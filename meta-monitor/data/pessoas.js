@@ -26,8 +26,38 @@ window.DB.pessoas = [
   "grupo": "UI"
  },
  {
-  "nome": "Comitê de Atendimento e Relacionamento da Inovação",
-  "papel": "Coordenadores + representantes dos núcleos · curadoria e priorização",
+  "nome": "Gabriel Gil Barreto Barros",
+  "papel": "Comitê de Atendimento e Relacionamento da Inovação",
+  "grupo": "Comitê"
+ },
+ {
+  "nome": "Hulda Oliveira Giesbrecht",
+  "papel": "Comitê de Atendimento e Relacionamento da Inovação",
+  "grupo": "Comitê"
+ },
+ {
+  "nome": "Lara Chicuta Franco",
+  "papel": "Comitê de Atendimento e Relacionamento da Inovação",
+  "grupo": "Comitê"
+ },
+ {
+  "nome": "Marcus Vinicius Lopes Bezerra",
+  "papel": "Comitê de Atendimento e Relacionamento da Inovação",
+  "grupo": "Comitê"
+ },
+ {
+  "nome": "Matheus Lopes de Queiroz Campos",
+  "papel": "Comitê de Atendimento e Relacionamento da Inovação",
+  "grupo": "Comitê"
+ },
+ {
+  "nome": "Paulo Puppin Zandonadi",
+  "papel": "Comitê de Atendimento e Relacionamento da Inovação",
+  "grupo": "Comitê"
+ },
+ {
+  "nome": "Sandra Chaves Silva Paraíso",
+  "papel": "Comitê de Atendimento e Relacionamento da Inovação",
   "grupo": "Comitê"
  },
  {

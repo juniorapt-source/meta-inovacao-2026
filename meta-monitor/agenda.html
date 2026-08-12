@@ -64,7 +64,7 @@
       "<td><b>" + esc(c.nome) + '</b><div style="color:var(--grafite);font-size:11.5px">' + esc(c.formato) + "</div></td>" +
       '<td style="font-size:12.5px;color:var(--grafite);max-width:340px">' + c.pauta.slice(0, 2).map(esc).join(" · ") +
         (c.pauta.length > 2 ? " · +" + (c.pauta.length - 2) : "") + "</td>" +
-      '<td class="mono" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + (e.hora ? " " + esc(e.hora) : "") : "—") + "</td>" +
+      '<td class="mono" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + (e.turno ? " · " + esc(e.turno) : "") + (e.hora ? " " + esc(e.hora) : "") : "—") + "</td>" +
       "<td>" + (e.local ? esc(e.local) : "—") + ' <span style="color:var(--grafite);font-size:11.5px">' + esc(e.modo) + "</span></td>" +
       '<td class="mono" style="font-size:12.5px">' + (e.convidados ? e.confirmados + "/" + e.convidados : "—") + "</td>" +
       '<td><span class="chip ' + stCls + '">' + esc(e.status) + "</span>" + (e.nota ? '<div style="font-size:11px;color:var(--grafite)">' + esc(e.nota) + "</div>" : "") + "</td></tr>";

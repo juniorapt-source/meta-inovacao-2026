@@ -1,6 +1,17 @@
 window.DB = window.DB || {};
 window.DB.canais = [
  {
+  "id": "foco",
+  "nome": "Foco+",
+  "completo": "CRM · Foco+",
+  "formato": "2 sessões · 3h · presencial",
+  "pauta": [
+   "Foco como centralizador dos dados e repositório dos sistemas externos",
+   "Além do atendimento: grupos de clientes, credenciamento, histórico, cruzamentos",
+   "Volume de informações e principais módulos"
+  ]
+ },
+ {
   "id": "cnr",
   "nome": "CNR",
   "completo": "CNR: operação ativa e receptiva",
@@ -12,14 +23,12 @@ window.DB.canais = [
   ]
  },
  {
-  "id": "assessoria",
-  "nome": "Assessoria de Negócios",
-  "completo": "Assessoria de negócios",
+  "id": "empresa",
+  "nome": "Sebrae na sua empresa",
+  "completo": "Sebrae na sua empresa",
   "formato": "2 sessões · 3h · presencial",
   "pauta": [
-   "Projeto, UFs presentes e time",
-   "Assessoria como promotora das estratégias da UI",
-   "Casos de relacionamento convertido em consumo de solução; conexão com o Foco"
+   "Pauta a definir com o canal — canal novo na grade v2"
   ]
  },
  {
@@ -36,16 +45,6 @@ window.DB.canais = [
   ]
  },
  {
-  "id": "loja",
-  "nome": "Loja",
-  "completo": "Loja Sebrae",
-  "formato": "2 sessões · 3h · presencial",
-  "pauta": [
-   "Maturidade, adoção pelas UFs, receita gerada",
-   "Loja vs. Sympla e similares: comparativo com diferenciais (AMEI, Foco, Portal, captura em tempo real sem atrito)"
-  ]
- },
- {
   "id": "mkt",
   "nome": "Marketing Cloud",
   "completo": "CRM · Marketing Cloud",
@@ -58,14 +57,13 @@ window.DB.canais = [
   ]
  },
  {
-  "id": "foco",
-  "nome": "Foco+",
-  "completo": "CRM · Foco+",
+  "id": "loja",
+  "nome": "Loja",
+  "completo": "Loja Sebrae",
   "formato": "2 sessões · 3h · presencial",
   "pauta": [
-   "Foco como centralizador dos dados e repositório dos sistemas externos",
-   "Além do atendimento: grupos de clientes, credenciamento, histórico, cruzamentos",
-   "Volume de informações e principais módulos"
+   "Maturidade, adoção pelas UFs, receita gerada",
+   "Loja vs. Sympla e similares: comparativo com diferenciais (AMEI, Foco, Portal, captura em tempo real sem atrito)"
   ]
  },
  {
@@ -79,6 +77,17 @@ window.DB.canais = [
   ]
  },
  {
+  "id": "assessoria",
+  "nome": "Assessoria de Negócios",
+  "completo": "Assessoria de negócios",
+  "formato": "2 sessões · 3h · presencial",
+  "pauta": [
+   "Projeto, UFs presentes e time",
+   "Assessoria como promotora das estratégias da UI",
+   "Casos de relacionamento convertido em consumo de solução; conexão com o Foco"
+  ]
+ },
+ {
   "id": "dxp",
   "nome": "DXP",
   "completo": "Estratégia DXP",
@@ -86,6 +95,15 @@ window.DB.canais = [
   "pauta": [
    "O que é a estratégia DXP",
    "Como pode transformar o relacionamento da Inovação com clientes e parceiros"
+  ]
+ },
+ {
+  "id": "contab",
+  "nome": "Contabilizações e instrumentos",
+  "completo": "Contabilizações e instrumentos",
+  "formato": "2 sessões · 3h · presencial",
+  "pauta": [
+   "Pauta a definir com o canal — canal novo na grade v2, ainda sem data (Ciclo 1)"
   ]
  }
 ];

@@ -10,7 +10,7 @@ Site estático multi-página (Vercel-ready, sem build step, sem backend), com da
 | `plano.html` | As 47 ações com filtros + **solução proposta por ação** (como executar · como monitorar · ferramenta) |
 | `caminho.html` | 7 nós + 2 SLAs: guardião, fallback pré-combinado, gatilho de escalada, status |
 | `agenda.html` | Ciclos 1 e 2, encontros por canal, datas, locais, confirmações |
-| `demandas.html` | Matriz 27 iniciativas × 8 canais: oficina → formulário (5 d.u.) → priorização → URC |
+| `demandas.html` | Matriz 27 iniciativas × 10 canais: oficina → formulário (5 d.u.) → priorização → URC |
 | `participantes.html` | Comitê, representantes por núcleo (CAN-05), pendências de indicação |
 | `editor.html` | Modo Edição: altera status/células/agenda no navegador e baixa o arquivo de dados atualizado |
 
@@ -21,7 +21,7 @@ Site estático multi-página (Vercel-ready, sem build step, sem backend), com da
 | Fase | Entrega | Teste automatizado (aceite) |
 |---|---|---|
 | F0 | Repo git iniciado, estrutura, .gitignore, BUILD_STATUS.md | `git log` ≥ 1 commit; árvore criada |
-| F1 | Camada de dados completa (plano+soluções, nós, canais, agenda, matriz, pessoas, iniciativas, config, changelog) | JSON válido em todos; contagens: 47 ações, 27 iniciativas, 8 canais, 7 nós; dependências apontam para IDs existentes |
+| F1 | Camada de dados completa (plano+soluções, nós, canais, agenda, matriz, pessoas, iniciativas, config, changelog) | JSON válido em todos; contagens: 47 ações, 27 iniciativas, 10 canais, 7 nós; dependências apontam para IDs existentes |
 | F2 | `css/base.css` (identidade herdada do site atual) + `js/core.js` + `js/calc.js` (funções puras) | `node` carrega calc.js; helpers de data corretos (3 asserts) |
 | F3 | Dashboard | HTML parseia; links/scripts existem; **KPIs do JS = KPIs recalculados em Python** (dupla contagem independente) |
 | F4 | plano.html + caminho.html | HTML parseia; todos os `script src` existem; 47 linhas renderizáveis (ids no dado) |

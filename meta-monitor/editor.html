@@ -68,7 +68,7 @@ montarShell("editor.html");
 
 const CONJUNTOS = {
   plano:  { rotulo:"Plano de ação — status e prazos", arquivo:"plano.js" },
-  matriz: { rotulo:"Matriz de demandas — 27 iniciativas × 8 canais", arquivo:"matriz.js" },
+  matriz: { rotulo:"Matriz de demandas — 27 iniciativas × 10 canais", arquivo:"matriz.js" },
   agenda: { rotulo:"Agenda — encontros dos ciclos", arquivo:"agenda.js" },
   pessoas:{ rotulo:"Pessoas — representantes e papéis", arquivo:"pessoas.js" }
 };
@@ -126,13 +126,14 @@ function renderMatriz(){
 }
 
 function renderAgenda(){
-  let h='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th>Encontro</th><th style="width:120px">Data</th><th style="width:80px">Hora</th><th style="width:140px">Local</th><th style="width:110px">Modo</th><th style="width:130px">Status</th><th>Conf.</th><th>Conv.</th><th>Nota</th></tr></thead><tbody>';
+  let h='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th>Encontro</th><th style="width:120px">Data</th><th style="width:90px">Turno</th><th style="width:80px">Hora</th><th style="width:140px">Local</th><th style="width:110px">Modo</th><th style="width:130px">Status</th><th>Conf.</th><th>Conv.</th><th>Nota</th></tr></thead><tbody>';
   W.agenda.encontros.forEach((en,i)=>{
     h+='<tr><td class="ed-mono">'+esc(en.id)+'</td>'+
       '<td><input type="text" data-i="'+i+'" data-f="data" value="'+esc(en.data||"")+'" placeholder="AAAA-MM-DD"></td>'+
+      '<td><select data-i="'+i+'" data-f="turno">'+opts(["","manhã","tarde"],en.turno||"",{"":"—"})+'</select></td>'+
       '<td><input type="text" data-i="'+i+'" data-f="hora" value="'+esc(en.hora||"")+'" placeholder="14h"></td>'+
       '<td><input type="text" data-i="'+i+'" data-f="local" value="'+esc(en.local||"")+'"></td>'+
-      '<td><select data-i="'+i+'" data-f="modo">'+opts(["presencial","online","híbrido"],en.modo)+'</select></td>'+
+      '<td><select data-i="'+i+'" data-f="modo">'+opts(["presencial","online","híbrido","a definir"],en.modo)+'</select></td>'+
       '<td><select data-i="'+i+'" data-f="status">'+opts(STATUS_ENC,en.status)+'</select></td>'+
       '<td><input type="number" min="0" data-i="'+i+'" data-f="confirmados" value="'+(en.confirmados||0)+'"></td>'+
       '<td><input type="number" min="0" data-i="'+i+'" data-f="convidados" value="'+(en.convidados||0)+'"></td>'+
@@ -142,7 +143,7 @@ function renderAgenda(){
   area.querySelectorAll("select,input").forEach(el=>el.addEventListener("change",e=>{
     const t=e.target, en=W.agenda.encontros[+t.dataset.i], f=t.dataset.f;
     if(f==="confirmados"||f==="convidados") en[f]=Math.max(0,parseInt(t.value||"0",10)||0);
-    else if((f==="data"||f==="hora"||f==="local") && t.value.trim()==="") en[f]=null;
+    else if((f==="data"||f==="hora"||f==="local"||f==="turno") && t.value.trim()==="") en[f]=null;
     else en[f]=t.value;
   }));
 }

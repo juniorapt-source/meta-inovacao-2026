@@ -4,7 +4,7 @@
 
 ## O plano vigente: Meta Inovação 2026
 
-Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanhar o plano de ação Atendimento e Relacionamento da Unidade de Inovação: 47 ações em 5 frentes, caminho crítico de 7 nós, agenda dos ciclos com a URC, matriz de demandas 27 iniciativas × 8 canais e participantes.
+Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanhar o plano de ação Atendimento e Relacionamento da Unidade de Inovação: 47 ações em 5 frentes, caminho crítico de 7 nós, agenda dos ciclos com a URC, matriz de demandas 27 iniciativas × 10 canais e participantes.
 
 ## Páginas
 
@@ -13,8 +13,8 @@ Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanh
 | `index.html` | Dashboard: trilho dos 7 nós, KPIs, radar de carga por dia, atrasadas, próximos 7 dias |
 | `plano.html` | 47 ações com filtros e busca; cada linha expande com dependências e a solução proposta (como executar, como monitorar, ferramenta) |
 | `caminho.html` | Os 7 nós do caminho crítico com estado calculado, fallbacks e gatilhos; SLAs pactuados e janelas de folga |
-| `agenda.html` | Ciclos 1 e 2 com a URC e os 16 encontros (nascem "a agendar" até o Nó 1 fechar) |
-| `demandas.html` | Matriz 27 iniciativas × 8 canais com o fluxo previsto → oficina → formulário → priorizado → encaminhado |
+| `agenda.html` | Ciclos 1 e 2 com a URC e os 20 encontros (10 canais × 2 ciclos; Ciclo 1 já com grade v2, Ciclo 2 "a agendar") |
+| `demandas.html` | Matriz 27 iniciativas × 10 canais com o fluxo previsto → oficina → formulário → priorizado → encaminhado |
 | `participantes.html` | Pessoas por grupo, com pendências de indicação (CAN-05) e fallback do Nó 2 |
 | `editor.html` | Modo edição: altera plano, matriz, agenda ou pessoas no navegador e baixa o `data/*.js` atualizado |
 
@@ -63,7 +63,7 @@ Quem preferir pode editar `data/*.js` direto no editor de texto — o formato é
 ## Testes (os mesmos usados na construção)
 
 ```bash
-python3 tools/validar_dados.py        # integridade dos dados (47/27/8/7/2/16, dependências)
+python3 tools/validar_dados.py        # integridade dos dados (47/27/10/7/2/20, dependências)
 node tools/testar_calc.js             # cálculos: KPIs, atraso, carga por dia, estado dos nós
 python3 tools/validar_site.py         # HTML: referências locais e ids obrigatórios por página
 python3 tools/testar_kpis_cruzado.py  # KPIs do Python == KPIs do JS

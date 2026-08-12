@@ -20,10 +20,10 @@ def check(cond, msg):
 
 check(len(db.get("plano", [])) == 47, f"plano: esperado 47, veio {len(db.get('plano', []))}")
 check(len(db.get("iniciativas", [])) == 27, "iniciativas != 27")
-check(len(db.get("canais", [])) == 8, "canais != 8")
+check(len(db.get("canais", [])) == 10, "canais != 10")
 check(len(db.get("nos", {}).get("nos", [])) == 7, "nós != 7")
 check(len(db.get("nos", {}).get("slas", [])) == 2, "SLAs != 2")
-check(len(db.get("agenda", {}).get("encontros", [])) == 16, "encontros != 16 (8 canais × 2 ciclos)")
+check(len(db.get("agenda", {}).get("encontros", [])) == 20, "encontros != 20 (10 canais × 2 ciclos)")
 
 ids = {a["id"] for a in db.get("plano", [])}
 for a in db.get("plano", []):
@@ -46,4 +46,4 @@ for n in db.get("nos", {}).get("nos", []):
 
 if erros:
     print("FALHOU:"); [print(" -", e) for e in erros]; sys.exit(1)
-print(f"F1 OK — {len(db['plano'])} ações · {len(db['iniciativas'])} iniciativas · {len(db['canais'])} canais · 7 nós · 2 SLAs · 16 encontros")
+print(f"F1 OK — {len(db['plano'])} ações · {len(db['iniciativas'])} iniciativas · {len(db['canais'])} canais · 7 nós · 2 SLAs · {len(db['agenda']['encontros'])} encontros")

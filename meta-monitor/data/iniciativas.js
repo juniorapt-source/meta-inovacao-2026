@@ -2,110 +2,137 @@ window.DB = window.DB || {};
 window.DB.iniciativas = [
  {
   "nome": "ACT Ministério da Saúde",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Hulda"
  },
  {
   "nome": "ALI Academy",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Carol"
  },
  {
   "nome": "ALI Coop",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Carol"
  },
  {
   "nome": "ALI Ecossistema",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Raquel"
  },
  {
   "nome": "ALI IG",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Hulda"
  },
  {
   "nome": "ALI Produtividade",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Fred"
  },
  {
   "nome": "ALI Rural",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Júnior"
  },
  {
   "nome": "ATIVA",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Raquel"
  },
  {
   "nome": "Catalisa Gov",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Dario / Rafa"
  },
  {
   "nome": "Catalisa ICT",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Agnaldo"
  },
  {
   "nome": "Consult",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Matheus"
  },
  {
   "nome": "Convênio Anprotec",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Matheus"
+ },
+ {
+  "nome": "Coopera mais Amazônia",
+  "nucleo": "",
+  "representante": "Carol"
  },
  {
   "nome": "ELI",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Raquel"
  },
  {
   "nome": "ELI Summit",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Raquel"
  },
  {
   "nome": "Embrapii",
-  "nucleo": ""
- },
- {
-  "nome": "Impulso Tecnológico",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Agnaldo"
  },
  {
   "nome": "Inova Biomas",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Gabriel / Valéria / Felipe"
  },
  {
   "nome": "Internacionalização",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Cris"
  },
  {
   "nome": "MEI + Inovador",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Thiago"
  },
  {
   "nome": "Missões",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Cris"
  },
  {
-  "nome": "Salas do Empreendedor",
-  "nucleo": ""
+  "nome": "Prêmio Sebrae Startups",
+  "nucleo": "",
+  "representante": "Pova"
  },
  {
   "nome": "Sebrae Origens",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Hulda"
  },
  {
   "nome": "Sebrae Startups",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Núcleo de Startups"
  },
  {
   "nome": "Sebraetec",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Matheus"
  },
  {
   "nome": "Startup Day",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Criss / Pova"
  },
  {
   "nome": "Startup NE",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Wébia, Jéssica e Fernanda"
  },
  {
   "nome": "Websummit Rio e Lisboa",
-  "nucleo": ""
+  "nucleo": "",
+  "representante": "Criss / Pova"
  }
 ];
