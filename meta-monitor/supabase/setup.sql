@@ -11,6 +11,12 @@
 -- SQL Editor do dashboard do Supabase (projeto wdygbfrmewlaffjsfyoi), na ordem
 -- em que aparece. É idempotente: pode rodar mais de uma vez sem duplicar dado
 -- nem quebrar se a tabela já existir.
+--
+-- v0.3.1: adicionado o bloco 3.5 com os GRANTs de tabela pra anon/authenticated
+-- — sem eles o Postgres barra a query com "permission denied" antes do RLS
+-- sequer ser avaliado. Já foi rodado manualmente em produção; a nota acima
+-- ("não executado pelo agente") vale do ponto de vista histórico do setup
+-- original, não deste ajuste.
 -- =====================================================================
 
 -- 0) Registro de auditoria — tabelas existentes no schema public antes do setup.
@@ -80,6 +86,22 @@ for all
 to anon
 using (true)
 with check (true);
+
+-- 3.5) GRANTs no nível de tabela.
+--      RLS sozinho não basta: sem GRANT, o Postgres barra a query antes de
+--      avaliar as policies e o cliente recebe "permission denied for table".
+--      Tabelas criadas pelo Table Editor do Supabase (UI) recebem esses grants
+--      automaticamente; quando a tabela é criada por SQL cru (como aqui), a
+--      gente precisa dar explicitamente.
+grant select, insert, update, delete
+  on public.meta_inovacao_matriz_demandas
+  to anon;
+
+-- authenticated fica preparado pra quando/se a gente migrar pra login.
+-- Sem policy pra authenticated, o RLS bloqueia mesmo com grant — é só terreno.
+grant select, insert, update, delete
+  on public.meta_inovacao_matriz_demandas
+  to authenticated;
 
 -- 4) Seed a partir do data/matriz.js atual (27 iniciativas × 10 canais).
 --    on conflict (iniciativa) do nothing => idempotente: rodar de novo não duplica.
