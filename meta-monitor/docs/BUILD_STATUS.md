@@ -21,3 +21,5 @@ conteúdo publicado (não assumidos a partir da linha acima). F7 foi conferida c
   `.gitignore` na raiz do repo (só existia dentro de `meta-monitor/`). Corrigido: `.gitignore` criado
   na raiz (.DS_Store, Thumbs.db, node_modules/, *.zip) e `git rm --cached .DS_Store`. Reteste:
   `git status` limpo quanto a artefatos de SO. F0 — OK.
+[23:50] F1 — OK (reconferido): `python3 tools/validar_dados.py` → "F1 OK — 47 ações · 27
+  iniciativas · 8 canais · 7 nós · 2 SLAs · 16 encontros".
