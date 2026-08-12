@@ -33,3 +33,5 @@ conteúdo publicado (não assumidos a partir da linha acima). F7 foi conferida c
 [23:50] F5 — OK (reconferido): mesma rodada de `validar_site.py` cobre agenda.html, demandas.html,
   participantes.html; matriz 27×8 só referencia iniciativas/canais existentes (checado por
   `validar_dados.py`).
+[23:50] F6 — OK (reconferido): `node tools/testar_editor.js` → "roundtrip integro em todos os
+  arquivos de data/".
