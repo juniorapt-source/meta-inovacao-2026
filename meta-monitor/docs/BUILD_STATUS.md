@@ -30,3 +30,6 @@ conteúdo publicado (não assumidos a partir da linha acima). F7 foi conferida c
   confirma index.html com scripts/links íntegros.
 [23:50] F4 — OK (reconferido): `python3 tools/validar_site.py` cobre plano.html e caminho.html —
   todos os `script src` existem, páginas parseiam.
+[23:50] F5 — OK (reconferido): mesma rodada de `validar_site.py` cobre agenda.html, demandas.html,
+  participantes.html; matriz 27×8 só referencia iniciativas/canais existentes (checado por
+  `validar_dados.py`).
