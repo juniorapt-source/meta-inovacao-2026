@@ -32,7 +32,7 @@
   window.montarShell = function (paginaAtual) {
     const nav = document.querySelector(".nav");
     if (!nav) return;
-    const cfg = DB.config || { projeto: "Meta Inovação 2026", versao: "dev", atualizado_em: "" };
+    const cfg = DB.config || { projeto: "Carta de Corso", versao: "dev", atualizado_em: "" };
     let html = '<div class="marca">Meta Inovação 2026<small>' + esc(cfg.subtitulo || "") + "</small></div>";
     for (const [href, rotulo] of PAGINAS) {
       const ativo = href === paginaAtual ? ' class="ativo" aria-current="page"' : "";

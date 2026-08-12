@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.0 — 2026-08-12
+- O ambiente ganha nome e identidade: **Carta de Corso** (título das páginas, cabeçalho e config). O plano vigente segue como Meta Inovação 2026, no subtítulo.
+- Deck dos 8 canais URC (apresentacao_canais.html) incorporado ao repositório, com o slide da soma citando a meta de omnicanalidade da URC (2025).
+
 ## v0.1.0 — 2026-08-11
 Primeira versão publicável do painel Meta Inovação 2026.
 

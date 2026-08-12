@@ -1,4 +1,8 @@
-# Meta Inovação 2026 — painel de monitoramento
+# Carta de Corso — painel da Unidade de Inovação
+
+> A carta de corso era o documento que legitimava o corsário: mesma tripulação, nova bandeira. Este ambiente é a nossa — o registro permanente de que a Inovação navega dentro das regras do Sebrae. As campanhas passam; a Carta fica.
+
+## O plano vigente: Meta Inovação 2026
 
 Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanhar o plano de ação Atendimento e Relacionamento da Unidade de Inovação: 47 ações em 5 frentes, caminho crítico de 7 nós, agenda dos ciclos com a URC, matriz de demandas 27 iniciativas × 8 canais e participantes.
 
@@ -26,6 +30,8 @@ window.DB.chave = { ...JSON puro... };
 Isso permite abrir o site direto do disco (file://) e publicar no Vercel sem fetch, CORS ou build. Datas textuais ("contínuo", "set–out") não entram no cálculo de atraso: viram o selo "janela".
 
 ## Publicar no Vercel (uma vez)
+
+Sugestão de nome do projeto/repositório: `cartadecorso` — a URL fica `cartadecorso.vercel.app`.
 
 Caminho recomendado — via GitHub:
 1. Crie um repositório vazio no GitHub (ex.: `meta-inovacao-2026`).

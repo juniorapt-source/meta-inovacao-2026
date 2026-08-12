@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Um time momentâneo · Canais URC × Inovação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --tinta:#14273D; --papel:#F7F9FB; --ceu:#EAF1F8; --linha:#D8E2EC; --grafite:#5A6E82;
+  --c-cnr:#1F4E79; --c-assessoria:#2F7D5A; --c-portal:#0B7386; --c-loja:#BF6A0F;
+  --c-mkt:#7A4FBF; --c-foco:#C2455A; --c-rede:#5C6E31; --c-dxp:#5A6B7D;
+  --ativo:var(--c-cnr);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font:400 16px/1.55 Inter,system-ui,sans-serif;color:var(--tinta);background:var(--papel);overflow:hidden}
+.slide{position:absolute;inset:0;display:none;padding:56px 72px 72px;background:var(--papel)}
+.slide.ativa{display:flex;flex-direction:column}
+.slide.tingida{background:linear-gradient(0deg,color-mix(in srgb,var(--ativo) 7%,var(--papel)),color-mix(in srgb,var(--ativo) 7%,var(--papel)))}
+.eyebrow{font:600 12px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:var(--grafite);text-transform:uppercase;margin-bottom:14px}
+.eyebrow b{color:var(--ativo)}
+h1{font:800 clamp(34px,4.6vw,58px)/1.08 Archivo,sans-serif;letter-spacing:-.01em;max-width:20ch}
+h2{font:700 clamp(26px,3.4vw,40px)/1.12 Archivo,sans-serif;letter-spacing:-.01em}
+.barra{width:64px;height:6px;border-radius:3px;background:var(--ativo);margin:18px 0 22px}
+.lead{font-size:clamp(16px,1.5vw,20px);color:#2B4258;max-width:62ch}
+.duas{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;flex:1;min-height:0;align-items:start}
+.lista{list-style:none;display:grid;gap:12px;max-width:60ch}
+.lista li{padding:12px 16px 12px 18px;background:#fff;border:1px solid var(--linha);border-left:4px solid var(--ativo);border-radius:10px;font-size:15.5px}
+.lista li small{display:block;color:var(--grafite);font-size:12.5px;margin-top:2px}
+.selo{display:inline-block;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:var(--grafite);border:1px solid var(--linha);border-radius:99px;padding:3px 10px;background:#fff}
+.selo.ui{color:var(--ativo);border-color:color-mix(in srgb,var(--ativo) 40%,#fff)}
+.conexao{background:#fff;border:1px solid var(--linha);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.conexao .com{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--grafite);display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.chip{display:inline-block;font:600 11px 'IBM Plex Mono',monospace;color:#fff;border-radius:6px;padding:2px 8px}
+.jogada{background:color-mix(in srgb,var(--ativo) 9%,#fff);border:1px solid color-mix(in srgb,var(--ativo) 35%,#fff);border-radius:12px;padding:16px 18px;margin-top:6px}
+.jogada .tt{font:700 13px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--ativo);margin-bottom:6px}
+.sozinho{display:grid;gap:10px;margin:6px 0 18px;max-width:60ch}
+.sozinho p{padding-left:14px;border-left:3px solid var(--linha)}
+.sozinho p.forte{border-color:var(--ativo)}
+.sozinho b{font-family:Archivo,sans-serif}
+.rodape{position:fixed;left:0;right:0;bottom:0;height:5px;background:var(--linha)}
+.rodape i{display:block;height:100%;width:0;background:var(--ativo);transition:width .45s ease, background .45s ease}
+.contador{position:fixed;right:26px;bottom:16px;font:500 12px 'IBM Plex Mono',monospace;color:var(--grafite)}
+.dica{position:fixed;left:26px;bottom:14px;font:400 12px 'IBM Plex Mono',monospace;color:#93A6B8}
+#mini{position:fixed;top:26px;right:32px;width:150px;height:150px;z-index:5;transition:opacity .4s}
+.semmini #mini{opacity:0;pointer-events:none}
+.grade2{display:grid;grid-template-columns:1fr 1fr;gap:20px 40px;margin-top:8px}
+.bloco{background:#fff;border:1px solid var(--linha);border-radius:12px;padding:16px 18px}
+.bloco h3{font:700 15px Archivo,sans-serif;margin-bottom:6px}
+.bloco p,.bloco li{font-size:14px;color:#2B4258}
+.bloco ul{padding-left:18px;display:grid;gap:4px}
+.num{font:700 30px Archivo,sans-serif;color:var(--ativo)}
+.centro{align-items:center;justify-content:center;text-align:center;display:flex}
+.capa-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;flex:1}
+.legenda-mandala{display:grid;grid-template-columns:repeat(4,auto);gap:8px 14px;justify-content:start;margin-top:16px}
+.legenda-mandala span{display:flex;align-items:center;gap:7px;font:500 12.5px 'IBM Plex Mono',monospace;color:#2B4258}
+.legenda-mandala i{width:12px;height:12px;border-radius:4px;display:inline-block}
+mark{background:linear-gradient(transparent 62%,color-mix(in srgb,var(--ativo) 28%,#fff) 0);padding:0 2px}
+.assin{font:600 12px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--grafite);text-transform:uppercase}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media print{
+  body{overflow:visible}
+  .slide{position:relative;display:flex!important;flex-direction:column;page-break-after:always;height:100vh}
+  #mini,.rodape,.contador,.dica{display:none}
+}
+@media (max-width:900px){
+  .slide{padding:32px 24px 64px;overflow:auto}
+  .duas,.capa-grid,.grade2{grid-template-columns:1fr;gap:22px}
+  #mini{width:92px;height:92px;top:14px;right:14px}
+}
+</style>
+</head>
+<body>
+<div id="palco"></div>
+<div id="mini" aria-hidden="true"></div>
+<div class="rodape" aria-hidden="true"><i id="prog"></i></div>
+<div class="contador" id="contador"></div>
+<div class="dica">← → navegar · P imprimir/PDF</div>
+
+<script>
+"use strict";
+/* ============ DADOS ============ */
+const CORES = {cnr:"--c-cnr",assessoria:"--c-assessoria",portal:"--c-portal",loja:"--c-loja",mkt:"--c-mkt",foco:"--c-foco",rede:"--c-rede",dxp:"--c-dxp"};
+const CANAIS = [
+ {id:"cnr", num:"01", sigla:"CNR", nome:"CNR — operação ativa e receptiva",
+  lead:"A voz do Sebrae em escala nacional: do tira-dúvidas tributário à prospecção ativa.",
+  fala:[
+   ["O projeto, as UFs presentes e o time","quem é a CNR hoje"],
+   ["NPS e volume: milhares de ligações/dia de todo o Brasil","da dúvida tributária ao apoio na emissão da guia DAS"],
+   ["Valor mesmo para projetos sazonais, pequenos ou em MVP","case recente UI × CNR no projeto da MEE"],
+   ["Gestão de conteúdo em nome das 27 UFs","a central como memória viva do conhecimento"],
+   ["Operação ativa em campanhas, prospecção e pesquisas","e o receptivo como camada de qualificação: inativos, inscritos de macroeventos, públicos de menor fluência digital"],
+   ["Prazos e ritos para formalizar demandas",""]
+  ],
+  sozinho:"atende bem, orienta em escala e resolve na hora.",
+  emrede:"vira motor de ativação: recebe base qualificada, devolve cliente aquecido para o canal certo.",
+  con:[
+   {p:["mkt","foco"], t:"O Marketing Cloud entrega base segmentada do Foco+ para a operação ativa; cada ligação volta registrada, alimentando a régua seguinte."},
+   {p:["assessoria","loja"], t:"O que a CNR aquece transborda com hora marcada: agenda na Assessoria, conversão assistida na Loja."},
+   {p:["portal"], t:"O receptivo qualifica inscritos de macroeventos e devolve o cliente para a página certa do Portal."}
+  ],
+  jogada:{selo:"DO E-MAIL", t:"MEI + Inovador já tem demanda aberta na CNR. Próximo passo: usar o receptivo para qualificar inscritos de Startup Day e ELI Summit, transformando plateia em carteira."}},
+
+ {id:"assessoria", num:"02", sigla:"ASS", nome:"Assessoria de Negócios",
+  lead:"Relacionamento consultivo de carteira: quem conhece o cliente pelo nome.",
+  fala:[
+   ["O projeto, as UFs presentes e o time",""],
+   ["A assessoria como promotora das estratégias da UI","não só atendimento: distribuição"],
+   ["Casos de relacionamento convertido em consumo de solução",""],
+   ["Como a assessoria se conecta ao Foco","visão do cliente antes da conversa"]
+  ],
+  sozinho:"cuida da carteira com profundidade e confiança.",
+  emrede:"vira o braço de distribuição das soluções da Inovação, com contexto completo do cliente.",
+  con:[
+   {p:["cnr"], t:"Recebe da CNR o transbordo quente: cliente já orientado chega à assessoria com histórico, não do zero."},
+   {p:["foco"], t:"A visão 360 do Foco+ mostra o que o cliente já consumiu e sugere a próxima oferta com pertinência."},
+   {p:["loja","rede"], t:"Fecha o ciclo indicando a Loja para transacionar e a Rede para presença local onde a carteira está."}
+  ],
+  jogada:{selo:"PROPOSTA UI", t:"Assessores como promotores de Sebraetec e ALI nas carteiras: converter relacionamento em consumo de solução, o caso que o próprio roteiro pede para a URC mostrar."}},
+
+ {id:"portal", num:"03", sigla:"POR", nome:"Portal",
+  lead:"Muito além do site do Sebrae: porta de entrada, rastreio e retenção.",
+  fala:[
+   ["O que mudou do Portal 2025 para o 2026",""],
+   ["Adoção pelas UFs e adaptação conforme a UF do cliente","rastreio, contabilização, prospecção e retenção"],
+   ["Integração Portal × MKT × Foco para captura de leads","concentrada no NA ou distribuída às UFs"],
+   ["Banner com QR code das páginas dos projetos em eventos","o que a Inovação ganharia se todo evento tivesse um"],
+   ["Área logada × não logada; o Portal como centralizador","e o que o Portal executa mas é gerido por Soluções"]
+  ],
+  sozinho:"é vitrine e autosserviço disponível o tempo todo.",
+  emrede:"é o começo mensurável de quase toda jornada: captura, identifica e distribui.",
+  con:[
+   {p:["mkt","foco"], t:"Portal × MKT × Foco: o lead capturado numa página vira registro identificado e entra em jornada, sem planilha no meio."},
+   {p:["loja"], t:"Da página do projeto ao checkout da Loja em um clique, com o mesmo login AMEI."},
+   {p:["cnr","rede"], t:"Conteúdo centralizado no Portal vira roteiro para a CNR e material de bolso para os 14 mil pontos da Rede."}
+  ],
+  jogada:{selo:"DO E-MAIL", t:"QR code padrão em todo evento da Inovação apontando para a página do projeto: Websummit, Startup Day e feiras viram captura rastreável, não só presença."}},
+
+ {id:"loja", num:"04", sigla:"LOJ", nome:"Loja",
+  lead:"Transação sem atrito, com o dado ficando em casa.",
+  fala:[
+   ["Maturidade, adoção pelas UFs e receita gerada",""],
+   ["Loja vs. Sympla e similares: o comparativo","recursos comuns e diferenciais exclusivos"],
+   ["Integração com AMEI, Foco e Portal","captura de informação em tempo real, sem atrito para o cliente"]
+  ],
+  sozinho:"resolve inscrição, venda e pagamento.",
+  emrede:"cada transação vira dado de relacionamento que dispara a próxima etapa da jornada.",
+  con:[
+   {p:["portal","mkt"], t:"Recebe o tráfego do Portal e das campanhas; a venda confirma o interesse que a jornada previu."},
+   {p:["foco"], t:"A compra cai no Foco+ em tempo real: quem comprou o quê alimenta grupos de clientes e a régua de entrega."},
+   {p:["cnr"], t:"A CNR assiste a conversão de quem travou no meio do caminho, com o carrinho na tela."}
+  ],
+  jogada:{selo:"PROPOSTA UI", t:"Ingressos e inscrições dos eventos da Inovação na Loja, não no Sympla: o comparativo que o e-mail pede vira decisão de migração, e o dado do participante fica no Sistema."}},
+
+ {id:"mkt", num:"05", sigla:"MKT", nome:"CRM · Marketing Cloud",
+  lead:"De disparos avulsos a jornadas com transbordo e rastreabilidade.",
+  fala:[
+   ["Ferramentas: LPs, e-mail, SMS, WhatsApp","Bureau de CRM e apoio na construção de jornadas"],
+   ["Disparo × campanha: a diferença na prática","exemplos com transbordo entre canais e cliente rastreável"],
+   ["Campanhas lideradas pelo NA com alcance nacional","o NA como promotor de estratégias que as UFs executam"],
+   ["O que trava pedidos na URC","sem estratégia, sem transbordo definido, sem base qualificada"]
+  ],
+  sozinho:"dispara mensagens com eficiência.",
+  emrede:"orquestra a conversa: decide quem recebe o quê, quando, e para qual canal o cliente segue.",
+  con:[
+   {p:["foco"], t:"Segmenta pelo Foco+: base qualificada é a diferença entre campanha e spam institucional."},
+   {p:["cnr","assessoria"], t:"Define transbordo de nascença: quem clica e não conclui vira lista da CNR ativa ou pauta da assessoria."},
+   {p:["portal","loja"], t:"Fecha o funil apontando para a página do Portal e o checkout da Loja, com origem de campanha marcada."}
+  ],
+  jogada:{selo:"DO E-MAIL", t:"As jornadas do Catalisa Gov em ritmo avançado são a referência viva: replicar o desenho (estratégia + transbordo + base) para ALI e Sebraetec é o caminho mais curto para demanda bem formulada."}},
+
+ {id:"foco", num:"06", sigla:"FOC", nome:"CRM · Foco+",
+  lead:"O centro da mandala: onde todos os canais viram um cliente só.",
+  fala:[
+   ["O Foco como centralizador dos dados dos clientes","e repositório dos sistemas que rodam fora dele"],
+   ["Além do registro de atendimento","grupos de clientes, credenciamento de eventos, histórico e cruzamentos"],
+   ["Volume de informações e principais módulos",""]
+  ],
+  sozinho:"registra atendimentos.",
+  emrede:"é a memória e a régua de tudo: sem ele, a omnicanalidade não existe nem pode ser medida.",
+  con:[
+   {p:["cnr","assessoria","rede"], t:"Dá contexto a quem fala com o cliente: histórico completo antes do alô, na central, na carteira ou no território."},
+   {p:["mkt"], t:"É a fonte das segmentações; e recebe de volta cada interação, fechando o ciclo da jornada."},
+   {p:["portal","loja","dxp"], t:"Login, navegação e compra identificados abastecem o golden record que personaliza a experiência digital."}
+  ],
+  jogada:{selo:"DO E-MAIL", t:"O ALI 100% integrado ao Foco é a régua de chegada: o mesmo padrão de registro vira meta para as demais iniciativas do portfólio no ciclo de adequação."}},
+
+ {id:"rede", num:"07", sigla:"RED", nome:"Rede própria e parceira",
+  lead:"14 mil pessoas onde o Sebrae não tem escritório.",
+  fala:[
+   ["Mais de 14.000 pessoas espalhadas pelo Brasil","presentes onde não há escritório do Sebrae"],
+   ["Como a rede potencializa programas das UFs e do NA",""]
+  ],
+  sozinho:"garante capilaridade e presença.",
+  emrede:"é a última milha da Inovação: leva o programa até o cliente e traz o registro de volta.",
+  con:[
+   {p:["foco"], t:"Atendimento presencial registrado no Foco+ transforma capilaridade em cobertura que conta na meta."},
+   {p:["portal","mkt"], t:"Usa o conteúdo do Portal como material de campo e entra como etapa presencial das jornadas."},
+   {p:["assessoria"], t:"Agenda local compartilhada: a rede abre a porta, a assessoria aprofunda a relação."}
+  ],
+  jogada:{selo:"PROPOSTA UI", t:"Salas do Empreendedor e ELI como porta territorial da Inovação: cidade com articulação local é cidade onde ALI Rural, Origens e Biomas chegam com endereço."}},
+
+ {id:"dxp", num:"08", sigla:"DXP", nome:"Estratégia DXP",
+  lead:"A camada que costura os canais digitais numa experiência só.",
+  fala:[
+   ["O que é a estratégia DXP",""],
+   ["Como pode transformar o relacionamento da Inovação","com clientes e com parceiros"]
+  ],
+  sozinho:"é plataforma.",
+  emrede:"é a promessa de continuidade: o cliente muda de canal e a conversa não recomeça do zero.",
+  con:[
+   {p:["portal","loja"], t:"Unifica navegação, conteúdo e transação numa experiência contínua, sem emendas visíveis."},
+   {p:["foco"], t:"Personaliza com os dados do Foco+: cada cliente vê o Sebrae que faz sentido para o momento dele."},
+   {p:["mkt"], t:"Dá às jornadas um destino à altura: páginas e fluxos que reconhecem quem chega."}
+  ],
+  jogada:{selo:"PROPOSTA UI", t:"Sessão em formato reduzido com um objetivo: sair com 2 ou 3 pilotos mapeados junto às iniciativas mais digitais, como Sebrae Startups e Catalisa."}}
+];
+
+/* ============ MANDALA ============ */
+function criarMandala(el, tam){
+  const NS="http://www.w3.org/2000/svg", C=200, R=138, NR=33;
+  const svg=document.createElementNS(NS,"svg");
+  svg.setAttribute("viewBox","0 0 400 400"); svg.style.width=tam+"px"; svg.style.height=tam+"px";
+  const ang=i=>(-90+i*45)*Math.PI/180;
+  const pos=i=>[C+R*Math.cos(ang(i)), C+R*Math.sin(ang(i))];
+  const gAnel=document.createElementNS(NS,"g");
+  gAnel.style.transformOrigin="200px 200px"; gAnel.style.transition="transform .7s cubic-bezier(.4,0,.2,1)";
+  svg.appendChild(gAnel);
+  const cordas={}, raios={};
+  for(let i=0;i<8;i++)for(let j=i+1;j<8;j++){
+    const [x1,y1]=pos(i),[x2,y2]=pos(j);
+    const l=document.createElementNS(NS,"line");
+    l.setAttribute("x1",x1);l.setAttribute("y1",y1);l.setAttribute("x2",x2);l.setAttribute("y2",y2);
+    l.setAttribute("stroke","var(--linha)");l.setAttribute("stroke-width","1.4");
+    l.style.transition="all .5s"; gAnel.appendChild(l);
+    cordas[CANAIS[i].id+"|"+CANAIS[j].id]=l;
+  }
+  for(let i=0;i<8;i++){
+    const [x,y]=pos(i);
+    const l=document.createElementNS(NS,"line");
+    l.setAttribute("x1",C);l.setAttribute("y1",C);l.setAttribute("x2",x);l.setAttribute("y2",y);
+    l.setAttribute("stroke","var(--linha)");l.setAttribute("stroke-width","1.4");
+    l.style.transition="all .5s"; gAnel.appendChild(l);
+    raios[CANAIS[i].id]=l;
+  }
+  const nucleo=document.createElementNS(NS,"g");
+  const cc=document.createElementNS(NS,"circle");
+  cc.setAttribute("cx",C);cc.setAttribute("cy",C);cc.setAttribute("r","44");
+  cc.setAttribute("fill","#fff");cc.setAttribute("stroke","var(--tinta)");cc.setAttribute("stroke-width","2");
+  const ct=document.createElementNS(NS,"text");
+  ct.setAttribute("x",C);ct.setAttribute("y",C+4);ct.setAttribute("text-anchor","middle");
+  ct.setAttribute("style","font:600 13px 'IBM Plex Mono',monospace;fill:var(--tinta)");
+  ct.textContent="CLIENTE";
+  nucleo.appendChild(cc);nucleo.appendChild(ct);svg.appendChild(nucleo);
+  const nos={};
+  CANAIS.forEach((c,i)=>{
+    const [x,y]=pos(i);
+    const g=document.createElementNS(NS,"g");
+    g.style.transformOrigin=x+"px "+y+"px";
+    g.style.transition="transform .7s cubic-bezier(.4,0,.2,1), opacity .5s";
+    const ci=document.createElementNS(NS,"circle");
+    ci.setAttribute("cx",x);ci.setAttribute("cy",y);ci.setAttribute("r",NR);
+    ci.setAttribute("fill","var("+CORES[c.id]+")");
+    ci.setAttribute("stroke","#fff");ci.setAttribute("stroke-width","3");
+    const tx=document.createElementNS(NS,"text");
+    tx.setAttribute("x",x);tx.setAttribute("y",y+4.5);tx.setAttribute("text-anchor","middle");
+    tx.setAttribute("style","font:600 13.5px 'IBM Plex Mono',monospace;fill:#fff");
+    tx.textContent=c.sigla;
+    g.appendChild(ci);g.appendChild(tx);gAnel.appendChild(g);
+    nos[c.id]=g;
+  });
+  el.appendChild(svg);
+  function setFoco(id, parceiros){
+    parceiros=parceiros||[];
+    const idx=CANAIS.findIndex(c=>c.id===id);
+    const rot=idx<0?0:-idx*45;
+    gAnel.style.transform="rotate("+rot+"deg)";
+    Object.values(nos).forEach(n=>n.style.transform="rotate("+(-rot)+"deg)");
+    CANAIS.forEach(c=>{
+      const foco=!id||c.id===id, par=parceiros.includes(c.id);
+      nos[c.id].style.opacity=(foco||par)?1:.16;
+      raios[c.id].setAttribute("stroke", foco&&id?("var("+CORES[id]+")"):"var(--linha)");
+      raios[c.id].setAttribute("stroke-width", foco&&id?"2.6":"1.4");
+      raios[c.id].style.opacity=(!id||foco)?1:(par?.9:.25);
+    });
+    for(const k in cordas){
+      const [a,b]=k.split("|");
+      const ligada=id&&((a===id&&parceiros.includes(b))||(b===id&&parceiros.includes(a)));
+      cordas[k].setAttribute("stroke", ligada?("var("+CORES[id]+")"):"var(--linha)");
+      cordas[k].setAttribute("stroke-width", ligada?"2.6":"1.4");
+      cordas[k].style.opacity=ligada?.95:(id?.18:.7);
+    }
+  }
+  setFoco(null,[]);
+  return {setFoco};
+}
+
+/* ============ SLIDES ============ */
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const chip=id=>{const c=CANAIS.find(x=>x.id===id);return '<span class="chip" style="background:var('+CORES[id]+')">'+c.sigla+'</span>';};
+const S=[];
+
+S.push({foco:null,par:[],capa:true,html:`
+  <div class="capa-grid">
+    <div>
+      <div class="eyebrow">URC × UNIDADE DE INOVAÇÃO · CICLO DE OFICINAS POR CANAL · 2026</div>
+      <h1>Um time momentâneo.</h1>
+      <div class="barra" style="background:var(--tinta)"></div>
+      <p class="lead">A URC não vai para dentro da UI, nem a UI para dentro da URC. Por dois ciclos, as duas unidades trabalham como um time só — para cada projeto da Inovação encontrar seu lugar nos canais de relacionamento do Sebrae.</p>
+      <div class="legenda-mandala" id="legenda"></div>
+    </div>
+    <div id="mandala-capa" class="centro"></div>
+  </div>`});
+
+S.push({foco:null,par:[],html:`
+  <div class="eyebrow">POR QUE ESTAMOS AQUI</div>
+  <h2>Fechar 2026 aderente — ou encaminhado para 2027.</h2>
+  <div class="barra" style="background:var(--tinta)"></div>
+  <p class="lead">O movimento da Inovação: todos os projetos prioritários aderentes às estratégias e canais de relacionamento do Sebrae, dos instrumentos à migração de plataformas. Já existe estrada: <mark>Catalisa Gov com jornadas em ritmo avançado</mark>, <mark>ALI 100% integrado ao Foco</mark>, <mark>MEI + Inovador com demanda aberta na CNR</mark>.</p>
+  <div class="grade2" style="margin-top:26px">
+    <div class="bloco"><h3>Comitê de Atendimento e Relacionamento da Inovação</h3><p>Coordenadores e representantes dos núcleos, com três papéis:</p><ul><li>garantir adoção e engajamento do time em todo o ciclo;</li><li>analisar, curar e priorizar antes de chegar à URC — demanda qualificada, não pedido avulso;</li><li>consolidar a devolutiva: separar lacuna de entendimento de oportunidade de evolução do canal.</li></ul></div>
+    <div class="bloco"><h3>O espírito do ciclo</h3><p>Reconhecemos que conhecemos pouco dos processos da URC. A proposta não é sair da sessão com formulário preenchido; é <b>qualificar o debate para o formulário vir bem-feito depois</b>. As 3 horas são 100% URC e UI juntas.</p></div>
+  </div>`});
+
+S.push({foco:null,par:[],html:`
+  <div class="eyebrow">COMO FUNCIONA</div>
+  <h2>Dois ciclos, oito canais, uma régua.</h2>
+  <div class="barra" style="background:var(--tinta)"></div>
+  <div class="grade2">
+    <div class="bloco"><div class="num">Ciclo 1</div><p><b>11 a 21/08</b> · máximo de 1 apresentação por dia · 1ª sessão de cada canal.</p></div>
+    <div class="bloco"><div class="num">Ciclo 2</div><p><b>31/08 a 11/09</b> · 2ª sessão, ajustada com o aprendizado da primeira. Intervalo de calibragem: 24 a 28/08.</p></div>
+    <div class="bloco"><h3>Cada sessão (3h, presencial, grupos reduzidos)</h3><ul><li>apresentação do canal pela URC;</li><li>oficina em dois grupos: adoção, nivelamento, oportunidades;</li><li>devolutiva macro no mesmo encontro — mal-entendido se corrige na hora.</li></ul></div>
+    <div class="bloco"><h3>Depois da sessão</h3><p>Cada projeto entrega em até <b>5 dias úteis</b> o formulário de demandas da URC preenchido — ou a justificativa de não adoção. O Comitê cura e prioriza antes de qualquer coisa chegar à fila da URC.</p></div>
+  </div>`});
+
+S.push({foco:null,par:[],html:`
+  <div class="eyebrow">COMO LER ESTE MATERIAL</div>
+  <h2>A mandala: quando um canal fala, os outros escutam.</h2>
+  <div class="barra" style="background:var(--tinta)"></div>
+  <div class="duas">
+    <div>
+      <p class="lead">O cliente está no centro. Em volta, os oito canais e estratégias da URC — cada um com sua cor. A mandala gira conforme a conversa: <b>o canal em foco sobe ao topo e os demais ficam em transparência</b>, sem nunca sair do desenho. Porque nenhum canal atua sozinho.</p>
+      <div style="margin-top:18px;display:grid;gap:10px;max-width:56ch">
+        <p style="padding-left:14px;border-left:3px solid var(--linha)">Cada canal tem <b>duas telas</b>: a expectativa de fala combinada no e-mail à URC, e a leitura do canal <b>em rede</b> — o que ele consegue a mais quando conectado aos vizinhos.</p>
+        <p style="padding-left:14px;border-left:3px solid var(--linha)">Os selos separam autoria: <span class="selo">DO E-MAIL</span> é pauta pactuada; <span class="selo ui" style="--ativo:var(--c-cnr)">PROPOSTA UI</span> é sugestão nossa para o debate.</p>
+      </div>
+    </div>
+    <div id="mandala-guia" class="centro"></div>
+  </div>`});
+
+CANAIS.forEach(c=>{
+  const fala=c.fala.map(f=>'<li>'+esc(f[0])+(f[1]?'<small>'+esc(f[1])+'</small>':'')+'</li>').join('');
+  S.push({foco:c.id,par:[],canal:c,html:`
+    <div class="eyebrow">CANAL ${c.num} · 08 &nbsp;<b>${esc(c.sigla)}</b></div>
+    <h2>${esc(c.nome)}</h2>
+    <div class="barra"></div>
+    <p class="lead">${esc(c.lead)}</p>
+    <div style="margin-top:18px;max-width:60ch">
+      <p class="assin" style="margin-bottom:10px">Expectativa de fala · <span class="selo">DO E-MAIL</span></p>
+      <ul class="lista">${fala}</ul>
+    </div>`});
+  const par=[...new Set(c.con.flatMap(x=>x.p))];
+  const cons=c.con.map(x=>'<div class="conexao"><div class="com">COM '+x.p.map(chip).join(' ')+'</div><p style="font-size:14.5px">'+esc(x.t)+'</p></div>').join('');
+  S.push({foco:c.id,par:par,canal:c,tingida:true,html:`
+    <div class="eyebrow">CANAL ${c.num} · 08 &nbsp;<b>${esc(c.sigla)} EM REDE</b></div>
+    <h2>${esc(c.sigla=="FOC"?"Foco+":c.nome.split("—")[0].split("·").pop().trim())} no ecossistema</h2>
+    <div class="barra"></div>
+    <div class="sozinho">
+      <p>Sozinho, ${esc(c.sozinho)}</p>
+      <p class="forte"><b>Em rede,</b> ${esc(c.emrede)}</p>
+    </div>
+    <div class="duas">
+      <div>${cons}</div>
+      <div>
+        <div class="jogada"><div class="tt">JOGADA DA INOVAÇÃO · <span class="selo ${c.jogada.selo=="PROPOSTA UI"?"ui":""}">${c.jogada.selo}</span></div><p style="font-size:14.5px">${esc(c.jogada.t)}</p></div>
+      </div>
+    </div>`});
+});
+
+S.push({foco:null,par:[],html:`
+  <div class="eyebrow">A SOMA · <span class="selo ui" style="--ativo:var(--c-foco)">PROPOSTA UI</span></div>
+  <h2>Omnicanalidade que conta na meta.</h2>
+  <div class="barra" style="background:var(--tinta)"></div>
+  <div class="duas">
+    <div>
+      <p class="lead">Canal conectado não é estética: é a mecânica das metas de 2026. O <b>Índice de Engajamento</b> do Plano Sebrae mede clientes pela <b>profundidade e frequência</b> das soluções consumidas — e cada canal a mais na jornada é um toque a mais que pontua. A <b>Cobertura</b> cresce onde CNR e Rede alcançam quem o escritório não alcança. E a máquina já existe: a meta de omnicanalidade da URC (2025) entregou jornadas implantadas para 5 programas nacionais, com campanha no Foco e transbordo com fila estadual.</p>
+      <div style="margin-top:16px;display:grid;gap:10px;max-width:58ch">
+        <p style="padding-left:14px;border-left:3px solid var(--c-foco)"><b>A regra do jogo:</b> só conta o que está registrado. Pelas Diretrizes de Relacionamento, é o registro no Foco — pelo CPF do cliente — que consolida a jornada. Canal fora do Foco é esforço invisível.</p>
+        <p style="padding-left:14px;border-left:3px solid var(--linha)">Por isso a mandala tem centro: <b>omnicanalidade é o cliente atravessar canais sem que o Sebrae perca o fio</b> — e sem que a meta perca o ponto.</p>
+      </div>
+    </div>
+    <div id="mandala-omni" class="centro"></div>
+  </div>`});
+
+S.push({foco:null,par:[],html:`
+  <div class="eyebrow">ALÉM DO E-MAIL · <span class="selo ui" style="--ativo:var(--c-cnr)">PROPOSTA UI</span></div>
+  <h2>O que este material acrescenta ao pactuado.</h2>
+  <div class="barra" style="background:var(--tinta)"></div>
+  <div class="grade2">
+    <div class="bloco"><h3>Leitura em rede por canal</h3><p>Cada canal ganhou a tela "em rede": conexões nomeadas e uma jogada concreta com iniciativa da Inovação — matéria-prima para a oficina, não decisão tomada.</p></div>
+    <div class="bloco"><h3>Âncora nas metas 2026</h3><p>A ponte explícita entre adoção de canais e Engajamento e Cobertura do Plano Sebrae — o argumento que conecta a oficina ao indicador do gestor.</p></div>
+    <div class="bloco"><h3>Critério de demanda bem formulada</h3><p>Estratégia definida + transbordo desenhado + base qualificada: o espelho do que trava a fila da URC vira checklist do nosso formulário.</p></div>
+    <div class="bloco"><h3>Identidade para o ciclo</h3><p>Cores por canal e a mandala como marca das oficinas — o mesmo desenho pode abrir cada sessão, girado para o canal do dia.</p></div>
+  </div>`});
+
+S.push({foco:null,par:[],html:`
+  <div class="eyebrow">RÉGUA DE SUCESSO</div>
+  <h2>O que combinamos entregar.</h2>
+  <div class="barra" style="background:var(--tinta)"></div>
+  <div class="grade2">
+    <div class="bloco"><div class="num">31/08</div><p>Submissão dos novos instrumentos de relacionamento para análise das unidades envolvidas.</p></div>
+    <div class="bloco"><div class="num">30/09</div><p>Todos os projetos prioritários manifestos: pedido de adoção formalizado e articulado — ou não adoção justificada com feedback estruturado por canal.</p></div>
+    <div class="bloco"><h3>Compromissos da Inovação</h3><ul><li>todos os coordenadores em ao menos uma apresentação por canal;</li><li>representantes do Comitê em todas, como facilitadores;</li><li>todos os projetos prioritários representados nas oficinas;</li><li>formulário ou justificativa em até 5 dias úteis;</li><li>assistente dedicada às agendas e prazos.</li></ul></div>
+    <div class="bloco"><h3>Regras de convivência</h3><p>Não atravessar a priorização pactuada com pedidos paralelos. E o que pedimos à URC: devolutiva de triagem — aceito, aceito com ajustes, não aceito — com prazos estimados, para fechar o ciclo em encaminhamento concreto.</p></div>
+  </div>`});
+
+S.push({foco:null,par:[],capa:true,html:`
+  <div class="capa-grid">
+    <div id="mandala-fim" class="centro"></div>
+    <div>
+      <div class="eyebrow">ENCERRAMENTO</div>
+      <h1 style="font-size:clamp(30px,3.8vw,48px)">Juntas, as unidades serão um time momentâneo.</h1>
+      <div class="barra" style="background:var(--tinta)"></div>
+      <p class="lead">Obrigado pela parceria de construir isso conosco. Formato, agenda e conteúdo seguem abertos a ajuste — o desenho é da URC, o compromisso é nosso.</p>
+      <p style="margin-top:18px" class="assin">Ponto de contato · José Júnior (JR.) · Unidade de Inovação</p>
+    </div>
+  </div>`});
+
+/* ============ MOTOR ============ */
+const palco=document.getElementById("palco");
+S.forEach((s,i)=>{
+  const sec=document.createElement("section");
+  sec.className="slide"+(s.tingida?" tingida":"");
+  if(s.canal) sec.style.setProperty("--ativo","var("+CORES[s.canal.id]+")");
+  sec.innerHTML=s.html; palco.appendChild(sec); s.el=sec;
+});
+const legenda=document.getElementById("legenda");
+if(legenda) legenda.innerHTML=CANAIS.map(c=>'<span><i style="background:var('+CORES[c.id]+')"></i>'+c.sigla+'</span>').join("");
+const mini=criarMandala(document.getElementById("mini"),150);
+const grandes=[];
+[["mandala-capa",340],["mandala-guia",320],["mandala-omni",320],["mandala-fim",340]].forEach(([id,tam])=>{
+  const el=document.getElementById(id); if(el) grandes.push(criarMandala(el,tam));
+});
+const prog=document.getElementById("prog"), contador=document.getElementById("contador");
+let atual=0;
+function ir(n){
+  atual=Math.max(0,Math.min(S.length-1,n));
+  S.forEach((s,i)=>s.el.classList.toggle("ativa",i===atual));
+  const s=S[atual];
+  document.body.classList.toggle("semmini", !!s.capa);
+  const cor=s.canal?("var("+CORES[s.canal.id]+")"):"var(--tinta)";
+  prog.style.background=cor; prog.style.width=((atual+1)/S.length*100)+"%";
+  contador.textContent=(atual+1)+" / "+S.length;
+  mini.setFoco(s.foco,s.par);
+  grandes.forEach(m=>m.setFoco(s.foco,s.par));
+  location.hash="s"+(atual+1);
+}
+addEventListener("keydown",e=>{
+  if(["ArrowRight","PageDown"," "].includes(e.key)){e.preventDefault();ir(atual+1);}
+  if(["ArrowLeft","PageUp"].includes(e.key)){e.preventDefault();ir(atual-1);}
+  if(e.key==="Home")ir(0); if(e.key==="End")ir(S.length-1);
+  if(e.key.toLowerCase()==="p"){e.preventDefault();print();}
+});
+addEventListener("click",e=>{
+  if(e.target.closest("a,button,#mini"))return;
+  ir(e.clientX>innerWidth/2?atual+1:atual-1);
+});
+const h=parseInt((location.hash.match(/s(\d+)/)||[])[1]||"1",10);
+ir(h-1);
+</script>
+</body>
+</html>

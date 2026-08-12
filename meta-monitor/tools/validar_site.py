@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Testes F3–F5: cada página parseia, todo script/css/link local existe, ids obrigatórios presentes."""
+import subprocess, tempfile, re as _re
 import os, sys
 from html.parser import HTMLParser
 
@@ -45,3 +46,24 @@ for pg in sys.argv[1:] or paginas:
 if erros:
     print("FALHOU:"); [print(" -", e) for e in erros]; sys.exit(1)
 print("validar_site OK:", ", ".join(sys.argv[1:] or paginas))
+
+
+def _checar_inline(paginas):
+    erros = []
+    for p in paginas:
+        html = open(p, encoding="utf-8").read()
+        blocos = _re.findall(r"<script>(.*?)</script>", html, _re.S)
+        if not blocos:
+            continue
+        with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as f:
+            f.write("\n".join(blocos)); tmp = f.name
+        r = subprocess.run(["node", "--check", tmp], capture_output=True, text=True)
+        if r.returncode != 0:
+            erros.append(f"{p}: sintaxe do script embutido → " + next((l for l in r.stderr.splitlines() if "Error" in l), r.stderr.strip().splitlines()[-1]))
+    if erros:
+        print("FALHOU (inline JS):"); [print(" -", e) for e in erros]; raise SystemExit(1)
+    print("inline JS OK:", ", ".join(paginas))
+
+if __name__ == "__main__":
+    import sys as _sys
+    _checar_inline(_sys.argv[1:] or ["index.html","plano.html","caminho.html","agenda.html","demandas.html","participantes.html","editor.html"])

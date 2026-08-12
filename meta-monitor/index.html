@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Dashboard · Meta Inovação 2026 — Unidade de Inovação · Sebrae Nacional</title>
+<title>Dashboard · Carta de Corso — Unidade de Inovação · Sebrae Nacional</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -91,7 +91,7 @@
   const carga = CALC.cargaPorDia(DB.plano).filter(c => c.carga >= 2 && c.iso >= hoje);
   document.getElementById("radar").innerHTML = carga.length
     ? carga.map(c => '<div style="margin:4px 0"><span class="badge-dia"' + (c.carga >= 3 ? "" : ' style="background:var(--ambar-w);color:var(--ambar)"') + '>' +
-        CALC.fmtBR(c.iso) + " · " + c.carga + " entregas</span> <span class="mono" style="font-size:12px;color:var(--grafite)">" +
+        CALC.fmtBR(c.iso) + " · " + c.carga + ' entregas</span> <span class="mono" style="font-size:12px;color:var(--grafite)">' +
         c.ids.join(" · ") + "</span></div>").join("")
     : '<span style="color:var(--grafite)">Nenhum dia à frente concentra 2+ entregas.</span>';
 
