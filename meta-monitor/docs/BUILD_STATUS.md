@@ -25,3 +25,6 @@ conteúdo publicado (não assumidos a partir da linha acima). F7 foi conferida c
   iniciativas · 8 canais · 7 nós · 2 SLAs · 16 encontros".
 [23:50] F2 — OK (reconferido): `node tools/testar_calc.js` → KPIs, carga 14/08 e estados dos 7 nós
   calculados sem erro; "F2 OK".
+[23:50] F3 — OK (reconferido): `python3 tools/testar_kpis_cruzado.py` → KPIs Python == KPIs JS
+  (total 47, concluído 4, andamento 4, não 39, atrasadas 7, próx7 9, janela 22); `validar_site.py`
+  confirma index.html com scripts/links íntegros.
