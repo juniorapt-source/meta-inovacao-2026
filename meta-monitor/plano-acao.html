@@ -158,6 +158,7 @@
         .from(TABELA)
         .select("*")
         .eq("iniciativa", nome)
+        .is("deleted_at", null)
         .order("ordem", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -219,9 +220,13 @@
   }
 
   async function removerAtividade(id, row) {
-    if (!window.confirm("Remover esta atividade? Essa ação não pode ser desfeita.")) return;
+    if (!window.confirm("Remover esta atividade?")) return;
     try {
-      const { error } = await supa.from(TABELA).delete().eq("id", id);
+      // soft delete: marca deleted_at em vez de apagar a linha. A leitura já
+      // filtra .is("deleted_at", null), então some da UI sem tirar o
+      // histórico da tabela — nunca DELETE físico por aqui.
+      const agora = new Date().toISOString();
+      const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_at: agora }).eq("id", id);
       if (error) throw error;
       listaAtual = listaAtual.filter((a) => a.id !== id);
       row.remove();
