@@ -12,6 +12,7 @@ OBRIG = {
     "agenda.html": ["ciclos", "encontros"],
     "demandas.html": ["matriz", "legenda"],
     "participantes.html": ["pessoas", "pendencias"],
+    "projetos.html": ["secoes", "f-nucleo", "f-busca", "contagem"],
     "editor.html": ["ed-conjunto", "ed-area", "ed-baixar"],
 }
 
@@ -66,4 +67,4 @@ def _checar_inline(paginas):
 
 if __name__ == "__main__":
     import sys as _sys
-    _checar_inline(_sys.argv[1:] or ["index.html","plano.html","caminho.html","agenda.html","demandas.html","participantes.html","editor.html"])
+    _checar_inline(_sys.argv[1:] or ["index.html","plano.html","caminho.html","agenda.html","demandas.html","participantes.html","projetos.html","editor.html"])

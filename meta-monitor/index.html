@@ -9,6 +9,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
+<style>
+.kpi-largo{grid-column:span 2;display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.kpi-largo .kpi-largo-num{min-width:130px}
+.kpi-largo .kpi-largo-lista{flex:1;min-width:200px;font-size:12.5px;color:var(--tinta);border-left:1px solid var(--linha);padding-left:16px}
+.kpi-largo .kpi-largo-lista div{padding:3px 0}
+.kpi-largo .kpi-largo-nota{flex-basis:100%;font-size:11.5px;color:var(--grafite);border-top:1px solid var(--linha);padding-top:8px;margin-top:2px}
+.kpi .sub{font-size:11px;color:var(--grafite);margin-top:4px}
+@media (max-width:960px){ .kpi-largo{grid-column:span 1} }
+</style>
 </head>
 <body>
 <div class="shell">
@@ -55,6 +64,7 @@
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/changelog.js"></script>
+<script src="data/projetos.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
 <script>
@@ -84,8 +94,32 @@
     [k.prox7, "vencem em 7 dias", ""],
     [k.janela, "em janela (sem data fixa)", ""],
   ];
-  document.getElementById("kpis").innerHTML = itens.map(i =>
+  let kpisHtml = itens.map(i =>
     '<div class="card kpi ' + i[2] + '"><div class="n">' + i[0] + '</div><div class="l">' + i[1] + "</div></div>").join("");
+
+  // cards de portfólio de projetos (calculados a partir de DB.projetos, nada hardcodado)
+  const projetos = DB.projetos || [];
+  const nucleosProj = [...new Set(projetos.map(p => p.nucleo))];
+  const REP_PENDENTE = "Núcleo de Startups";
+  const repsDistintos = new Set();
+  let iniciativasPendentes = 0;
+  projetos.forEach(p => {
+    if (p.representantes.includes(REP_PENDENTE)) iniciativasPendentes++;
+    p.representantes.forEach(r => { if (r !== REP_PENDENTE) repsDistintos.add(r); });
+  });
+  const porNucleo = nucleosProj.map(n => [n, projetos.filter(p => p.nucleo === n).length]);
+
+  kpisHtml += '<div class="card kpi"><div class="n">' + projetos.length + '</div>' +
+    '<div class="l">Projetos no portfólio</div><div class="sub">Iniciativas mapeadas pela UI</div></div>';
+
+  kpisHtml += '<div class="card kpi kpi-largo">' +
+    '<div class="kpi-largo-num"><div class="n">' + repsDistintos.size + '</div><div class="l">Núcleos × representantes UI</div></div>' +
+    '<div class="kpi-largo-lista">' + porNucleo.map(([n, c]) => "<div>" + esc(n) + " — " + c + (c === 1 ? " projeto" : " projetos") + "</div>").join("") + "</div>" +
+    (iniciativasPendentes ? '<div class="kpi-largo-nota">' + iniciativasPendentes + (iniciativasPendentes === 1 ? " iniciativa aguarda" : " iniciativas aguardam") +
+      " indicação nominal do representante (pendência com a Sandra).</div>" : "") +
+    "</div>";
+
+  document.getElementById("kpis").innerHTML = kpisHtml;
 
   // radar de carga
   const carga = CALC.cargaPorDia(DB.plano).filter(c => c.carga >= 2 && c.iso >= hoje);

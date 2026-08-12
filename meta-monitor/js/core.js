@@ -9,6 +9,7 @@
     ["agenda.html", "Agenda dos ciclos"],
     ["demandas.html", "Matriz de demandas"],
     ["participantes.html", "Participantes"],
+    ["projetos.html", "Projetos"],
     ["editor.html", "Modo edição"],
   ];
 

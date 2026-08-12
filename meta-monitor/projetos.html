@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Projetos & Representantes · Carta de Corso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<style>
+.proj-secao{margin-bottom:16px;overflow:hidden}
+.proj-secao summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;font:700 15px Archivo,sans-serif}
+.proj-secao summary::-webkit-details-marker{display:none}
+.proj-secao summary::before{content:"▾";display:inline-block;margin-right:8px;color:var(--grafite);transition:transform .15s}
+.proj-secao:not([open]) summary::before{transform:rotate(-90deg)}
+.proj-secao summary .contagem{font:600 12px Inter,sans-serif;color:var(--grafite);text-transform:none;letter-spacing:0}
+.proj-secao .tab-wrap{overflow:auto;border-top:1px solid var(--linha)}
+.chip.pessoa{background:var(--grafite-w);color:var(--tinta);margin:2px 4px 2px 0}
+.proj-reps{display:flex;flex-wrap:wrap;gap:0}
+.proj-num{color:var(--grafite);font-size:12px;text-align:right;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Projetos & Representantes</h1>
+    <p class="pagina-sub">27 iniciativas do portfólio da UI, organizadas por núcleo, com os representantes indicados.</p>
+
+    <div class="filtros">
+      <select id="f-nucleo" aria-label="Filtrar por núcleo"></select>
+      <input id="f-busca" type="search" placeholder="Buscar por iniciativa ou representante…" aria-label="Buscar">
+    </div>
+
+    <div id="secoes"></div>
+    <p style="color:var(--grafite);font-size:12.5px;margin-top:10px" id="contagem"></p>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="data/projetos.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script>
+(function(){
+  montarShell("projetos.html");
+
+  const selN = document.getElementById("f-nucleo"), busca = document.getElementById("f-busca"),
+        secoes = document.getElementById("secoes");
+
+  const nucleos = [...new Set(DB.projetos.map(p => p.nucleo))];
+  selN.innerHTML = '<option value="">Todos os núcleos</option>' + nucleos.map(n => "<option>" + esc(n) + "</option>").join("");
+
+  function repsHtml(reps){
+    return '<div class="proj-reps">' +
+      [...reps].sort((a, b) => a.localeCompare(b, "pt-BR")).map(r => '<span class="chip pessoa">' + esc(r) + "</span>").join("") +
+      "</div>";
+  }
+
+  function render(){
+    const nv = selN.value, q = busca.value.trim().toLowerCase();
+    let visTotal = 0, html = "";
+
+    for (const nucleo of nucleos) {
+      if (nv && nucleo !== nv) continue;
+      const itens = DB.projetos.filter(p => p.nucleo === nucleo).filter(p =>
+        !q || (p.iniciativa + " " + p.representantes.join(" ")).toLowerCase().includes(q)
+      );
+      if (!itens.length) continue;
+      visTotal += itens.length;
+
+      html += '<details class="card proj-secao" open><summary>' +
+        "<span>" + esc(nucleo) + "</span>" +
+        '<span class="contagem">' + itens.length + (itens.length === 1 ? " iniciativa" : " iniciativas") + "</span>" +
+        "</summary>" +
+        '<div class="tab-wrap"><table><thead><tr><th>Iniciativa</th><th>Representante(s)</th><th style="width:40px"></th></tr></thead><tbody>' +
+        itens.map(p => "<tr><td>" + esc(p.iniciativa) + "</td><td>" + repsHtml(p.representantes) + "</td>" +
+          '<td class="proj-num">' + p.representantes.length + "</td></tr>").join("") +
+        "</tbody></table></div></details>";
+    }
+
+    secoes.innerHTML = html || '<div class="card" style="color:var(--grafite)">Nenhum projeto com esses filtros.</div>';
+    document.getElementById("contagem").textContent = visTotal + " de " + DB.projetos.length + " iniciativas exibidas.";
+  }
+
+  selN.addEventListener("change", render);
+  busca.addEventListener("input", render);
+  render();
+})();
+</script>
+</body>
+</html>

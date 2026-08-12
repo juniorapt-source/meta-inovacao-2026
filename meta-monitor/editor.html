@@ -70,6 +70,7 @@
 <script src="data/iniciativas.js"></script>
 <script src="data/matriz.js"></script>
 <script src="data/pessoas.js"></script>
+<script src="data/projetos.js"></script>
 <script src="data/changelog.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
@@ -81,10 +82,11 @@ const DB = window.DB, IO = window.EDITOR_IO;
 montarShell("editor.html");
 
 const CONJUNTOS = {
-  plano:  { rotulo:"Plano de ação — status e prazos", arquivo:"plano.js" },
-  matriz: { rotulo:"Matriz de demandas — 27 iniciativas × 10 canais", arquivo:"matriz.js" },
-  agenda: { rotulo:"Agenda — encontros dos ciclos", arquivo:"agenda.js" },
-  pessoas:{ rotulo:"Pessoas — representantes e papéis", arquivo:"pessoas.js" }
+  plano:   { rotulo:"Plano de ação — status e prazos", arquivo:"plano.js" },
+  matriz:  { rotulo:"Matriz de demandas — 27 iniciativas × 10 canais", arquivo:"matriz.js" },
+  agenda:  { rotulo:"Agenda — encontros dos ciclos", arquivo:"agenda.js" },
+  pessoas: { rotulo:"Pessoas — representantes e papéis", arquivo:"pessoas.js" },
+  projetos:{ rotulo:"Projetos & Representantes — núcleos e portfólio UI", arquivo:"projetos.js" }
 };
 const STATUS_ACAO = ["Não iniciado","Em andamento","Concluído"];
 const STATUS_ENC  = ["a agendar","agendado","confirmado","realizado","cancelado"];
@@ -92,7 +94,7 @@ const ESTADOS_CEL = ["","previsto","oficina","formulario","justificado","prioriz
 const ROTULO_CEL  = {"":"—","previsto":"previsto","oficina":"oficina feita","formulario":"formulário ok","justificado":"justificado","priorizado":"priorizado","encaminhado":"encaminhado"};
 
 /* cópia de trabalho isolada dos dados carregados */
-const W = JSON.parse(JSON.stringify({ plano:DB.plano, matriz:DB.matriz, agenda:DB.agenda, pessoas:DB.pessoas }));
+const W = JSON.parse(JSON.stringify({ plano:DB.plano, matriz:DB.matriz, agenda:DB.agenda, pessoas:DB.pessoas, projetos:DB.projetos }));
 
 const sel = document.getElementById("ed-conjunto");
 Object.keys(CONJUNTOS).forEach(k=>{
@@ -100,6 +102,7 @@ Object.keys(CONJUNTOS).forEach(k=>{
 });
 const area = document.getElementById("ed-area");
 const saida = document.getElementById("ed-saida");
+const NUCLEOS_VALIDOS = ["Inovação para competitividade","Inovação territorial","Startups","Tecnologias portadoras de futuro"];
 
 function opts(lista, atual, rot){
   const l = lista.includes(atual)||atual===""&&lista.includes("") ? lista : [atual].concat(lista);
@@ -280,8 +283,23 @@ function renderPessoas(){
   }));
 }
 
+function renderProjetos(){
+  let h='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Núcleo</th><th>Iniciativa</th><th>Representantes (vírgula)</th></tr></thead><tbody>';
+  W.projetos.forEach((p,i)=>{
+    h+='<tr><td><select data-i="'+i+'" data-f="nucleo">'+opts(NUCLEOS_VALIDOS,p.nucleo)+'</select></td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="iniciativa" value="'+esc(p.iniciativa)+'"></td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="representantes" value="'+esc(p.representantes.join(", "))+'" placeholder="ex.: Carol, Matheus"></td></tr>';
+  });
+  area.innerHTML=h+'</tbody></table></div>';
+  area.querySelectorAll("select,input").forEach(el=>el.addEventListener("change",e=>{
+    const t=e.target, p=W.projetos[+t.dataset.i], f=t.dataset.f;
+    if(f==="representantes") p.representantes = t.value.split(",").map(s=>s.trim()).filter(Boolean);
+    else p[f]=t.value;
+  }));
+}
+
 function render(){
-  ({plano:renderPlano, matriz:renderMatriz, agenda:renderAgenda, pessoas:renderPessoas})[sel.value]();
+  ({plano:renderPlano, matriz:renderMatriz, agenda:renderAgenda, pessoas:renderPessoas, projetos:renderProjetos})[sel.value]();
   saida.value="";
 }
 sel.addEventListener("change", render);
