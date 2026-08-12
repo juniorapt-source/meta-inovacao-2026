@@ -24,5 +24,10 @@ window.DB.changelog = [
   "data": "2026-08-12",
   "versao": "0.5.0",
   "nota": "Nova identidade visual \"Carta Náutica\": paleta papel-de-mapa-antigo, tipografia Spectral + DM Sans + IBM Plex Mono, texturas náuticas de fundo. Aplicada a todo o painel — só tema, estrutura e funcionalidades continuam iguais."
+ },
+ {
+  "data": "2026-08-12",
+  "versao": "0.5.1",
+  "nota": "Marca no menu lateral passa a ler o nome do projeto (\"Carta de Corso\") em vez do texto fixo \"Meta Inovação 2026\" — alinhada com o nome já usado nos títulos das páginas."
  }
 ];

@@ -35,7 +35,7 @@
     const nav = document.querySelector(".nav");
     if (!nav) return;
     const cfg = DB.config || { projeto: "Carta de Corso", versao: "dev", atualizado_em: "" };
-    let html = '<div class="marca">Meta Inovação 2026<small>' + esc(cfg.subtitulo || "") + "</small></div>";
+    let html = '<div class="marca">' + esc(cfg.projeto || "Carta de Corso") + "<small>" + esc(cfg.subtitulo || "") + "</small></div>";
     for (const [href, rotulo] of PAGINAS) {
       const ativo = href === paginaAtual ? ' class="ativo" aria-current="page"' : "";
       html += '<a href="' + href + '"' + ativo + ">" + rotulo + "</a>";
