@@ -9,7 +9,10 @@
   /* paleta */
   --bg:#f4efe4; --surface:#fbf8f0;
   --ink:#2b2620; --ink-rgb:43,38,32;
-  --ink-2:rgba(43,38,32,.55); --ink-3:rgba(43,38,32,.35);
+  /* .55/.35 originais falhavam WCAG AA (4.5:1) contra os fundos reais de tabela — surface,
+     ceu e neutro-w medem entre 2:1 e 3.5:1; .72/.68 seguram >=4.7:1 nos três (checado com o
+     fórmula de luminância relativa do WCAG, contra o pior caso de cada um) */
+  --ink-2:rgba(43,38,32,.72); --ink-3:rgba(43,38,32,.68);
   --accent:#8f2d2d; --accent-w:#f0dcd7; --accent-hover:#762424;
   --border:rgba(43,38,32,.22); --border-soft:rgba(43,38,32,.15);
 
@@ -68,7 +71,7 @@ a{color:inherit;text-decoration:none} a:hover{color:var(--accent);text-decoratio
 .nav a.ativo{background:rgba(143,45,45,.2);border-left-color:var(--accent);color:#f4efe4;font-weight:700}
 .nav .rodape{margin-top:auto;font-family:'IBM Plex Mono';font-size:10.5px;color:rgba(244,239,228,.42);
   border-top:1px solid rgba(244,239,228,.14);padding-top:12px}
-.nav .rodape::after{content:"Confidencial · Documento de bordo";display:block;margin-top:8px;
+.nav .rodape::after{content:"Uso interno · Unidade de Inovação";display:block;margin-top:8px;
   font-family:'DM Sans';font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;
   color:rgba(244,239,228,.34)}
 .conteudo{position:relative;padding:26px 30px 60px;max-width:1180px;width:100%}
@@ -150,7 +153,10 @@ tr.detalhe td{background:rgba(43,38,32,.02);border-left:3px solid var(--accent);
 .filtros input{min-width:200px}
 
 /* ---- matriz ---- */
-.matriz-wrap{overflow:auto;max-height:70vh;border:1px solid var(--border)}
+/* fundo sólido explícito — sem isso a textura quadriculada do body (e a rosa dos ventos
+   de .conteudo::before) aparecem atrás das células sem cor própria (ex.: os "gaps" ao
+   redor dos badges .cel-*), que é justamente o ruído que essa seção precisa não ter */
+.matriz-wrap{overflow:auto;max-height:70vh;border:1px solid var(--border);background:var(--surface)}
 .matriz td,.matriz th{padding:6px 8px;font-size:12px}
 .matriz td:first-child,.matriz th:first-child{position:sticky;left:0;background:var(--surface);font-weight:600;
   min-width:180px;z-index:2}

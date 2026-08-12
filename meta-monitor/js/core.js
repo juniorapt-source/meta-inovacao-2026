@@ -10,7 +10,7 @@
     ["demandas.html", "Matriz de demandas"],
     ["participantes.html", "Participantes"],
     ["projetos.html", "Projetos"],
-    ["plano-acao.html", "Plano de Ação x Projeto"],
+    ["plano-acao.html", "Atividades por iniciativa"],
     ["corsario.html", "O Caminho para o Corsário"],
     ["editor.html", "Modo edição"],
   ];
