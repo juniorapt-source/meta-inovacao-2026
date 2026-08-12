@@ -59,6 +59,32 @@ for p in projetos:
     inic_projetos.append(p.get("iniciativa"))
 check(len(inic_projetos) == len(set(inic_projetos)), "projetos: iniciativa duplicada")
 
+# projetos.js é a fonte canônica de autoria por iniciativa — qualquer outro dataset que
+# cite uma iniciativa precisa apontar pra um nome que exista aqui.
+inic_proj = set(inic_projetos)
+for nome in inic:
+    check(nome in inic_proj, f"iniciativas.js: iniciativa {nome!r} não cadastrada em data/projetos.js")
+for nome in db.get("matriz", {}).keys():
+    check(nome in inic_proj, f"matriz.js: iniciativa {nome!r} não cadastrada em data/projetos.js")
+
+# guardrail anti-duplicação: nenhum outro data/*.js pode reintroduzir um campo de autoria
+# (isso é o que causou o "Criss"/"Cris" e o "Dario / Rafa" divergindo do array de projetos.js)
+CAMPO_AUTORIA = re.compile(r"respons|dono|gestor|representante|owner", re.I)
+def campos_suspeitos(obj, origem, caminho=""):
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            p = f"{caminho}.{k}" if caminho else k
+            if CAMPO_AUTORIA.search(k):
+                erros.append(f"{origem}: campo {p!r} duplica autoria — fonte canônica é data/projetos.js")
+            campos_suspeitos(v, origem, p)
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            campos_suspeitos(v, origem, f"{caminho}[{i}]")
+
+for nome_ds, dados in db.items():
+    if nome_ds == "projetos": continue
+    campos_suspeitos(dados, f"data/{nome_ds}.js")
+
 if erros:
     print("FALHOU:"); [print(" -", e) for e in erros]; sys.exit(1)
 print(f"F1 OK — {len(db['plano'])} ações · {len(db['iniciativas'])} iniciativas · {len(db['canais'])} canais · 7 nós · 2 SLAs · {len(db['agenda']['encontros'])} encontros")

@@ -100,23 +100,32 @@
   // cards de portfólio de projetos (calculados a partir de DB.projetos, nada hardcodado)
   const projetos = DB.projetos || [];
   const nucleosProj = [...new Set(projetos.map(p => p.nucleo))];
-  const REP_PENDENTE = "Núcleo de Startups";
-  const repsDistintos = new Set();
-  let iniciativasPendentes = 0;
+  const PLACEHOLDER_RE = /^núcleo de/i; // representante que não é pessoa física (pendência de indicação)
+  const gestores = new Set();
+  const iniciativasPendentes = [];
   projetos.forEach(p => {
-    if (p.representantes.includes(REP_PENDENTE)) iniciativasPendentes++;
-    p.representantes.forEach(r => { if (r !== REP_PENDENTE) repsDistintos.add(r); });
+    let pendente = false;
+    p.representantes.forEach(r => {
+      const nome = r.trim();
+      if (!nome) return;
+      if (PLACEHOLDER_RE.test(nome)) { pendente = true; return; }
+      gestores.add(nome);
+    });
+    if (pendente) iniciativasPendentes.push(p.iniciativa);
   });
+  const totalGestores = gestores.size;
   const porNucleo = nucleosProj.map(n => [n, projetos.filter(p => p.nucleo === n).length]);
 
   kpisHtml += '<div class="card kpi"><div class="n">' + projetos.length + '</div>' +
     '<div class="l">Projetos no portfólio</div><div class="sub">Iniciativas mapeadas pela UI</div></div>';
 
   kpisHtml += '<div class="card kpi kpi-largo">' +
-    '<div class="kpi-largo-num"><div class="n">' + repsDistintos.size + '</div><div class="l">Núcleos × representantes UI</div></div>' +
+    '<div class="kpi-largo-num"><div class="n">' + totalGestores + '</div><div class="l">Gestores de projetos na UI</div>' +
+      '<div class="sub">' + totalGestores + " gestores de projetos</div></div>" +
     '<div class="kpi-largo-lista">' + porNucleo.map(([n, c]) => "<div>" + esc(n) + " — " + c + (c === 1 ? " projeto" : " projetos") + "</div>").join("") + "</div>" +
-    (iniciativasPendentes ? '<div class="kpi-largo-nota">' + iniciativasPendentes + (iniciativasPendentes === 1 ? " iniciativa aguarda" : " iniciativas aguardam") +
-      " indicação nominal do representante (pendência com a Sandra).</div>" : "") +
+    (iniciativasPendentes.length ? '<div class="kpi-largo-nota">' + iniciativasPendentes.length +
+      (iniciativasPendentes.length === 1 ? " iniciativa aguarda" : " iniciativas aguardam") +
+      " indicação nominal (" + iniciativasPendentes.map(esc).join(", ") + ").</div>" : "") +
     "</div>";
 
   document.getElementById("kpis").innerHTML = kpisHtml;
