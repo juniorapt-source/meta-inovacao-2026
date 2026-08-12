@@ -7,14 +7,14 @@
 <title>Agenda dos ciclos · Carta de Corso</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 <style>
 .vista-toggle{display:flex;gap:8px;margin-bottom:12px}
 .vista-toggle button{font:600 12px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.06em;padding:8px 14px;border-radius:0;border:1px solid var(--linha);background:var(--branco);color:var(--tinta);cursor:pointer}
 .vista-toggle button.ativo{background:var(--azul);color:var(--branco);border-color:var(--azul)}
 .cal-topo{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px}
-.cal-titulo{font:600 18px 'Spectral',Georgia,serif;text-transform:capitalize}
+.cal-titulo{font:600 18px var(--font-sans);text-transform:capitalize}
 .cal-nav{display:flex;gap:6px}
 .cal-nav button{padding:6px 12px;font-size:14px}
 .cal-cabecalho{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;font:600 10.5px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--grafite);text-align:center;padding:4px 0}
@@ -63,12 +63,7 @@
       </div>
 
       <div id="vista-lista">
-        <div class="card" style="padding:0;overflow:auto">
-          <table>
-            <thead><tr><th>Ciclo</th><th>Canal</th><th>Pauta (resumo)</th><th>Data</th><th>Local · modo</th><th>Confirmações</th><th>Status</th></tr></thead>
-            <tbody id="encontros"></tbody>
-          </table>
-        </div>
+        <div id="encontros"></div>
       </div>
 
       <div id="vista-calendario" class="card" style="display:none"></div>
@@ -101,19 +96,37 @@
     '<div style="font-size:12.5px;color:var(--grafite)">' + esc(c.regra) + (c.obs ? " · " + esc(c.obs) : "") + "</div></div>").join("");
 
   const porCanal = Object.fromEntries(DB.canais.map(c => [c.id, c]));
-  const nomeCiclo = Object.fromEntries(DB.agenda.ciclos.map(c => [c.id, c.nome]));
-  document.getElementById("encontros").innerHTML = DB.agenda.encontros.map(e => {
+
+  // dia da semana abreviado (pt-BR, minúsculo, 3 letras) ao lado da data — parse local-safe
+  // igual ao resto do site (evita o off-by-one de fuso de "new Date(iso)" cru)
+  const DIAS_SEMANA_ABREV = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  function diaSemanaAbrev(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    return DIAS_SEMANA_ABREV[new Date(y, m - 1, d).getDay()];
+  }
+
+  function linhaEncontro(e) {
     const c = porCanal[e.canal];
     const stCls = e.status === "realizado" ? "st-concluido" : e.status === "confirmado" ? "st-andamento" : "st-janela";
     return "<tr>" +
-      '<td class="mono" style="font-size:12px;white-space:nowrap">' + esc(nomeCiclo[e.ciclo] || e.ciclo) + "</td>" +
       "<td><b>" + esc(c.nome) + '</b><div style="color:var(--grafite);font-size:11.5px">' + esc(c.formato) + "</div></td>" +
       '<td style="font-size:12.5px;color:var(--grafite);max-width:340px">' + c.pauta.slice(0, 2).map(esc).join(" · ") +
         (c.pauta.length > 2 ? " · +" + (c.pauta.length - 2) : "") + "</td>" +
-      '<td class="mono" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + (e.turno ? " · " + esc(e.turno) : "") + (e.hora ? " " + esc(e.hora) : "") : "—") + "</td>" +
+      '<td class="mono" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + " (" + diaSemanaAbrev(e.data) + ")" + (e.turno ? " · " + esc(e.turno) : "") + (e.hora ? " " + esc(e.hora) : "") : "—") + "</td>" +
       "<td>" + (e.local ? esc(e.local) : "—") + ' <span style="color:var(--grafite);font-size:11.5px">' + esc(e.modo) + "</span></td>" +
       '<td class="mono" style="font-size:12.5px">' + (e.convidados ? e.confirmados + "/" + e.convidados : "—") + "</td>" +
       '<td><span class="chip ' + stCls + '">' + esc(e.status) + "</span>" + (e.nota ? '<div style="font-size:11px;color:var(--grafite)">' + esc(e.nota) + "</div>" : "") + "</td></tr>";
+  }
+
+  // um card por ciclo (título próprio) em vez de uma tabela única com coluna "Ciclo" —
+  // a coluna sai porque o bloco já deixa isso implícito
+  document.getElementById("encontros").innerHTML = DB.agenda.ciclos.map((c) => {
+    const linhas = DB.agenda.encontros.filter((e) => e.ciclo === c.id);
+    return '<h3 style="font-size:15px;margin:18px 0 8px">' + esc(c.nome) + "</h3>" +
+      '<div class="card" style="padding:0;overflow:auto">' +
+        "<table><thead><tr><th>Canal</th><th>Pauta (resumo)</th><th>Data</th><th>Local · modo</th><th>Confirmações</th><th>Status</th></tr></thead>" +
+        "<tbody>" + (linhas.length ? linhas.map(linhaEncontro).join("") : '<tr><td colspan="6" style="color:var(--grafite)">Nenhum encontro cadastrado.</td></tr>') + "</tbody></table>" +
+      "</div>";
   }).join("");
 
   /* toggle Lista / Calendário — o calendário só é montado na primeira vez que é aberto */

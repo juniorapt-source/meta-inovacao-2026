@@ -7,7 +7,7 @@
 <title>Caminho crítico · Carta de Corso</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 </head>
 <body>
@@ -15,18 +15,13 @@
   <nav class="nav" aria-label="Navegação do painel"></nav>
   <main class="conteudo">
     <h1 class="pagina-titulo">Caminho crítico</h1>
-    <p class="pagina-sub">Os 7 nós de folga zero, com guardião, fallback pré-combinado e gatilho de escalada — mais os 2 SLAs a negociar e onde mora a folga do ano.</p>
+    <p class="pagina-sub">Os 7 nós de folga zero, com guardião, fallback pré-combinado e gatilho de escalada — mais os 2 SLAs a negociar.</p>
 
     <div id="lista-nos" class="grid" style="grid-template-columns:1fr"></div>
 
     <section class="secao">
       <h2>SLAs a negociar <span class="hint">◆ compromissos externos que destravam o fim do ano</span></h2>
       <div id="slas" class="grid" style="grid-template-columns:1fr 1fr"></div>
-    </section>
-
-    <section class="secao">
-      <h2>Onde mora a folga</h2>
-      <div class="aviso" id="folga"></div>
     </section>
   </main>
 </div>
@@ -71,8 +66,6 @@
     '<div style="font-size:12.5px;margin-bottom:6px">' +
     s.acoes.map(a => '<a class="mono" href="plano.html#' + a + '">' + a + "</a>").join(" · ") + "</div>" +
     '<p style="font-size:13px">' + esc(s.acao) + "</p></article>").join("");
-
-  document.getElementById("folga").textContent = DB.nos.folga;
 
   if (window.matchMedia("(max-width:960px)").matches)
     document.getElementById("slas").style.gridTemplateColumns = "1fr";

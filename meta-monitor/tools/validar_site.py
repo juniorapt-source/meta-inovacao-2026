@@ -6,9 +6,9 @@ from html.parser import HTMLParser
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OBRIG = {
-    "index.html": ["trilho", "kpis", "radar", "atrasadas", "prox", "log"],
+    "index.html": ["trilho", "kpis", "radar", "atrasadas", "prox"],
     "plano.html": ["tabela", "f-frente", "f-status", "f-resp", "f-busca"],
-    "caminho.html": ["lista-nos", "slas", "folga"],
+    "caminho.html": ["lista-nos", "slas"],
     "agenda.html": ["ciclos", "encontros"],
     "demandas.html": ["matriz", "legenda"],
     "participantes.html": ["pessoas", "pendencias"],

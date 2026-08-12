@@ -7,7 +7,7 @@
 <title>Matriz de demandas · Carta de Corso</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 <script src="js/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -15,8 +15,8 @@
 .mz-topo{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}
 .mz-status{font-size:12.5px;color:var(--grafite)}
 .mz-acoes{display:flex;gap:8px;flex-wrap:wrap}
-.mz-aviso{background:var(--ambar-w);border:1px solid rgba(43,38,32,.2);border-radius:0;padding:10px 14px;font-family:'Spectral',Georgia,serif;font-size:13.5px;color:#5c481a;margin-bottom:14px}
-.mz-erro{background:var(--critico-w);border:1px solid rgba(43,38,32,.2);border-radius:0;padding:10px 14px;font-family:'Spectral',Georgia,serif;font-size:13.5px;color:var(--critico);margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.mz-aviso{background:var(--ambar-w);border:1px solid rgba(43,38,32,.2);border-radius:0;padding:10px 14px;font-family:var(--font-sans);font-size:13.5px;color:#5c481a;margin-bottom:14px}
+.mz-erro{background:var(--critico-w);border:1px solid rgba(43,38,32,.2);border-radius:0;padding:10px 14px;font-family:var(--font-sans);font-size:13.5px;color:var(--critico);margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .mz-skel{display:grid;gap:6px}
 .mz-skel div{height:34px;border-radius:0;background:linear-gradient(90deg,var(--neutro-w) 25%,var(--branco) 37%,var(--neutro-w) 63%);background-size:400% 100%;animation:mz-shimmer 1.4s ease infinite}
 @keyframes mz-shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
@@ -89,8 +89,8 @@
   "use strict";
   montarShell("demandas.html");
 
-  const ORDEM = ["", "previsto", "oficina", "formulario", "justificado", "priorizado", "encaminhado"];
-  const ROTULO = {"":"—","previsto":"previsto","oficina":"oficina feita","formulario":"formulário ok","justificado":"justificado","priorizado":"priorizado","encaminhado":"encaminhado"};
+  const ORDEM = ["", "previsto", "oficina_confirmada", "oficina", "formulario", "justificado", "nao_aplica", "priorizado", "encaminhado"];
+  const ROTULO = {"":"—","previsto":"previsto","oficina_confirmada":"Oficina confirmada","oficina":"oficina feita","formulario":"formulário ok","justificado":"justificado","nao_aplica":"Não se aplica o uso","priorizado":"priorizado","encaminhado":"encaminhado"};
   const CANAIS = DB.canais;
   const CANAL_IDS = CANAIS.map(c => c.id);
 

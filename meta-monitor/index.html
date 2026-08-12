@@ -7,7 +7,7 @@
 <title>Dashboard · Carta de Corso — Unidade de Inovação · Sebrae Nacional</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 <style>
 .kpi-largo{grid-column:span 2;display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
@@ -24,7 +24,7 @@
 .kpi-chevron{font-size:13px;line-height:1;color:var(--grafite);font-weight:600;transition:transform .15s}
 .kpi-lista{max-height:0;overflow:hidden;transition:max-height .2s ease}
 .kpi-lista-inner{padding-top:10px}
-.kpi-item{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--linha);font-size:.85rem;font-family:'Spectral',Georgia,serif}
+.kpi-item{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--linha);font-size:.85rem;font-family:var(--font-sans)}
 .kpi-item:first-child{border-top:none}
 .kpi-item-id{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--grafite);min-width:54px;flex-shrink:0}
 .kpi-item-tit{flex:1;color:var(--tinta);min-width:0}
@@ -52,7 +52,7 @@
     </section>
 
     <section class="secao">
-      <h2>Radar de carga <span class="hint">dias com 2+ entregas pendentes — distribuir com Sandra e Pova</span></h2>
+      <h2>Radar de carga <span class="hint">dias com 2+ entregas pendentes</span></h2>
       <div class="card" id="radar"></div>
     </section>
 
@@ -66,18 +66,12 @@
         <div class="card" id="prox"></div>
       </section>
     </div>
-
-    <section class="secao">
-      <h2>Atualizações do ambiente</h2>
-      <div class="card" id="log"></div>
-    </section>
   </main>
 </div>
 
 <script src="data/config.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
-<script src="data/changelog.js"></script>
 <script src="data/projetos.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
@@ -340,11 +334,6 @@
       '<span class="mono" style="font-size:12px">' + esc(a.prazo) + "</span>" +
       '<span class="chip ' + cls + '">' + rot + "</span></div>";
   }
-
-  // changelog
-  document.getElementById("log").innerHTML = DB.changelog.map(c =>
-    '<div style="padding:5px 0"><span class="mono" style="font-size:12px;color:var(--grafite)">' + CALC.fmtBR(c.data) +
-    " · v" + esc(c.versao) + "</span> — " + esc(c.nota) + "</div>").join("");
 
   if (window.matchMedia("(max-width:960px)").matches)
     document.getElementById("duas-colunas").style.gridTemplateColumns = "1fr";

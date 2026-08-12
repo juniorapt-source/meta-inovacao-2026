@@ -7,12 +7,12 @@
 <title>Projetos & Representantes · Carta de Corso</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 <style>
 .proj-secao{margin-bottom:16px;overflow:hidden}
 .proj-secao summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
-  padding:14px 18px;font:600 16px 'Spectral',Georgia,serif}
+  padding:14px 18px;font:600 16px var(--font-sans)}
 .proj-secao summary::-webkit-details-marker{display:none}
 .proj-secao summary::before{content:"▾";display:inline-block;margin-right:8px;color:var(--grafite);transition:transform .15s}
 .proj-secao:not([open]) summary::before{transform:rotate(-90deg)}
@@ -53,6 +53,19 @@
   const nucleos = [...new Set(DB.projetos.map(p => p.nucleo))];
   selN.innerHTML = '<option value="">Todos os núcleos</option>' + nucleos.map(n => "<option>" + esc(n) + "</option>").join("");
 
+  // pessoas distintas por núcleo, considerando TODAS as iniciativas do núcleo (não só as que
+  // passam no filtro de busca) — mesmo critério de "pessoa física" já usado no dashboard
+  // (index.html): "Núcleo de Startups" é placeholder de indicação pendente, não conta.
+  const PLACEHOLDER_RE = /^núcleo de/i;
+  const pessoasPorNucleo = new Map(nucleos.map(n => {
+    const distintos = new Set();
+    DB.projetos.filter(p => p.nucleo === n).forEach(p => p.representantes.forEach(r => {
+      const nome = r.trim();
+      if (nome && !PLACEHOLDER_RE.test(nome)) distintos.add(nome);
+    }));
+    return [n, distintos.size];
+  }));
+
   function repsHtml(reps){
     return '<div class="proj-reps">' +
       [...reps].sort((a, b) => a.localeCompare(b, "pt-BR")).map(r => '<span class="chip pessoa">' + esc(r) + "</span>").join("") +
@@ -73,7 +86,10 @@
 
       html += '<details class="card proj-secao" open><summary>' +
         "<span>" + esc(nucleo) + "</span>" +
-        '<span class="contagem">' + itens.length + (itens.length === 1 ? " iniciativa" : " iniciativas") + "</span>" +
+        '<span style="display:flex;gap:14px;align-items:center">' +
+          '<span class="contagem">' + itens.length + (itens.length === 1 ? " iniciativa" : " iniciativas") + "</span>" +
+          '<span class="contagem">Pessoas envolvidas: ' + pessoasPorNucleo.get(nucleo) + "</span>" +
+        "</span>" +
         "</summary>" +
         '<div class="tab-wrap"><table><thead><tr><th>Iniciativa</th><th>Representante(s)</th><th style="width:40px"></th></tr></thead><tbody>' +
         itens.map(p => "<tr><td>" + esc(p.iniciativa) + "</td><td>" + repsHtml(p.representantes) + "</td>" +

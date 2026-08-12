@@ -7,7 +7,7 @@
 <title>Participantes · Carta de Corso</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 </head>
 <body>
@@ -39,16 +39,25 @@
 
   /* rótulo exibido no card, quando difere do valor cru de "grupo" */
   const TITULO_GRUPO = { "Comitê": "Comitê de Atendimento e Relacionamento da Inovação" };
-  /* grupos onde a linha de descrição abaixo do nome fica oculta (Núcleos usa "nucleo" no lugar) */
-  const SEM_DESCRICAO = new Set(["Comitê", "UI"]);
+  /* grupos onde a linha de descrição abaixo do nome fica oculta (Núcleos mostra o núcleo
+     inline ao lado do nome agora, não mais como linha separada) */
+  const SEM_DESCRICAO = new Set(["Comitê", "UI", "Núcleos"]);
+
+  // núcleo por pessoa, puxado da mesma fonte que já popula os participantes (data/pessoas.js,
+  // grupo "Núcleos") — casamento por nome exato; sem match não escreve nada (o painel não inventa dado)
+  const nucleoPorNome = new Map(DB.pessoas.filter(p => p.grupo === "Núcleos").map(p => [p.nome, p.nucleo]));
+  function sufixoNucleo(nome) {
+    const n = nucleoPorNome.get(nome);
+    return n ? " — " + esc(n) : "";
+  }
 
   const grupos = [...new Set(DB.pessoas.map(p => p.grupo))];
   const blocos = grupos.map(g =>
     '<section class="card"><h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin-bottom:8px">' + esc(TITULO_GRUPO[g] || g) + "</h3>" +
     DB.pessoas.filter(p => p.grupo === g).map(p => {
-      const desc = g === "Núcleos" ? (p.nucleo || "") : (SEM_DESCRICAO.has(g) ? "" : (p.papel || ""));
+      const desc = SEM_DESCRICAO.has(g) ? "" : (p.papel || "");
       return '<div style="padding:7px 0;border-bottom:1px solid var(--linha)">' +
-        "<b>" + esc(p.nome) + "</b>" + (p.pendente ? ' <span class="chip st-atrasada">pendente</span>' : "") +
+        "<b>" + esc(p.nome) + "</b>" + sufixoNucleo(p.nome) + (p.pendente ? ' <span class="chip st-atrasada">pendente</span>' : "") +
         (desc ? '<div style="font-size:12.5px;color:var(--grafite)">' + esc(desc) + "</div>" : "") + "</div>";
     }).join("") +
     "</section>");
@@ -57,39 +66,33 @@
   function renderUrc() {
     const lid = DB.urc_lideranca || [];
     const canais = DB.urc_canais || [];
-    const comIndicacao = canais.filter(c => c.responsaveis && c.responsaveis.length > 0);
-    const operacionais = new Set();
-    canais.forEach(c => (c.responsaveis || []).forEach(r => operacionais.add(r.nome)));
 
     let h = '<section class="card"><h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin-bottom:8px">URC</h3>';
     h += lid.map(p =>
-      '<div style="padding:7px 0;border-bottom:1px solid var(--linha)"><b>' + esc(p.nome) + "</b>" +
+      '<div style="padding:7px 0;border-bottom:1px solid var(--linha)"><b>' + esc(p.nome) + "</b>" + sufixoNucleo(p.nome) +
       '<div style="font-size:12.5px;color:var(--grafite)">' + esc(p.papel) + "</div></div>"
     ).join("");
 
-    h += '<h4 style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin:14px 0 6px">' +
-      "Responsáveis por canal" +
-      '<span style="font-weight:500;text-transform:none;letter-spacing:0;margin-left:6px">— ' +
-      comIndicacao.length + " de " + canais.length + " canais com indicação</span></h4>";
+    h += '<h4 style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin:14px 0 6px">Responsáveis por canal</h4>';
 
     h += canais.map(c => {
       const reps = c.responsaveis || [];
       const conteudo = reps.length
-        ? reps.map(r => '<span class="chip pessoa">' + esc(r.nome) + "</span>").join("")
+        ? reps.map(r => '<span class="chip pessoa">' + esc(r.nome) + sufixoNucleo(r.nome) + "</span>").join("")
         : '<span class="chip st-janela">aguardando indicação</span>';
       return '<div style="padding:6px 0;border-bottom:1px solid var(--linha)"><b style="font-size:13px">' + esc(c.canal) + "</b>" +
         '<div style="margin-top:4px">' + conteudo + "</div></div>";
     }).join("");
 
-    h += '<div style="font-size:12px;color:var(--grafite);margin-top:10px">' +
-      operacionais.size + " responsáveis operacionais indicados ao todo</div>";
     h += "</section>";
     return h;
   }
 
-  // insere o card da URC logo após o Comitê, preservando a posição visual de antes
-  const posComite = grupos.indexOf("Comitê");
-  blocos.splice(posComite === -1 ? 0 : posComite + 1, 0, renderUrc());
+  // Comitê vai primeiro (topo-esquerda no grid de 2 colunas), sem mudar a ordem relativa
+  // dos demais grupos; URC continua entrando logo depois do Comitê, como já era
+  const posComiteOriginal = grupos.indexOf("Comitê");
+  if (posComiteOriginal > 0) blocos.unshift(blocos.splice(posComiteOriginal, 1)[0]);
+  blocos.splice(1, 0, renderUrc());
 
   document.getElementById("pessoas").innerHTML = blocos.join("");
 
