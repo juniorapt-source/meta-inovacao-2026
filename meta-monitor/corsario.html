@@ -28,8 +28,13 @@
 .crs-frota-data b{display:block;color:var(--tinta);font-weight:600;margin-top:2px}
 @media (max-width:640px){ .crs-frota{flex-direction:column;align-items:stretch} .crs-frota-data{text-align:left} }
 
-/* controles: chips de núcleo, busca, ordenação */
+/* controles: alternador de visão, chips de núcleo, busca, ordenação */
 .crs-controles{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:20px 0 14px}
+.crs-segmento{display:inline-flex;border:1px solid var(--linha);flex-shrink:0}
+.crs-segmento button{background:var(--branco);border:0;border-radius:0;padding:7px 14px;font-family:'DM Sans';
+  font-weight:600;font-size:11px;color:var(--tinta);cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
+.crs-segmento button+button{border-left:1px solid var(--linha)}
+.crs-segmento button.ativo{background:var(--tinta);color:#fff}
 .crs-chips{display:flex;gap:6px;flex-wrap:wrap}
 .crs-chip-filtro{cursor:pointer;border:1px solid var(--linha);background:var(--branco);border-radius:0;
   padding:6px 12px;font-family:'DM Sans';font-weight:600;font-size:11px;color:var(--tinta);
@@ -82,6 +87,30 @@
 .crs-st-entendimento{background:#ECEFF1;color:#78909C}
 .crs-crit-na{background:transparent;color:#8B98A5;font-style:italic;box-shadow:inset 0 0 0 1px rgba(139,152,165,.4)}
 
+/* visão matriz: iniciativas × critérios, cabeçalho e 2 primeiras colunas fixos */
+.crs-matriz-wrap{overflow:auto;max-height:70vh;border:1px solid var(--linha);margin-top:4px}
+.crs-matriz{border-collapse:separate;border-spacing:0;font-size:12px;width:max-content;min-width:100%}
+.crs-matriz th,.crs-matriz td{padding:4px 6px;border-bottom:1px solid var(--border-soft);
+  border-right:1px solid var(--border-soft);box-sizing:border-box;height:30px}
+.crs-matriz thead th{position:sticky;top:0;z-index:2;background:var(--ceu);font-family:'DM Sans';font-weight:700;
+  color:var(--tinta);text-align:left;vertical-align:bottom;white-space:normal;line-height:1.15;font-size:10.5px;padding:6px 4px}
+.crs-mz-th-crit,.crs-mz-td-crit{min-width:90px;max-width:90px;width:90px;text-align:center}
+.crs-mz-td-crit{font-family:'DM Sans';font-weight:600;font-size:10.5px;letter-spacing:.02em}
+.crs-mz-td-pct{min-width:66px;max-width:66px;width:66px;text-align:center;font-family:'IBM Plex Mono';font-weight:700;color:var(--tinta)}
+.crs-mz-td-pat{min-width:100px;max-width:100px;width:100px;text-align:center;font-family:'DM Sans';font-weight:700;
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--tinta)}
+.crs-mz-pat-corsario{color:#8A6A12}
+.crs-mz-col-nucleo{position:sticky;left:0;z-index:1;width:100px;min-width:100px;max-width:100px;color:#fff;
+  font-family:'DM Sans';font-weight:600;font-size:9.5px;text-align:left;white-space:normal;line-height:1.2}
+.crs-mz-col-iniciativa{position:sticky;left:100px;z-index:1;width:168px;min-width:168px;max-width:168px;
+  background:var(--branco);font-family:'Spectral';font-size:12.5px;color:var(--tinta);white-space:normal}
+thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(--ceu);color:var(--tinta)}
+/* a célula de núcleo tem cor inline (por linha) — a especificidade do inline já vence a zebra por conta própria */
+.crs-matriz tbody tr.crs-mz-zebra td{background:rgba(43,38,32,.025)}
+.crs-mz-na{color:#8B98A5;font-style:italic;font-weight:400;background:transparent}
+.crs-matriz tbody tr td.crs-mz-vazia{text-align:center;color:var(--grafite);padding:16px;position:static}
+@media (max-width:960px){ .crs-matriz-wrap{max-height:60vh} }
+
 /* legenda — sempre visível, independente do Supabase responder */
 .crs-leg-bloco{margin-bottom:16px}
 .crs-leg-bloco:last-of-type{margin-bottom:12px}
@@ -109,6 +138,10 @@
     <section class="card" id="crs-frota-wrap" aria-label="Painel da frota"></section>
 
     <div class="crs-controles" id="crs-controles">
+      <div class="crs-segmento" id="crs-segmento" role="group" aria-label="Visualização">
+        <button type="button" class="ativo" data-visao="cards">Cards</button>
+        <button type="button" data-visao="matriz">Matriz</button>
+      </div>
       <div class="crs-chips" id="crs-chips">
         <button type="button" class="crs-chip-filtro ativo" data-nucleo="">Todos</button>
       </div>
@@ -121,6 +154,9 @@
     </div>
 
     <div class="crs-grid" id="crs-grid"></div>
+    <div class="crs-matriz-wrap" id="crs-matriz-wrap" style="display:none">
+      <table class="crs-matriz" id="crs-matriz"></table>
+    </div>
     <p class="crs-contagem" id="crs-contagem"></p>
 
     <section class="secao" id="crs-legenda">
@@ -220,6 +256,37 @@
   };
   const ORDEM_NUCLEOS = Object.keys(NUCLEO_CORES);
 
+  // rótulos curtos pros cabeçalhos da matriz (a régua/os cards usam o `rotulo` completo,
+  // vindo do banco, sem alteração — isto é só apresentação de coluna estreita)
+  const ROTULOS_CURTOS = {
+    base_foco: "Base no Foco",
+    instrumentos: "Instrumentos",
+    solucao: "Solução",
+    atend_foco: "Atend. no Foco",
+    painel_dw: "Painel / DW",
+    campanha_foco: "Campanha Foco",
+    portal: "Portal",
+    lp_mc: "LP MC",
+    captura_mc: "Captura MC",
+    transbordo_mc: "MC → Foco",
+    transbordo_ufs: "Leads → UFs",
+    email_mc: "E-mail MC",
+    whats_mc: "WhatsApp MC",
+    jornadas_mc: "Jornadas MC",
+    loja: "Loja",
+    cnr_receptiva: "CNR Recept.",
+    cnr_ativa: "CNR Ativa",
+    assessoria: "Assessoria",
+    rede: "Rede parceira",
+  };
+  const ABREV_STATUS = { "ok": "ok", "ajuste em andamento": "andamento", "a iniciar": "a iniciar", "em entendimento": "entend." };
+
+  function rotuloCurto(c) {
+    if (ROTULOS_CURTOS[c.chave]) return ROTULOS_CURTOS[c.chave];
+    const r = c.rotulo || c.chave || "";
+    return r.length > 18 ? r.slice(0, 17) + "…" : r;
+  }
+
   function corNucleo(nome) {
     return NUCLEO_CORES[normalizar(nome)] || { cor: "#5c5346", fundo: "var(--neutro-w)" };
   }
@@ -238,20 +305,26 @@
   const elEstado = document.getElementById("crs-estado");
   const elFrota = document.getElementById("crs-frota-wrap");
   const elControles = document.getElementById("crs-controles");
+  const elSegmento = document.getElementById("crs-segmento");
   const elChips = document.getElementById("crs-chips");
   const elBusca = document.getElementById("crs-busca");
   const elOrdenar = document.getElementById("crs-ordenar");
   const elGrid = document.getElementById("crs-grid");
+  const elMatrizWrap = document.getElementById("crs-matriz-wrap");
+  const elMatriz = document.getElementById("crs-matriz");
   const elContagem = document.getElementById("crs-contagem");
 
-  let TODAS = [];   // uma entrada por iniciativa, com os 19 status já carregados e a régua já calculada
-  let GRUPOS = [];  // critérios agrupados por `grupo`, na ordem de `ordem`
+  let TODAS = [];      // uma entrada por iniciativa, com os 19 status já carregados e a régua já calculada
+  let GRUPOS = [];     // critérios agrupados por `grupo`, na ordem de `ordem` — usado pelo detalhe dos cards
+  let CRITERIOS = [];  // os mesmos 19 critérios, em lista plana e na ordem de `ordem` — usado pelas colunas da matriz
   let filtroNucleo = ""; // "" = todos
+  let visao = "cards";   // "cards" | "matriz" — espelhado em location.hash
 
   function mostrarSkeleton() {
     elControles.style.visibility = "hidden";
     elFrota.innerHTML = "";
     elGrid.innerHTML = "";
+    elMatriz.innerHTML = "";
     elContagem.textContent = "";
     elEstado.innerHTML = '<div class="card" style="color:var(--grafite)">Carregando dados do Supabase…</div>';
   }
@@ -265,6 +338,7 @@
   }
 
   function processar(criterios, statusRows) {
+    CRITERIOS = criterios; // já vem ordenado por `ordem` (fetch com &order=ordem) — fonte única pra cards e matriz
     GRUPOS = [];
     const idxGrupo = new Map();
     criterios.forEach((c) => {
@@ -380,17 +454,86 @@
     return (b.calc.pct === null ? -1 : b.calc.pct) - (a.calc.pct === null ? -1 : a.calc.pct) || a.nome.localeCompare(b.nome, "pt-BR");
   }
 
-  function renderGrid() {
+  // fonte única do que aparece na tela — filtro de núcleo, busca e ordenação valem
+  // igual pras duas visões; cards e matriz só decidem COMO desenhar esta mesma lista
+  function listaFiltrada() {
     let lista = TODAS.slice();
     if (filtroNucleo) lista = lista.filter((x) => normalizar(x.nucleo) === filtroNucleo);
     const q = elBusca.value.trim().toLowerCase();
     if (q) lista = lista.filter((x) => x.nome.toLowerCase().includes(q));
     lista.sort(comparador);
+    return lista;
+  }
 
+  function renderGrid(lista) {
     elGrid.innerHTML = lista.length
       ? lista.map(cardHtml).join("")
       : '<div class="card" style="color:var(--grafite)">Nenhuma iniciativa com esses filtros.</div>';
+  }
+
+  function celulaMatrizHtml(item, crit) {
+    if (!item || item.status === "não se aplica") {
+      return '<td class="crs-mz-td-crit crs-mz-na" title="' + esc(crit.rotulo) + ': não se aplica">n.a.</td>';
+    }
+    const cls = CLASSE_STATUS[item.status] || "";
+    const texto = ABREV_STATUS[item.status] || item.status;
+    const tituloObs = item.observacao ? " — " + item.observacao : "";
+    return '<td class="crs-mz-td-crit ' + cls + '" title="' + esc(crit.rotulo + ": " + item.status + tituloObs) + '">' + esc(texto) + '</td>';
+  }
+
+  function linhaMatrizHtml(x, idx) {
+    const nc = corNucleo(x.nucleo);
+    const porChave = new Map(x.itens.map((i) => [i.criterio, i]));
+    const celulas = CRITERIOS.map((c) => celulaMatrizHtml(porChave.get(c.chave), c)).join("");
+    const patCls = x.calc.patente === "Corsário" ? " crs-mz-pat-corsario" : "";
+    return '<tr class="' + (idx % 2 ? "crs-mz-zebra" : "") + '">' +
+      '<td class="crs-mz-col-nucleo" style="background:' + nc.cor + '" title="' + esc(x.nucleo || "") + '">' + esc(x.nucleo || "—") + '</td>' +
+      '<td class="crs-mz-col-iniciativa">' + esc(x.nome) + '</td>' +
+      celulas +
+      '<td class="crs-mz-td-pct">' + fmtPct(x.calc.pct) + '</td>' +
+      '<td class="crs-mz-td-pat' + patCls + '">' + esc(x.calc.patente) + '</td>' +
+    '</tr>';
+  }
+
+  function theadMatrizHtml() {
+    return '<tr>' +
+      '<th class="crs-mz-col-nucleo">Núcleo</th>' +
+      '<th class="crs-mz-col-iniciativa">Iniciativa</th>' +
+      CRITERIOS.map((c) => '<th class="crs-mz-th-crit" title="' + esc(c.rotulo) + '">' + esc(rotuloCurto(c)) + '</th>').join("") +
+      '<th class="crs-mz-td-pct">%</th>' +
+      '<th class="crs-mz-td-pat">Patente</th>' +
+    '</tr>';
+  }
+
+  function renderMatriz(lista) {
+    const corpo = lista.length
+      ? lista.map(linhaMatrizHtml).join("")
+      : '<tr><td class="crs-mz-vazia" colspan="' + (CRITERIOS.length + 4) + '">Nenhuma iniciativa com esses filtros.</td></tr>';
+    elMatriz.innerHTML = '<thead>' + theadMatrizHtml() + '</thead><tbody>' + corpo + '</tbody>';
+  }
+
+  // dispatcher único: filtra/ordena uma vez, decide qual visão está ativa e delega o
+  // desenho — filtro/busca/ordenação e o contador de baixo valem pras duas por igual
+  function renderTudo() {
+    const lista = listaFiltrada();
     elContagem.textContent = lista.length + " de " + TODAS.length + " iniciativas exibidas.";
+    if (visao === "matriz") {
+      elGrid.style.display = "none";
+      elMatrizWrap.style.display = "";
+      renderMatriz(lista);
+    } else {
+      elMatrizWrap.style.display = "none";
+      elGrid.style.display = "";
+      renderGrid(lista);
+    }
+  }
+
+  // visão em location.hash (#cards/#matriz) — link compartilhável, sem localStorage;
+  // hashchange cobre tanto o clique no alternador quanto voltar/avançar no navegador
+  function aplicarHash() {
+    visao = location.hash === "#matriz" ? "matriz" : "cards";
+    elSegmento.querySelectorAll("button[data-visao]").forEach((b) => b.classList.toggle("ativo", b.dataset.visao === visao));
+    renderTudo();
   }
 
   async function carregar() {
@@ -403,12 +546,19 @@
       elFrota.innerHTML = frotaHtml();
       montarChips();
       elControles.style.visibility = "";
-      renderGrid();
+      renderTudo();
     } catch (err) {
       console.error("corsario: falha ao carregar", err);
       mostrarErro(err);
     }
   }
+
+  elSegmento.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-visao]");
+    if (!btn || btn.classList.contains("ativo")) return;
+    location.hash = btn.dataset.visao;
+  });
+  window.addEventListener("hashchange", aplicarHash);
 
   elChips.addEventListener("click", (e) => {
     const btn = e.target.closest(".crs-chip-filtro");
@@ -416,11 +566,12 @@
     elChips.querySelectorAll(".crs-chip-filtro").forEach((b) => b.classList.remove("ativo"));
     btn.classList.add("ativo");
     filtroNucleo = btn.dataset.nucleo || "";
-    renderGrid();
+    renderTudo();
   });
-  elBusca.addEventListener("input", renderGrid);
-  elOrdenar.addEventListener("change", renderGrid);
+  elBusca.addEventListener("input", renderTudo);
+  elOrdenar.addEventListener("change", renderTudo);
 
+  aplicarHash(); // respeita um #matriz vindo de link compartilhado antes mesmo do fetch terminar
   carregar();
 })();
 </script>

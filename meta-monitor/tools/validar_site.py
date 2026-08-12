@@ -14,7 +14,7 @@ OBRIG = {
     "participantes.html": ["pessoas", "pendencias"],
     "projetos.html": ["secoes", "f-nucleo", "f-busca", "contagem"],
     "plano-acao.html": ["pa-nav", "pa-painel"],
-    "corsario.html": ["crs-frota-wrap", "crs-controles", "crs-grid", "crs-legenda"],
+    "corsario.html": ["crs-frota-wrap", "crs-controles", "crs-segmento", "crs-grid", "crs-matriz-wrap", "crs-matriz", "crs-legenda"],
     "editor.html": ["ed-conjunto", "ed-area", "ed-baixar"],
 }
 
