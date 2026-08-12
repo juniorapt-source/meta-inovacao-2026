@@ -17,6 +17,19 @@
 .kpi-largo .kpi-largo-nota{flex-basis:100%;font-size:11.5px;color:var(--grafite);border-top:1px solid var(--linha);padding-top:8px;margin-top:2px}
 .kpi .sub{font-size:11px;color:var(--grafite);margin-top:4px}
 @media (max-width:960px){ .kpi-largo{grid-column:span 1} }
+
+/* cards de KPI clicáveis (Concluídas, Em andamento, Atrasadas, Vencem em 7 dias, Em janela) */
+.kpi .n.kpi-toggle{cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none;border-radius:6px}
+.kpi .n.kpi-toggle:focus-visible{outline:2px solid var(--azul-claro);outline-offset:3px}
+.kpi-chevron{font-size:13px;line-height:1;color:var(--grafite);font-weight:600;transition:transform .15s}
+.kpi-lista{max-height:0;overflow:hidden;transition:max-height .2s ease}
+.kpi-lista-inner{padding-top:10px}
+.kpi-item{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--linha);font-size:.85rem;font-family:'Inter',sans-serif}
+.kpi-item:first-child{border-top:none}
+.kpi-item-id{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--grafite);min-width:54px;flex-shrink:0}
+.kpi-item-tit{flex:1;color:var(--tinta);min-width:0}
+.kpi-item-data{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--grafite);white-space:nowrap;flex-shrink:0}
+.kpi-item-vazio{padding:4px 0;color:var(--grafite);font-size:.85rem}
 </style>
 </head>
 <body>
@@ -69,6 +82,48 @@
 <script src="js/core.js"></script>
 <script>
 (function(){
+  /* Fonte única pros 5 cards de KPI clicáveis: relê window.DB a cada chamada (sem cache —
+     uma edição feita em editor.html precisa aparecer aqui sem refresh) e replica EXATAMENTE
+     os critérios que CALC.kpis usa pra contar (js/calc.js), incluindo duas particularidades
+     preservadas de propósito, não corrigidas por conta própria:
+       - "em_andamento" e "atrasada" NÃO são mutuamente exclusivas: uma ação "Em andamento"
+         com prazo_iso vencido aparece nas duas listas, igual já acontece nos dois cards hoje.
+       - "em_janela_sem_data" exige !prazo_iso E prazo (texto) preenchido — não só ausência
+         de prazo_iso — porque é assim que k.janela já é calculado em CALC.kpis.
+     hoje vem de hojeISO() (não de um novo() Date() cru) pra respeitar DB.config.hoje_referencia
+     e garantir que a lista bata com o número do card mesmo em modo demo; a comparação em si
+     usa Date normalizado pra meia-noite local (evita o off-by-one de fuso do toISOString). */
+  function isoParaDataLocal(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y, m - 1, d); // meia-noite local, sem componente de fuso
+  }
+  function getAcoesPorCategoria(categoria) {
+    const plano = (window.DB && window.DB.plano) || [];
+    const hojeISOStr = hojeISO();
+    const hojeData = isoParaDataLocal(hojeISOStr);
+    const limData = isoParaDataLocal(CALC.somaDias(hojeISOStr, 7));
+    const dataDe = (a) => a.prazo_iso ? isoParaDataLocal(a.prazo_iso) : null;
+
+    let lista;
+    if (categoria === "concluida") {
+      lista = plano.filter(a => a.status === "Concluído");
+    } else if (categoria === "em_andamento") {
+      lista = plano.filter(a => a.status === "Em andamento");
+    } else if (categoria === "atrasada") {
+      lista = plano.filter(a => a.prazo_iso && a.status !== "Concluído" && dataDe(a) < hojeData);
+    } else if (categoria === "vence_7_dias") {
+      lista = plano.filter(a => a.prazo_iso && a.status !== "Concluído" && dataDe(a) >= hojeData && dataDe(a) <= limData);
+    } else if (categoria === "em_janela_sem_data") {
+      lista = plano.filter(a => !a.prazo_iso && a.prazo);
+    } else {
+      lista = [];
+    }
+
+    lista = lista.slice().sort((a, b) =>
+      categoria === "em_janela_sem_data" ? a.id.localeCompare(b.id) : (a.prazo_iso || "").localeCompare(b.prazo_iso || ""));
+    return lista;
+  }
+
   const hoje = hojeISO();
   montarShell("index.html");
   document.getElementById("sub").textContent =
@@ -84,18 +139,45 @@
       '<div class="t">' + esc(n.titulo) + '</div></a>';
   }).join("");
 
-  // kpis
+  // kpis — total fica sem clique; os outros 5 expandem a lista das ações correspondentes
   const k = CALC.kpis(DB.plano, hoje);
+  const atrasadasLista = getAcoesPorCategoria("atrasada"); // usada aqui só pra colorir o card (alerta)
   const itens = [
-    [k.total, "ações no plano", ""],
-    [k.concluido, "concluídas", ""],
-    [k.andamento, "em andamento", ""],
-    [k.atrasadas, "atrasadas", k.atrasadas ? "alerta" : ""],
-    [k.prox7, "vencem em 7 dias", ""],
-    [k.janela, "em janela (sem data fixa)", ""],
+    [k.total, "ações no plano", "", null],
+    [null, "concluídas", "", "concluida"],
+    [null, "em andamento", "", "em_andamento"],
+    [null, "atrasadas", atrasadasLista.length ? "alerta" : "", "atrasada"],
+    [null, "vencem em 7 dias", "", "vence_7_dias"],
+    [null, "em janela (sem data fixa)", "", "em_janela_sem_data"],
   ];
-  let kpisHtml = itens.map(i =>
-    '<div class="card kpi ' + i[2] + '"><div class="n">' + i[0] + '</div><div class="l">' + i[1] + "</div></div>").join("");
+
+  function fmtItemData(a) {
+    return a.prazo_iso ? CALC.fmtBR(a.prazo_iso) : "sem data fixa";
+  }
+  function renderKpiItem(a) {
+    return '<div class="kpi-item">' +
+      '<span class="kpi-item-id">' + esc(a.id) + '</span>' +
+      '<span class="kpi-item-tit">' + esc(a.atividade) + '</span>' +
+      '<span class="kpi-item-data">' + esc(fmtItemData(a)) + '</span></div>';
+  }
+
+  let kpisHtml = itens.map(([numFixo, rot, cls, cat]) => {
+    if (!cat) {
+      return '<div class="card kpi ' + cls + '"><div class="n">' + numFixo + '</div><div class="l">' + rot + "</div></div>";
+    }
+    const lista = cat === "atrasada" ? atrasadasLista : getAcoesPorCategoria(cat);
+    return '<div class="card kpi ' + cls + '">' +
+      '<div class="n kpi-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="kpi-lista-' + cat + '" data-cat="' + cat + '">' +
+        lista.length + '<span class="kpi-chevron" aria-hidden="true">▼</span>' +
+      '</div>' +
+      '<div class="l">' + rot + '</div>' +
+      '<div class="kpi-lista" id="kpi-lista-' + cat + '">' +
+        '<div class="kpi-lista-inner">' +
+          (lista.length ? lista.map(renderKpiItem).join("") : '<div class="kpi-item-vazio">Nenhuma ação nessa categoria.</div>') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join("");
 
   // cards de portfólio de projetos (calculados a partir de DB.projetos, nada hardcodado)
   const projetos = DB.projetos || [];
@@ -132,6 +214,85 @@
     "</div>";
 
   document.getElementById("kpis").innerHTML = kpisHtml;
+
+  // expand/colapsa dos cards de KPI clicáveis — só um aberto por vez, altura medida via JS
+  // (scrollHeight) em vez de um max-height chumbado, pra não capar listas maiores
+  (function(){
+    const kpisEl = document.getElementById("kpis");
+    let abertoCat = null;
+
+    function elementos(cat) {
+      return {
+        painel: document.getElementById("kpi-lista-" + cat),
+        botao: kpisEl.querySelector('.kpi-toggle[data-cat="' + cat + '"]'),
+        chevron: kpisEl.querySelector('.kpi-toggle[data-cat="' + cat + '"] .kpi-chevron'),
+      };
+    }
+
+    function fechar(cat) {
+      const { painel, botao, chevron } = elementos(cat);
+      if (!painel) return;
+      painel.style.maxHeight = painel.scrollHeight + "px"; // trava a altura atual antes de animar até 0
+      painel.offsetHeight; // força reflow — sem isso o navegador colapsa a transição num só passo
+      requestAnimationFrame(() => { painel.style.maxHeight = "0px"; });
+      if (botao) botao.setAttribute("aria-expanded", "false");
+      if (chevron) chevron.textContent = "▼";
+    }
+
+    // reconstrói o número e a lista do painel a partir de getAcoesPorCategoria NA HORA do
+    // clique — é o que garante que uma edição feita em outro lugar (ex.: editor.html mutando
+    // window.DB.plano) apareça sem refresh; o HTML montado no carregamento da página é só o
+    // primeiro paint, não pode ser o que o clique reexibe
+    function renderPainel(cat) {
+      const { painel, botao } = elementos(cat);
+      if (!painel || !botao) return;
+      const lista = getAcoesPorCategoria(cat);
+      const inner = painel.querySelector(".kpi-lista-inner");
+      inner.innerHTML = lista.length
+        ? lista.map(renderKpiItem).join("")
+        : '<div class="kpi-item-vazio">Nenhuma ação nessa categoria.</div>';
+      botao.childNodes[0].textContent = lista.length; // 1º nó = número; 2º nó = chevron (preservado)
+    }
+
+    function abrir(cat) {
+      renderPainel(cat);
+      const { painel, botao, chevron } = elementos(cat);
+      if (!painel) return;
+      const alvo = painel.scrollHeight;
+      painel.style.maxHeight = alvo + "px";
+      if (botao) botao.setAttribute("aria-expanded", "true");
+      if (chevron) chevron.textContent = "▲";
+      painel.addEventListener("transitionend", function onEnd(e) {
+        if (e.propertyName !== "max-height") return;
+        painel.removeEventListener("transitionend", onEnd);
+        if (abertoCat === cat) painel.style.maxHeight = "none"; // altura livre no estado final aberto
+      });
+    }
+
+    function alternar(cat) {
+      if (abertoCat && abertoCat !== cat) fechar(abertoCat);
+      if (abertoCat === cat) {
+        fechar(cat);
+        abertoCat = null;
+      } else {
+        abrir(cat);
+        abertoCat = cat;
+      }
+    }
+
+    kpisEl.addEventListener("click", (e) => {
+      const alvo = e.target.closest(".kpi-toggle");
+      if (alvo) alternar(alvo.dataset.cat);
+    });
+    kpisEl.addEventListener("keydown", (e) => {
+      const alvo = e.target.closest(".kpi-toggle");
+      if (!alvo) return;
+      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+        e.preventDefault();
+        alternar(alvo.dataset.cat);
+      }
+    });
+  })();
 
   // radar de carga
   const carga = CALC.cargaPorDia(DB.plano).filter(c => c.carga >= 2 && c.iso >= hoje);
