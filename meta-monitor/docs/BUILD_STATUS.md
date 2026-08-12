@@ -42,3 +42,13 @@ conteúdo publicado (não assumidos a partir da linha acima). F7 foi conferida c
   corretos. Correção: um commit por fase verificada nesta retomada (F0–F6, acima) elevou o
   histórico para 9 commits; tag anotada `v0.1.0` criada em seguida. Reteste: `git log --oneline |
   wc -l` = 9 (≥ 8, OK); `git tag` lista `v0.1.0` (OK). F7 — OK.
+[23:52] F8 — OK: pacote `meta-inovacao-2026-v0.1.0.zip` gerado na raiz do repo (fora do
+  versionamento — coberto por `*.zip` no `.gitignore`) a partir da árvore de trabalho após a tag,
+  incluindo `.git/`. Teste: `unzip -l` confirma `.git/HEAD`, as 7 páginas
+  (index/plano/caminho/agenda/demandas/participantes/editor) e todo `meta-monitor/data/`. F8 — OK.
+
+## Régua final desta retomada
+
+F0 OK · F1 OK · F2 OK · F3 OK · F4 OK · F5 OK · F6 OK · F7 OK (AJUSTE 1, resolvido) · F8 OK
+10 commits em `git log`, tag `v0.1.0` presente. Nenhum item pendente — `PENDENCIAS.md` não foi
+necessário nesta retomada.
