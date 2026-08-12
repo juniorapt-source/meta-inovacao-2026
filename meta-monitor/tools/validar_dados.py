@@ -5,15 +5,45 @@ import json, re, os, sys, glob
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 db, erros = {}, []
 
+def blocos_de(txt):
+    """Extrai todas as atribuições window.DB.<chave> = <JSON>; de um arquivo, na ordem em que
+    aparecem — a maioria dos arquivos tem uma só, mas data/urc.js tem duas. Acha o fim de cada
+    valor balanceando colchetes/chaves e respeitando aspas, em vez de cortar no primeiro ';'
+    (que pode aparecer dentro de uma string, ex.: um texto de "como executar")."""
+    resultado = {}
+    for m in re.finditer(r"window\.DB\.(\w+)\s*=\s*", txt):
+        chave = m.group(1)
+        i = m.end()
+        while i < len(txt) and txt[i].isspace(): i += 1
+        if i >= len(txt) or txt[i] not in "{[":
+            continue  # ex.: "window.DB = window.DB || {}"
+        depth, in_str, escape, j = 0, False, False, i
+        while j < len(txt):
+            c = txt[j]
+            if in_str:
+                if escape: escape = False
+                elif c == "\\": escape = True
+                elif c == '"': in_str = False
+            else:
+                if c == '"': in_str = True
+                elif c in "{[": depth += 1
+                elif c in "}]":
+                    depth -= 1
+                    if depth == 0: j += 1; break
+            j += 1
+        resultado[chave] = txt[i:j]
+    return resultado
+
 for path in sorted(glob.glob(os.path.join(BASE, "data", "*.js"))):
     txt = open(path, encoding="utf-8").read()
-    m = re.search(r"window\.DB\.(\w+)\s*=\s*(.*);\s*$", txt, re.S)
-    if not m:
+    blocos = blocos_de(txt)
+    if not blocos:
         erros.append(f"{os.path.basename(path)}: padrão window.DB.x = JSON; não encontrado"); continue
-    try:
-        db[m.group(1)] = json.loads(m.group(2))
-    except Exception as e:
-        erros.append(f"{os.path.basename(path)}: JSON inválido → {e}")
+    for chave, valor_txt in blocos.items():
+        try:
+            db[chave] = json.loads(valor_txt)
+        except Exception as e:
+            erros.append(f"{os.path.basename(path)}: JSON inválido em {chave} → {e}")
 
 def check(cond, msg):
     if not cond: erros.append(msg)
@@ -81,9 +111,41 @@ def campos_suspeitos(obj, origem, caminho=""):
         for i, v in enumerate(obj):
             campos_suspeitos(v, origem, f"{caminho}[{i}]")
 
+# exceções ao guardrail: "projetos" é a fonte canônica de autoria por INICIATIVA da UI;
+# "urc_lideranca"/"urc_canais" são a fonte canônica de responsáveis pela relação com a URC —
+# domínio diferente, "responsaveis" ali é legítimo, não duplicação.
+DATASETS_AUTORIA_PROPRIA = {"projetos", "urc_lideranca", "urc_canais"}
 for nome_ds, dados in db.items():
-    if nome_ds == "projetos": continue
+    if nome_ds in DATASETS_AUTORIA_PROPRIA: continue
     campos_suspeitos(dados, f"data/{nome_ds}.js")
+
+# --- URC: liderança + responsáveis por canal (data/urc.js) ---
+CANAIS_URC = ["CNR", "Assessoria de Negócios", "Portal", "Loja", "Marketing Cloud",
+              "Foco+", "Rede própria e parceira", "DXP"]
+urc_lid = db.get("urc_lideranca", [])
+urc_canais = db.get("urc_canais", [])
+
+check(len(urc_lid) >= 1, "urc_lideranca: vazio")
+nomes_lideranca = set()
+for p in urc_lid:
+    check(bool(p.get("nome")) and isinstance(p.get("nome"), str), f"urc_lideranca: nome vazio/ausente em {p!r}")
+    check(bool(p.get("papel")) and isinstance(p.get("papel"), str), f"urc_lideranca: papel vazio/ausente em {p!r}")
+    check("email" in p, f"urc_lideranca: campo email ausente em {p!r}")
+    if p.get("email"): check("@" in p["email"], f"urc_lideranca: email inválido em {p!r}")
+    nomes_lideranca.add(p.get("nome"))
+
+nomes_canais = [c.get("canal") for c in urc_canais]
+check(nomes_canais == CANAIS_URC, f"urc_canais: esperava exatamente os 8 canais na ordem canônica, veio {nomes_canais}")
+
+nomes_operacionais = {}
+for c in urc_canais:
+    check(isinstance(c.get("responsaveis"), list), f"urc_canais[{c.get('canal')}]: responsaveis precisa ser lista")
+    for r in c.get("responsaveis", []):
+        check(bool(r.get("nome")) and isinstance(r.get("nome"), str), f"urc_canais[{c.get('canal')}]: responsável sem nome {r!r}")
+        if r.get("email"): check("@" in r["email"], f"urc_canais[{c.get('canal')}]: email inválido {r!r}")
+        check(r.get("nome") not in nomes_lideranca,
+              f"urc_canais[{c.get('canal')}]: {r.get('nome')!r} é liderança da URC — liderança é transversal, não entra em canal")
+        nomes_operacionais.setdefault(r.get("nome"), []).append(c.get("canal"))
 
 if erros:
     print("FALHOU:"); [print(" -", e) for e in erros]; sys.exit(1)
@@ -94,3 +156,9 @@ por_nucleo = {n: sum(1 for p in projetos if p.get("nucleo") == n) for n in NUCLE
 print(f"projetos OK — {len(projetos)} projetos · {len(reps_distintos)} representantes distintos")
 for n in sorted(por_nucleo):
     print(f"  - {n}: {por_nucleo[n]}")
+
+canais_indicados = sum(1 for c in urc_canais if c.get("responsaveis"))
+print(f"urc OK — {len(urc_lid)} líderes · {canais_indicados} de {len(urc_canais)} canais indicados · {len(nomes_operacionais)} operacionais distintos")
+for nome, cs in nomes_operacionais.items():
+    if len(cs) >= 2:
+        print(f"  AVISO: {nome!r} aparece em {len(cs)} canais ({', '.join(cs)}) — confirmar se é intencional.")

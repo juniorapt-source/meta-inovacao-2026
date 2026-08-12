@@ -71,6 +71,7 @@
 <script src="data/matriz.js"></script>
 <script src="data/pessoas.js"></script>
 <script src="data/projetos.js"></script>
+<script src="data/urc.js"></script>
 <script src="data/changelog.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
@@ -82,19 +83,23 @@ const DB = window.DB, IO = window.EDITOR_IO;
 montarShell("editor.html");
 
 const CONJUNTOS = {
-  plano:   { rotulo:"Plano de ação — status e prazos", arquivo:"plano.js" },
-  matriz:  { rotulo:"Matriz de demandas — 27 iniciativas × 10 canais", arquivo:"matriz.js" },
-  agenda:  { rotulo:"Agenda — encontros dos ciclos", arquivo:"agenda.js" },
-  pessoas: { rotulo:"Pessoas — representantes e papéis", arquivo:"pessoas.js" },
-  projetos:{ rotulo:"Projetos & Representantes — núcleos e portfólio UI", arquivo:"projetos.js" }
+  plano:        { rotulo:"Plano de ação — status e prazos", arquivo:"plano.js" },
+  matriz:       { rotulo:"Matriz de demandas — 27 iniciativas × 10 canais", arquivo:"matriz.js" },
+  agenda:       { rotulo:"Agenda — encontros dos ciclos", arquivo:"agenda.js" },
+  pessoas:      { rotulo:"Pessoas — representantes e papéis", arquivo:"pessoas.js" },
+  projetos:     { rotulo:"Projetos & Representantes — núcleos e portfólio UI", arquivo:"projetos.js" },
+  urc_lideranca:{ rotulo:"URC — Liderança", arquivo:"urc.js" },
+  urc_canais:   { rotulo:"URC — Responsáveis por canal", arquivo:"urc.js" }
 };
+const CANAIS_URC = ["CNR","Assessoria de Negócios","Portal","Loja","Marketing Cloud","Foco+","Rede própria e parceira","DXP"];
 const STATUS_ACAO = ["Não iniciado","Em andamento","Concluído"];
 const STATUS_ENC  = ["a agendar","agendado","confirmado","realizado","cancelado"];
 const ESTADOS_CEL = ["","previsto","oficina","formulario","justificado","priorizado","encaminhado"];
 const ROTULO_CEL  = {"":"—","previsto":"previsto","oficina":"oficina feita","formulario":"formulário ok","justificado":"justificado","priorizado":"priorizado","encaminhado":"encaminhado"};
 
 /* cópia de trabalho isolada dos dados carregados */
-const W = JSON.parse(JSON.stringify({ plano:DB.plano, matriz:DB.matriz, agenda:DB.agenda, pessoas:DB.pessoas, projetos:DB.projetos }));
+const W = JSON.parse(JSON.stringify({ plano:DB.plano, matriz:DB.matriz, agenda:DB.agenda, pessoas:DB.pessoas, projetos:DB.projetos,
+  urc_lideranca:DB.urc_lideranca, urc_canais:DB.urc_canais }));
 
 const sel = document.getElementById("ed-conjunto");
 Object.keys(CONJUNTOS).forEach(k=>{
@@ -298,8 +303,69 @@ function renderProjetos(){
   }));
 }
 
+function renderUrcLideranca(){
+  let h='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Nome</th><th>Papel</th><th style="width:220px">Email (opcional)</th></tr></thead><tbody>';
+  W.urc_lideranca.forEach((p,i)=>{
+    h+='<tr><td><input type="text" data-i="'+i+'" data-f="nome" value="'+esc(p.nome)+'"></td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="papel" value="'+esc(p.papel||"")+'"></td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="email" value="'+esc(p.email||"")+'" placeholder="nome@sebrae.com.br"></td></tr>';
+  });
+  area.innerHTML=h+'</tbody></table></div>';
+  area.querySelectorAll("input").forEach(el=>el.addEventListener("change",e=>{
+    const t=e.target, p=W.urc_lideranca[+t.dataset.i], f=t.dataset.f;
+    p[f] = (f==="email" && t.value.trim()==="") ? null : t.value;
+  }));
+}
+
+/* urc_canais é editado como lista achatada de responsáveis (1 linha por pessoa, com um
+   dropdown de canal), depois regravada de volta na forma canônica agrupada por canal. */
+let urcCanaisLinhas = null;
+function achatarUrcCanais(){
+  const linhas = [];
+  CANAIS_URC.forEach(canal=>{
+    const bloco = W.urc_canais.find(c=>c.canal===canal) || { canal, responsaveis:[] };
+    (bloco.responsaveis||[]).forEach(r=> linhas.push({ canal, nome:r.nome, email:r.email||null }));
+  });
+  return linhas;
+}
+function regravarUrcCanais(linhas){
+  W.urc_canais = CANAIS_URC.map(canal=>({
+    canal,
+    responsaveis: linhas.filter(l=>l.canal===canal).map(l=>({ nome:l.nome, email:l.email||null }))
+  }));
+}
+
+function renderUrcCanais(){
+  if(!urcCanaisLinhas) urcCanaisLinhas = achatarUrcCanais();
+  let h='<div class="ed-topo" style="margin-bottom:12px"><button type="button" id="ed-add-resp" class="ed-btn">+ Adicionar responsável</button></div>';
+  h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:200px">Canal</th><th>Nome *</th><th style="width:220px">Email (opcional)</th><th style="width:36px"></th></tr></thead><tbody>';
+  urcCanaisLinhas.forEach((l,i)=>{
+    h+='<tr><td><select data-i="'+i+'" data-f="canal">'+opts(CANAIS_URC,l.canal)+'</select></td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="nome" value="'+esc(l.nome)+'"></td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="email" value="'+esc(l.email||"")+'" placeholder="nome@sebrae.com.br"></td>'+
+      '<td><button type="button" class="ed-btn sec" data-del="'+i+'" style="padding:4px 8px" title="Remover">×</button></td></tr>';
+  });
+  area.innerHTML=h+'</tbody></table></div>';
+  area.querySelectorAll("select,input").forEach(el=>el.addEventListener("change",e=>{
+    const t=e.target, l=urcCanaisLinhas[+t.dataset.i], f=t.dataset.f;
+    l[f] = (f==="email" && t.value.trim()==="") ? null : t.value;
+    regravarUrcCanais(urcCanaisLinhas);
+  }));
+  area.querySelectorAll("[data-del]").forEach(btn=>btn.addEventListener("click",e=>{
+    urcCanaisLinhas.splice(+e.target.dataset.del,1);
+    regravarUrcCanais(urcCanaisLinhas);
+    renderUrcCanais();
+  }));
+  document.getElementById("ed-add-resp").addEventListener("click",()=>{
+    urcCanaisLinhas.push({ canal:CANAIS_URC[0], nome:"", email:null });
+    regravarUrcCanais(urcCanaisLinhas);
+    renderUrcCanais();
+  });
+}
+
 function render(){
-  ({plano:renderPlano, matriz:renderMatriz, agenda:renderAgenda, pessoas:renderPessoas, projetos:renderProjetos})[sel.value]();
+  ({plano:renderPlano, matriz:renderMatriz, agenda:renderAgenda, pessoas:renderPessoas, projetos:renderProjetos,
+    urc_lideranca:renderUrcLideranca, urc_canais:renderUrcCanais})[sel.value]();
   saida.value="";
 }
 sel.addEventListener("change", render);
@@ -307,12 +373,33 @@ render();
 
 document.getElementById("ed-baixar").addEventListener("click", function(){
   const k = sel.value;
-  const conteudo = IO.serializar(k, W[k]);
+  let conteudo, nomeArquivo;
+
+  if (k === "urc_lideranca" || k === "urc_canais") {
+    // os dois conjuntos moram no mesmo arquivo — validar e regravar urc.js inteiro,
+    // pra não perder o bloco que não está selecionado no momento
+    for (const p of W.urc_lideranca) {
+      if (!p.nome || !p.nome.trim()) { alert("Toda liderança precisa de nome."); return; }
+      if (p.email && !p.email.includes("@")) { alert("Email inválido em " + p.nome + "."); return; }
+    }
+    for (const c of W.urc_canais) {
+      for (const r of c.responsaveis) {
+        if (!r.nome || !r.nome.trim()) { alert("Todo responsável precisa de nome (canal " + c.canal + ")."); return; }
+        if (r.email && !r.email.includes("@")) { alert("Email inválido em " + r.nome + " (canal " + c.canal + ")."); return; }
+      }
+    }
+    conteudo = IO.serializarMulti([["urc_lideranca", W.urc_lideranca], ["urc_canais", W.urc_canais]]);
+    nomeArquivo = "urc.js";
+  } else {
+    conteudo = IO.serializar(k, W[k]);
+    nomeArquivo = CONJUNTOS[k].arquivo;
+  }
+
   saida.value = conteudo;
   const blob = new Blob([conteudo], {type:"text/javascript;charset=utf-8"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = CONJUNTOS[k].arquivo;
+  a.download = nomeArquivo;
   document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 400);
 });

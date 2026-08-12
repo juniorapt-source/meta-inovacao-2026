@@ -51,6 +51,7 @@ a{color:var(--azul);text-decoration:none} a:hover{text-decoration:underline}
 .st-janela{background:var(--ambar-w);color:var(--ambar)}
 .chip.cc{background:var(--laranja-w);color:var(--laranja)}
 .chip.sla{background:#EFE7F7;color:#6B3FA0}
+.chip.pessoa{background:var(--grafite-w);color:var(--tinta);margin:2px 4px 2px 0}
 
 /* ---- trilho dos nós (assinatura) ---- */
 .trilho{position:relative;padding:26px 6px 6px}

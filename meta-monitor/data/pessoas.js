@@ -61,16 +61,6 @@ window.DB.pessoas = [
   "grupo": "Comitê"
  },
  {
-  "nome": "Enio",
-  "papel": "URC · liderança (destinatário da proposta)",
-  "grupo": "URC"
- },
- {
-  "nome": "Milva",
-  "papel": "URC · liderança (destinatária da proposta)",
-  "grupo": "URC"
- },
- {
   "nome": "Gabriel Gil Barreto Barros",
   "nucleo": "Tecnologias Portadoras de Futuro",
   "grupo": "Núcleos"
