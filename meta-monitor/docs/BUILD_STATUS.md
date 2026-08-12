@@ -23,3 +23,5 @@ conteúdo publicado (não assumidos a partir da linha acima). F7 foi conferida c
   `git status` limpo quanto a artefatos de SO. F0 — OK.
 [23:50] F1 — OK (reconferido): `python3 tools/validar_dados.py` → "F1 OK — 47 ações · 27
   iniciativas · 8 canais · 7 nós · 2 SLAs · 16 encontros".
+[23:50] F2 — OK (reconferido): `node tools/testar_calc.js` → KPIs, carga 14/08 e estados dos 7 nós
+  calculados sem erro; "F2 OK".
