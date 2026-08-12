@@ -30,6 +30,7 @@
 .kpi-item-tit{flex:1;color:var(--tinta);min-width:0}
 .kpi-item-data{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--grafite);white-space:nowrap;flex-shrink:0}
 .kpi-item-vazio{padding:4px 0;color:var(--grafite);font-size:.85rem}
+.kpi-item-nota{color:var(--grafite);font-size:10.5px}
 </style>
 </head>
 <body>
@@ -154,11 +155,25 @@
   function fmtItemData(a) {
     return a.prazo_iso ? CALC.fmtBR(a.prazo_iso) : "sem data fixa";
   }
-  function renderKpiItem(a) {
+  function renderKpiItem(a, sufixo) {
     return '<div class="kpi-item">' +
       '<span class="kpi-item-id">' + esc(a.id) + '</span>' +
-      '<span class="kpi-item-tit">' + esc(a.atividade) + '</span>' +
+      '<span class="kpi-item-tit">' + esc(a.atividade) +
+        (sufixo ? ' <span class="kpi-item-nota">· ' + esc(sufixo) + '</span>' : "") + '</span>' +
       '<span class="kpi-item-data">' + esc(fmtItemData(a)) + '</span></div>';
+  }
+
+  // "Em andamento" e "Atrasada" se sobrepõem de propósito (ver getAcoesPorCategoria) — sem
+  // marca visual, a mesma ação aparecendo em duas listas parece bug. Chama getAcoesPorCategoria
+  // das duas categorias uma vez por render de lista (não por item) e devolve uma função de
+  // lookup; não reimplementa a regra de sobreposição, só reconsulta a fonte única.
+  function sufixoParaCategoria(categoria) {
+    if (categoria !== "em_andamento" && categoria !== "atrasada") return () => "";
+    const idsEmAndamento = new Set(getAcoesPorCategoria("em_andamento").map((a) => a.id));
+    const idsAtrasada = new Set(getAcoesPorCategoria("atrasada").map((a) => a.id));
+    return categoria === "em_andamento"
+      ? (a) => (idsAtrasada.has(a.id) ? "também atrasada" : "")
+      : (a) => (idsEmAndamento.has(a.id) ? "também em andamento" : "");
   }
 
   let kpisHtml = itens.map(([numFixo, rot, cls, cat]) => {
@@ -166,6 +181,7 @@
       return '<div class="card kpi ' + cls + '"><div class="n">' + numFixo + '</div><div class="l">' + rot + "</div></div>";
     }
     const lista = cat === "atrasada" ? atrasadasLista : getAcoesPorCategoria(cat);
+    const sufixo = sufixoParaCategoria(cat);
     return '<div class="card kpi ' + cls + '">' +
       '<div class="n kpi-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="kpi-lista-' + cat + '" data-cat="' + cat + '">' +
         lista.length + '<span class="kpi-chevron" aria-hidden="true">▼</span>' +
@@ -173,7 +189,7 @@
       '<div class="l">' + rot + '</div>' +
       '<div class="kpi-lista" id="kpi-lista-' + cat + '">' +
         '<div class="kpi-lista-inner">' +
-          (lista.length ? lista.map(renderKpiItem).join("") : '<div class="kpi-item-vazio">Nenhuma ação nessa categoria.</div>') +
+          (lista.length ? lista.map((a) => renderKpiItem(a, sufixo(a))).join("") : '<div class="kpi-item-vazio">Nenhuma ação nessa categoria.</div>') +
         '</div>' +
       '</div>' +
     '</div>';
@@ -247,9 +263,10 @@
       const { painel, botao } = elementos(cat);
       if (!painel || !botao) return;
       const lista = getAcoesPorCategoria(cat);
+      const sufixo = sufixoParaCategoria(cat);
       const inner = painel.querySelector(".kpi-lista-inner");
       inner.innerHTML = lista.length
-        ? lista.map(renderKpiItem).join("")
+        ? lista.map((a) => renderKpiItem(a, sufixo(a))).join("")
         : '<div class="kpi-item-vazio">Nenhuma ação nessa categoria.</div>';
       botao.childNodes[0].textContent = lista.length; // 1º nó = número; 2º nó = chevron (preservado)
     }

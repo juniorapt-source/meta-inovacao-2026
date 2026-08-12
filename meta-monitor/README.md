@@ -63,11 +63,14 @@ Quem preferir pode editar `data/*.js` direto no editor de texto — o formato é
 ## Testes (os mesmos usados na construção)
 
 ```bash
-python3 tools/validar_dados.py        # integridade dos dados (47/27/10/7/2/20, dependências)
-node tools/testar_calc.js             # cálculos: KPIs, atraso, carga por dia, estado dos nós
-python3 tools/validar_site.py         # HTML: referências locais e ids obrigatórios por página
-python3 tools/testar_kpis_cruzado.py  # KPIs do Python == KPIs do JS
-node tools/testar_editor.js           # roundtrip da serialização do editor
+python3 tools/validar_dados.py         # integridade dos dados (47/27/10/7/2/20, dependências)
+node tools/testar_calc.js              # cálculos: KPIs, atraso, carga por dia, estado dos nós
+python3 tools/validar_site.py          # HTML: referências locais e ids obrigatórios por página
+python3 tools/testar_kpis_cruzado.py   # KPIs do Python == KPIs do JS
+node tools/testar_editor.js            # roundtrip da serialização do editor
+node tools/testar_dashboard_headless.js # dashboard num Chrome/Chromium real via CDP: clique nos
+                                        # cards de KPI re-renderiza a lista ao vivo, sem refresh
+                                        # (usa o navegador já instalado — sem instalar nada novo)
 ```
 
 ## Estrutura
@@ -79,7 +82,7 @@ js/calc.js            funções puras de cálculo (testáveis em node)
 js/core.js            shell de navegação e utilitários
 js/editor_io.js       serialização canônica dos dados (testável em node)
 data/*.js             config, plano, nos, canais, agenda, iniciativas, matriz, pessoas, changelog
-tools/                geração de dados a partir do xlsx + os 5 testes
+tools/                geração de dados a partir do xlsx + os 6 testes
 docs/                 PLANO_EXECUCAO.md, BUILD_STATUS.md, PENDENCIAS.md (se houver)
 ```
 
