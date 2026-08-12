@@ -11,6 +11,7 @@
     ["participantes.html", "Participantes"],
     ["projetos.html", "Projetos"],
     ["plano-acao.html", "Plano de Ação x Projeto"],
+    ["corsario.html", "O Caminho para o Corsário"],
     ["editor.html", "Modo edição"],
   ];
 

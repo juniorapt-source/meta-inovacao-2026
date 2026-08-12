@@ -16,6 +16,9 @@ Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanh
 | `agenda.html` | Ciclos 1 e 2 com a URC e os 20 encontros (10 canais × 2 ciclos; Ciclo 1 já com grade v2, Ciclo 2 "a agendar") |
 | `demandas.html` | Matriz 27 iniciativas × 10 canais com o fluxo previsto → oficina → formulário → priorizado → encaminhado |
 | `participantes.html` | Pessoas por grupo, com pendências de indicação (CAN-05) e fallback do Nó 2 |
+| `projetos.html` | Portfólio de projetos por núcleo, com representantes |
+| `plano-acao.html` | Atividades por iniciativa (CRUD via Supabase) |
+| `corsario.html` | Adequação de cada iniciativa ao ecossistema oficial (Supabase, somente leitura) — régua de 19 critérios, patente por faixa de % |
 | `editor.html` | Modo edição: altera plano, matriz, agenda ou pessoas no navegador e baixa o `data/*.js` atualizado |
 
 ## Como os dados funcionam

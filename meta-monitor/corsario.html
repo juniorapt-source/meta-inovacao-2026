@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>O Caminho para o Corsário · Carta de Corso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<style>
+/* painel da frota (resumo) */
+.crs-frota{display:flex;gap:26px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.crs-frota-bloco{flex:1;min-width:170px}
+.crs-frota-media .n{font-family:'Spectral';font-weight:300;font-size:46px;line-height:1;color:var(--tinta)}
+.crs-frota-media .l{font-family:'DM Sans';font-weight:600;font-size:11px;color:var(--grafite);margin-top:6px;
+  text-transform:uppercase;letter-spacing:.1em}
+.crs-frota-patentes{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--linha)}
+.crs-patente-mini{padding:8px 4px;text-align:center;border-left:1px solid var(--linha)}
+.crs-patente-mini:first-child{border-left:none}
+.crs-patente-mini .n{font-family:'Spectral';font-weight:600;font-size:19px;color:var(--tinta)}
+.crs-patente-mini.crs-pat-corsario .n{color:#8A6A12}
+.crs-patente-mini .l{font-family:'DM Sans';font-weight:500;font-size:9px;color:var(--grafite);margin-top:2px;
+  text-transform:uppercase;letter-spacing:.04em}
+.crs-frota-nota{font-size:11px;color:var(--grafite);font-style:italic;margin-top:6px}
+.crs-frota-data{font-size:12px;color:var(--grafite);text-align:right}
+.crs-frota-data b{display:block;color:var(--tinta);font-weight:600;margin-top:2px}
+@media (max-width:640px){ .crs-frota{flex-direction:column;align-items:stretch} .crs-frota-data{text-align:left} }
+
+/* controles: chips de núcleo, busca, ordenação */
+.crs-controles{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:20px 0 14px}
+.crs-chips{display:flex;gap:6px;flex-wrap:wrap}
+.crs-chip-filtro{cursor:pointer;border:1px solid var(--linha);background:var(--branco);border-radius:0;
+  padding:6px 12px;font-family:'DM Sans';font-weight:600;font-size:11px;color:var(--tinta);
+  text-transform:uppercase;letter-spacing:.04em}
+.crs-chip-filtro.ativo{background:var(--cor-chip,var(--tinta));border-color:var(--cor-chip,var(--tinta));color:#fff}
+.crs-controles input[type=search]{border:1px solid var(--linha);border-radius:0;padding:7px 10px;font-size:13px;
+  background:var(--branco);font-family:'DM Sans';color:var(--tinta);min-width:200px}
+.crs-controles select{border:1px solid var(--linha);border-radius:0;padding:7px 10px;font-size:13px;
+  background:var(--branco);font-family:'DM Sans';color:var(--tinta)}
+.crs-contagem{color:var(--grafite);font-size:12.5px;margin-top:10px}
+
+/* estado de carregamento/erro */
+.crs-erro{background:var(--critico-w);border:1px solid rgba(43,38,32,.2);border-radius:0;padding:10px 14px;
+  font-family:'Spectral',Georgia,serif;font-size:13.5px;color:var(--critico);margin-bottom:14px;
+  display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+
+/* grid de cards */
+.crs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-top:4px}
+.crs-card{padding:0;overflow:hidden}
+.crs-card summary{cursor:pointer;list-style:none;padding:16px 18px}
+.crs-card summary::-webkit-details-marker{display:none}
+.crs-card summary::after{content:"▾ ver os 19 critérios";display:block;margin-top:12px;font-family:'DM Sans';
+  font-weight:500;font-size:10.5px;color:var(--grafite);text-transform:uppercase;letter-spacing:.05em}
+.crs-card[open] summary::after{content:"▴ recolher"}
+.crs-card-topo{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.crs-card-nome{font-family:'Spectral';font-weight:600;font-size:15px;color:var(--tinta);line-height:1.3}
+.crs-chip-nucleo{flex-shrink:0;padding:2px 9px;border-radius:0;font-family:'DM Sans';font-weight:600;font-size:10px;
+  text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.crs-barra{height:7px;background:var(--neutro-w);margin:12px 0 8px}
+.crs-barra-fill{height:100%;background:var(--accent)}
+.crs-fora-regua{margin:12px 0 8px;font-size:12px;color:var(--grafite);font-style:italic}
+.crs-card-meta{display:flex;justify-content:space-between;align-items:center}
+.crs-patente-badge{display:inline-block;padding:3px 10px;font-family:'DM Sans';font-weight:700;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.05em;background:var(--neutro-w);color:var(--tinta)}
+.crs-pat-corsario{background:#FBF1D9;color:#8A6A12;box-shadow:inset 0 0 0 1px #C9A227}
+.crs-pct{font-family:'IBM Plex Mono';font-size:13px;color:var(--tinta)}
+.crs-card-linha{margin-top:9px;font-size:12px;color:var(--grafite)}
+
+/* detalhe expandido: critérios agrupados */
+.crs-detalhe{border-top:1px solid var(--linha);padding:14px 18px;background:rgba(43,38,32,.015)}
+.crs-grupo{margin-bottom:11px}
+.crs-grupo:last-child{margin-bottom:0}
+.crs-grupo-titulo{font-family:'DM Sans';font-weight:700;font-size:10px;color:var(--grafite);margin-bottom:6px;
+  text-transform:uppercase;letter-spacing:.08em}
+.crs-grupo-chips{display:flex;flex-wrap:wrap;gap:5px}
+.crs-chip-crit{display:inline-block;padding:3px 9px;border-radius:0;font-family:'DM Sans';font-weight:500;font-size:11px}
+.crs-st-ok{background:#E8F5E9;color:#2E7D32}
+.crs-st-andamento{background:#E3F0FB;color:#005EB8}
+.crs-st-iniciar{background:#FFF8E1;color:#B28704}
+.crs-st-entendimento{background:#ECEFF1;color:#78909C}
+.crs-crit-na{background:transparent;color:#8B98A5;font-style:italic;box-shadow:inset 0 0 0 1px rgba(139,152,165,.4)}
+
+/* legenda — sempre visível, independente do Supabase responder */
+.crs-leg-bloco{margin-bottom:16px}
+.crs-leg-bloco:last-of-type{margin-bottom:12px}
+.crs-leg-titulo{display:block;font-family:'DM Sans';font-weight:700;font-size:11px;color:var(--grafite);
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.crs-leg-patentes{display:flex;flex-direction:column;gap:7px}
+.crs-leg-item{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.crs-leg-faixa{font-family:'IBM Plex Mono';font-size:11.5px;color:var(--grafite);min-width:60px}
+.crs-leg-desc{font-family:'Spectral';font-size:13px;color:var(--tinta)}
+.crs-leg-status{display:flex;flex-wrap:wrap;gap:6px 4px;align-items:center}
+.crs-leg-peso{font-family:'IBM Plex Mono';font-size:11px;color:var(--grafite);margin-right:10px}
+.crs-regra-ouro{font-family:'Spectral';font-style:italic;font-size:13.5px;color:var(--tinta);
+  border-top:1px solid var(--linha);padding-top:10px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">O Caminho para o Corsário</h1>
+    <p class="pagina-sub">A jornada de cada iniciativa até a carta de corso: operar com tudo registrado e visível no ecossistema oficial (Foco, catálogo e canais da URC). Nenhum status é punição: a régua mede distância, não mérito.</p>
+
+    <div id="crs-estado"></div>
+
+    <section class="card" id="crs-frota-wrap" aria-label="Painel da frota"></section>
+
+    <div class="crs-controles" id="crs-controles">
+      <div class="crs-chips" id="crs-chips">
+        <button type="button" class="crs-chip-filtro ativo" data-nucleo="">Todos</button>
+      </div>
+      <input type="search" id="crs-busca" placeholder="Buscar por iniciativa…" aria-label="Buscar iniciativa">
+      <select id="crs-ordenar" aria-label="Ordenar iniciativas">
+        <option value="pct_desc">% de adequação (maior primeiro)</option>
+        <option value="nome_asc">Nome A-Z</option>
+        <option value="nucleo">Núcleo</option>
+      </select>
+    </div>
+
+    <div class="crs-grid" id="crs-grid"></div>
+    <p class="crs-contagem" id="crs-contagem"></p>
+
+    <section class="secao" id="crs-legenda">
+      <h2>Legenda</h2>
+      <div class="card">
+        <div class="crs-leg-bloco">
+          <b class="crs-leg-titulo">Patentes</b>
+          <div class="crs-leg-patentes">
+            <div class="crs-leg-item"><span class="crs-patente-badge">Grumete</span><span class="crs-leg-faixa">0–24%</span><span class="crs-leg-desc">embarcou; ainda mapeando o próprio navio</span></div>
+            <div class="crs-leg-item"><span class="crs-patente-badge">Marujo</span><span class="crs-leg-faixa">25–49%</span><span class="crs-leg-desc">primeiras entregas dentro do ecossistema</span></div>
+            <div class="crs-leg-item"><span class="crs-patente-badge">Timoneiro</span><span class="crs-leg-faixa">50–74%</span><span class="crs-leg-desc">mais da metade da rota navegada</span></div>
+            <div class="crs-leg-item"><span class="crs-patente-badge">Capitão</span><span class="crs-leg-faixa">75–99%</span><span class="crs-leg-desc">reta final; faltam poucos itens</span></div>
+            <div class="crs-leg-item"><span class="crs-patente-badge crs-pat-corsario">Corsário</span><span class="crs-leg-faixa">100%</span><span class="crs-leg-desc">carta de corso emitida: iniciativa integralmente no ecossistema oficial</span></div>
+          </div>
+        </div>
+        <div class="crs-leg-bloco">
+          <b class="crs-leg-titulo">Status e pesos</b>
+          <div class="crs-leg-status">
+            <span class="crs-chip-crit crs-st-ok">ok</span><span class="crs-leg-peso">100%</span>
+            <span class="crs-chip-crit crs-st-andamento">ajuste em andamento</span><span class="crs-leg-peso">70%</span>
+            <span class="crs-chip-crit crs-st-iniciar">a iniciar</span><span class="crs-leg-peso">40%</span>
+            <span class="crs-chip-crit crs-st-entendimento">em entendimento</span><span class="crs-leg-peso">20%</span>
+            <span class="crs-chip-crit crs-crit-na">não se aplica</span><span class="crs-leg-peso">fora da régua</span>
+          </div>
+        </div>
+        <p class="crs-regra-ouro">A regra de ouro: não se aplica não conta contra ninguém — 100% significa ok em tudo que se aplica à iniciativa.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script src="js/config.js"></script>
+<script>
+(function () {
+  "use strict";
+  montarShell("corsario.html");
+
+  /* Reaproveita window.APP_CONFIG (js/config.js) — já usado por demandas.html e
+     plano-acao.html pra falar com o mesmo projeto Supabase compartilhado. Os
+     placeholders só entram em jogo se, por algum motivo, js/config.js não tiver
+     carregado; troque em Supabase → Project Settings → API se um dia for preciso
+     apontar pra outro projeto. */
+  const SUPABASE_URL = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) || "COLE_AQUI_A_URL";
+  const SUPABASE_ANON_KEY = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_ANON_KEY) || "COLE_AQUI_A_ANON_KEY";
+
+  async function buscar(tabela, params) {
+    const url = SUPABASE_URL + "/rest/v1/" + tabela + "?select=*" + (params || "");
+    const r = await fetch(url, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY },
+    });
+    if (!r.ok) {
+      // PostgREST devolve {message, hint} no corpo (ex.: GRANT faltando pro role anon) —
+      // repassa isso no erro em vez de só "HTTP 401", que é o de fato acionável pra quem for corrigir.
+      let detalhe = "HTTP " + r.status;
+      try {
+        const corpo = await r.json();
+        if (corpo && corpo.message) detalhe = corpo.message + (corpo.hint ? " — " + corpo.hint : "");
+      } catch (e) { /* corpo não era JSON — mantém o HTTP status como detalhe */ }
+      throw new Error(tabela + ": " + detalhe);
+    }
+    return r.json();
+  }
+
+  function normalizar(s) {
+    return String(s == null ? "" : s).trim().toLowerCase();
+  }
+
+  /* ---- a régua (não mexer sem revalidar contra o card da ALI Ecossistema) ---- */
+  const PESOS = { "ok": 1, "ajuste em andamento": 0.7, "a iniciar": 0.4, "em entendimento": 0.2 };
+
+  function calcular(listaDeStatus) {
+    const aplicaveis = listaDeStatus.filter((s) => s !== "não se aplica");
+    if (aplicaveis.length === 0) return { pct: null, patente: "Fora da régua", aplicaveis: 0 };
+    const pct = aplicaveis.reduce((soma, s) => soma + (PESOS[s] || 0), 0) / aplicaveis.length;
+    const patente = pct >= 0.995 ? "Corsário"
+      : pct >= 0.75 ? "Capitão"
+      : pct >= 0.5 ? "Timoneiro"
+      : pct >= 0.25 ? "Marujo" : "Grumete";
+    return { pct: pct, patente: patente, aplicaveis: aplicaveis.length };
+  }
+
+  const ORDEM_PATENTES = ["Grumete", "Marujo", "Timoneiro", "Capitão", "Corsário"];
+  const CLASSE_STATUS = {
+    "ok": "crs-st-ok",
+    "ajuste em andamento": "crs-st-andamento",
+    "a iniciar": "crs-st-iniciar",
+    "em entendimento": "crs-st-entendimento",
+  };
+  const NUCLEO_CORES = {
+    "inovação para competitividade": { cor: "#005EB8", fundo: "#E3F0FB" },
+    "inovação territorial": { cor: "#00796B", fundo: "#E0F2F0" },
+    "startups": { cor: "#6A4FA3", fundo: "#EFEAF7" },
+    "tecnologias portadoras de futuro": { cor: "#E65100", fundo: "#FDEDE0" },
+  };
+  const ORDEM_NUCLEOS = Object.keys(NUCLEO_CORES);
+
+  function corNucleo(nome) {
+    return NUCLEO_CORES[normalizar(nome)] || { cor: "#5c5346", fundo: "var(--neutro-w)" };
+  }
+
+  function fmtPct(p) {
+    if (p === null || p === undefined) return "—";
+    return (p * 100).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
+  }
+
+  function fmtDataHora(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+
+  const elEstado = document.getElementById("crs-estado");
+  const elFrota = document.getElementById("crs-frota-wrap");
+  const elControles = document.getElementById("crs-controles");
+  const elChips = document.getElementById("crs-chips");
+  const elBusca = document.getElementById("crs-busca");
+  const elOrdenar = document.getElementById("crs-ordenar");
+  const elGrid = document.getElementById("crs-grid");
+  const elContagem = document.getElementById("crs-contagem");
+
+  let TODAS = [];   // uma entrada por iniciativa, com os 19 status já carregados e a régua já calculada
+  let GRUPOS = [];  // critérios agrupados por `grupo`, na ordem de `ordem`
+  let filtroNucleo = ""; // "" = todos
+
+  function mostrarSkeleton() {
+    elControles.style.visibility = "hidden";
+    elFrota.innerHTML = "";
+    elGrid.innerHTML = "";
+    elContagem.textContent = "";
+    elEstado.innerHTML = '<div class="card" style="color:var(--grafite)">Carregando dados do Supabase…</div>';
+  }
+
+  function mostrarErro(err) {
+    elEstado.innerHTML =
+      '<div class="crs-erro"><span><b>Não consegui falar com a base agora.</b> ' +
+      esc((err && err.message) || String(err)) + '</span>' +
+      '<button type="button" class="btn sec" id="crs-retry">Tentar de novo</button></div>';
+    document.getElementById("crs-retry").addEventListener("click", carregar);
+  }
+
+  function processar(criterios, statusRows) {
+    GRUPOS = [];
+    const idxGrupo = new Map();
+    criterios.forEach((c) => {
+      if (!idxGrupo.has(c.grupo)) {
+        idxGrupo.set(c.grupo, GRUPOS.length);
+        GRUPOS.push({ grupo: c.grupo, criterios: [] });
+      }
+      GRUPOS[idxGrupo.get(c.grupo)].criterios.push(c);
+    });
+
+    const porIniciativa = new Map();
+    statusRows.forEach((r) => {
+      const nome = r.iniciativa;
+      if (!porIniciativa.has(nome)) porIniciativa.set(nome, { nome: nome, nucleo: r.nucleo, itens: [], ultimaAtualizacao: null });
+      const ent = porIniciativa.get(nome);
+      if (!ent.nucleo && r.nucleo) ent.nucleo = r.nucleo;
+      const status = normalizar(r.status);
+      ent.itens.push({ criterio: r.criterio, status: status, observacao: r.observacao, atualizado_em: r.atualizado_em });
+      if (r.atualizado_em && (!ent.ultimaAtualizacao || r.atualizado_em > ent.ultimaAtualizacao)) ent.ultimaAtualizacao = r.atualizado_em;
+    });
+
+    TODAS = Array.from(porIniciativa.values()).map((ent) => {
+      ent.calc = calcular(ent.itens.map((i) => i.status));
+      return ent;
+    });
+    TODAS.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  }
+
+  function frotaHtml() {
+    const comRegua = TODAS.filter((x) => x.calc.pct !== null);
+    const media = comRegua.length ? comRegua.reduce((s, x) => s + x.calc.pct, 0) / comRegua.length : null;
+    const foraDaRegua = TODAS.length - comRegua.length;
+    let ultimaData = null;
+    TODAS.forEach((x) => { if (x.ultimaAtualizacao && (!ultimaData || x.ultimaAtualizacao > ultimaData)) ultimaData = x.ultimaAtualizacao; });
+
+    const patentesHtml = ORDEM_PATENTES.map((p) => {
+      const n = TODAS.filter((x) => x.calc.patente === p).length;
+      return '<div class="crs-patente-mini' + (p === "Corsário" ? " crs-pat-corsario" : "") + '"><div class="n">' + n + '</div><div class="l">' + esc(p) + '</div></div>';
+    }).join("");
+
+    return '<div class="crs-frota">' +
+      '<div class="crs-frota-bloco crs-frota-media"><div class="n">' + fmtPct(media) + '</div><div class="l">Adequação média da frota</div></div>' +
+      '<div class="crs-frota-bloco"><div class="crs-frota-patentes">' + patentesHtml + '</div>' +
+        (foraDaRegua ? '<div class="crs-frota-nota">' + foraDaRegua + (foraDaRegua === 1 ? " iniciativa fora" : " iniciativas fora") + ' da régua (nenhum critério aplicável).</div>' : "") +
+      '</div>' +
+      '<div class="crs-frota-bloco crs-frota-data">Última atualização registrada<b>' + (ultimaData ? esc(fmtDataHora(ultimaData)) : "—") + '</b></div>' +
+    '</div>';
+  }
+
+  function montarChips() {
+    const nucleos = Array.from(new Set(TODAS.map((x) => x.nucleo).filter(Boolean)));
+    nucleos.sort((a, b) => {
+      const ia = ORDEM_NUCLEOS.indexOf(normalizar(a));
+      const ib = ORDEM_NUCLEOS.indexOf(normalizar(b));
+      if (ia === -1 && ib === -1) return a.localeCompare(b, "pt-BR");
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+    elChips.innerHTML = '<button type="button" class="crs-chip-filtro ativo" data-nucleo="">Todos</button>' +
+      nucleos.map((n) => '<button type="button" class="crs-chip-filtro" data-nucleo="' + esc(normalizar(n)) + '" style="--cor-chip:' + corNucleo(n).cor + '">' + esc(n) + '</button>').join("");
+  }
+
+  function chipCriterioHtml(l) {
+    const rotulo = l.crit.rotulo;
+    if (!l.item || l.item.status === "não se aplica") {
+      return '<span class="crs-chip-crit crs-crit-na">' + esc(rotulo) + ' — fora da régua</span>';
+    }
+    const cls = CLASSE_STATUS[l.item.status] || "";
+    const titulo = l.item.observacao ? ' title="' + esc(l.item.observacao) + '"' : "";
+    return '<span class="crs-chip-crit ' + cls + '"' + titulo + '>' + esc(rotulo) + '</span>';
+  }
+
+  function detalheHtml(x) {
+    const porChave = new Map(x.itens.map((i) => [i.criterio, i]));
+    return GRUPOS.map((g) => {
+      const linhas = g.criterios.map((c) => ({ crit: c, item: porChave.get(c.chave) }));
+      const aplicaveis = linhas.filter((l) => l.item && l.item.status !== "não se aplica");
+      const naoAplicaveis = linhas.filter((l) => !l.item || l.item.status === "não se aplica");
+      const chips = aplicaveis.concat(naoAplicaveis).map(chipCriterioHtml).join("");
+      return '<div class="crs-grupo"><div class="crs-grupo-titulo">' + esc(g.grupo) + '</div><div class="crs-grupo-chips">' + chips + '</div></div>';
+    }).join("");
+  }
+
+  function cardHtml(x) {
+    const calc = x.calc, pct = calc.pct;
+    const nc = corNucleo(x.nucleo);
+    const okCount = x.itens.filter((i) => i.status === "ok").length;
+    const movimentoCount = x.itens.filter((i) => i.status === "ajuste em andamento" || i.status === "a iniciar").length;
+    const barraOuAviso = pct === null
+      ? '<div class="crs-fora-regua">Fora da régua — nenhum critério aplicável a esta iniciativa.</div>'
+      : '<div class="crs-barra" role="img" aria-label="' + Math.round(pct * 100) + '% de adequação"><div class="crs-barra-fill" style="width:' + (Math.round(pct * 1000) / 10) + '%"></div></div>' +
+        '<div class="crs-card-meta"><span class="crs-patente-badge' + (calc.patente === "Corsário" ? " crs-pat-corsario" : "") + '">' + esc(calc.patente) + '</span><span class="crs-pct">' + fmtPct(pct) + '</span></div>';
+
+    return '<details class="card crs-card">' +
+      '<summary>' +
+        '<div class="crs-card-topo">' +
+          '<div class="crs-card-nome">' + esc(x.nome) + '</div>' +
+          '<span class="crs-chip-nucleo" style="background:' + nc.fundo + ';color:' + nc.cor + '">' + esc(x.nucleo || "sem núcleo") + '</span>' +
+        '</div>' +
+        barraOuAviso +
+        '<div class="crs-card-linha">' + okCount + ' de ' + calc.aplicaveis + ' aplicáveis em ok · ' + movimentoCount + ' em movimento</div>' +
+      '</summary>' +
+      '<div class="crs-detalhe">' + detalheHtml(x) + '</div>' +
+    '</details>';
+  }
+
+  function comparador(a, b) {
+    const modo = elOrdenar.value;
+    if (modo === "nome_asc") return a.nome.localeCompare(b.nome, "pt-BR");
+    if (modo === "nucleo") return (a.nucleo || "").localeCompare(b.nucleo || "", "pt-BR") || a.nome.localeCompare(b.nome, "pt-BR");
+    // pct_desc (padrão) — "fora da régua" (pct null) vai pro fim
+    return (b.calc.pct === null ? -1 : b.calc.pct) - (a.calc.pct === null ? -1 : a.calc.pct) || a.nome.localeCompare(b.nome, "pt-BR");
+  }
+
+  function renderGrid() {
+    let lista = TODAS.slice();
+    if (filtroNucleo) lista = lista.filter((x) => normalizar(x.nucleo) === filtroNucleo);
+    const q = elBusca.value.trim().toLowerCase();
+    if (q) lista = lista.filter((x) => x.nome.toLowerCase().includes(q));
+    lista.sort(comparador);
+
+    elGrid.innerHTML = lista.length
+      ? lista.map(cardHtml).join("")
+      : '<div class="card" style="color:var(--grafite)">Nenhuma iniciativa com esses filtros.</div>';
+    elContagem.textContent = lista.length + " de " + TODAS.length + " iniciativas exibidas.";
+  }
+
+  async function carregar() {
+    mostrarSkeleton();
+    try {
+      const criterios = await buscar("corsario_criterios", "&order=ordem&limit=1000");
+      const statusRows = await buscar("corsario_status", "&limit=1000");
+      processar(criterios, statusRows);
+      elEstado.innerHTML = "";
+      elFrota.innerHTML = frotaHtml();
+      montarChips();
+      elControles.style.visibility = "";
+      renderGrid();
+    } catch (err) {
+      console.error("corsario: falha ao carregar", err);
+      mostrarErro(err);
+    }
+  }
+
+  elChips.addEventListener("click", (e) => {
+    const btn = e.target.closest(".crs-chip-filtro");
+    if (!btn) return;
+    elChips.querySelectorAll(".crs-chip-filtro").forEach((b) => b.classList.remove("ativo"));
+    btn.classList.add("ativo");
+    filtroNucleo = btn.dataset.nucleo || "";
+    renderGrid();
+  });
+  elBusca.addEventListener("input", renderGrid);
+  elOrdenar.addEventListener("change", renderGrid);
+
+  carregar();
+})();
+</script>
+</body>
+</html>
