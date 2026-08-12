@@ -19,5 +19,10 @@ window.DB.changelog = [
   "data": "2026-08-12",
   "versao": "0.3.1",
   "nota": "Corrige supabase/setup.sql — adiciona GRANTs de tabela para anon e authenticated, sem os quais o RLS não chega a ser avaliado e o cliente recebe permission denied."
+ },
+ {
+  "data": "2026-08-12",
+  "versao": "0.5.0",
+  "nota": "Nova identidade visual \"Carta Náutica\": paleta papel-de-mapa-antigo, tipografia Spectral + DM Sans + IBM Plex Mono, texturas náuticas de fundo. Aplicada a todo o painel — só tema, estrutura e funcionalidades continuam iguais."
  }
 ];

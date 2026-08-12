@@ -5,40 +5,40 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Editor · Carta de Corso</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 <style>
 .ed-topo{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
-.ed-topo select{font:600 14px Inter,sans-serif;color:var(--tinta);padding:8px 10px;border:1px solid #C7D6E6;border-radius:8px;background:#fff}
-.ed-btn{font:600 13px Inter,sans-serif;color:#fff;background:var(--azul);border:0;border-radius:8px;padding:9px 14px;cursor:pointer}
-.ed-btn:hover{background:var(--azul-claro)}
-.ed-tab{width:100%;border-collapse:collapse;background:#fff;border:1px solid #DCE6F0;border-radius:10px;overflow:hidden}
-.ed-tab th{font:600 11px Inter,sans-serif;text-transform:uppercase;letter-spacing:.04em;color:#5A6E82;background:var(--ceu);padding:8px 10px;text-align:left}
-.ed-tab td{font:400 13px Inter,sans-serif;color:var(--tinta);padding:6px 10px;border-top:1px solid #EDF2F7;vertical-align:middle}
-.ed-tab input[type=text],.ed-tab input[type=number],.ed-tab select{font:400 13px Inter,sans-serif;color:var(--tinta);padding:5px 8px;border:1px solid #C7D6E6;border-radius:6px;background:#fff;width:100%;box-sizing:border-box}
+.ed-topo select{font:600 13px 'DM Sans',sans-serif;color:var(--tinta);padding:8px 10px;border:1px solid var(--linha);border-radius:0;background:var(--branco)}
+.ed-btn{font:700 12px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--branco);background:var(--azul);border:0;border-radius:0;padding:9px 16px;cursor:pointer}
+.ed-btn:hover{background:var(--accent-hover)}
+.ed-tab{width:100%;border-collapse:collapse;background:var(--branco);border:1px solid var(--linha);border-radius:0}
+.ed-tab th{font:700 10.5px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--grafite);background:var(--ceu);padding:8px 10px;text-align:left}
+.ed-tab td{font:400 13px 'DM Sans',sans-serif;color:var(--tinta);padding:6px 10px;border-top:1px solid var(--border-soft);vertical-align:middle}
+.ed-tab input[type=text],.ed-tab input[type=number],.ed-tab select{font:400 13px 'DM Sans',sans-serif;color:var(--tinta);padding:5px 8px;border:1px solid var(--linha);border-radius:0;background:var(--branco);width:100%;box-sizing:border-box}
 .ed-tab input[type=number]{width:76px}
 .ed-mono{font-family:'IBM Plex Mono',monospace;font-size:12px;white-space:nowrap}
-.ed-saida{width:100%;min-height:180px;font:400 12px 'IBM Plex Mono',monospace;color:var(--tinta);border:1px solid #C7D6E6;border-radius:8px;padding:10px;box-sizing:border-box;background:#fff;margin-top:12px}
-.ed-passos{background:var(--ceu);border:1px solid #C7D6E6;border-radius:10px;padding:12px 14px;margin:14px 0;font:400 13px Inter,sans-serif;color:var(--tinta)}
-.ed-passos code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:#fff;border:1px solid #DCE6F0;border-radius:4px;padding:1px 5px}
+.ed-saida{width:100%;min-height:180px;font:400 12px 'IBM Plex Mono',monospace;color:var(--tinta);border:1px solid var(--linha);border-radius:0;padding:10px;box-sizing:border-box;background:var(--branco);margin-top:12px}
+.ed-passos{background:var(--ceu);border:1px solid var(--linha);border-radius:0;padding:12px 14px;margin:14px 0;font:400 13px 'DM Sans',sans-serif;color:var(--tinta)}
+.ed-passos code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--branco);border:1px solid var(--linha);border-radius:0;padding:1px 5px}
 .ed-matriz td{padding:3px 4px}
 .ed-matriz select{padding:4px 4px;font-size:12px}
-.ed-matriz .col-ini{font:500 12px Inter,sans-serif;white-space:nowrap;position:sticky;left:0;background:#fff;border-right:1px solid #DCE6F0}
+.ed-matriz .col-ini{font:500 12px 'DM Sans',sans-serif;white-space:nowrap;position:sticky;left:0;background:var(--branco);border-right:1px solid var(--linha)}
 .ed-wrap{overflow:auto;max-width:100%}
 .ed-btn.sec{background:var(--grafite-w);color:var(--tinta)}
-.ed-btn.sec:hover{background:#E2E8EE}
-.ed-nova{background:var(--ceu);border:1px solid #C7D6E6;border-radius:10px;padding:14px;margin-bottom:14px}
-.ed-nova h3{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#5A6E82;margin-bottom:10px}
+.ed-btn.sec:hover{background:#e1d7c0}
+.ed-nova{background:var(--ceu);border:1px solid var(--linha);border-radius:0;padding:14px;margin-bottom:14px}
+.ed-nova h3{font-family:'DM Sans',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--grafite);margin-bottom:10px}
 .ed-nova-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 12px}
-.ed-nova-grid label{display:block;font:600 11.5px Inter,sans-serif;color:var(--tinta);margin-bottom:3px}
-.ed-nova-grid input,.ed-nova-grid select,.ed-nova-grid textarea{font:400 13px Inter,sans-serif;color:var(--tinta);padding:7px 9px;border:1px solid #C7D6E6;border-radius:7px;background:#fff;width:100%;box-sizing:border-box}
+.ed-nova-grid label{display:block;font:600 11px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.04em;color:var(--tinta);margin-bottom:4px}
+.ed-nova-grid input,.ed-nova-grid select,.ed-nova-grid textarea{font:400 13px 'DM Sans',sans-serif;color:var(--tinta);padding:7px 9px;border:1px solid var(--linha);border-radius:0;background:var(--branco);width:100%;box-sizing:border-box}
 .ed-nova-grid textarea{min-height:52px;resize:vertical}
 .ed-nova-grid.full{grid-column:1/-1}
 .ed-campo-erro input,.ed-campo-erro select,.ed-campo-erro textarea{border-color:var(--critico)}
 .ed-campo-erro .ed-erro-msg{display:block}
 .ed-erro-msg{display:none;color:var(--critico);font-size:11px;margin-top:3px}
 .ed-nova-acoes{display:flex;gap:10px;align-items:center;margin-top:12px}
-.ed-nova-id{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--azul);background:#fff;border:1px solid #DCE6F0;border-radius:6px;padding:6px 9px;display:inline-block}
+.ed-nova-id{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--azul);background:var(--branco);border:1px solid var(--linha);border-radius:0;padding:6px 9px;display:inline-block}
 </style>
 </head>
 <body>
@@ -49,7 +49,7 @@
     <p class="pagina-sub">Edite abaixo, gere o arquivo atualizado e substitua o correspondente na pasta <span class="ed-mono">data/</span> do repositório. Nada é salvo automaticamente nesta página.</p>
     <section class="cartao">
       <div class="ed-topo">
-        <label for="ed-conjunto" style="font:600 13px Inter,sans-serif">Conjunto:</label>
+        <label for="ed-conjunto" style="font:600 13px 'DM Sans',sans-serif">Conjunto:</label>
         <select id="ed-conjunto" aria-label="Escolher conjunto de dados"></select>
         <button id="ed-baixar" class="ed-btn">Gerar e baixar arquivo atualizado</button>
       </div>

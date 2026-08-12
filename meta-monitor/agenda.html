@@ -7,37 +7,37 @@
 <title>Agenda dos ciclos · Carta de Corso</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 <style>
 .vista-toggle{display:flex;gap:8px;margin-bottom:12px}
-.vista-toggle button{font:600 13px Inter,sans-serif;padding:8px 14px;border-radius:8px;border:1px solid var(--linha);background:#fff;color:var(--tinta);cursor:pointer}
-.vista-toggle button.ativo{background:var(--azul);color:#fff;border-color:var(--azul)}
+.vista-toggle button{font:600 12px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.06em;padding:8px 14px;border-radius:0;border:1px solid var(--linha);background:var(--branco);color:var(--tinta);cursor:pointer}
+.vista-toggle button.ativo{background:var(--azul);color:var(--branco);border-color:var(--azul)}
 .cal-topo{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px}
-.cal-titulo{font:800 17px Archivo,sans-serif;text-transform:capitalize}
+.cal-titulo{font:600 18px 'Spectral',Georgia,serif;text-transform:capitalize}
 .cal-nav{display:flex;gap:6px}
 .cal-nav button{padding:6px 12px;font-size:14px}
-.cal-cabecalho{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;font:600 11px Inter,sans-serif;text-transform:uppercase;letter-spacing:.04em;color:var(--grafite);text-align:center;padding:4px 0}
+.cal-cabecalho{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;font:600 10.5px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--grafite);text-align:center;padding:4px 0}
 .cal-semana{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--linha);border-left:1px solid var(--linha);border-right:1px solid var(--linha)}
 .cal-semana:first-child{border-top:1px solid var(--linha)}
 .cal-semana:last-child{border-bottom:1px solid var(--linha)}
-.cal-dia{background:#fff;min-height:76px;padding:4px 5px;cursor:default;position:relative}
+.cal-dia{background:var(--branco);min-height:76px;padding:4px 5px;cursor:default;position:relative}
 .cal-dia.cal-tem-evento{cursor:pointer}
-.cal-dia.cal-tem-evento:hover{background:#F7FAFD}
-.cal-dia.cal-fora{background:#FBFCFE;color:#B8C4D0}
-.cal-dia.cal-fora .cal-num{color:#C3CDD8}
-.cal-num{font:600 12px Inter,sans-serif}
+.cal-dia.cal-tem-evento:hover{background:rgba(43,38,32,.035)}
+.cal-dia.cal-fora{background:var(--ceu);color:var(--ink-3)}
+.cal-dia.cal-fora .cal-num{color:var(--ink-3)}
+.cal-num{font:600 12px 'IBM Plex Mono',monospace}
 .cal-dia.cal-hoje{box-shadow:inset 0 0 0 2px var(--azul-claro)}
-.cal-dia.cal-hoje .cal-num{color:var(--azul-claro);font-weight:800}
+.cal-dia.cal-hoje .cal-num{color:var(--azul-claro);font-weight:700}
 .cal-eventos{display:flex;flex-direction:column;gap:1px}
-.cal-faixa{position:absolute;height:14px;line-height:14px;font-size:9.5px;font-weight:700;color:#fff;padding:0 5px;overflow:hidden;white-space:nowrap;border-radius:3px;z-index:2}
+.cal-faixa{position:absolute;height:14px;line-height:14px;font-size:9.5px;font-weight:700;color:var(--branco);padding:0 5px;overflow:hidden;white-space:nowrap;border-radius:0;z-index:2}
 .cal-faixa-c1{background:var(--azul-claro)}
 .cal-faixa-c2{background:var(--laranja)}
-.cal-faixa-amostra{display:inline-block;width:16px;height:9px;border-radius:2px;vertical-align:middle}
+.cal-faixa-amostra{display:inline-block;width:16px;height:9px;vertical-align:middle}
 .cal-faixa-amostra.cal-faixa-c1{background:var(--azul-claro)}
 .cal-faixa-amostra.cal-faixa-c2{background:var(--laranja)}
 .cal-legenda{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;font-size:11.5px;color:var(--grafite);align-items:center}
-.cal-detalhe{margin-top:14px;background:#fff;border:1px solid var(--linha);border-radius:12px;padding:14px 16px;box-shadow:var(--sombra)}
+.cal-detalhe{margin-top:14px;background:var(--branco);border:1px solid var(--linha);border-radius:0;padding:14px 16px;box-shadow:var(--sombra)}
 @media (max-width:960px){
   .cal-dia{min-height:56px}
   .cal-faixa{font-size:8.5px}

@@ -7,29 +7,29 @@
 <title>Plano de Ação · Carta de Corso</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 <style>
 .pa-layout{display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start}
 .pa-nav{padding:8px;max-height:76vh;overflow:auto;position:sticky;top:16px}
-.pa-nucleo{font:600 10.5px Inter,sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);padding:10px 10px 4px}
-.pa-nav button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:8px 10px;font:500 13px Inter,sans-serif;color:var(--tinta);cursor:pointer}
+.pa-nucleo{font:600 10.5px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--grafite);padding:10px 10px 4px}
+.pa-nav button{display:block;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;border-radius:0;padding:8px 10px;font:500 13px 'DM Sans',sans-serif;color:var(--tinta);cursor:pointer}
 .pa-nav button:hover{background:var(--ceu)}
-.pa-nav button.ativo{background:var(--azul-claro);color:#fff;font-weight:600}
-.pa-painel h2{font-size:16px;margin-bottom:4px}
-.pa-painel .pa-sub{font-size:12.5px;color:var(--grafite);margin-bottom:14px}
+.pa-nav button.ativo{background:var(--accent-w);border-left-color:var(--accent);color:var(--accent);font-weight:700}
+.pa-painel h2{font-size:18px;margin-bottom:4px}
+.pa-painel .pa-sub{font-size:12.5px;font-style:italic;color:var(--grafite);margin-bottom:14px}
 .pa-carregando,.pa-erro{color:var(--grafite);font-size:13px}
-.pa-erro{color:#7A1F1F}
-.pa-row{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;border-left:4px solid var(--linha);margin-bottom:8px;background:#fff;transition:background .15s,border-color .15s}
-.pa-row.st-nao_iniciado{border-left-color:#B8C4D0;background:var(--grafite-w)}
-.pa-row.st-em_execucao{border-left-color:var(--azul-claro);background:#EEF4FA}
+.pa-erro{color:var(--critico)}
+.pa-row{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:0;border-left:4px solid var(--linha);margin-bottom:8px;background:var(--branco);transition:background .15s,border-color .15s}
+.pa-row.st-nao_iniciado{border-left-color:var(--ink-3);background:var(--neutro-w)}
+.pa-row.st-em_execucao{border-left-color:var(--azul-claro);background:var(--prog-w)}
 .pa-row.st-atrasado{border-left-color:var(--critico);background:var(--critico-w)}
-.pa-row input[type=text]{flex:1;min-width:0;font:400 13px Inter,sans-serif;color:var(--tinta);border:1px solid transparent;border-radius:6px;padding:6px 8px;background:transparent}
-.pa-row input[type=text]:hover,.pa-row input[type=text]:focus{border-color:#C7D6E6;background:#fff}
+.pa-row input[type=text]{flex:1;min-width:0;font:400 13px 'DM Sans',sans-serif;color:var(--tinta);border:1px solid transparent;border-radius:0;padding:6px 8px;background:transparent}
+.pa-row input[type=text]:hover,.pa-row input[type=text]:focus{border-color:var(--linha);background:var(--branco)}
 .pa-row input.pa-desc{flex:2}
-.pa-row select{font:400 12.5px Inter,sans-serif;color:var(--tinta);border:1px solid #C7D6E6;border-radius:6px;padding:5px 6px;background:#fff;flex-shrink:0}
+.pa-row select{font:400 12.5px 'DM Sans',sans-serif;color:var(--tinta);border:1px solid var(--linha);border-radius:0;padding:5px 6px;background:var(--branco);flex-shrink:0}
 .pa-row-status{font-size:11px;min-width:34px;flex-shrink:0;white-space:nowrap}
-.pa-row .pa-del{background:none;border:0;color:var(--critico);cursor:pointer;font-size:16px;padding:4px 8px;line-height:1;border-radius:6px;flex-shrink:0}
+.pa-row .pa-del{background:none;border:0;color:var(--critico);cursor:pointer;font-size:16px;padding:4px 8px;line-height:1;border-radius:0;flex-shrink:0}
 .pa-row .pa-del:hover{background:var(--critico-w)}
 #pa-nova{margin-top:6px}
 @media (max-width:960px){ .pa-layout{grid-template-columns:1fr} .pa-nav{position:static;max-height:none} .pa-row{flex-wrap:wrap} }
