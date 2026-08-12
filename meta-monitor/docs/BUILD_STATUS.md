@@ -28,3 +28,5 @@ conteúdo publicado (não assumidos a partir da linha acima). F7 foi conferida c
 [23:50] F3 — OK (reconferido): `python3 tools/testar_kpis_cruzado.py` → KPIs Python == KPIs JS
   (total 47, concluído 4, andamento 4, não 39, atrasadas 7, próx7 9, janela 22); `validar_site.py`
   confirma index.html com scripts/links íntegros.
+[23:50] F4 — OK (reconferido): `python3 tools/validar_site.py` cobre plano.html e caminho.html —
+  todos os `script src` existem, páginas parseiam.
