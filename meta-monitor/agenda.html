@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Agenda dos ciclos · Meta Inovação 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Agenda dos ciclos</h1>
+    <p class="pagina-sub">2 sessões por canal (3h, presencial, grupos reduzidos; DXP em formato reduzido de 2h). Datas entram assim que a URC devolver a grade — Nó 1.</p>
+
+    <div id="aviso-no1"></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))" id="ciclos"></div>
+
+    <section class="secao">
+      <h2>Encontros <span class="hint">preencha data, local e confirmações no Modo edição</span></h2>
+      <div class="card" style="padding:0;overflow:auto">
+        <table>
+          <thead><tr><th>Ciclo</th><th>Canal</th><th>Pauta (resumo)</th><th>Data</th><th>Local · modo</th><th>Confirmações</th><th>Status</th></tr></thead>
+          <tbody id="encontros"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="data/plano.js"></script>
+<script src="data/canais.js"></script>
+<script src="data/agenda.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script>
+(function(){
+  const hoje = hojeISO();
+  montarShell("agenda.html");
+
+  const can02 = DB.plano.find(a => a.id === "CAN-02");
+  if (can02 && can02.status !== "Concluído")
+    document.getElementById("aviso-no1").innerHTML =
+      '<div class="aviso" style="margin-bottom:14px"><b>Nó 1 pendente:</b> a URC ainda não devolveu a grade (CAN-02). ' +
+      'Fallback vigente: qualquer contraproposta serve, desde que o Ciclo 1 comece até ~18/08. Gatilho: ligação gerência-a-gerência.</div>';
+
+  document.getElementById("ciclos").innerHTML = DB.agenda.ciclos.map(c =>
+    '<div class="card"><h3 style="font-size:15px">' + esc(c.nome) + "</h3>" +
+    '<div class="mono" style="font-size:13px;color:var(--azul);margin:4px 0">' + esc(c.janela) + "</div>" +
+    '<div style="font-size:12.5px;color:var(--grafite)">' + esc(c.regra) + (c.obs ? " · " + esc(c.obs) : "") + "</div></div>").join("");
+
+  const porCanal = Object.fromEntries(DB.canais.map(c => [c.id, c]));
+  const nomeCiclo = Object.fromEntries(DB.agenda.ciclos.map(c => [c.id, c.nome]));
+  document.getElementById("encontros").innerHTML = DB.agenda.encontros.map(e => {
+    const c = porCanal[e.canal];
+    const stCls = e.status === "realizado" ? "st-concluido" : e.status === "confirmado" ? "st-andamento" : "st-janela";
+    return "<tr>" +
+      '<td class="mono" style="font-size:12px;white-space:nowrap">' + esc(nomeCiclo[e.ciclo] || e.ciclo) + "</td>" +
+      "<td><b>" + esc(c.nome) + '</b><div style="color:var(--grafite);font-size:11.5px">' + esc(c.formato) + "</div></td>" +
+      '<td style="font-size:12.5px;color:var(--grafite);max-width:340px">' + c.pauta.slice(0, 2).map(esc).join(" · ") +
+        (c.pauta.length > 2 ? " · +" + (c.pauta.length - 2) : "") + "</td>" +
+      '<td class="mono" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + (e.hora ? " " + esc(e.hora) : "") : "—") + "</td>" +
+      "<td>" + (e.local ? esc(e.local) : "—") + ' <span style="color:var(--grafite);font-size:11.5px">' + esc(e.modo) + "</span></td>" +
+      '<td class="mono" style="font-size:12.5px">' + (e.convidados ? e.confirmados + "/" + e.convidados : "—") + "</td>" +
+      '<td><span class="chip ' + stCls + '">' + esc(e.status) + "</span>" + (e.nota ? '<div style="font-size:11px;color:var(--grafite)">' + esc(e.nota) + "</div>" : "") + "</td></tr>";
+  }).join("");
+})();
+</script>
+</body>
+</html>

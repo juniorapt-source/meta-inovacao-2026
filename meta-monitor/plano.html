@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Plano de ação · Meta Inovação 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Plano de ação</h1>
+    <p class="pagina-sub">47 ações em 5 frentes. Clique numa linha para ver dependências e a <b>solução proposta</b>: como executar, como monitorar e com qual ferramenta.</p>
+
+    <div class="filtros">
+      <select id="f-frente" aria-label="Filtrar por frente"></select>
+      <select id="f-status" aria-label="Filtrar por status">
+        <option value="">Todos os status</option>
+        <option>Concluído</option><option>Em andamento</option><option>Não iniciado</option>
+        <option value="__atrasadas">Só atrasadas</option>
+      </select>
+      <select id="f-resp" aria-label="Filtrar por responsável"></select>
+      <select id="f-cc" aria-label="Filtrar caminho crítico">
+        <option value="">Crítico e não crítico</option>
+        <option value="cc">Só caminho crítico</option>
+      </select>
+      <input id="f-busca" type="search" placeholder="Buscar por texto ou ID…" aria-label="Buscar">
+    </div>
+
+    <div class="card" style="padding:0;overflow:auto">
+      <table>
+        <thead><tr><th>ID</th><th>Frente</th><th>Atividade</th><th>Responsável</th><th>Prazo</th><th>Status</th></tr></thead>
+        <tbody id="tabela"></tbody>
+      </table>
+    </div>
+    <p style="color:var(--grafite);font-size:12.5px;margin-top:10px" id="contagem"></p>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="data/plano.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script>
+(function(){
+  const hoje = hojeISO();
+  montarShell("plano.html");
+
+  const selF = document.getElementById("f-frente"), selS = document.getElementById("f-status"),
+        selR = document.getElementById("f-resp"), selC = document.getElementById("f-cc"),
+        busca = document.getElementById("f-busca"), corpo = document.getElementById("tabela");
+
+  const frentes = [...new Set(DB.plano.map(a => a.frente))];
+  selF.innerHTML = '<option value="">Todas as frentes</option>' + frentes.map(f => "<option>" + esc(f) + "</option>").join("");
+  const resps = [...new Set(DB.plano.map(a => a.resp))].sort();
+  selR.innerHTML = '<option value="">Todos os responsáveis</option>' + resps.map(r => "<option>" + esc(r) + "</option>").join("");
+
+  function ccChip(a){
+    if (!a.cc || !a.cc.tipo) return "";
+    if (a.cc.tipo === "no") return ' <span class="chip cc">★ Nó ' + a.cc.no + "</span>";
+    if (a.cc.tipo === "cadeia") return ' <span class="chip cc">cadeia ' + a.cc.no + "</span>";
+    if (a.cc.tipo === "sla") return ' <span class="chip sla">◆ SLA</span>';
+    return "";
+  }
+
+  function render(){
+    const fv = selF.value, sv = selS.value, rv = selR.value, cv = selC.value, q = busca.value.trim().toLowerCase();
+    let vis = 0, html = "";
+    for (const a of DB.plano) {
+      const atras = CALC.ehAtrasada(a, hoje);
+      if (fv && a.frente !== fv) continue;
+      if (sv === "__atrasadas" ? !atras : (sv && a.status !== sv)) continue;
+      if (rv && a.resp !== rv) continue;
+      if (cv === "cc" && !(a.cc && a.cc.tipo)) continue;
+      if (q && !(a.id + " " + a.atividade + " " + a.sub).toLowerCase().includes(q)) continue;
+      vis++;
+      const [cls, rot] = stClass(a, hoje);
+      html += '<tr class="clicavel" data-id="' + a.id + '" id="' + a.id + '">' +
+        '<td class="mono" style="font-size:12px;white-space:nowrap">' + a.id + ccChip(a) + "</td>" +
+        "<td>" + esc(a.frente.replace(/^\d+\.\s*/, "")) + '<div style="color:var(--grafite);font-size:11.5px">' + esc(a.sub) + "</div></td>" +
+        "<td>" + esc(a.atividade) + "</td>" +
+        "<td>" + esc(a.resp) + "</td>" +
+        '<td class="mono" style="font-size:12px;white-space:nowrap">' + esc(a.prazo || "—") + "</td>" +
+        '<td><span class="chip ' + cls + '">' + rot + "</span></td></tr>";
+      html += '<tr class="detalhe" data-det="' + a.id + '" hidden><td colspan="6">' +
+        '<div style="margin-bottom:10px;font-size:12.5px"><b style="color:var(--grafite)">Depende de:</b> ' +
+        (a.dep.length ? a.dep.map(d => '<a class="mono" href="#' + d + '" data-goto="' + d + '">' + d + "</a>").join(" · ") : "—") + "</div>" +
+        '<div class="det-grid">' +
+        "<div><b>Como executar</b>" + esc(a.como) + "</div>" +
+        "<div><b>Como monitorar</b>" + esc(a.monitor) + "</div>" +
+        "<div><b>Ferramenta</b>" + esc(a.ferramenta) + "</div></div></td></tr>";
+    }
+    corpo.innerHTML = html || '<tr><td colspan="6" style="color:var(--grafite)">Nenhuma ação com esses filtros.</td></tr>';
+    document.getElementById("contagem").textContent = vis + " de " + DB.plano.length + " ações exibidas.";
+  }
+
+  corpo.addEventListener("click", (e) => {
+    const goto = e.target.closest("[data-goto]");
+    if (goto) { abrir(goto.dataset.goto); return; }
+    const tr = e.target.closest("tr.clicavel");
+    if (!tr) return;
+    const det = corpo.querySelector('[data-det="' + tr.dataset.id + '"]');
+    det.hidden = !det.hidden;
+  });
+
+  function abrir(id){
+    const tr = corpo.querySelector('tr.clicavel[data-id="' + id + '"]');
+    if (!tr) return;
+    corpo.querySelector('[data-det="' + id + '"]').hidden = false;
+    tr.scrollIntoView({ block: "center" });
+  }
+
+  [selF, selS, selR, selC].forEach(s => s.addEventListener("change", render));
+  busca.addEventListener("input", render);
+  render();
+  if (location.hash) abrir(location.hash.slice(1));
+})();
+</script>
+</body>
+</html>

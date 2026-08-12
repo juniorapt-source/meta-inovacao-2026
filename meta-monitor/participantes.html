@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Participantes · Meta Inovação 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Participantes</h1>
+    <p class="pagina-sub">Quem sustenta o plano: guardiões, Comitê, URC e representantes dos núcleos. Compromisso do e-mail: todos os coordenadores em pelo menos uma apresentação por canal; representantes do Comitê em todas.</p>
+
+    <div id="pendencias"></div>
+    <div class="grid" style="grid-template-columns:1fr 1fr" id="pessoas"></div>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="data/pessoas.js"></script>
+<script src="data/plano.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script>
+(function(){
+  montarShell("participantes.html");
+  const pend = DB.pessoas.filter(p => p.pendente);
+  document.getElementById("pendencias").innerHTML = pend.length
+    ? '<div class="aviso" style="margin-bottom:14px"><b>' + pend.length + ' indicação(ões) pendente(s) — CAN-05.</b> ' +
+      'Fallback do Nó 2 já aprovado: sem indicação do núcleo, o gestor da iniciativa é o representante. Atualize no Modo edição quando os nomes saírem.</div>'
+    : "";
+
+  const grupos = [...new Set(DB.pessoas.map(p => p.grupo))];
+  document.getElementById("pessoas").innerHTML = grupos.map(g =>
+    '<section class="card"><h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin-bottom:8px">' + esc(g) + "</h3>" +
+    DB.pessoas.filter(p => p.grupo === g).map(p =>
+      '<div style="padding:7px 0;border-bottom:1px solid var(--linha)">' +
+      "<b>" + esc(p.nome) + "</b>" + (p.pendente ? ' <span class="chip st-atrasada">pendente</span>' : "") +
+      '<div style="font-size:12.5px;color:var(--grafite)">' + esc(p.papel) + "</div></div>").join("") +
+    "</section>").join("");
+
+  if (window.matchMedia("(max-width:960px)").matches)
+    document.getElementById("pessoas").style.gridTemplateColumns = "1fr";
+})();
+</script>
+</body>
+</html>

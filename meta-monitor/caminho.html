@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Caminho crítico · Meta Inovação 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Caminho crítico</h1>
+    <p class="pagina-sub">Os 7 nós de folga zero, com guardião, fallback pré-combinado e gatilho de escalada — mais os 2 SLAs a negociar e onde mora a folga do ano.</p>
+
+    <div id="lista-nos" class="grid" style="grid-template-columns:1fr"></div>
+
+    <section class="secao">
+      <h2>SLAs a negociar <span class="hint">◆ compromissos externos que destravam o fim do ano</span></h2>
+      <div id="slas" class="grid" style="grid-template-columns:1fr 1fr"></div>
+    </section>
+
+    <section class="secao">
+      <h2>Onde mora a folga</h2>
+      <div class="aviso" id="folga"></div>
+    </section>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="data/plano.js"></script>
+<script src="data/nos.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script>
+(function(){
+  const hoje = hojeISO();
+  montarShell("caminho.html");
+  const NOME = { ok:"cumprido", hoje:"vence hoje", risco:"venceu sem concluir", atencao:"em andamento", futuro:"à frente" };
+  const CLS  = { ok:"st-concluido", hoje:"st-andamento", risco:"st-atrasada", atencao:"st-janela", futuro:"st-nao" };
+
+  document.getElementById("lista-nos").innerHTML = DB.nos.nos.map(n => {
+    const st = CALC.estadoNo(n, DB.plano, hoje);
+    const acoes = DB.plano.filter(a => n.acoes.includes(a.id));
+    return '<article class="card" id="no' + n.no + '">' +
+      '<div style="display:flex;gap:14px;align-items:flex-start">' +
+      '<div class="no-item no-' + st + '" style="min-width:64px"><span class="no-dot">' + n.no + '</span>' +
+      '<div class="d mono">' + esc(n.data) + "</div></div>" +
+      '<div style="flex:1">' +
+      '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">' +
+      '<h3 style="font-size:15.5px">' + esc(n.titulo) + "</h3>" +
+      '<span class="chip ' + CLS[st] + '">' + NOME[st] + "</span>" +
+      '<span style="color:var(--grafite);font-size:12.5px">guardião: ' + esc(n.guardiao) + "</span></div>" +
+      '<div style="margin:7px 0 9px">' + acoes.map(a => {
+        const [c, r] = stClass(a, hoje);
+        return '<a class="mono" style="font-size:12px" href="plano.html#' + a.id + '">' + a.id + "</a> " +
+               '<span class="chip ' + c + '" style="margin-right:10px">' + r + "</span>";
+      }).join("") + "</div>" +
+      '<div style="font-size:13px"><b style="color:var(--verde)">Fallback:</b> ' + esc(n.fallback) + "</div>" +
+      '<div style="font-size:13px;margin-top:4px"><b style="color:var(--laranja)">Gatilho:</b> ' + esc(n.gatilho) + "</div>" +
+      "</div></div></article>";
+  }).join("");
+
+  document.getElementById("slas").innerHTML = DB.nos.slas.map(s =>
+    '<article class="card"><span class="chip sla">◆ ' + esc(s.id) + "</span>" +
+    '<h3 style="font-size:14.5px;margin:8px 0 4px">' + esc(s.titulo) + "</h3>" +
+    '<div style="font-size:12.5px;margin-bottom:6px">' +
+    s.acoes.map(a => '<a class="mono" href="plano.html#' + a + '">' + a + "</a>").join(" · ") + "</div>" +
+    '<p style="font-size:13px">' + esc(s.acao) + "</p></article>").join("");
+
+  document.getElementById("folga").textContent = DB.nos.folga;
+
+  if (window.matchMedia("(max-width:960px)").matches)
+    document.getElementById("slas").style.gridTemplateColumns = "1fr";
+})();
+</script>
+</body>
+</html>

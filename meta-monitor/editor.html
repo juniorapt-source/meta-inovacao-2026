@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor · Meta Inovação 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<style>
+.ed-topo{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.ed-topo select{font:600 14px Inter,sans-serif;color:var(--tinta);padding:8px 10px;border:1px solid #C7D6E6;border-radius:8px;background:#fff}
+.ed-btn{font:600 13px Inter,sans-serif;color:#fff;background:var(--azul);border:0;border-radius:8px;padding:9px 14px;cursor:pointer}
+.ed-btn:hover{background:var(--azul-claro)}
+.ed-tab{width:100%;border-collapse:collapse;background:#fff;border:1px solid #DCE6F0;border-radius:10px;overflow:hidden}
+.ed-tab th{font:600 11px Inter,sans-serif;text-transform:uppercase;letter-spacing:.04em;color:#5A6E82;background:var(--ceu);padding:8px 10px;text-align:left}
+.ed-tab td{font:400 13px Inter,sans-serif;color:var(--tinta);padding:6px 10px;border-top:1px solid #EDF2F7;vertical-align:middle}
+.ed-tab input[type=text],.ed-tab input[type=number],.ed-tab select{font:400 13px Inter,sans-serif;color:var(--tinta);padding:5px 8px;border:1px solid #C7D6E6;border-radius:6px;background:#fff;width:100%;box-sizing:border-box}
+.ed-tab input[type=number]{width:76px}
+.ed-mono{font-family:'IBM Plex Mono',monospace;font-size:12px;white-space:nowrap}
+.ed-saida{width:100%;min-height:180px;font:400 12px 'IBM Plex Mono',monospace;color:var(--tinta);border:1px solid #C7D6E6;border-radius:8px;padding:10px;box-sizing:border-box;background:#fff;margin-top:12px}
+.ed-passos{background:var(--ceu);border:1px solid #C7D6E6;border-radius:10px;padding:12px 14px;margin:14px 0;font:400 13px Inter,sans-serif;color:var(--tinta)}
+.ed-passos code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:#fff;border:1px solid #DCE6F0;border-radius:4px;padding:1px 5px}
+.ed-matriz td{padding:3px 4px}
+.ed-matriz select{padding:4px 4px;font-size:12px}
+.ed-matriz .col-ini{font:500 12px Inter,sans-serif;white-space:nowrap;position:sticky;left:0;background:#fff;border-right:1px solid #DCE6F0}
+.ed-wrap{overflow:auto;max-width:100%}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Modo edição</h1>
+    <p class="pagina-sub">Edite abaixo, gere o arquivo atualizado e substitua o correspondente na pasta <span class="ed-mono">data/</span> do repositório. Nada é salvo automaticamente nesta página.</p>
+    <section class="cartao">
+      <div class="ed-topo">
+        <label for="ed-conjunto" style="font:600 13px Inter,sans-serif">Conjunto:</label>
+        <select id="ed-conjunto" aria-label="Escolher conjunto de dados"></select>
+        <button id="ed-baixar" class="ed-btn">Gerar e baixar arquivo atualizado</button>
+      </div>
+      <div id="ed-area"></div>
+      <textarea id="ed-saida" class="ed-saida" spellcheck="false" placeholder="O conteúdo do arquivo gerado aparece aqui para conferência."></textarea>
+      <div class="ed-passos"><strong>Como publicar a mudança</strong><br>
+      1. Baixe o arquivo gerado e substitua o de mesmo nome em <code>data/</code>.<br>
+      2. Valide: <code>python3 tools/validar_dados.py</code>.<br>
+      3. Publique: <code>git add data/ &amp;&amp; git commit -m "atualiza dados" &amp;&amp; git push</code> — o Vercel redistribui sozinho.</div>
+    </section>
+  </main>
+</div>
+<script src="data/config.js"></script>
+<script src="data/plano.js"></script>
+<script src="data/nos.js"></script>
+<script src="data/canais.js"></script>
+<script src="data/agenda.js"></script>
+<script src="data/iniciativas.js"></script>
+<script src="data/matriz.js"></script>
+<script src="data/pessoas.js"></script>
+<script src="data/changelog.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script src="js/editor_io.js"></script>
+<script>
+(function(){
+"use strict";
+const DB = window.DB, IO = window.EDITOR_IO;
+montarShell("editor.html");
+
+const CONJUNTOS = {
+  plano:  { rotulo:"Plano de ação — status e prazos", arquivo:"plano.js" },
+  matriz: { rotulo:"Matriz de demandas — 27 iniciativas × 8 canais", arquivo:"matriz.js" },
+  agenda: { rotulo:"Agenda — encontros dos ciclos", arquivo:"agenda.js" },
+  pessoas:{ rotulo:"Pessoas — representantes e papéis", arquivo:"pessoas.js" }
+};
+const STATUS_ACAO = ["Não iniciado","Em andamento","Concluído"];
+const STATUS_ENC  = ["a agendar","agendado","confirmado","realizado","cancelado"];
+const ESTADOS_CEL = ["","previsto","oficina","formulario","justificado","priorizado","encaminhado"];
+const ROTULO_CEL  = {"":"—","previsto":"previsto","oficina":"oficina feita","formulario":"formulário ok","justificado":"justificado","priorizado":"priorizado","encaminhado":"encaminhado"};
+
+/* cópia de trabalho isolada dos dados carregados */
+const W = JSON.parse(JSON.stringify({ plano:DB.plano, matriz:DB.matriz, agenda:DB.agenda, pessoas:DB.pessoas }));
+
+const sel = document.getElementById("ed-conjunto");
+Object.keys(CONJUNTOS).forEach(k=>{
+  const o=document.createElement("option"); o.value=k; o.textContent=CONJUNTOS[k].rotulo; sel.appendChild(o);
+});
+const area = document.getElementById("ed-area");
+const saida = document.getElementById("ed-saida");
+
+function opts(lista, atual, rot){
+  const l = lista.includes(atual)||atual===""&&lista.includes("") ? lista : [atual].concat(lista);
+  return l.map(v=>'<option value="'+esc(v)+'"'+(v===atual?" selected":"")+'>'+esc(rot?(rot[v]!==undefined?rot[v]:v):(v||"—"))+'</option>').join("");
+}
+
+function renderPlano(){
+  let h='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th>ID</th><th>Atividade</th><th style="width:150px">Status</th><th style="width:110px">Prazo</th><th style="width:130px">Prazo ISO</th></tr></thead><tbody>';
+  W.plano.forEach((a,i)=>{
+    h+='<tr><td class="ed-mono">'+esc(a.id)+'</td><td>'+esc(a.atividade)+'</td>'+
+       '<td><select data-i="'+i+'" data-f="status">'+opts(STATUS_ACAO,a.status)+'</select></td>'+
+       '<td><input type="text" data-i="'+i+'" data-f="prazo" value="'+esc(a.prazo)+'"></td>'+
+       '<td><input type="text" data-i="'+i+'" data-f="prazo_iso" value="'+esc(a.prazo_iso||"")+'" placeholder="AAAA-MM-DD ou vazio"></td></tr>';
+  });
+  area.innerHTML=h+'</tbody></table></div>';
+  area.querySelectorAll("select,input").forEach(el=>el.addEventListener("change",e=>{
+    const t=e.target, a=W.plano[+t.dataset.i];
+    a[t.dataset.f] = t.dataset.f==="prazo_iso" && t.value.trim()==="" ? null : t.value;
+  }));
+}
+
+function renderMatriz(){
+  const canais = DB.canais.map(c=>c.id);
+  let h='<div class="ed-wrap"><table class="ed-tab ed-matriz"><thead><tr><th class="col-ini">Iniciativa</th>';
+  DB.canais.forEach(c=>h+='<th>'+esc(c.sigla||c.nome)+'</th>');
+  h+='</tr></thead><tbody>';
+  Object.keys(W.matriz).forEach(ini=>{
+    h+='<tr><td class="col-ini">'+esc(ini)+'</td>';
+    canais.forEach(cn=>{
+      h+='<td><select data-ini="'+esc(ini)+'" data-cn="'+cn+'">'+opts(ESTADOS_CEL,W.matriz[ini][cn]||"",ROTULO_CEL)+'</select></td>';
+    });
+    h+='</tr>';
+  });
+  area.innerHTML=h+'</tbody></table></div>';
+  area.querySelectorAll("select").forEach(el=>el.addEventListener("change",e=>{
+    W.matriz[e.target.dataset.ini][e.target.dataset.cn]=e.target.value;
+  }));
+}
+
+function renderAgenda(){
+  let h='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th>Encontro</th><th style="width:120px">Data</th><th style="width:80px">Hora</th><th style="width:140px">Local</th><th style="width:110px">Modo</th><th style="width:130px">Status</th><th>Conf.</th><th>Conv.</th><th>Nota</th></tr></thead><tbody>';
+  W.agenda.encontros.forEach((en,i)=>{
+    h+='<tr><td class="ed-mono">'+esc(en.id)+'</td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="data" value="'+esc(en.data||"")+'" placeholder="AAAA-MM-DD"></td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="hora" value="'+esc(en.hora||"")+'" placeholder="14h"></td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="local" value="'+esc(en.local||"")+'"></td>'+
+      '<td><select data-i="'+i+'" data-f="modo">'+opts(["presencial","online","híbrido"],en.modo)+'</select></td>'+
+      '<td><select data-i="'+i+'" data-f="status">'+opts(STATUS_ENC,en.status)+'</select></td>'+
+      '<td><input type="number" min="0" data-i="'+i+'" data-f="confirmados" value="'+(en.confirmados||0)+'"></td>'+
+      '<td><input type="number" min="0" data-i="'+i+'" data-f="convidados" value="'+(en.convidados||0)+'"></td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="nota" value="'+esc(en.nota||"")+'"></td></tr>';
+  });
+  area.innerHTML=h+'</tbody></table></div>';
+  area.querySelectorAll("select,input").forEach(el=>el.addEventListener("change",e=>{
+    const t=e.target, en=W.agenda.encontros[+t.dataset.i], f=t.dataset.f;
+    if(f==="confirmados"||f==="convidados") en[f]=Math.max(0,parseInt(t.value||"0",10)||0);
+    else if((f==="data"||f==="hora"||f==="local") && t.value.trim()==="") en[f]=null;
+    else en[f]=t.value;
+  }));
+}
+
+function renderPessoas(){
+  let h='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Nome</th><th>Papel</th><th style="width:110px">Grupo</th><th style="width:90px">Pendente</th></tr></thead><tbody>';
+  W.pessoas.forEach((p,i)=>{
+    h+='<tr><td><input type="text" data-i="'+i+'" data-f="nome" value="'+esc(p.nome)+'"></td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="papel" value="'+esc(p.papel||"")+'"></td>'+
+      '<td><input type="text" data-i="'+i+'" data-f="grupo" value="'+esc(p.grupo||"")+'"></td>'+
+      '<td style="text-align:center"><input type="checkbox" data-i="'+i+'" data-f="pendente"'+(p.pendente?" checked":"")+'></td></tr>';
+  });
+  area.innerHTML=h+'</tbody></table></div>';
+  area.querySelectorAll("input").forEach(el=>el.addEventListener("change",e=>{
+    const t=e.target, p=W.pessoas[+t.dataset.i], f=t.dataset.f;
+    if(f==="pendente"){ if(t.checked) p.pendente=true; else delete p.pendente; }
+    else p[f]=t.value;
+  }));
+}
+
+function render(){
+  ({plano:renderPlano, matriz:renderMatriz, agenda:renderAgenda, pessoas:renderPessoas})[sel.value]();
+  saida.value="";
+}
+sel.addEventListener("change", render);
+render();
+
+document.getElementById("ed-baixar").addEventListener("click", function(){
+  const k = sel.value;
+  const conteudo = IO.serializar(k, W[k]);
+  saida.value = conteudo;
+  const blob = new Blob([conteudo], {type:"text/javascript;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = CONJUNTOS[k].arquivo;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+});
+})();
+</script>
+</body>
+</html>

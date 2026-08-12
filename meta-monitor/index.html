@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Dashboard · Meta Inovação 2026 — Unidade de Inovação · Sebrae Nacional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Dashboard</h1>
+    <p class="pagina-sub" id="sub"></p>
+
+    <section class="card" aria-label="Trilho do caminho crítico">
+      <div class="trilho">
+        <div class="linha-base"></div>
+        <div class="nos" id="trilho"></div>
+      </div>
+    </section>
+
+    <section class="secao">
+      <div class="grid kpis" id="kpis"></div>
+    </section>
+
+    <section class="secao">
+      <h2>Radar de carga <span class="hint">dias com 2+ entregas pendentes — distribuir com Sandra e Pova</span></h2>
+      <div class="card" id="radar"></div>
+    </section>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:26px" id="duas-colunas">
+      <section>
+        <h2 style="font-size:16px;margin-bottom:10px">Atrasadas agora</h2>
+        <div class="card" id="atrasadas"></div>
+      </section>
+      <section>
+        <h2 style="font-size:16px;margin-bottom:10px">Próximos 7 dias</h2>
+        <div class="card" id="prox"></div>
+      </section>
+    </div>
+
+    <section class="secao">
+      <h2>Atualizações do ambiente</h2>
+      <div class="card" id="log"></div>
+    </section>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="data/plano.js"></script>
+<script src="data/nos.js"></script>
+<script src="data/changelog.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script>
+(function(){
+  const hoje = hojeISO();
+  montarShell("index.html");
+  document.getElementById("sub").textContent =
+    "Visão geral do plano · hoje é " + CALC.fmtBR(hoje) + "/2026. Nós vencidos sem conclusão aparecem em vermelho; fallbacks estão no Caminho crítico.";
+
+  // trilho dos nós
+  const trilho = document.getElementById("trilho");
+  trilho.innerHTML = DB.nos.nos.map(n => {
+    const st = CALC.estadoNo(n, DB.plano, hoje);
+    return '<a class="no-item no-' + st + '" href="caminho.html#no' + n.no + '" title="' + esc(n.titulo) + '">' +
+      '<span class="no-dot">' + n.no + '</span>' +
+      '<div class="d mono">' + esc(n.data) + '</div>' +
+      '<div class="t">' + esc(n.titulo) + '</div></a>';
+  }).join("");
+
+  // kpis
+  const k = CALC.kpis(DB.plano, hoje);
+  const itens = [
+    [k.total, "ações no plano", ""],
+    [k.concluido, "concluídas", ""],
+    [k.andamento, "em andamento", ""],
+    [k.atrasadas, "atrasadas", k.atrasadas ? "alerta" : ""],
+    [k.prox7, "vencem em 7 dias", ""],
+    [k.janela, "em janela (sem data fixa)", ""],
+  ];
+  document.getElementById("kpis").innerHTML = itens.map(i =>
+    '<div class="card kpi ' + i[2] + '"><div class="n">' + i[0] + '</div><div class="l">' + i[1] + "</div></div>").join("");
+
+  // radar de carga
+  const carga = CALC.cargaPorDia(DB.plano).filter(c => c.carga >= 2 && c.iso >= hoje);
+  document.getElementById("radar").innerHTML = carga.length
+    ? carga.map(c => '<div style="margin:4px 0"><span class="badge-dia"' + (c.carga >= 3 ? "" : ' style="background:var(--ambar-w);color:var(--ambar)"') + '>' +
+        CALC.fmtBR(c.iso) + " · " + c.carga + " entregas</span> <span class="mono" style="font-size:12px;color:var(--grafite)">" +
+        c.ids.join(" · ") + "</span></div>").join("")
+    : '<span style="color:var(--grafite)">Nenhum dia à frente concentra 2+ entregas.</span>';
+
+  // atrasadas
+  const atr = DB.plano.filter(a => CALC.ehAtrasada(a, hoje));
+  document.getElementById("atrasadas").innerHTML = atr.length
+    ? atr.map(a => linha(a)).join("")
+    : '<span style="color:var(--grafite)">Nada atrasado. 👌</span>';
+
+  // próximos 7 dias
+  const lim = CALC.somaDias(hoje, 7);
+  const prox = DB.plano.filter(a => a.prazo_iso && a.status !== "Concluído" && a.prazo_iso >= hoje && a.prazo_iso <= lim)
+                       .sort((a, b) => a.prazo_iso.localeCompare(b.prazo_iso));
+  document.getElementById("prox").innerHTML = prox.length ? prox.map(a => linha(a)).join("") : "—";
+
+  function linha(a) {
+    const [cls, rot] = stClass(a, hoje);
+    return '<div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--linha)">' +
+      '<span class="mono" style="font-size:12px;color:var(--grafite);min-width:58px">' + esc(a.id) + "</span>" +
+      '<span style="flex:1"><a href="plano.html#' + esc(a.id) + '">' + esc(a.atividade) + "</a>" +
+      ' <span style="color:var(--grafite);font-size:12px">· ' + esc(a.resp) + "</span></span>" +
+      '<span class="mono" style="font-size:12px">' + esc(a.prazo) + "</span>" +
+      '<span class="chip ' + cls + '">' + rot + "</span></div>";
+  }
+
+  // changelog
+  document.getElementById("log").innerHTML = DB.changelog.map(c =>
+    '<div style="padding:5px 0"><span class="mono" style="font-size:12px;color:var(--grafite)">' + CALC.fmtBR(c.data) +
+    " · v" + esc(c.versao) + "</span> — " + esc(c.nota) + "</div>").join("");
+
+  if (window.matchMedia("(max-width:960px)").matches)
+    document.getElementById("duas-colunas").style.gridTemplateColumns = "1fr";
+})();
+</script>
+</body>
+</html>

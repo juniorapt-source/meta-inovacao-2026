@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Matriz de demandas · Meta Inovação 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Matriz de demandas</h1>
+    <p class="pagina-sub">27 iniciativas × 8 canais. É aqui que o micro vira visível: oficina feita → formulário em 5 dias úteis (ou justificativa) → priorização do Comitê → encaminhado à URC. C1 até 01/09 · C2 até 30/09.</p>
+
+    <div class="card" style="margin-bottom:14px" id="legenda">
+      <b style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite)">Fluxo da célula</b>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px;align-items:center">
+        <span class="cel cel-vazia" style="width:auto;padding:3px 10px">—</span>→
+        <span class="cel cel-previsto" style="width:auto;padding:3px 10px">previsto</span>→
+        <span class="cel cel-oficina" style="width:auto;padding:3px 10px">oficina</span>→
+        <span class="cel cel-formulario" style="width:auto;padding:3px 10px">formulário</span> ou
+        <span class="cel cel-justificado" style="width:auto;padding:3px 10px">justificado</span>→
+        <span class="cel cel-priorizado" style="width:auto;padding:3px 10px">priorizado</span>→
+        <span class="cel cel-encaminhado" style="width:auto;padding:3px 10px">encaminhado</span>
+      </div>
+      <div id="resumo" style="margin-top:10px;font-size:13px;color:var(--grafite)"></div>
+    </div>
+
+    <div class="matriz-wrap">
+      <table class="matriz"><thead id="cab"></thead><tbody id="matriz"></tbody></table>
+    </div>
+    <p style="color:var(--grafite);font-size:12.5px;margin-top:10px">Para atualizar células, use o Modo edição e baixe o novo <span class="mono">data/matriz.js</span>.</p>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="data/canais.js"></script>
+<script src="data/iniciativas.js"></script>
+<script src="data/matriz.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script>
+(function(){
+  montarShell("demandas.html");
+  const ORDEM = ["", "previsto", "oficina", "formulario", "justificado", "priorizado", "encaminhado"];
+  document.getElementById("cab").innerHTML = "<tr><th>Iniciativa</th>" +
+    DB.canais.map(c => "<th>" + esc(c.nome) + "</th>").join("") + "</tr>";
+
+  let tot = { formulario: 0, justificado: 0, priorizado: 0, encaminhado: 0, oficina: 0, previsto: 0 };
+  document.getElementById("matriz").innerHTML = DB.iniciativas.map(i => {
+    const linha = DB.matriz[i.nome] || {};
+    return "<tr><td>" + esc(i.nome) + "</td>" + DB.canais.map(c => {
+      const v = linha[c.id] || "";
+      if (v) tot[v] = (tot[v] || 0) + 1;
+      const cls = v ? "cel-" + v : "cel-vazia";
+      return '<td><span class="cel ' + cls + '">' + (v || "—") + "</span></td>";
+    }).join("") + "</tr>";
+  }).join("");
+
+  const total = DB.iniciativas.length * DB.canais.length;
+  const entregues = tot.formulario + tot.justificado + tot.priorizado + tot.encaminhado;
+  document.getElementById("resumo").textContent =
+    "Progresso: " + entregues + " célula(s) com formulário/justificativa de " + total +
+    " possíveis · oficinas registradas: " + (tot.oficina + entregues) +
+    " · priorizadas: " + (tot.priorizado + tot.encaminhado) + " · encaminhadas à URC: " + tot.encaminhado + ".";
+})();
+</script>
+</body>
+</html>
