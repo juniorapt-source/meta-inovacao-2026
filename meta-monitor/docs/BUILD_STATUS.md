@@ -35,3 +35,10 @@ conteúdo publicado (não assumidos a partir da linha acima). F7 foi conferida c
   `validar_dados.py`).
 [23:50] F6 — OK (reconferido): `node tools/testar_editor.js` → "roundtrip integro em todos os
   arquivos de data/".
+[23:51] F7 — AJUSTE(1): causa = a linha [01:36] acima registrava "OK (tag v0.1.0)" mas `git tag`
+  não retornava nenhuma tag e `git log` tinha só 2 commits — o critério de aceite (`git log` ≥ 8
+  commits; tag existe) nunca foi cumprido de fato, embora README, CHANGELOG.md e o rodapé
+  versionado (`data/config.js` → "versao": "0.1.0", renderizado por `js/core.js`) já estivessem
+  corretos. Correção: um commit por fase verificada nesta retomada (F0–F6, acima) elevou o
+  histórico para 9 commits; tag anotada `v0.1.0` criada em seguida. Reteste: `git log --oneline |
+  wc -l` = 9 (≥ 8, OK); `git tag` lista `v0.1.0` (OK). F7 — OK.
