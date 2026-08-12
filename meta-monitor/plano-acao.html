@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Plano de Ação · Carta de Corso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<style>
+.pa-layout{display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start}
+.pa-nav{padding:8px;max-height:76vh;overflow:auto;position:sticky;top:16px}
+.pa-nucleo{font:600 10.5px Inter,sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);padding:10px 10px 4px}
+.pa-nav button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:8px 10px;font:500 13px Inter,sans-serif;color:var(--tinta);cursor:pointer}
+.pa-nav button:hover{background:var(--ceu)}
+.pa-nav button.ativo{background:var(--azul-claro);color:#fff;font-weight:600}
+.pa-painel h2{font-size:16px;margin-bottom:4px}
+.pa-painel .pa-sub{font-size:12.5px;color:var(--grafite);margin-bottom:14px}
+.pa-carregando,.pa-erro{color:var(--grafite);font-size:13px}
+.pa-erro{color:#7A1F1F}
+.pa-row{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;border-left:4px solid var(--linha);margin-bottom:8px;background:#fff;transition:background .15s,border-color .15s}
+.pa-row.st-nao_iniciado{border-left-color:#B8C4D0;background:var(--grafite-w)}
+.pa-row.st-em_execucao{border-left-color:var(--azul-claro);background:#EEF4FA}
+.pa-row.st-atrasado{border-left-color:var(--critico);background:var(--critico-w)}
+.pa-row input[type=text]{flex:1;min-width:0;font:400 13px Inter,sans-serif;color:var(--tinta);border:1px solid transparent;border-radius:6px;padding:6px 8px;background:transparent}
+.pa-row input[type=text]:hover,.pa-row input[type=text]:focus{border-color:#C7D6E6;background:#fff}
+.pa-row input.pa-desc{flex:2}
+.pa-row select{font:400 12.5px Inter,sans-serif;color:var(--tinta);border:1px solid #C7D6E6;border-radius:6px;padding:5px 6px;background:#fff;flex-shrink:0}
+.pa-row-status{font-size:11px;min-width:34px;flex-shrink:0;white-space:nowrap}
+.pa-row .pa-del{background:none;border:0;color:var(--critico);cursor:pointer;font-size:16px;padding:4px 8px;line-height:1;border-radius:6px;flex-shrink:0}
+.pa-row .pa-del:hover{background:var(--critico-w)}
+#pa-nova{margin-top:6px}
+@media (max-width:960px){ .pa-layout{grid-template-columns:1fr} .pa-nav{position:static;max-height:none} .pa-row{flex-wrap:wrap} }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Plano de Ação</h1>
+    <p class="pagina-sub">Atividades por iniciativa — descrição, responsável e status, editados direto aqui. Sem login: todo mundo que abre o site vê e edita o mesmo conteúdo.</p>
+
+    <div class="pa-layout">
+      <nav class="card pa-nav" aria-label="Iniciativas" id="pa-nav"></nav>
+      <section class="card pa-painel" id="pa-painel">
+        <div class="pa-carregando">Selecione uma iniciativa à esquerda.</div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="data/projetos.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script src="js/config.js"></script>
+<script>
+(async function () {
+  "use strict";
+  montarShell("plano-acao.html");
+
+  const TABELA = "plano_acao_atividades";
+  const STATUS_OPCOES = [
+    ["nao_iniciado", "Não iniciado"],
+    ["em_execucao", "Em execução"],
+    ["atrasado", "Atrasado"],
+  ];
+
+  const navEl = document.getElementById("pa-nav");
+  const painel = document.getElementById("pa-painel");
+
+  let supa = null;
+  let iniciativaAtual = null;
+  let listaAtual = [];
+  const timers = new Map(); // debounce por "id:campo"
+
+  /* lib via CDN em formato ESM, carregada por import() dinâmico dentro de um
+     <script> clássico (não type="module") — assim o arquivo continua
+     testável por node --check junto com o resto do site, sem precisar de
+     bundler nem de mudar como as outras páginas carregam script. */
+  async function iniciarCliente() {
+    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+    if (!window.APP_CONFIG) throw new Error("js/config.js não carregado — falta window.APP_CONFIG.");
+    return createClient(window.APP_CONFIG.SUPABASE_URL, window.APP_CONFIG.SUPABASE_ANON_KEY);
+  }
+
+  function renderNav() {
+    const projetos = (window.DB && window.DB.projetos) || [];
+    const nucleos = [...new Set(projetos.map((p) => p.nucleo))];
+    let html = "";
+    nucleos.forEach((n) => {
+      html += '<div class="pa-nucleo">' + esc(n) + "</div>";
+      projetos
+        .filter((p) => p.nucleo === n)
+        .forEach((p) => {
+          html += '<button type="button" data-iniciativa="' + esc(p.iniciativa) + '">' + esc(p.iniciativa) + "</button>";
+        });
+    });
+    navEl.innerHTML = html || '<div class="pa-carregando">Nenhuma iniciativa cadastrada em data/projetos.js.</div>';
+  }
+
+  function destacarBotaoAtivo(nome) {
+    navEl.querySelectorAll("button[data-iniciativa]").forEach((b) => {
+      b.classList.toggle("ativo", b.dataset.iniciativa === nome);
+    });
+  }
+
+  function tituloPainel(nome) {
+    return "<h2>" + esc(nome) + '</h2><p class="pa-sub">Descrição, responsável e status de cada atividade.</p>';
+  }
+
+  function linhaHtml(a) {
+    return '<div class="pa-row st-' + esc(a.status) + '" data-id="' + esc(a.id) + '">' +
+      '<input type="text" class="pa-desc" data-campo="descricao" value="' + esc(a.descricao || "") + '" placeholder="Descrição da atividade" aria-label="Descrição">' +
+      '<input type="text" class="pa-resp" data-campo="responsavel" value="' + esc(a.responsavel || "") + '" placeholder="Responsável" aria-label="Responsável">' +
+      '<select class="pa-status" data-campo="status" aria-label="Status">' +
+        STATUS_OPCOES.map(([v, r]) => '<option value="' + v + '"' + (v === a.status ? " selected" : "") + ">" + r + "</option>").join("") +
+      "</select>" +
+      '<span class="pa-row-status" aria-live="polite"></span>' +
+      '<button type="button" class="pa-del" title="Remover atividade" aria-label="Remover atividade">×</button>' +
+      "</div>";
+  }
+
+  function renderPainel() {
+    const linhasHtml = listaAtual.length
+      ? listaAtual.map(linhaHtml).join("")
+      : '<div class="pa-carregando">Nenhuma atividade ainda.</div>';
+    painel.innerHTML =
+      tituloPainel(iniciativaAtual) +
+      '<div id="pa-linhas">' + linhasHtml + "</div>" +
+      '<button type="button" class="btn sec" id="pa-nova">+ Nova atividade</button>';
+  }
+
+  function marcarRowStatus(row, texto) {
+    if (!row) return;
+    const el = row.querySelector(".pa-row-status");
+    if (!el) return;
+    if (texto === "salvo") {
+      el.textContent = "salvo";
+      el.style.color = "var(--verde)";
+      setTimeout(() => { if (el.textContent === "salvo") el.textContent = ""; }, 1500);
+    } else if (texto) {
+      el.textContent = texto;
+      el.style.color = "var(--critico)";
+    } else {
+      el.textContent = "";
+    }
+  }
+
+  async function selecionar(nome) {
+    iniciativaAtual = nome;
+    destacarBotaoAtivo(nome);
+    painel.innerHTML = tituloPainel(nome) + '<div class="pa-carregando">Carregando…</div>';
+    try {
+      const { data, error } = await supa
+        .from(TABELA)
+        .select("*")
+        .eq("iniciativa", nome)
+        .order("ordem", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      listaAtual = data || [];
+      renderPainel();
+    } catch (err) {
+      console.error("plano-acao: falha ao carregar", err);
+      painel.innerHTML =
+        tituloPainel(nome) +
+        '<div class="pa-erro">Não consegui carregar do Supabase — ' + esc((err && err.message) || String(err)) +
+        '.<br>Confira se <span class="mono">supabase/plano_acao_atividades.sql</span> já foi rodado no SQL Editor (GRANT/RLS da tabela). ' +
+        '<button type="button" class="btn sec" id="pa-retry">Tentar de novo</button></div>';
+    }
+  }
+
+  async function salvarImediato(id, campos, row) {
+    try {
+      const { error } = await supa
+        .from(TABELA)
+        .update(Object.assign({}, campos, { updated_at: new Date().toISOString() }))
+        .eq("id", id);
+      if (error) throw error;
+      marcarRowStatus(row, "salvo");
+    } catch (err) {
+      console.error("plano-acao: falha ao salvar", err);
+      marcarRowStatus(row, "erro ao salvar");
+    }
+  }
+
+  function agendarSalvar(id, campo, valor, row) {
+    const chave = id + ":" + campo;
+    clearTimeout(timers.get(chave));
+    marcarRowStatus(row, "");
+    const t = setTimeout(() => {
+      timers.delete(chave);
+      salvarImediato(id, { [campo]: valor }, row);
+    }, 600);
+    timers.set(chave, t);
+  }
+
+  async function criarAtividade() {
+    if (!iniciativaAtual || !supa) return;
+    const novaOrdem = listaAtual.length ? Math.max(...listaAtual.map((a) => a.ordem || 0)) + 1 : 1;
+    try {
+      const { data, error } = await supa
+        .from(TABELA)
+        .insert({ iniciativa: iniciativaAtual, descricao: "", responsavel: "", status: "nao_iniciado", ordem: novaOrdem })
+        .select()
+        .single();
+      if (error) throw error;
+      listaAtual.push(data);
+      renderPainel();
+      const novoInput = painel.querySelector('.pa-row[data-id="' + data.id + '"] .pa-desc');
+      if (novoInput) novoInput.focus();
+    } catch (err) {
+      console.error("plano-acao: falha ao criar atividade", err);
+      window.alert("Não consegui criar a atividade: " + ((err && err.message) || err));
+    }
+  }
+
+  async function removerAtividade(id, row) {
+    if (!window.confirm("Remover esta atividade? Essa ação não pode ser desfeita.")) return;
+    try {
+      const { error } = await supa.from(TABELA).delete().eq("id", id);
+      if (error) throw error;
+      listaAtual = listaAtual.filter((a) => a.id !== id);
+      row.remove();
+      if (!listaAtual.length) renderPainel();
+    } catch (err) {
+      console.error("plano-acao: falha ao remover atividade", err);
+      window.alert("Não consegui remover: " + ((err && err.message) || err));
+    }
+  }
+
+  // delegação de eventos — o conteúdo do painel é substituído a cada troca
+  // de iniciativa/criação/remoção; os listeners ficam no container fixo
+  painel.addEventListener("input", (e) => {
+    const input = e.target.closest("input[data-campo]");
+    if (!input) return;
+    const row = input.closest(".pa-row");
+    agendarSalvar(row.dataset.id, input.dataset.campo, input.value, row);
+  });
+  painel.addEventListener("change", (e) => {
+    const sel = e.target.closest("select[data-campo]");
+    if (!sel) return;
+    const row = sel.closest(".pa-row");
+    row.className = "pa-row st-" + sel.value;
+    salvarImediato(row.dataset.id, { status: sel.value }, row);
+  });
+  painel.addEventListener("click", (e) => {
+    if (e.target.closest("#pa-nova")) { criarAtividade(); return; }
+    if (e.target.closest("#pa-retry")) { selecionar(iniciativaAtual); return; }
+    const del = e.target.closest(".pa-del");
+    if (del) {
+      const row = del.closest(".pa-row");
+      removerAtividade(row.dataset.id, row);
+    }
+  });
+  navEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-iniciativa]");
+    if (btn) selecionar(btn.dataset.iniciativa);
+  });
+
+  renderNav();
+  try {
+    supa = await iniciarCliente();
+  } catch (err) {
+    console.error("plano-acao: falha ao iniciar o cliente Supabase", err);
+    painel.innerHTML = '<div class="pa-erro">Não consegui carregar a biblioteca do Supabase via CDN — ' +
+      esc((err && err.message) || String(err)) + ".</div>";
+    return;
+  }
+  const projetos = (window.DB && window.DB.projetos) || [];
+  if (projetos.length) selecionar(projetos[0].iniciativa);
+})();
+</script>
+</body>
+</html>

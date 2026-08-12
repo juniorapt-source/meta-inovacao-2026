@@ -10,6 +10,7 @@
     ["demandas.html", "Matriz de demandas"],
     ["participantes.html", "Participantes"],
     ["projetos.html", "Projetos"],
+    ["plano-acao.html", "Plano de Ação"],
     ["editor.html", "Modo edição"],
   ];
 
