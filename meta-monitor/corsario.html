@@ -93,7 +93,8 @@
 .crs-matriz th,.crs-matriz td{padding:4px 6px;border-bottom:1px solid var(--border-soft);
   border-right:1px solid var(--border-soft);box-sizing:border-box;height:30px}
 .crs-matriz thead th{position:sticky;top:0;z-index:2;background:var(--ceu);font-family:'DM Sans';font-weight:700;
-  color:var(--tinta);text-align:left;vertical-align:bottom;white-space:normal;line-height:1.15;font-size:10.5px;padding:6px 4px}
+  color:var(--grafite);text-align:left;vertical-align:bottom;white-space:normal;line-height:1.25;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.05em;padding:6px 4px}
 .crs-mz-th-crit,.crs-mz-td-crit{min-width:90px;max-width:90px;width:90px;text-align:center}
 .crs-mz-td-crit{font-family:'DM Sans';font-weight:600;font-size:10.5px;letter-spacing:.02em}
 .crs-mz-td-pct{min-width:66px;max-width:66px;width:66px;text-align:center;font-family:'IBM Plex Mono';font-weight:700;color:var(--tinta)}
@@ -104,7 +105,7 @@
   font-family:'DM Sans';font-weight:600;font-size:9.5px;text-align:left;white-space:normal;line-height:1.2}
 .crs-mz-col-iniciativa{position:sticky;left:100px;z-index:1;width:168px;min-width:168px;max-width:168px;
   background:var(--branco);font-family:'Spectral';font-size:12.5px;color:var(--tinta);white-space:normal}
-thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(--ceu);color:var(--tinta)}
+thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(--ceu)}
 /* a célula de núcleo tem cor inline (por linha) — a especificidade do inline já vence a zebra por conta própria */
 .crs-matriz tbody tr.crs-mz-zebra td{background:rgba(43,38,32,.025)}
 .crs-mz-na{color:#8B98A5;font-style:italic;font-weight:400;background:transparent}
@@ -248,11 +249,15 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     "a iniciar": "crs-st-iniciar",
     "em entendimento": "crs-st-entendimento",
   };
+  // cores por núcleo: em vez dos tons vivos da planilha-fonte (usados só pra status de
+  // critério, que precisa bater com a origem), reaproveita a família "carta náutica" já
+  // definida em css/base.css — mesma lógica de matiz (azul/verde/roxo/laranja), só que
+  // lavada pra tinta de papel antigo, coerente com o resto do site.
   const NUCLEO_CORES = {
-    "inovação para competitividade": { cor: "#005EB8", fundo: "#E3F0FB" },
-    "inovação territorial": { cor: "#00796B", fundo: "#E0F2F0" },
-    "startups": { cor: "#6A4FA3", fundo: "#EFEAF7" },
-    "tecnologias portadoras de futuro": { cor: "#E65100", fundo: "#FDEDE0" },
+    "inovação para competitividade": { cor: "var(--prog)", fundo: "var(--prog-w)" },   // azul
+    "inovação territorial": { cor: "var(--ok)", fundo: "var(--ok-w)" },                // verde
+    "startups": { cor: "var(--sla)", fundo: "var(--sla-w)" },                          // roxo/malva
+    "tecnologias portadoras de futuro": { cor: "var(--cc)", fundo: "var(--cc-w)" },    // laranja/terracota
   };
   const ORDEM_NUCLEOS = Object.keys(NUCLEO_CORES);
 
@@ -288,7 +293,7 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
   }
 
   function corNucleo(nome) {
-    return NUCLEO_CORES[normalizar(nome)] || { cor: "#5c5346", fundo: "var(--neutro-w)" };
+    return NUCLEO_CORES[normalizar(nome)] || { cor: "var(--grafite)", fundo: "var(--neutro-w)" };
   }
 
   function fmtPct(p) {
@@ -489,9 +494,9 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     return '<tr class="' + (idx % 2 ? "crs-mz-zebra" : "") + '">' +
       '<td class="crs-mz-col-nucleo" style="background:' + nc.cor + '" title="' + esc(x.nucleo || "") + '">' + esc(x.nucleo || "—") + '</td>' +
       '<td class="crs-mz-col-iniciativa">' + esc(x.nome) + '</td>' +
+      '<td class="crs-mz-td-pat' + patCls + '">' + esc(x.calc.patente) + '</td>' +
       celulas +
       '<td class="crs-mz-td-pct">' + fmtPct(x.calc.pct) + '</td>' +
-      '<td class="crs-mz-td-pat' + patCls + '">' + esc(x.calc.patente) + '</td>' +
     '</tr>';
   }
 
@@ -499,9 +504,9 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     return '<tr>' +
       '<th class="crs-mz-col-nucleo">Núcleo</th>' +
       '<th class="crs-mz-col-iniciativa">Iniciativa</th>' +
+      '<th class="crs-mz-td-pat">Patente Atual</th>' +
       CRITERIOS.map((c) => '<th class="crs-mz-th-crit" title="' + esc(c.rotulo) + '">' + esc(rotuloCurto(c)) + '</th>').join("") +
       '<th class="crs-mz-td-pct">%</th>' +
-      '<th class="crs-mz-td-pat">Patente</th>' +
     '</tr>';
   }
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.6.2 — 2026-08-12
+- `corsario.html` (visão Matriz): coluna **"Patente"** renomeada pra **"Patente Atual"** e movida pra logo depois de Iniciativa (antes de "Base no Foco"), em vez de ficar isolada no fim da tabela — não é mais sticky, rola junto com os critérios como as demais.
+- Cores de núcleo trocadas dos tons vivos da planilha-fonte (`#005EB8`/`#00796B`/`#6A4FA3`/`#E65100`, que continuam só nas cores de *status* de critério, pra bater com a origem) pelos tokens já lavados de `css/base.css` — `var(--prog)` azul, `var(--ok)` verde, `var(--sla)` roxo/malva, `var(--cc)` laranja/terracota — mesma lógica de matiz, mas na tinta de papel antigo do resto do site. Vale pra célula sólida da matriz, pro chip do card e pro chip de filtro por igual (todos usam `corNucleo()`, fonte única).
+- Cabeçalhos de coluna da matriz alinhados à tipografia padrão de `<th>` do site (`css/base.css`): maiúsculas, `letter-spacing:.05em`, cor `var(--grafite)` em vez de `var(--tinta)` — antes destoava do resto das tabelas do painel (`plano.html`, `demandas.html`, `projetos.html`).
+
 ## v0.6.1 — 2026-08-12
 - `corsario.html`: segunda visualização, **Matriz** (iniciativas × critérios), no espírito da planilha de origem — alternador segmentado "Cards | Matriz" junto aos controles existentes, padrão Cards. Estado espelhado em `location.hash` (`#cards`/`#matriz`, sem `localStorage`) — link direto pra `#matriz` já abre nela, e o alternador some/reaparece corretamente no botão voltar/avançar do navegador (`hashchange`).
   - Fonte única: mesmo `TODAS`/`calcular()` dos cards — a filtragem/ordenação foi extraída pra uma função só (`listaFiltrada()`) que os dois renders consomem; filtro por núcleo, busca e ordenação valem igual pras duas visões, sem lógica duplicada.
