@@ -75,7 +75,12 @@ for e in db.get("agenda", {}).get("encontros", []):
 for n in db.get("nos", {}).get("nos", []):
     for aid in n["acoes"]: check(aid in ids, f"nó {n['no']}: ação inexistente {aid}")
 
-NUCLEOS_VALIDOS = {"Inovação para competitividade", "Inovação territorial", "Startups", "Tecnologias portadoras de futuro"}
+# Title Case com preposições/artigos em minúsculas — padrão institucional. Lista fechada;
+# "Gestão do Conhecimento e Processos" é núcleo válido mesmo sem projeto de portfólio hoje
+# (é usado em data/pessoas.js). editor.html tem sua própria constante NUCLEOS_VALIDOS que
+# precisa bater exatamente com esta.
+NUCLEOS_VALIDOS = {"Inovação para Competitividade", "Inovação Territorial", "Startups",
+                    "Tecnologias Portadoras de Futuro", "Gestão do Conhecimento e Processos"}
 projetos = db.get("projetos", [])
 inic_projetos = []
 for p in projetos:
@@ -88,6 +93,12 @@ for p in projetos:
             check(isinstance(r, str) and bool(r.strip()), f"projetos[{p.get('iniciativa')}]: representante vazio/inválido {r!r}")
     inic_projetos.append(p.get("iniciativa"))
 check(len(inic_projetos) == len(set(inic_projetos)), "projetos: iniciativa duplicada")
+
+# mesma lista fechada vale pro campo nucleo em data/pessoas.js — é o que evita a divergência
+# silenciosa de nomenclatura que motivou este guardrail (ex.: "Inovação para Escala e Startups").
+for p in db.get("pessoas", []):
+    if "nucleo" in p:
+        check(p["nucleo"] in NUCLEOS_VALIDOS, f"pessoas.js: núcleo inválido {p['nucleo']!r} em {p.get('nome')!r}")
 
 # projetos.js é a fonte canônica de autoria por iniciativa — qualquer outro dataset que
 # cite uma iniciativa precisa apontar pra um nome que exista aqui.

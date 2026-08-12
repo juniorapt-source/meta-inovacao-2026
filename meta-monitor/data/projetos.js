@@ -1,21 +1,21 @@
 window.DB = window.DB || {};
 window.DB.projetos = [
-  { "nucleo": "Inovação para competitividade", "iniciativa": "ALI Academy",           "representantes": ["Carol"] },
-  { "nucleo": "Inovação para competitividade", "iniciativa": "ALI Coop",              "representantes": ["Carol"] },
-  { "nucleo": "Inovação para competitividade", "iniciativa": "ALI Produtividade",     "representantes": ["Fred"] },
-  { "nucleo": "Inovação para competitividade", "iniciativa": "ALI Rural",             "representantes": ["Júnior"] },
-  { "nucleo": "Inovação para competitividade", "iniciativa": "Consult",               "representantes": ["Matheus"] },
-  { "nucleo": "Inovação para competitividade", "iniciativa": "Convênio Anprotec",     "representantes": ["Matheus"] },
-  { "nucleo": "Inovação para competitividade", "iniciativa": "Coopera mais Amazônia", "representantes": ["Carol"] },
-  { "nucleo": "Inovação para competitividade", "iniciativa": "MEI + Inovador",        "representantes": ["Thiago"] },
-  { "nucleo": "Inovação para competitividade", "iniciativa": "Sebraetec",             "representantes": ["Matheus"] },
+  { "nucleo": "Inovação para Competitividade", "iniciativa": "ALI Academy",           "representantes": ["Carol"] },
+  { "nucleo": "Inovação para Competitividade", "iniciativa": "ALI Coop",              "representantes": ["Carol"] },
+  { "nucleo": "Inovação para Competitividade", "iniciativa": "ALI Produtividade",     "representantes": ["Fred"] },
+  { "nucleo": "Inovação para Competitividade", "iniciativa": "ALI Rural",             "representantes": ["Júnior"] },
+  { "nucleo": "Inovação para Competitividade", "iniciativa": "Consult",               "representantes": ["Matheus"] },
+  { "nucleo": "Inovação para Competitividade", "iniciativa": "Convênio Anprotec",     "representantes": ["Matheus"] },
+  { "nucleo": "Inovação para Competitividade", "iniciativa": "Coopera mais Amazônia", "representantes": ["Carol"] },
+  { "nucleo": "Inovação para Competitividade", "iniciativa": "MEI + Inovador",        "representantes": ["Thiago"] },
+  { "nucleo": "Inovação para Competitividade", "iniciativa": "Sebraetec",             "representantes": ["Matheus"] },
 
-  { "nucleo": "Inovação territorial", "iniciativa": "ALI Ecossistema", "representantes": ["Raquel"] },
-  { "nucleo": "Inovação territorial", "iniciativa": "ALI IG",          "representantes": ["Hulda"] },
-  { "nucleo": "Inovação territorial", "iniciativa": "ATIVA",           "representantes": ["Raquel"] },
-  { "nucleo": "Inovação territorial", "iniciativa": "Catalisa Gov",    "representantes": ["Dario", "Rafa"] },
-  { "nucleo": "Inovação territorial", "iniciativa": "ELI",             "representantes": ["Raquel"] },
-  { "nucleo": "Inovação territorial", "iniciativa": "ELI Summit",      "representantes": ["Raquel"] },
+  { "nucleo": "Inovação Territorial", "iniciativa": "ALI Ecossistema", "representantes": ["Raquel"] },
+  { "nucleo": "Inovação Territorial", "iniciativa": "ALI IG",          "representantes": ["Hulda"] },
+  { "nucleo": "Inovação Territorial", "iniciativa": "ATIVA",           "representantes": ["Raquel"] },
+  { "nucleo": "Inovação Territorial", "iniciativa": "Catalisa Gov",    "representantes": ["Dario", "Rafa"] },
+  { "nucleo": "Inovação Territorial", "iniciativa": "ELI",             "representantes": ["Raquel"] },
+  { "nucleo": "Inovação Territorial", "iniciativa": "ELI Summit",      "representantes": ["Raquel"] },
 
   { "nucleo": "Startups", "iniciativa": "Internacionalização",   "representantes": ["Cris"] },
   { "nucleo": "Startups", "iniciativa": "Missões",               "representantes": ["Cris"] },
@@ -25,9 +25,9 @@ window.DB.projetos = [
   { "nucleo": "Startups", "iniciativa": "Startup NE",            "representantes": ["Wébia", "Jéssica", "Fernanda"] },
   { "nucleo": "Startups", "iniciativa": "Websummit Rio e Lisboa","representantes": ["Cris", "Pova"] },
 
-  { "nucleo": "Tecnologias portadoras de futuro", "iniciativa": "ACT Ministério da Saúde", "representantes": ["Hulda"] },
-  { "nucleo": "Tecnologias portadoras de futuro", "iniciativa": "Catalisa ICT",             "representantes": ["Agnaldo"] },
-  { "nucleo": "Tecnologias portadoras de futuro", "iniciativa": "Embrapii",                 "representantes": ["Agnaldo"] },
-  { "nucleo": "Tecnologias portadoras de futuro", "iniciativa": "Inova Biomas",             "representantes": ["Gabriel", "Valéria", "Felipe"] },
-  { "nucleo": "Tecnologias portadoras de futuro", "iniciativa": "Sebrae Origens",           "representantes": ["Hulda"] }
+  { "nucleo": "Tecnologias Portadoras de Futuro", "iniciativa": "ACT Ministério da Saúde", "representantes": ["Hulda"] },
+  { "nucleo": "Tecnologias Portadoras de Futuro", "iniciativa": "Catalisa ICT",             "representantes": ["Agnaldo"] },
+  { "nucleo": "Tecnologias Portadoras de Futuro", "iniciativa": "Embrapii",                 "representantes": ["Agnaldo"] },
+  { "nucleo": "Tecnologias Portadoras de Futuro", "iniciativa": "Inova Biomas",             "representantes": ["Gabriel", "Valéria", "Felipe"] },
+  { "nucleo": "Tecnologias Portadoras de Futuro", "iniciativa": "Sebrae Origens",           "representantes": ["Hulda"] }
 ];

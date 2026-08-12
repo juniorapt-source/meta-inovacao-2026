@@ -107,7 +107,8 @@ Object.keys(CONJUNTOS).forEach(k=>{
 });
 const area = document.getElementById("ed-area");
 const saida = document.getElementById("ed-saida");
-const NUCLEOS_VALIDOS = ["Inovação para competitividade","Inovação territorial","Startups","Tecnologias portadoras de futuro"];
+/* precisa bater exatamente com NUCLEOS_VALIDOS de tools/validar_dados.py */
+const NUCLEOS_VALIDOS = ["Inovação para Competitividade","Inovação Territorial","Startups","Tecnologias Portadoras de Futuro","Gestão do Conhecimento e Processos"];
 
 function opts(lista, atual, rot){
   const l = lista.includes(atual)||atual===""&&lista.includes("") ? lista : [atual].concat(lista);

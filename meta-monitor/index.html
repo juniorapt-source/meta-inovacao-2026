@@ -114,7 +114,10 @@
     if (pendente) iniciativasPendentes.push(p.iniciativa);
   });
   const totalGestores = gestores.size;
-  const porNucleo = nucleosProj.map(n => [n, projetos.filter(p => p.nucleo === n).length]);
+  // mini-breakdown só mostra núcleo com projeto — "Gestão do Conhecimento e Processos" é
+  // núcleo válido no whitelist (editor.html/validar_dados.py), mas sem portfólio hoje, então
+  // não entra aqui (0 é ruído visual, não informação)
+  const porNucleo = nucleosProj.map(n => [n, projetos.filter(p => p.nucleo === n).length]).filter(([, c]) => c > 0);
 
   kpisHtml += '<div class="card kpi"><div class="n">' + projetos.length + '</div>' +
     '<div class="l">Projetos no portfólio</div><div class="sub">Iniciativas mapeadas pela UI</div></div>';

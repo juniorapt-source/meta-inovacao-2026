@@ -87,7 +87,7 @@ window.DB.pessoas = [
  },
  {
   "nome": "Paulo Puppin Zandonadi",
-  "nucleo": "Inovação para Escala e Startups",
+  "nucleo": "Startups",
   "grupo": "Núcleos"
  },
  {
