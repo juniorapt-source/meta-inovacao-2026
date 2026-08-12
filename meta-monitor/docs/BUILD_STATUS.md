@@ -10,3 +10,14 @@
 [00:26] F5 — OK (agenda + matriz 27×8 + participantes)
 [01:36] F6 — OK apos 1 ajuste (ids estaticos; editor com download + roundtrip node)
 [01:36] F7 — OK (README + CHANGELOG + tag v0.1.0)
+
+## Retomada 2026-08-11 23:49 — verificação de estado real (sem repetir trabalho)
+
+Antes de reexecutar qualquer fase, os testes de aceite de F1–F6 foram rodados de novo contra o
+conteúdo publicado (não assumidos a partir da linha acima). F7 foi conferida contra o repo real
+(`git log`, `git tag`) e não batia com o que a linha [01:36] afirmava.
+
+[23:49] F0 — AJUSTE(1): causa = `.DS_Store` da raiz versionado desde o "Initial commit" e sem
+  `.gitignore` na raiz do repo (só existia dentro de `meta-monitor/`). Corrigido: `.gitignore` criado
+  na raiz (.DS_Store, Thumbs.db, node_modules/, *.zip) e `git rm --cached .DS_Store`. Reteste:
+  `git status` limpo quanto a artefatos de SO. F0 — OK.
