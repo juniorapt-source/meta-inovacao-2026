@@ -71,33 +71,43 @@ window.DB.pessoas = [
   "grupo": "URC"
  },
  {
-  "nome": "Representante Núcleo 1",
-  "papel": "A indicar até 07/08 (CAN-05) — fallback: gestor da iniciativa",
-  "grupo": "Núcleos",
-  "pendente": true
+  "nome": "Gabriel Gil Barreto Barros",
+  "nucleo": "Tecnologias Portadoras de Futuro",
+  "grupo": "Núcleos"
  },
  {
-  "nome": "Representante Núcleo 2",
-  "papel": "A indicar até 07/08 (CAN-05) — fallback: gestor da iniciativa",
-  "grupo": "Núcleos",
-  "pendente": true
+  "nome": "Hulda Oliveira Giesbrecht",
+  "nucleo": "Tecnologias Portadoras de Futuro",
+  "grupo": "Núcleos"
  },
  {
-  "nome": "Representante Núcleo 3",
-  "papel": "A indicar até 07/08 (CAN-05) — fallback: gestor da iniciativa",
-  "grupo": "Núcleos",
-  "pendente": true
+  "nome": "Lara Chicuta Franco",
+  "nucleo": "Gestão do Conhecimento e Processos",
+  "grupo": "Núcleos"
  },
  {
-  "nome": "Representante Núcleo 4",
-  "papel": "A indicar até 07/08 (CAN-05) — fallback: gestor da iniciativa",
-  "grupo": "Núcleos",
-  "pendente": true
+  "nome": "Marcus Vinicius Lopes Bezerra",
+  "nucleo": "Inovação Territorial",
+  "grupo": "Núcleos"
  },
  {
-  "nome": "Representante Núcleo 5",
-  "papel": "A indicar até 07/08 (CAN-05) — fallback: gestor da iniciativa",
-  "grupo": "Núcleos",
-  "pendente": true
+  "nome": "Matheus Lopes de Queiroz Campos",
+  "nucleo": "Inovação para Competitividade",
+  "grupo": "Núcleos"
+ },
+ {
+  "nome": "Paulo Puppin Zandonadi",
+  "nucleo": "Inovação para Escala e Startups",
+  "grupo": "Núcleos"
+ },
+ {
+  "nome": "Sandra Chaves Silva Paraíso",
+  "nucleo": "Gestão do Conhecimento e Processos",
+  "grupo": "Núcleos"
+ },
+ {
+  "nome": "José Mendes de Oliveira Júnior",
+  "nucleo": "Inovação para Competitividade",
+  "grupo": "Núcleos"
  }
 ];

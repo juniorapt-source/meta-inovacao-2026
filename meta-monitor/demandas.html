@@ -9,6 +9,27 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.mz-topo{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}
+.mz-status{font-size:12.5px;color:var(--grafite)}
+.mz-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.mz-aviso{background:var(--ambar-w);border:1px solid #EAD9A8;border-radius:10px;padding:10px 14px;font-size:13px;color:#7A5A14;margin-bottom:14px}
+.mz-erro{background:var(--critico-w);border:1px solid #E7B8B8;border-radius:10px;padding:10px 14px;font-size:13px;color:#7A1F1F;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.mz-skel{display:grid;gap:6px}
+.mz-skel div{height:34px;border-radius:8px;background:linear-gradient(90deg,#EEF1F4 25%,#F7F9FB 37%,#EEF1F4 63%);background-size:400% 100%;animation:mz-shimmer 1.4s ease infinite}
+@keyframes mz-shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
+.matriz select.cel-editar{width:100%;border:1px solid var(--linha);border-radius:6px;font-size:11px;font-weight:600;padding:3px 2px;background:#fff}
+.cel-salvando{outline:2px solid var(--ambar) !important}
+.cel-salvo{outline:2px solid var(--verde) !important}
+.cel-falhou{outline:2px solid var(--critico) !important}
+.mz-del{background:none;border:0;color:var(--critico);cursor:pointer;font-size:13px;margin-left:6px;line-height:1}
+.mz-del:hover{text-decoration:underline}
+.mz-badge-rt{position:fixed;bottom:18px;right:18px;background:var(--tinta);color:#fff;padding:8px 14px;border-radius:999px;font-size:12.5px;box-shadow:var(--sombra);opacity:0;transition:opacity .25s;pointer-events:none;z-index:50}
+.mz-badge-rt.show{opacity:1}
+.mz-rodape{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+</style>
 </head>
 <body>
 <div class="shell">
@@ -28,15 +49,33 @@
         <span class="cel cel-priorizado" style="width:auto;padding:3px 10px">priorizado</span>→
         <span class="cel cel-encaminhado" style="width:auto;padding:3px 10px">encaminhado</span>
       </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--grafite);align-items:center">
+        <span><span class="cel" style="width:auto;padding:2px 8px;outline:2px solid var(--ambar)">salvando</span></span>
+        <span><span class="cel" style="width:auto;padding:2px 8px;outline:2px solid var(--verde)">salvo</span></span>
+        <span><span class="cel" style="width:auto;padding:2px 8px;outline:2px solid var(--critico)">falhou (clique para tentar de novo)</span></span>
+      </div>
       <div id="resumo" style="margin-top:10px;font-size:13px;color:var(--grafite)"></div>
     </div>
 
-    <div class="matriz-wrap">
+    <div class="mz-topo">
+      <div class="mz-status" id="mz-status">Carregando…</div>
+      <div class="mz-acoes">
+        <button type="button" class="btn sec" id="mz-atualizar">Atualizar</button>
+        <button type="button" class="btn sec" id="mz-exportar">Exportar matriz (JSON)</button>
+        <button type="button" class="btn" id="mz-editar">Ativar edição</button>
+      </div>
+    </div>
+
+    <div id="mz-estado"></div>
+
+    <div class="matriz-wrap" id="mz-wrap" style="display:none">
       <table class="matriz"><thead id="cab"></thead><tbody id="matriz"></tbody></table>
     </div>
-    <p style="color:var(--grafite);font-size:12.5px;margin-top:10px">Para atualizar células, use o Modo edição e baixe o novo <span class="mono">data/matriz.js</span>.</p>
+
+    <div class="mz-rodape" id="mz-rodape"></div>
   </main>
 </div>
+<div class="mz-badge-rt" id="mz-badge-rt"></div>
 
 <script src="data/config.js"></script>
 <script src="data/canais.js"></script>
@@ -44,30 +83,232 @@
 <script src="data/matriz.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
+<script src="js/matriz-store.js"></script>
 <script>
 (function(){
+  "use strict";
   montarShell("demandas.html");
+
   const ORDEM = ["", "previsto", "oficina", "formulario", "justificado", "priorizado", "encaminhado"];
+  const ROTULO = {"":"—","previsto":"previsto","oficina":"oficina feita","formulario":"formulário ok","justificado":"justificado","priorizado":"priorizado","encaminhado":"encaminhado"};
+  const CANAIS = DB.canais;
+  const CANAL_IDS = CANAIS.map(c => c.id);
+
   document.getElementById("cab").innerHTML = "<tr><th>Iniciativa</th>" +
-    DB.canais.map(c => "<th>" + esc(c.nome) + "</th>").join("") + "</tr>";
+    CANAIS.map(c => "<th>" + esc(c.nome) + "</th>").join("") + "</tr>";
 
-  let tot = { formulario: 0, justificado: 0, priorizado: 0, encaminhado: 0, oficina: 0, previsto: 0 };
-  document.getElementById("matriz").innerHTML = DB.iniciativas.map(i => {
-    const linha = DB.matriz[i.nome] || {};
-    return "<tr><td>" + esc(i.nome) + "</td>" + DB.canais.map(c => {
-      const v = linha[c.id] || "";
-      if (v) tot[v] = (tot[v] || 0) + 1;
-      const cls = v ? "cel-" + v : "cel-vazia";
-      return '<td><span class="cel ' + cls + '">' + (v || "—") + "</span></td>";
-    }).join("") + "</tr>";
-  }).join("");
+  let linhas = null;          // registros carregados (do Supabase, ou do fallback local)
+  let usandoFallback = false; // true quando o Supabase não respondeu e caímos pro data/matriz.js
+  let editando = false;
+  let realtimeCanal = null;
+  let badgeTimer = null;
 
-  const total = DB.iniciativas.length * DB.canais.length;
-  const entregues = tot.formulario + tot.justificado + tot.priorizado + tot.encaminhado;
-  document.getElementById("resumo").textContent =
-    "Progresso: " + entregues + " célula(s) com formulário/justificativa de " + total +
-    " possíveis · oficinas registradas: " + (tot.oficina + entregues) +
-    " · priorizadas: " + (tot.priorizado + tot.encaminhado) + " · encaminhadas à URC: " + tot.encaminhado + ".";
+  const elStatus = document.getElementById("mz-status");
+  const elEstado = document.getElementById("mz-estado");
+  const elWrap = document.getElementById("mz-wrap");
+  const elMatriz = document.getElementById("matriz");
+  const elRodape = document.getElementById("mz-rodape");
+  const elBadge = document.getElementById("mz-badge-rt");
+
+  function nomeEditor() {
+    let nome = localStorage.getItem("editor_nome");
+    if (!nome) {
+      nome = (window.prompt("Seu nome ou iniciais, pra identificar suas edições na matriz:") || "").trim();
+      if (nome) localStorage.setItem("editor_nome", nome);
+    }
+    return nome || "anônimo";
+  }
+
+  function fallbackLocal() {
+    usandoFallback = true;
+    return DB.iniciativas.map((ini, idx) => {
+      const linha = DB.matriz[ini.nome] || {};
+      const row = { id: "local-" + idx, iniciativa: ini.nome, atualizado_em: null, atualizado_por: null };
+      CANAL_IDS.forEach(c => { row[c] = linha[c] || ""; });
+      return row;
+    });
+  }
+
+  function mostrarSkeleton() {
+    elEstado.innerHTML = '<div class="mz-skel">' + Array.from({length:6}).map(()=>"<div></div>").join("") + "</div>";
+    elWrap.style.display = "none";
+  }
+
+  function mostrarErro(err) {
+    elEstado.innerHTML = '<div class="mz-erro"><span><b>Não consegui carregar do Supabase.</b> ' +
+      esc((err && err.message) || String(err)) + '</span><button type="button" class="btn sec" id="mz-retry">Tentar de novo</button></div>' +
+      '<div class="mz-aviso">Mostrando a última cópia local (<span class="mono">data/matriz.js</span>), somente leitura, até a tabela do Supabase responder.</div>';
+    document.getElementById("mz-retry").addEventListener("click", () => carregar(true));
+    elWrap.style.display = "";
+  }
+
+  async function carregar(forcar) {
+    mostrarSkeleton();
+    try {
+      linhas = await window.matrizStore.load(forcar);
+      usandoFallback = false;
+      elEstado.innerHTML = "";
+    } catch (err) {
+      console.error("matriz-store.load falhou:", err);
+      linhas = fallbackLocal();
+      mostrarErro(err);
+    }
+    renderTudo();
+    if (!usandoFallback) iniciarRealtime();
+  }
+
+  function iniciarRealtime() {
+    if (realtimeCanal) return;
+    realtimeCanal = window.matrizStore.subscribeRealtime((payload) => {
+      const quem = (payload.new && payload.new.atualizado_por) || "alguém";
+      mostrarBadge("atualizado por " + quem + " agora");
+      carregar(true);
+    });
+  }
+
+  function mostrarBadge(txt) {
+    elBadge.textContent = txt;
+    elBadge.classList.add("show");
+    clearTimeout(badgeTimer);
+    badgeTimer = setTimeout(() => elBadge.classList.remove("show"), 3000);
+  }
+
+  function renderStatus() {
+    if (usandoFallback) {
+      elStatus.textContent = "Fonte: data/matriz.js local (Supabase indisponível) · somente leitura.";
+      return;
+    }
+    const comData = linhas.filter(l => l.atualizado_em).sort((a,b) => b.atualizado_em.localeCompare(a.atualizado_em));
+    if (!comData.length) { elStatus.textContent = "Nenhuma edição registrada ainda."; return; }
+    const ultima = comData[0];
+    const d = new Date(ultima.atualizado_em);
+    const dataFmt = isNaN(d) ? ultima.atualizado_em : d.toLocaleString("pt-BR");
+    elStatus.textContent = "Última atualização: " + dataFmt + " por " + (ultima.atualizado_por || "—") + ".";
+  }
+
+  function renderResumo() {
+    let tot = { formulario: 0, justificado: 0, priorizado: 0, encaminhado: 0, oficina: 0, previsto: 0 };
+    linhas.forEach(l => CANAL_IDS.forEach(c => { const v = l[c]; if (v) tot[v] = (tot[v]||0)+1; }));
+    const total = linhas.length * CANAL_IDS.length;
+    const entregues = tot.formulario + tot.justificado + tot.priorizado + tot.encaminhado;
+    document.getElementById("resumo").textContent =
+      "Progresso: " + entregues + " célula(s) com formulário/justificativa de " + total +
+      " possíveis · oficinas registradas: " + (tot.oficina + entregues) +
+      " · priorizadas: " + (tot.priorizado + tot.encaminhado) + " · encaminhadas à URC: " + tot.encaminhado + ".";
+  }
+
+  function celulaEstatica(v) {
+    const cls = v ? "cel-" + v : "cel-vazia";
+    return '<td><span class="cel ' + cls + '">' + (v || "—") + "</span></td>";
+  }
+
+  function celulaEditavel(linha, canalId) {
+    const v = linha[canalId] || "";
+    const opts = ORDEM.map(o => '<option value="' + esc(o) + '"' + (o===v?" selected":"") + '>' + esc(ROTULO[o]) + "</option>").join("");
+    return '<td><select class="cel-editar" data-id="' + esc(String(linha.id)) + '" data-campo="' + canalId + '">' + opts + "</select></td>";
+  }
+
+  function renderTabela() {
+    elMatriz.innerHTML = linhas.map(l =>
+      "<tr><td>" + esc(l.iniciativa) +
+        (editando && !usandoFallback ? '<button type="button" class="mz-del" data-del="' + esc(String(l.id)) + '" title="Remover linha">×</button>' : "") +
+      "</td>" +
+      CANAL_IDS.map(c => (editando && !usandoFallback) ? celulaEditavel(l, c) : celulaEstatica(l[c])).join("") +
+      "</tr>"
+    ).join("");
+
+    if (editando && !usandoFallback) {
+      elMatriz.querySelectorAll("select.cel-editar").forEach(sel => {
+        sel.addEventListener("change", onSalvarCelula);
+      });
+      elMatriz.querySelectorAll("[data-del]").forEach(btn => {
+        btn.addEventListener("click", onRemoverLinha);
+      });
+    }
+  }
+
+  async function onSalvarCelula(e) {
+    const sel = e.target, id = sel.dataset.id, campo = sel.dataset.campo, valor = sel.value;
+    const td = sel.closest("td");
+    td.classList.remove("cel-salvo", "cel-falhou"); td.classList.add("cel-salvando");
+    try {
+      const usuario = nomeEditor();
+      const atualizado = await window.matrizStore.saveCell(id, campo, valor, usuario);
+      const linha = linhas.find(l => String(l.id) === id);
+      if (linha) Object.assign(linha, atualizado);
+      td.classList.remove("cel-salvando"); td.classList.add("cel-salvo");
+      setTimeout(() => td.classList.remove("cel-salvo"), 1500);
+      renderStatus(); renderResumo();
+    } catch (err) {
+      console.error("saveCell falhou:", err);
+      td.classList.remove("cel-salvando"); td.classList.add("cel-falhou");
+      sel.title = "Falhou: " + ((err && err.message) || err) + " — mude de novo pra tentar salvar outra vez.";
+    }
+  }
+
+  async function onRemoverLinha(e) {
+    const id = e.target.dataset.del;
+    const linha = linhas.find(l => String(l.id) === id);
+    if (!linha) return;
+    if (!window.confirm('Remover a linha "' + linha.iniciativa + '" da matriz? Essa ação não pode ser desfeita.')) return;
+    try {
+      await window.matrizStore.deleteRow(id);
+      linhas = linhas.filter(l => String(l.id) !== id);
+      renderTudo();
+    } catch (err) {
+      window.alert("Não consegui remover: " + ((err && err.message) || err));
+    }
+  }
+
+  function renderRodape() {
+    if (!editando || usandoFallback) { elRodape.innerHTML = ""; return; }
+    elRodape.innerHTML = '<button type="button" class="btn sec" id="mz-add">+ Adicionar linha</button>';
+    document.getElementById("mz-add").addEventListener("click", async () => {
+      const nome = (window.prompt("Nome da nova iniciativa:") || "").trim();
+      if (!nome) return;
+      if (linhas.some(l => l.iniciativa === nome)) { window.alert("Já existe uma linha com esse nome."); return; }
+      const dados = { iniciativa: nome };
+      CANAL_IDS.forEach(c => { dados[c] = ""; });
+      try {
+        const nova = await window.matrizStore.addRow(dados, nomeEditor());
+        linhas.push(nova);
+        renderTudo();
+      } catch (err) {
+        window.alert("Não consegui adicionar: " + ((err && err.message) || err));
+      }
+    });
+  }
+
+  function exportarJSON() {
+    const obj = {};
+    linhas.forEach(l => { obj[l.iniciativa] = Object.fromEntries(CANAL_IDS.map(c => [c, l[c] || ""])); });
+    const conteudo = "window.DB = window.DB || {};\nwindow.DB.matriz = " + JSON.stringify(obj, null, 1) + ";\n";
+    const blob = new Blob([conteudo], { type: "text/javascript;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "matriz.js";
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  }
+
+  function renderTudo() {
+    elWrap.style.display = "";
+    renderStatus();
+    renderResumo();
+    renderTabela();
+    renderRodape();
+  }
+
+  document.getElementById("mz-atualizar").addEventListener("click", () => carregar(true));
+  document.getElementById("mz-exportar").addEventListener("click", exportarJSON);
+  document.getElementById("mz-editar").addEventListener("click", (e) => {
+    if (usandoFallback) { window.alert("Edição desativada: sem conexão com o Supabase, a matriz está em modo somente leitura."); return; }
+    editando = !editando;
+    e.target.textContent = editando ? "Sair da edição" : "Ativar edição";
+    if (editando) nomeEditor();
+    renderTudo();
+  });
+
+  carregar(false);
 })();
 </script>
 </body>

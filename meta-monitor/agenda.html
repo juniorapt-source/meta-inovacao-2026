@@ -9,6 +9,40 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
+<style>
+.vista-toggle{display:flex;gap:8px;margin-bottom:12px}
+.vista-toggle button{font:600 13px Inter,sans-serif;padding:8px 14px;border-radius:8px;border:1px solid var(--linha);background:#fff;color:var(--tinta);cursor:pointer}
+.vista-toggle button.ativo{background:var(--azul);color:#fff;border-color:var(--azul)}
+.cal-topo{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.cal-titulo{font:800 17px Archivo,sans-serif;text-transform:capitalize}
+.cal-nav{display:flex;gap:6px}
+.cal-nav button{padding:6px 12px;font-size:14px}
+.cal-cabecalho{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;font:600 11px Inter,sans-serif;text-transform:uppercase;letter-spacing:.04em;color:var(--grafite);text-align:center;padding:4px 0}
+.cal-semana{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--linha);border-left:1px solid var(--linha);border-right:1px solid var(--linha)}
+.cal-semana:first-child{border-top:1px solid var(--linha)}
+.cal-semana:last-child{border-bottom:1px solid var(--linha)}
+.cal-dia{background:#fff;min-height:76px;padding:4px 5px;cursor:default;position:relative}
+.cal-dia.cal-tem-evento{cursor:pointer}
+.cal-dia.cal-tem-evento:hover{background:#F7FAFD}
+.cal-dia.cal-fora{background:#FBFCFE;color:#B8C4D0}
+.cal-dia.cal-fora .cal-num{color:#C3CDD8}
+.cal-num{font:600 12px Inter,sans-serif}
+.cal-dia.cal-hoje{box-shadow:inset 0 0 0 2px var(--azul-claro)}
+.cal-dia.cal-hoje .cal-num{color:var(--azul-claro);font-weight:800}
+.cal-eventos{display:flex;flex-direction:column;gap:1px}
+.cal-faixa{position:absolute;height:14px;line-height:14px;font-size:9.5px;font-weight:700;color:#fff;padding:0 5px;overflow:hidden;white-space:nowrap;border-radius:3px;z-index:2}
+.cal-faixa-c1{background:var(--azul-claro)}
+.cal-faixa-c2{background:var(--laranja)}
+.cal-faixa-amostra{display:inline-block;width:16px;height:9px;border-radius:2px;vertical-align:middle}
+.cal-faixa-amostra.cal-faixa-c1{background:var(--azul-claro)}
+.cal-faixa-amostra.cal-faixa-c2{background:var(--laranja)}
+.cal-legenda{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;font-size:11.5px;color:var(--grafite);align-items:center}
+.cal-detalhe{margin-top:14px;background:#fff;border:1px solid var(--linha);border-radius:12px;padding:14px 16px;box-shadow:var(--sombra)}
+@media (max-width:960px){
+  .cal-dia{min-height:56px}
+  .cal-faixa{font-size:8.5px}
+}
+</style>
 </head>
 <body>
 <div class="shell">
@@ -22,22 +56,34 @@
 
     <section class="secao">
       <h2>Encontros <span class="hint">preencha data, local e confirmações no Modo edição</span></h2>
-      <div class="card" style="padding:0;overflow:auto">
-        <table>
-          <thead><tr><th>Ciclo</th><th>Canal</th><th>Pauta (resumo)</th><th>Data</th><th>Local · modo</th><th>Confirmações</th><th>Status</th></tr></thead>
-          <tbody id="encontros"></tbody>
-        </table>
+
+      <div class="vista-toggle">
+        <button type="button" id="btn-vista-lista" class="ativo">Lista</button>
+        <button type="button" id="btn-vista-calendario">Calendário</button>
       </div>
+
+      <div id="vista-lista">
+        <div class="card" style="padding:0;overflow:auto">
+          <table>
+            <thead><tr><th>Ciclo</th><th>Canal</th><th>Pauta (resumo)</th><th>Data</th><th>Local · modo</th><th>Confirmações</th><th>Status</th></tr></thead>
+            <tbody id="encontros"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="vista-calendario" class="card" style="display:none"></div>
     </section>
   </main>
 </div>
 
 <script src="data/config.js"></script>
 <script src="data/plano.js"></script>
+<script src="data/nos.js"></script>
 <script src="data/canais.js"></script>
 <script src="data/agenda.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
+<script src="js/calendario.js"></script>
 <script>
 (function(){
   const hoje = hojeISO();
@@ -69,6 +115,35 @@
       '<td class="mono" style="font-size:12.5px">' + (e.convidados ? e.confirmados + "/" + e.convidados : "—") + "</td>" +
       '<td><span class="chip ' + stCls + '">' + esc(e.status) + "</span>" + (e.nota ? '<div style="font-size:11px;color:var(--grafite)">' + esc(e.nota) + "</div>" : "") + "</td></tr>";
   }).join("");
+
+  /* toggle Lista / Calendário — o calendário só é montado na primeira vez que é aberto */
+  const elLista = document.getElementById("vista-lista");
+  const elCal = document.getElementById("vista-calendario");
+  const btnLista = document.getElementById("btn-vista-lista");
+  const btnCal = document.getElementById("btn-vista-calendario");
+  let calendarioMontado = false;
+
+  function mostrarLista() {
+    elLista.style.display = ""; elCal.style.display = "none";
+    btnLista.classList.add("ativo"); btnCal.classList.remove("ativo");
+  }
+  function mostrarCalendario() {
+    elLista.style.display = "none"; elCal.style.display = "";
+    btnCal.classList.add("ativo"); btnLista.classList.remove("ativo");
+    if (!calendarioMontado) {
+      CALENDARIO.montar(elCal, {
+        ciclos: DB.agenda.ciclos,
+        encontros: DB.agenda.encontros,
+        canais: DB.canais,
+        nos: DB.nos.nos,
+        plano: DB.plano,
+        hojeISO: hoje
+      });
+      calendarioMontado = true;
+    }
+  }
+  btnLista.addEventListener("click", mostrarLista);
+  btnCal.addEventListener("click", mostrarCalendario);
 })();
 </script>
 </body>

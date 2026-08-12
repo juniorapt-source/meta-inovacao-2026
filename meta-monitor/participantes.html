@@ -36,13 +36,20 @@
       'Fallback do Nó 2 já aprovado: sem indicação do núcleo, o gestor da iniciativa é o representante. Atualize no Modo edição quando os nomes saírem.</div>'
     : "";
 
+  /* rótulo exibido no card, quando difere do valor cru de "grupo" */
+  const TITULO_GRUPO = { "Comitê": "Comitê de Atendimento e Relacionamento da Inovação" };
+  /* grupos onde a linha de descrição abaixo do nome fica oculta (Núcleos usa "nucleo" no lugar) */
+  const SEM_DESCRICAO = new Set(["Comitê", "UI"]);
+
   const grupos = [...new Set(DB.pessoas.map(p => p.grupo))];
   document.getElementById("pessoas").innerHTML = grupos.map(g =>
-    '<section class="card"><h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin-bottom:8px">' + esc(g) + "</h3>" +
-    DB.pessoas.filter(p => p.grupo === g).map(p =>
-      '<div style="padding:7px 0;border-bottom:1px solid var(--linha)">' +
-      "<b>" + esc(p.nome) + "</b>" + (p.pendente ? ' <span class="chip st-atrasada">pendente</span>' : "") +
-      '<div style="font-size:12.5px;color:var(--grafite)">' + esc(p.papel) + "</div></div>").join("") +
+    '<section class="card"><h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin-bottom:8px">' + esc(TITULO_GRUPO[g] || g) + "</h3>" +
+    DB.pessoas.filter(p => p.grupo === g).map(p => {
+      const desc = g === "Núcleos" ? (p.nucleo || "") : (SEM_DESCRICAO.has(g) ? "" : (p.papel || ""));
+      return '<div style="padding:7px 0;border-bottom:1px solid var(--linha)">' +
+        "<b>" + esc(p.nome) + "</b>" + (p.pendente ? ' <span class="chip st-atrasada">pendente</span>' : "") +
+        (desc ? '<div style="font-size:12.5px;color:var(--grafite)">' + esc(desc) + "</div>" : "") + "</div>";
+    }).join("") +
     "</section>").join("");
 
   if (window.matchMedia("(max-width:960px)").matches)
