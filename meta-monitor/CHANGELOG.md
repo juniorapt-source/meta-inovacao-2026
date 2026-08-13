@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.22.1 — 2026-08-13
+Correção pós-deploy da v0.22.0 — a edição do Corsário salvava aparentemente sem erro na
+hora, mas nada persistia: o JR. rodou `2026-08_corsario_edicao.sql` em produção e, ao
+editar em `editor.html`, toda escrita falhava com `PGRST204: Could not find the
+'updated_by' column of 'corsario_status' in the schema cache` (confirmado no console do
+navegador). Causa: o `ALTER TABLE ... ADD COLUMN` do script rodou certo — a coluna existe
+no Postgres — mas o PostgREST (API do Supabase) mantém um cache do schema em memória que
+`ALTER TABLE` sozinho não invalida; faltava o `NOTIFY pgrst, 'reload schema';` no final
+do script. Sem código novo nesta versão, só documentação/SQL:
+
+- **`tools/sql/2026-08_corsario_edicao.sql`** — adicionado `NOTIFY pgrst, 'reload
+  schema';` como seção 4, no final. Quem já rodou o script antes desta correção só
+  precisa rodar essa uma linha manualmente (já orientado fora do commit); quem for rodar
+  o script do zero agora já sai correto.
+- **`tools/sql/PADRAO_TABELA.md`** — novo item 8 no checklist: todo script que faz
+  `ALTER TABLE` numa tabela que já existia (diferente de `CREATE TABLE` de tabela nova,
+  que o PostgREST detecta sozinho) precisa terminar com esse `NOTIFY`, registrado como
+  lição aprendida com este incidente.
+- **`data/config.js`** — `versao` 0.22.0 → 0.22.1.
+
 ## v0.22.0 — 2026-08-13
 "O Caminho para o Corsário ganha edição ao vivo" — `corsario_status` (status por
 iniciativa×critério) era somente leitura desde sempre (README já documentava isso

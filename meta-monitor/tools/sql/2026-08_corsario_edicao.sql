@@ -128,6 +128,17 @@ CREATE TRIGGER cc_audit_corsario_status
 
 
 -- ---------------------------------------------------------------------------
+-- 4) Recarrega o cache de schema do PostgREST — SEM ISSO a API continua "achando" que
+--    id/updated_by não existem mesmo depois do ALTER TABLE acima (DDL feito pelo SQL
+--    Editor não avisa o PostgREST sozinho), e toda escrita falha com
+--    PGRST204 "Could not find the '<coluna>' column ... in the schema cache" mesmo com
+--    RLS/GRANT corretos. Descoberto rodando este script em produção pela 1ª vez — quem
+--    rodar de novo (ou aplicar o mesmo padrão numa tabela nova) precisa deste passo.
+-- ---------------------------------------------------------------------------
+NOTIFY pgrst, 'reload schema';
+
+
+-- ---------------------------------------------------------------------------
 -- Pra REVERTER (na ordem inversa):
 --   DROP TRIGGER IF EXISTS cc_audit_corsario_status ON public.corsario_status;
 --   DROP POLICY IF EXISTS "cc_token_update" ON public.corsario_status;

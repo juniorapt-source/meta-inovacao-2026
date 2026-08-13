@@ -40,10 +40,18 @@ ligado, policy criada) e só quebra em produção contra o client de verdade.
    só se a tabela tiver coluna `updated_at`.
 7. **Trigger de auditoria** via `cc_audit()` (`tools/sql/2026-08_auditoria.sql`, P13) —
    `AFTER INSERT OR UPDATE OR DELETE ... FOR EACH ROW EXECUTE FUNCTION public.cc_audit()`.
-   Só entra nas 4 tabelas "editáveis de verdade" (hoje: `meta_inovacao_plano_acoes`,
+   Entra nas tabelas "editáveis de verdade" (hoje: `meta_inovacao_plano_acoes`,
    `meta_inovacao_agenda_encontros`, `plano_acao_atividades`,
-   `meta_inovacao_matriz_demandas`) — não é obrigatório em toda tabela nova por padrão;
-   avaliar caso a caso se a tabela nova entra nesse grupo.
+   `meta_inovacao_matriz_demandas`, `corsario_status`) — não é obrigatório em toda tabela
+   nova por padrão; avaliar caso a caso se a tabela nova entra nesse grupo.
+8. **`NOTIFY pgrst, 'reload schema';` no FINAL do script, sempre que o script faz
+   `ALTER TABLE` numa tabela que JÁ EXISTIA** (não é preciso em `CREATE TABLE` de tabela
+   nova — o PostgREST detecta relação nova sozinho). Pego em produção com
+   `2026-08_corsario_edicao.sql`: o `ALTER TABLE ... ADD COLUMN` rodou sem erro, mas toda
+   escrita seguinte falhava com `PGRST204: Could not find the '<coluna>' column ... in
+   the schema cache` — a coluna existia de verdade no Postgres, só a API não sabia ainda.
+   Sem esse `NOTIFY`, o cache só se atualiza sozinho depois de um tempo (minutos) ou de
+   um restart manual do serviço (Project Settings → API → "Reload schema" no painel).
 
 ## Exceção: tabelas cuja leitura NÃO é pública
 
