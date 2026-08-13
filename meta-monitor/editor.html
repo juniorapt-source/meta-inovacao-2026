@@ -39,6 +39,13 @@
 .ed-erro-msg{display:none;color:var(--critico);font-size:11px;margin-top:3px}
 .ed-nova-acoes{display:flex;gap:10px;align-items:center;margin-top:12px}
 .ed-nova-id{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--azul);background:var(--branco);border:1px solid var(--linha);border-radius:0;padding:6px 9px;display:inline-block}
+
+/* item 3.1 — PLANO e AGENDA viraram CRUD ao vivo (Supabase), sem baixar/publicar arquivo;
+   indicador por linha "salvando…/salvo/falhou" igual ao de plano-acao.html/demandas.html,
+   só que em texto (não outline), porque aqui a linha é uma <tr> de tabela densa. */
+.ed-row-status{font-size:10.5px;white-space:nowrap;min-width:52px;display:inline-block}
+.ed-carregando,.ed-erro-carregar{color:var(--grafite);font-size:13px;padding:10px 2px}
+.ed-erro-carregar{color:var(--critico)}
 </style>
 </head>
 <body>
@@ -46,7 +53,7 @@
   <nav class="nav" aria-label="Navegação do painel"></nav>
   <main class="conteudo">
     <h1 class="pagina-titulo">Modo edição</h1>
-    <p class="pagina-sub">Edite abaixo, gere o arquivo atualizado e substitua o correspondente na pasta <span class="ed-mono">data/</span> do repositório. Nada é salvo automaticamente nesta página.</p>
+    <p class="pagina-sub" id="ed-sub">Edite abaixo, gere o arquivo atualizado e substitua o correspondente na pasta <span class="ed-mono">data/</span> do repositório. Nada é salvo automaticamente nesta página.</p>
     <section class="cartao">
       <div class="ed-topo">
         <label for="ed-conjunto" style="font:600 13px 'DM Sans',sans-serif">Conjunto:</label>
@@ -55,7 +62,7 @@
       </div>
       <div id="ed-area"></div>
       <textarea id="ed-saida" class="ed-saida" spellcheck="false" placeholder="O conteúdo do arquivo gerado aparece aqui para conferência."></textarea>
-      <div class="ed-passos"><strong>Como publicar a mudança</strong><br>
+      <div class="ed-passos" id="ed-passos"><strong>Como publicar a mudança</strong><br>
       1. Baixe o arquivo gerado e substitua o de mesmo nome em <code>data/</code>.<br>
       2. Valide: <code>python3 tools/validar_dados.py</code>.<br>
       3. Publique: <code>git add data/ &amp;&amp; git commit -m "atualiza dados" &amp;&amp; git push</code> — o Vercel redistribui sozinho.</div>
@@ -65,6 +72,9 @@
 <script src="data/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
+<script src="js/db-plano.js"></script>
+<script src="js/db-agenda.js"></script>
+<script src="js/responsaveis.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/canais.js"></script>
@@ -85,10 +95,17 @@
 const DB = window.DB, IO = window.EDITOR_IO;
 montarShell("editor.html");
 
+// item 3.1 do plano de melhorias — plano e agenda saíram do modelo "editar cópia local +
+// baixar + trocar arquivo em data/" e viraram CRUD ao vivo no Supabase (mesmo padrão de
+// plano-acao.html/demandas.html): `vivo:true` marca os dois conjuntos que não passam mais
+// pelo botão "Gerar e baixar" nem pelo textarea de conferência — a gravação acontece linha
+// a linha, com indicador de salvando/salvo/falhou. Editor único: hoje só o JR. usa o Modo
+// edição, então não há rede de segurança de revisão pra esses dois conjuntos — igual já é
+// o caso de demandas.html desde a v0.3.0.
 const CONJUNTOS = {
-  plano:        { rotulo:"Plano de ação — status e prazos", arquivo:"plano.js" },
+  plano:        { rotulo:"Plano de ação — status e prazos (editado ao vivo)", vivo:true },
   matriz:       { rotulo:"Matriz de demandas — 27 iniciativas × 10 canais", arquivo:"matriz.js" },
-  agenda:       { rotulo:"Agenda — encontros dos ciclos", arquivo:"agenda.js" },
+  agenda:       { rotulo:"Agenda — encontros dos ciclos (editada ao vivo)", vivo:true },
   pessoas:      { rotulo:"Pessoas — representantes e papéis", arquivo:"pessoas.js" },
   projetos:     { rotulo:"Projetos & Representantes — núcleos e portfólio UI", arquivo:"projetos.js" },
   urc_lideranca:{ rotulo:"URC — Liderança", arquivo:"urc.js" },
@@ -100,9 +117,28 @@ const STATUS_ENC  = ["a agendar","agendado","confirmado","realizado","cancelado"
 const ESTADOS_CEL = ["","previsto","oficina","formulario","justificado","priorizado","encaminhado"];
 const ROTULO_CEL  = {"":"—","previsto":"previsto","oficina":"oficina feita","formulario":"formulário ok","justificado":"justificado","priorizado":"priorizado","encaminhado":"encaminhado"};
 
-/* cópia de trabalho isolada dos dados carregados */
-const W = JSON.parse(JSON.stringify({ plano:DB.plano, matriz:DB.matriz, agenda:DB.agenda, pessoas:DB.pessoas, projetos:DB.projetos,
+/* cópia de trabalho isolada dos dados carregados — plano e agenda NÃO entram aqui mais
+   (item 3.1): são CRUD ao vivo, cada linha grava direto no Supabase assim que muda, sem
+   cópia local intermediária pra depois baixar. */
+const W = JSON.parse(JSON.stringify({ matriz:DB.matriz, pessoas:DB.pessoas, projetos:DB.projetos,
   urc_lideranca:DB.urc_lideranca, urc_canais:DB.urc_canais }));
+
+// mesmo prompt de "seu nome/iniciais" de demandas.html (window.prompt + localStorage,
+// chave compartilhada "editor_nome") — identifica quem editou cada linha (updated_by).
+function nomeEditor(){
+  let nome = localStorage.getItem("editor_nome");
+  if(!nome){
+    nome = (window.prompt("Seu nome ou iniciais, pra identificar suas edições:") || "").trim();
+    if(nome) localStorage.setItem("editor_nome", nome);
+  }
+  return nome || "anônimo";
+}
+
+// estado ao vivo do plano e da agenda — carregado sob demanda na primeira vez que o
+// conjunto é selecionado (DB_PLANO.carregar()/DB_AGENDA.carregar(), com fallback pro
+// seed local se o Supabase estiver fora do ar — mesma UI de aviso do resto do site).
+let planoAtual = null, planoFallback = false, planoCarregando = false;
+let agendaAtual = null, agendaFallback = false, agendaCarregando = false;
 
 const sel = document.getElementById("ed-conjunto");
 Object.keys(CONJUNTOS).forEach(k=>{
@@ -121,21 +157,53 @@ function opts(lista, atual, rot){
 /* prefixo de ID por frente, descoberto a partir dos dados carregados (não hardcodado) */
 function mapaPrefixos(){
   const mapa = {};
-  W.plano.forEach(a=>{ const p=(a.id||"").split("-")[0]; if(p && !mapa[a.frente]) mapa[a.frente]=p; });
+  (planoAtual||[]).forEach(a=>{ const p=(a.id||"").split("-")[0]; if(p && !mapa[a.frente]) mapa[a.frente]=p; });
   return mapa;
 }
 function proximoId(frente){
   const prefixo = (frente && mapaPrefixos()[frente]) || "ATV";
-  const nums = W.plano.map(a=>(a.id||"").split("-")).filter(p=>p[0]===prefixo).map(p=>parseInt(p[1],10)).filter(n=>!isNaN(n));
+  const nums = (planoAtual||[]).map(a=>(a.id||"").split("-")).filter(p=>p[0]===prefixo).map(p=>parseInt(p[1],10)).filter(n=>!isNaN(n));
   const prox = (nums.length ? Math.max.apply(null,nums) : 0) + 1;
   return prefixo+"-"+String(prox).padStart(2,"0");
 }
 
 let formNovaAberto = false;
 
-function renderPlano(){
-  const frentes = [...new Set(W.plano.map(a=>a.frente))];
-  let h = '<div class="ed-topo" style="margin-bottom:12px"><button type="button" id="ed-abrir-nova" class="ed-btn">+ Nova atividade</button></div>';
+// indicador por linha (mesma ideia de plano-acao.html's marcarRowStatus, adaptada pra uma
+// <tr> de tabela em vez de uma .pa-row flex) — "salvando…" some sozinho ao virar "salvo"
+// (1.5s), "falhou" fica até a próxima tentativa.
+function marcarLinhaStatus(tr, texto){
+  if(!tr) return;
+  const el = tr.querySelector(".ed-row-status");
+  if(!el) return;
+  if(texto==="salvando"){ el.textContent="salvando…"; el.style.color="var(--grafite)"; }
+  else if(texto==="salvo"){
+    el.textContent="salvo"; el.style.color="var(--verde)";
+    setTimeout(()=>{ if(el.textContent==="salvo") el.textContent=""; },1500);
+  } else if(texto){ el.textContent=texto; el.style.color="var(--critico)"; }
+  else el.textContent="";
+}
+
+async function renderPlano(){
+  if(!planoAtual && !planoCarregando){
+    planoCarregando = true;
+    area.innerHTML = '<div class="ed-carregando">Carregando plano do Supabase…</div>';
+    try {
+      const { lista, usandoFallback } = await DB_PLANO.carregar();
+      planoAtual = lista; planoFallback = usandoFallback;
+    } catch(err){
+      console.error("editor: falha ao carregar plano", err);
+      planoCarregando = false;
+      area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar o plano do Supabase — '+esc((err&&err.message)||String(err))+'.</div>';
+      return;
+    }
+    planoCarregando = false;
+  }
+  if(sel.value!=="plano") return; // usuário trocou de conjunto enquanto isso carregava
+  const lista = planoAtual || [];
+  const frentes = [...new Set(lista.map(a=>a.frente))];
+  let h = planoFallback ? '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não consegui falar com o Supabase agora; isto é a última cópia local (data/plano.js). Edições aqui não vão ser salvas até a rede voltar — recarregue a página depois.</div>' : "";
+  h += '<div class="ed-topo" style="margin-bottom:12px"><button type="button" id="ed-abrir-nova" class="ed-btn"'+(planoFallback?" disabled":"")+'>+ Nova atividade</button></div>';
   h += '<div id="ed-form-nova" class="ed-nova" style="display:'+(formNovaAberto?"block":"none")+'">'+
     '<h3>Nova atividade <span class="ed-nova-id" id="ed-id-preview">'+esc(proximoId(frentes[0]))+'</span></h3>'+
     '<div class="ed-nova-grid">'+
@@ -162,24 +230,38 @@ function renderPlano(){
     '<div class="ed-nova-acoes"><button type="button" id="ed-confirmar-nova" class="ed-btn">Adicionar</button>'+
       '<button type="button" id="ed-cancelar-nova" class="ed-btn sec">Cancelar</button></div>'+
   '</div>';
-  h += '<div class="ed-wrap"><table class="ed-tab"><thead><tr><th>ID</th><th>Atividade</th><th style="width:150px">Status</th><th style="width:110px">Prazo</th><th style="width:130px">Prazo ISO</th></tr></thead><tbody>';
-  W.plano.forEach((a,i)=>{
-    h+='<tr><td class="ed-mono">'+esc(a.id)+'</td><td>'+esc(a.atividade)+'</td>'+
-       '<td><select data-i="'+i+'" data-f="status">'+opts(STATUS_ACAO,a.status)+'</select></td>'+
-       '<td><input type="text" data-i="'+i+'" data-f="prazo" value="'+esc(a.prazo)+'"></td>'+
-       '<td><input type="text" data-i="'+i+'" data-f="prazo_iso" value="'+esc(a.prazo_iso||"")+'" placeholder="AAAA-MM-DD ou vazio"></td></tr>';
+  h += '<div class="ed-wrap"><table class="ed-tab"><thead><tr><th>ID</th><th>Atividade</th><th style="width:150px">Status</th><th style="width:110px">Prazo</th><th style="width:130px">Prazo ISO</th><th style="width:70px"></th></tr></thead><tbody>';
+  lista.forEach(a=>{
+    h+='<tr data-id="'+esc(a.id)+'"><td class="ed-mono">'+esc(a.id)+'</td><td>'+esc(a.atividade)+'</td>'+
+       '<td><select data-f="status"'+(planoFallback?" disabled":"")+'>'+opts(STATUS_ACAO,a.status)+'</select></td>'+
+       '<td><input type="text" data-f="prazo" value="'+esc(a.prazo)+'"'+(planoFallback?" disabled":"")+'></td>'+
+       '<td><input type="text" data-f="prazo_iso" value="'+esc(a.prazo_iso||"")+'" placeholder="AAAA-MM-DD ou vazio"'+(planoFallback?" disabled":"")+'></td>'+
+       '<td><span class="ed-row-status" aria-live="polite"></span></td></tr>';
   });
   area.innerHTML=h+'</tbody></table></div>';
-  area.querySelectorAll("select,input").forEach(el=>{
-    if(el.id) return; // campos do form de nova atividade têm handler próprio, não o genérico de edição
-    el.addEventListener("change",e=>{
-      const t=e.target, a=W.plano[+t.dataset.i];
-      a[t.dataset.f] = t.dataset.f==="prazo_iso" && t.value.trim()==="" ? null : t.value;
+
+  const CAMPO_COLUNA = { status:"status", prazo:"prazo_texto", prazo_iso:"prazo_iso" };
+  area.querySelectorAll("tbody select[data-f],tbody input[data-f]").forEach(el=>{
+    el.addEventListener("change",async e=>{
+      const t=e.target, tr=t.closest("tr"), id=tr.dataset.id, campo=t.dataset.f;
+      const coluna = CAMPO_COLUNA[campo];
+      let valorColuna = t.value;
+      if(campo==="status") valorColuna = DB_PLANO.CHAVE_POR_ROTULO[t.value] || t.value;
+      else if(campo==="prazo_iso") valorColuna = t.value.trim()==="" ? null : t.value;
+      const a = lista.find(x=>x.id===id);
+      if(a) a[campo] = campo==="prazo_iso" && t.value.trim()==="" ? null : t.value;
+      marcarLinhaStatus(tr,"salvando");
+      try {
+        await DB_PLANO.salvar(id, { [coluna]: valorColuna }, nomeEditor());
+        marcarLinhaStatus(tr,"salvo");
+      } catch(err){
+        console.error("editor: falha ao salvar ação do plano",err);
+        marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+      }
     });
   });
 
   document.getElementById("ed-abrir-nova").addEventListener("click",()=>{ formNovaAberto=true; render(); });
-  const painel = document.getElementById("ed-form-nova");
   if(formNovaAberto){
     document.getElementById("nv-frente").addEventListener("change",e=>{
       document.getElementById("ed-id-preview").textContent = proximoId(e.target.value);
@@ -189,7 +271,7 @@ function renderPlano(){
   }
 }
 
-function adicionarAtividade(){
+async function adicionarAtividade(){
   const campo = id => document.getElementById(id);
   const obrigatorios = {
     atividade: campo("nv-atividade").value.trim(),
@@ -218,6 +300,7 @@ function adicionarAtividade(){
     sub: campo("nv-sub").value.trim(),
     atividade: obrigatorios.atividade,
     resp: campo("nv-resp").value.trim(),
+    responsavel_id: [],
     prazo: obrigatorios.prazo,
     prazo_iso: obrigatorios.prazo_iso,
     status: campo("nv-status").value,
@@ -225,11 +308,21 @@ function adicionarAtividade(){
     cc: { tipo: null },
     como: obrigatorios.como,
     monitor: obrigatorios.monitor,
-    ferramenta: campo("nv-ferramenta").value.trim()
+    ferramenta: campo("nv-ferramenta").value.trim(),
+    ordem: (planoAtual||[]).length + 1
   };
-  W.plano.push(nova);
-  formNovaAberto = false;
-  render();
+  const btn = document.getElementById("ed-confirmar-nova");
+  btn.disabled = true;
+  try {
+    const criada = await DB_PLANO.criar(nova, nomeEditor());
+    planoAtual.push(criada);
+    formNovaAberto = false;
+    render();
+  } catch(err){
+    console.error("editor: falha ao criar ação do plano",err);
+    btn.disabled = false;
+    window.alert((window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "Não consegui criar a atividade: "+((err&&err.message)||err));
+  }
 }
 
 function renderMatriz(){
@@ -253,26 +346,58 @@ function renderMatriz(){
   }));
 }
 
-function renderAgenda(){
-  let h='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th>Encontro</th><th style="width:120px">Data</th><th style="width:90px">Turno</th><th style="width:80px">Hora</th><th style="width:140px">Local</th><th style="width:110px">Modo</th><th style="width:130px">Status</th><th>Conf.</th><th>Conv.</th><th>Nota</th></tr></thead><tbody>';
-  W.agenda.encontros.forEach((en,i)=>{
-    h+='<tr><td class="ed-mono">'+esc(en.id)+'</td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="data" value="'+esc(en.data||"")+'" placeholder="AAAA-MM-DD"></td>'+
-      '<td><select data-i="'+i+'" data-f="turno">'+opts(["","manhã","tarde"],en.turno||"",{"":"—"})+'</select></td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="hora" value="'+esc(en.hora||"")+'" placeholder="14h"></td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="local" value="'+esc(en.local||"")+'"></td>'+
-      '<td><select data-i="'+i+'" data-f="modo">'+opts(["presencial","online","híbrido","a definir"],en.modo)+'</select></td>'+
-      '<td><select data-i="'+i+'" data-f="status">'+opts(STATUS_ENC,en.status)+'</select></td>'+
-      '<td><input type="number" min="0" data-i="'+i+'" data-f="confirmados" value="'+(en.confirmados||0)+'"></td>'+
-      '<td><input type="number" min="0" data-i="'+i+'" data-f="convidados" value="'+(en.convidados||0)+'"></td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="nota" value="'+esc(en.nota||"")+'"></td></tr>';
+// AGENDA guarda "local"+"modo" combinados num único campo texto (local_modo) e
+// "confirmados"+"convidados" também (confirmacoes, formato livre "3/5") — colunas reais
+// de meta_inovacao_agenda_encontros (tools/sql/2026-08_agenda.sql); não são mais 2 campos
+// separados como no data/agenda.js de antes. "hora" nunca teve valor até hoje e virou
+// parte de "turno" (texto livre) — ver comentário de js/db-agenda.js.
+async function renderAgenda(){
+  if(!agendaAtual && !agendaCarregando){
+    agendaCarregando = true;
+    area.innerHTML = '<div class="ed-carregando">Carregando agenda do Supabase…</div>';
+    try {
+      const { lista, usandoFallback } = await DB_AGENDA.carregar();
+      agendaAtual = lista; agendaFallback = usandoFallback;
+    } catch(err){
+      console.error("editor: falha ao carregar agenda", err);
+      agendaCarregando = false;
+      area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar a agenda do Supabase — '+esc((err&&err.message)||String(err))+'.</div>';
+      return;
+    }
+    agendaCarregando = false;
+  }
+  if(sel.value!=="agenda") return;
+  const lista = agendaAtual || [];
+  let h = agendaFallback ? '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não consegui falar com o Supabase agora; isto é a última cópia local (data/agenda.js). Edições aqui não vão ser salvas até a rede voltar — recarregue a página depois.</div>' : "";
+  h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th>Encontro</th><th style="width:120px">Data</th><th style="width:110px">Turno</th><th style="width:170px">Local · modo</th><th style="width:150px">Status</th><th style="width:90px">Confirmações</th><th>Nota</th><th style="width:70px"></th></tr></thead><tbody>';
+  lista.forEach(en=>{
+    const dis = agendaFallback ? " disabled" : "";
+    h+='<tr data-id="'+esc(String(en.db_id))+'"><td class="ed-mono">'+esc(en.id)+'</td>'+
+      '<td><input type="text" data-f="data" value="'+esc(en.data||"")+'" placeholder="AAAA-MM-DD"'+dis+'></td>'+
+      '<td><input type="text" data-f="turno" value="'+esc(en.turno||"")+'" placeholder="manhã, tarde · 14h..."'+dis+'></td>'+
+      '<td><input type="text" data-f="localModo" value="'+esc(en.localModo||"")+'" placeholder="ex.: Sede Sebrae · presencial"'+dis+'></td>'+
+      '<td><select data-f="status"'+dis+'>'+opts(STATUS_ENC,en.status)+'</select></td>'+
+      '<td><input type="text" data-f="confirmacoes" value="'+esc(en.confirmacoes||"")+'" placeholder="3/5"'+dis+'></td>'+
+      '<td><input type="text" data-f="nota" value="'+esc(en.nota||"")+'"'+dis+'></td>'+
+      '<td><span class="ed-row-status" aria-live="polite"></span></td></tr>';
   });
   area.innerHTML=h+'</tbody></table></div>';
-  area.querySelectorAll("select,input").forEach(el=>el.addEventListener("change",e=>{
-    const t=e.target, en=W.agenda.encontros[+t.dataset.i], f=t.dataset.f;
-    if(f==="confirmados"||f==="convidados") en[f]=Math.max(0,parseInt(t.value||"0",10)||0);
-    else if((f==="data"||f==="hora"||f==="local"||f==="turno") && t.value.trim()==="") en[f]=null;
-    else en[f]=t.value;
+
+  const CAMPO_COLUNA = { data:"data_iso", turno:"turno", localModo:"local_modo", status:"status", confirmacoes:"confirmacoes", nota:"observacao" };
+  area.querySelectorAll("tbody select[data-f],tbody input[data-f]").forEach(el=>el.addEventListener("change",async e=>{
+    const t=e.target, tr=t.closest("tr"), dbId=tr.dataset.id, campo=t.dataset.f;
+    const coluna = CAMPO_COLUNA[campo];
+    const valorColuna = t.value.trim()==="" && (campo==="data"||campo==="turno"||campo==="localModo"||campo==="confirmacoes") ? null : t.value;
+    const en = lista.find(x=>String(x.db_id)===dbId);
+    if(en) en[campo] = valorColuna;
+    marcarLinhaStatus(tr,"salvando");
+    try {
+      await DB_AGENDA.salvar(en ? en.db_id : dbId, { [coluna]: valorColuna }, nomeEditor());
+      marcarLinhaStatus(tr,"salvo");
+    } catch(err){
+      console.error("editor: falha ao salvar encontro da agenda",err);
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+    }
   }));
 }
 
@@ -367,7 +492,31 @@ function renderUrcCanais(){
   });
 }
 
+const btnBaixar = document.getElementById("ed-baixar");
+const passosEl = document.getElementById("ed-passos");
+const subEl = document.getElementById("ed-sub");
+const PASSOS_DOWNLOAD = '<strong>Como publicar a mudança</strong><br>'+
+  '1. Baixe o arquivo gerado e substitua o de mesmo nome em <code>data/</code>.<br>'+
+  '2. Valide: <code>python3 tools/validar_dados.py</code>.<br>'+
+  '3. Publique: <code>git add data/ &amp;&amp; git commit -m "atualiza dados" &amp;&amp; git push</code> — o Vercel redistribui sozinho.';
+const PASSOS_VIVO = '<strong>Este conjunto é editado ao vivo</strong><br>'+
+  'Cada campo grava direto no Supabase assim que você sai dele (igual a demandas.html) — não '+
+  'precisa baixar nem publicar nada. O indicador ao lado de cada linha mostra "salvando…", '+
+  '"salvo" ou o motivo se falhar. <code>data/plano.js</code>/<code>data/agenda.js</code> continuam '+
+  'no repositório só como seed/fallback pra quando o Supabase estiver fora do ar.';
+
+function atualizarChromeVivo(){
+  const vivo = !!(CONJUNTOS[sel.value] && CONJUNTOS[sel.value].vivo);
+  btnBaixar.style.display = vivo ? "none" : "";
+  saida.style.display = vivo ? "none" : "";
+  passosEl.innerHTML = vivo ? PASSOS_VIVO : PASSOS_DOWNLOAD;
+  subEl.textContent = vivo
+    ? "Plano de ação e Agenda são editados ao vivo (Supabase) — o resto ainda é editar, baixar e substituir o arquivo em data/."
+    : "Edite abaixo, gere o arquivo atualizado e substitua o correspondente na pasta data/ do repositório. Nada é salvo automaticamente nesta página.";
+}
+
 function render(){
+  atualizarChromeVivo();
   ({plano:renderPlano, matriz:renderMatriz, agenda:renderAgenda, pessoas:renderPessoas, projetos:renderProjetos,
     urc_lideranca:renderUrcLideranca, urc_canais:renderUrcCanais})[sel.value]();
   saida.value="";
@@ -375,8 +524,9 @@ function render(){
 sel.addEventListener("change", render);
 render();
 
-document.getElementById("ed-baixar").addEventListener("click", function(){
+btnBaixar.addEventListener("click", function(){
   const k = sel.value;
+  if (CONJUNTOS[k].vivo) return; // plano/agenda não passam por aqui — botão fica escondido, isto é só rede de segurança
   let conteudo, nomeArquivo;
 
   if (k === "urc_lideranca" || k === "urc_canais") {

@@ -140,6 +140,11 @@ async function principal() {
     const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
     await cdp.send("Page.enable", {}, sessionId);
     await cdp.send("Runtime.enable", {}, sessionId);
+    // força fallback local (DB_PLANO/DB_AGENDA) em toda navegação desta sessão — inclusive
+    // as que acontecem por clique dentro da própria página (kpi-card, Enter na busca, drawer),
+    // não só na URL inicial; ?semrede=1 nas URLs de abrir() cobre o caso "URL direta", isto
+    // cobre o caso "navegação via JS" (item 3.1 — testes headless não podem depender de rede).
+    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.CC_FORCAR_FALLBACK = true;" }, sessionId);
 
     async function evaluate(expression) {
       const r = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }, sessionId);
@@ -159,7 +164,7 @@ async function principal() {
 
     // ---- 1) atalho "/" foca a busca ----
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false }, sessionId);
-    await abrir("http://127.0.0.1:" + port + "/index.html");
+    await abrir("http://127.0.0.1:" + port + "/index.html?semrede=1");
     await evaluate("document.body.focus()");
     await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "/", text: "/" }, sessionId);
     await cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "/" }, sessionId);
@@ -194,7 +199,7 @@ async function principal() {
     if (filtroAplicado !== "CMT-01") erros.push('plano.html não aplicou o ?q=CMT-01 no campo de busca da página (veio "' + filtroAplicado + '")');
 
     // ---- 3) iniciativa conhecida: Sebraetec → corsario.html visão CARDS ----
-    await abrir("http://127.0.0.1:" + port + "/index.html");
+    await abrir("http://127.0.0.1:" + port + "/index.html?semrede=1");
     await digitar("#busca-input-nav", "Sebraetec");
     const resultadoIniciativa = JSON.parse(await evaluate(`JSON.stringify({
       grupos: [...document.querySelectorAll('#busca-resultados-nav .busca-grupo-titulo')].map(e=>e.textContent),
@@ -218,14 +223,14 @@ async function principal() {
     }
 
     // ---- 4) pessoa conhecida: Sandra → minhas-acoes.html?pessoa=sandra ----
-    await abrir("http://127.0.0.1:" + port + "/index.html");
+    await abrir("http://127.0.0.1:" + port + "/index.html?semrede=1");
     await digitar("#busca-input-nav", "Sandra");
     const hrefPessoa = await evaluate(`(document.querySelector('#busca-resultados-nav a[href="minhas-acoes.html?pessoa=sandra"]') ? "achou" : "NAO ACHOU")`);
     if (hrefPessoa !== "achou") erros.push('busca "Sandra" não retornou um resultado linkando pra "minhas-acoes.html?pessoa=sandra"');
 
     // ---- 5) mobile: botão do header abre o painel e busca funciona por ali ----
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }, sessionId);
-    await abrir("http://127.0.0.1:" + port + "/index.html");
+    await abrir("http://127.0.0.1:" + port + "/index.html?semrede=1");
     await evaluate("document.querySelector('.mob-busca-btn').click()");
     await esperar(200);
     const painelAberto = await evaluate("!document.querySelector('.mob-busca-painel').hidden");

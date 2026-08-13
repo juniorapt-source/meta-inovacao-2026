@@ -36,6 +36,7 @@
   <main class="conteudo">
     <h1 class="pagina-titulo">Dashboard</h1>
     <p class="pagina-sub" id="sub"></p>
+    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não consegui falar com o Supabase agora; mostrando a última cópia local (<span class="mono">data/plano.js</span>).</p>
     <p class="frase-contexto" id="frase-contexto"></p>
 
     <!-- 1º frase de contexto (acima) · 2º timeline dos 7 nós · 3º atrasadas + próximos 7 dias ·
@@ -79,6 +80,7 @@
 <script src="data/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
+<script src="js/db-plano.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/projetos.js"></script>
@@ -90,11 +92,13 @@
 <script src="js/core.js"></script>
 <script src="js/busca.js"></script>
 <script>
-(function(){
-  /* Fonte única pros 5 cards de KPI clicáveis: relê window.DB a cada chamada (sem cache —
-     uma edição feita em editor.html precisa aparecer aqui sem refresh) e replica EXATAMENTE
-     os critérios que CALC.kpis usa pra contar (js/calc.js), incluindo duas particularidades
-     preservadas de propósito, não corrigidas por conta própria:
+(async function(){
+  "use strict";
+  /* Fonte única pros 5 cards de KPI clicáveis: fecha sobre `plano` (carregado uma vez no
+     topo via DB_PLANO.carregar() — item 3.1 do plano de melhorias, Supabase com fallback
+     pra data/plano.js) e replica EXATAMENTE os critérios que CALC.kpis usa pra contar
+     (js/calc.js), incluindo duas particularidades preservadas de propósito, não
+     corrigidas por conta própria:
        - "em_andamento" e "atrasada" NÃO são mutuamente exclusivas: uma ação "Em andamento"
          com prazo_iso vencido aparece nas duas listas, igual já acontece nos dois cards hoje.
        - "em_janela_sem_data" exige !prazo_iso E prazo (texto) preenchido — não só ausência
@@ -106,8 +110,7 @@
     const [y, m, d] = iso.split("-").map(Number);
     return new Date(y, m - 1, d); // meia-noite local, sem componente de fuso
   }
-  function getAcoesPorCategoria(categoria) {
-    const plano = (window.DB && window.DB.plano) || [];
+  function getAcoesPorCategoria(plano, categoria) {
     const hojeISOStr = hojeISO();
     const hojeData = isoParaDataLocal(hojeISOStr);
     const limData = isoParaDataLocal(CALC.somaDias(hojeISOStr, 7));
@@ -135,6 +138,12 @@
 
   const hoje = hojeISO();
   montarShell("index.html");
+
+  // item 3.1 do plano de melhorias — PLANO agora vem do Supabase (meta_inovacao_plano_acoes),
+  // com data/plano.js como seed/fallback se a rede falhar (DB_PLANO.carregar(), js/db-plano.js).
+  const { lista: plano, usandoFallback } = await DB_PLANO.carregar();
+  if (usandoFallback) document.getElementById("aviso-fallback").hidden = false;
+
   document.getElementById("sub").textContent =
     "Visão geral do plano · hoje é " + CALC.fmtBR(hoje) + "/2026. Nós vencidos sem conclusão aparecem em vermelho; fallbacks estão no Caminho crítico.";
 
@@ -143,7 +152,7 @@
   // carga/trilho/KPIs abaixo — nada recalculado diferente aqui). Parcelas zeradas somem da
   // frase; o total (N itens) soma as 3, não só as 2 citadas no pedido original, senão N
   // ficaria maior que a soma das partes nomeadas — inconsistência pior que citar a 3ª parte.
-  const urgencia = CALC.resumoUrgencia(DB.plano, DB.nos.nos, hoje);
+  const urgencia = CALC.resumoUrgencia(plano, DB.nos.nos, hoje);
   const totalUrgente = urgencia.atrasadas + urgencia.nosCriticos + urgencia.diasCargaConcentrada;
   const fraseEl = document.getElementById("frase-contexto");
   if (totalUrgente === 0) {
@@ -160,7 +169,7 @@
   // trilho dos nós
   const trilho = document.getElementById("trilho");
   trilho.innerHTML = DB.nos.nos.map(n => {
-    const st = CALC.estadoNo(n, DB.plano, hoje);
+    const st = CALC.estadoNo(n, plano, hoje);
     return '<a class="no-item no-' + st + '" href="caminho.html#no' + n.no + '" title="' + esc(n.titulo) + '">' +
       '<span class="no-dot">' + n.no + '</span>' +
       '<div class="d mono">' + esc(n.data) + '</div>' +
@@ -171,8 +180,8 @@
   // "ações no plano" vai sem filtro. Vocabulário da querystring é o de plano.html
   // (?status=vence7/janela/atrasada/concluida/em_andamento), não o das chaves internas
   // de getAcoesPorCategoria (vence_7_dias/em_janela_sem_data) — o mapa abaixo traduz.
-  const k = CALC.kpis(DB.plano, hoje);
-  const atrasadasLista = getAcoesPorCategoria("atrasada"); // usada aqui só pra colorir o card (alerta)
+  const k = CALC.kpis(plano, hoje);
+  const atrasadasLista = getAcoesPorCategoria(plano, "atrasada"); // usada aqui só pra colorir o card (alerta)
   const STATUS_QUERY = {
     concluida: "concluida",
     em_andamento: "em_andamento",
@@ -193,7 +202,7 @@
     if (!cat) {
       return '<a class="card kpi kpi-link ' + cls + '" href="plano.html"><div class="n">' + numFixo + '</div><div class="l">' + rot + "</div></a>";
     }
-    const lista = cat === "atrasada" ? atrasadasLista : getAcoesPorCategoria(cat);
+    const lista = cat === "atrasada" ? atrasadasLista : getAcoesPorCategoria(plano, cat);
     const href = "plano.html?status=" + STATUS_QUERY[cat];
     return '<a class="card kpi kpi-link ' + cls + '" href="' + href + '">' +
       '<div class="n">' + lista.length + '</div>' +
@@ -242,7 +251,7 @@
   document.getElementById("portfolio").innerHTML = portfolioHtml;
 
   // radar de carga
-  const carga = CALC.cargaPorDia(DB.plano).filter(c => c.carga >= 2 && c.iso >= hoje);
+  const carga = CALC.cargaPorDia(plano).filter(c => c.carga >= 2 && c.iso >= hoje);
   document.getElementById("radar").innerHTML = carga.length
     ? carga.map(c => '<div style="margin:4px 0"><span class="badge-dia"' + (c.carga >= 3 ? "" : ' style="background:var(--ambar-w);color:var(--ambar)"') + '>' +
         CALC.fmtBR(c.iso) + " · " + c.carga + ' entregas</span> <span class="mono" style="font-size:12px;color:var(--grafite)">' +
@@ -250,14 +259,14 @@
     : '<span style="color:var(--grafite)">Nenhum dia à frente concentra 2+ entregas.</span>';
 
   // atrasadas
-  const atr = DB.plano.filter(a => CALC.ehAtrasada(a, hoje));
+  const atr = plano.filter(a => CALC.ehAtrasada(a, hoje));
   document.getElementById("atrasadas").innerHTML = atr.length
     ? atr.map(a => linha(a)).join("")
     : '<span style="color:var(--grafite)">Nada atrasado. 👌</span>';
 
   // próximos 7 dias
   const lim = CALC.somaDias(hoje, 7);
-  const prox = DB.plano.filter(a => a.prazo_iso && a.status !== "Concluído" && a.prazo_iso >= hoje && a.prazo_iso <= lim)
+  const prox = plano.filter(a => a.prazo_iso && a.status !== "Concluído" && a.prazo_iso >= hoje && a.prazo_iso <= lim)
                        .sort((a, b) => a.prazo_iso.localeCompare(b.prazo_iso));
   document.getElementById("prox").innerHTML = prox.length ? prox.map(a => linha(a)).join("") : "—";
 

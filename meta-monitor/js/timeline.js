@@ -69,8 +69,8 @@
   }
 
   function tooltip(e) {
-    const partes = [fmtBR(e.data) + "/2026", e.turno || null, e.local || e.modo || "modo a definir",
-      e.convidados ? e.confirmados + "/" + e.convidados + " confirmados" : "sem confirmações"];
+    const partes = [fmtBR(e.data) + "/2026", e.turno || null, e.localModo || "modo a definir",
+      e.confirmacoes ? e.confirmacoes + " confirmados" : "sem confirmações"];
     return partes.filter(Boolean).join(" · ");
   }
 

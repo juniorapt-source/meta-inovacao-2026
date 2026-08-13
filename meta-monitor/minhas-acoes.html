@@ -29,6 +29,7 @@
   <main class="conteudo">
     <h1 class="pagina-titulo">Minhas ações</h1>
     <p class="pagina-sub">O que está sob a guarda de cada pessoa, reunido de três fontes: nós do caminho crítico, ações do plano e atividades por iniciativa. Escolha "Ver como" ou abra um link direto (<span class="mono">?pessoa=id</span>) compartilhado no WhatsApp.</p>
+    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não consegui falar com o Supabase agora; mostrando a última cópia local (<span class="mono">data/plano.js</span>).</p>
 
     <div class="ma-selecao">
       <label for="ver-como">Ver como</label>
@@ -65,6 +66,7 @@
 <script src="data/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
+<script src="js/db-plano.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/pessoas.js"></script>
@@ -83,6 +85,11 @@
   const hoje = hojeISO();
   const LIM7 = CALC.somaDias(hoje, 7);
   montarShell("minhas-acoes.html");
+
+  // item 3.1 do plano de melhorias — PLANO agora vem do Supabase (meta_inovacao_plano_acoes),
+  // com data/plano.js como seed/fallback se a rede falhar (DB_PLANO.carregar(), js/db-plano.js).
+  const { lista: plano, usandoFallback } = await DB_PLANO.carregar();
+  if (usandoFallback) document.getElementById("aviso-fallback").hidden = false;
 
   const TABELA = "plano_acao_atividades";
   const RESPONSAVEIS = (window.DB && window.DB.responsaveis) || [];
@@ -122,7 +129,7 @@
   }
 
   function acoesDaPessoa(id) {
-    const lista = DB.plano.filter((a) => Array.isArray(a.responsavel_id) && a.responsavel_id.includes(id));
+    const lista = plano.filter((a) => Array.isArray(a.responsavel_id) && a.responsavel_id.includes(id));
     // atrasadas primeiro (por prazo crescente) · depois quem tem prazo (por prazo crescente,
     // cobre concluídas e futuras) · janelas (sem data fixa) por último — mesmo critério de
     // "janela" já usado no resto do site (!prazo_iso && prazo preenchido)
@@ -141,7 +148,7 @@
   }
 
   function linhaNo(n) {
-    const st = CALC.estadoNo(n, DB.plano, hoje);
+    const st = CALC.estadoNo(n, plano, hoje);
     return '<div class="ma-linha" data-no="' + n.no + '">' +
       '<span class="ma-id mono">Nó ' + n.no + "</span>" +
       '<div class="ma-titulo"><a href="caminho.html#no' + n.no + '">' + esc(n.titulo) + "</a>" +
@@ -192,7 +199,7 @@
     blocoAcoes.hidden = !acoes.length;
     secaoAcoes.innerHTML = acoes.length ? acoes.map(linhaAcao).join("") : "";
 
-    const atrasadosNos = nos.filter((n) => CALC.estadoNo(n, DB.plano, hoje) === "risco").length;
+    const atrasadosNos = nos.filter((n) => CALC.estadoNo(n, plano, hoje) === "risco").length;
     const atrasadosAcoes = acoes.filter((a) => CALC.ehAtrasada(a, hoje)).length;
     const vence7Acoes = acoes.filter((a) => a.prazo_iso && a.status !== "Concluído" && a.prazo_iso >= hoje && a.prazo_iso <= LIM7).length;
 

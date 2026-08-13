@@ -27,12 +27,12 @@ const CAMINHOS_CHROME = [
 // no relatório da migração). Cada seletor exclui explicitamente as legendas (#legenda-vocab,
 // #legenda) — só conta badge que representa um registro de dado.
 const PAGINAS = [
-  { pagina: "plano.html", seletor: "#tabela .chip", esperado: 62 },
-  { pagina: "index.html", seletor: "#atrasadas .chip, #prox .chip", esperado: 16 },
-  { pagina: "caminho.html", seletor: "#lista-nos .chip", esperado: 18 },
-  { pagina: "agenda.html", seletor: "#encontros .chip", esperado: 20 },
+  { pagina: "plano.html?semrede=1", seletor: "#tabela .chip", esperado: 62 },
+  { pagina: "index.html?semrede=1", seletor: "#atrasadas .chip, #prox .chip", esperado: 16 },
+  { pagina: "caminho.html?semrede=1", seletor: "#lista-nos .chip", esperado: 18 },
+  { pagina: "agenda.html?semrede=1", seletor: "#encontros .chip", esperado: 20 },
   { pagina: "demandas.html", seletor: "#matriz .cel", esperado: 270 },
-  { pagina: "minhas-acoes.html?pessoa=sandra", seletor: "#secao-nos .chip, #secao-acoes .chip, #secao-atividades .chip", esperado: 17 },
+  { pagina: "minhas-acoes.html?pessoa=sandra&semrede=1", seletor: "#secao-nos .chip, #secao-acoes .chip, #secao-atividades .chip", esperado: 17 },
 ];
 
 function acharChrome() {
@@ -147,6 +147,11 @@ async function principal() {
     const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
     await cdp.send("Page.enable", {}, sessionId);
     await cdp.send("Runtime.enable", {}, sessionId);
+    // força fallback local (DB_PLANO/DB_AGENDA) em toda navegação desta sessão — inclusive
+    // as que acontecem por clique dentro da própria página (kpi-card, Enter na busca, drawer),
+    // não só na URL inicial; ?semrede=1 nas URLs de abrir() cobre o caso "URL direta", isto
+    // cobre o caso "navegação via JS" (item 3.1 — testes headless não podem depender de rede).
+    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.CC_FORCAR_FALLBACK = true;" }, sessionId);
 
     async function evaluate(expression) {
       const r = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }, sessionId);

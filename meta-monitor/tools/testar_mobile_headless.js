@@ -140,6 +140,11 @@ async function principal() {
     const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
     await cdp.send("Page.enable", {}, sessionId);
     await cdp.send("Runtime.enable", {}, sessionId);
+    // força fallback local (DB_PLANO/DB_AGENDA) em toda navegação desta sessão — inclusive
+    // as que acontecem por clique dentro da própria página (kpi-card, Enter na busca, drawer),
+    // não só na URL inicial; ?semrede=1 nas URLs de abrir() cobre o caso "URL direta", isto
+    // cobre o caso "navegação via JS" (item 3.1 — testes headless não podem depender de rede).
+    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.CC_FORCAR_FALLBACK = true;" }, sessionId);
     await cdp.send("Emulation.setDeviceMetricsOverride", VIEWPORT, sessionId);
 
     async function evaluate(expression) {
@@ -155,7 +160,7 @@ async function principal() {
     }
 
     // ---- 1) index.html: hambúrguer + KPIs em 2 colunas ----
-    await abrir("http://127.0.0.1:" + port + "/index.html");
+    await abrir("http://127.0.0.1:" + port + "/index.html?semrede=1");
     const navFechadoTransform = await evaluate("getComputedStyle(document.querySelector('.nav')).transform");
     if (navFechadoTransform === "none" || navFechadoTransform === "matrix(1, 0, 0, 1, 0, 0)") {
       erros.push("index.html: menu deveria começar fechado (nav fora da tela), mas transform veio " + navFechadoTransform);
@@ -193,7 +198,7 @@ async function principal() {
     if (!fechouComLink) erros.push('index.html: clicar num link do menu não fechou ele (antes da navegação completar)');
 
     // ---- 2) plano.html: tabela vira cards ----
-    await abrir("http://127.0.0.1:" + port + "/plano.html");
+    await abrir("http://127.0.0.1:" + port + "/plano.html?semrede=1");
     const plano = JSON.parse(await evaluate(`JSON.stringify({
       theadDisplay: getComputedStyle(document.querySelector('table.tabela-ordenavel thead')).display,
       cards: document.querySelectorAll('table.tabela-ordenavel tr.clicavel').length,
@@ -206,7 +211,7 @@ async function principal() {
     if (plano.filtrosDirection !== "column") erros.push("plano.html: filtros deveriam empilhar em coluna no mobile");
 
     // ---- 3) agenda.html: mesma conversão na lista de encontros ----
-    await abrir("http://127.0.0.1:" + port + "/agenda.html");
+    await abrir("http://127.0.0.1:" + port + "/agenda.html?semrede=1");
     const agenda = JSON.parse(await evaluate(`JSON.stringify({
       theadDisplay: getComputedStyle(document.querySelector('#encontros table thead')).display,
       primeiraLinhaFlexDirection: getComputedStyle(document.querySelector('#encontros table tbody tr')).flexDirection

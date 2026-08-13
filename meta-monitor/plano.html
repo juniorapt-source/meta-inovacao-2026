@@ -37,6 +37,7 @@
   <main class="conteudo">
     <h1 class="pagina-titulo">Plano de ação</h1>
     <p class="pagina-sub">47 ações em 5 frentes. Clique numa linha para ver dependências e a <b>solução proposta</b>: como executar, como monitorar e com qual ferramenta.</p>
+    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não consegui falar com o Supabase agora; mostrando a última cópia local (<span class="mono">data/plano.js</span>).</p>
 
     <div class="filtros">
       <select id="f-frente" aria-label="Filtrar por frente"></select>
@@ -76,6 +77,7 @@
 <script src="js/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
+<script src="js/db-plano.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/canais.js"></script>
@@ -89,18 +91,24 @@
 <script src="js/busca.js"></script>
 <script src="js/drawer.js"></script>
 <script>
-(function(){
+(async function(){
+  "use strict";
   const hoje = hojeISO();
   const LIM7 = CALC.somaDias(hoje, 7);
   montarShell("plano.html");
+
+  // item 3.1 do plano de melhorias — PLANO agora vem do Supabase (meta_inovacao_plano_acoes),
+  // com data/plano.js como seed/fallback se a rede falhar (DB_PLANO.carregar(), js/db-plano.js).
+  const { lista: plano, usandoFallback } = await DB_PLANO.carregar();
+  if (usandoFallback) document.getElementById("aviso-fallback").hidden = false;
 
   const selF = document.getElementById("f-frente"), selS = document.getElementById("f-status"),
         selR = document.getElementById("f-resp"), selC = document.getElementById("f-cc"),
         busca = document.getElementById("f-busca"), corpo = document.getElementById("tabela");
 
-  const frentes = [...new Set(DB.plano.map(a => a.frente))];
+  const frentes = [...new Set(plano.map(a => a.frente))];
   selF.innerHTML = '<option value="">Todas as frentes</option>' + frentes.map(f => "<option>" + esc(f) + "</option>").join("");
-  const resps = [...new Set(DB.plano.map(a => a.resp))].sort();
+  const resps = [...new Set(plano.map(a => a.resp))].sort();
   selR.innerHTML = '<option value="">Todos os responsáveis</option>' + resps.map(r => "<option>" + esc(r) + "</option>").join("");
 
   function ccChip(a){
@@ -140,7 +148,7 @@
 
   function render(){
     const fv = selF.value, sv = selS.value, rv = selR.value, cv = selC.value, q = busca.value.trim().toLowerCase();
-    let lista = DB.plano.filter((a) => {
+    let lista = plano.filter((a) => {
       const atras = CALC.ehAtrasada(a, hoje);
       if (fv && a.frente !== fv) return false;
       if (sv === "__atrasadas") { if (!atras) return false; }
@@ -173,7 +181,7 @@
         "<div><b>Ferramenta</b>" + esc(a.ferramenta) + "</div></div></td></tr>";
     }
     corpo.innerHTML = html || '<tr><td colspan="6" style="color:var(--grafite)">Nenhuma ação com esses filtros.</td></tr>';
-    document.getElementById("contagem").textContent = lista.length + " de " + DB.plano.length + " ações exibidas.";
+    document.getElementById("contagem").textContent = lista.length + " de " + plano.length + " ações exibidas.";
     atualizarIndicadoresOrdenacao();
   }
 

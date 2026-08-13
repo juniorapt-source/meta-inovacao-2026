@@ -72,6 +72,7 @@
   <main class="conteudo">
     <h1 class="pagina-titulo">Agenda dos ciclos</h1>
     <p class="pagina-sub">2 sessões por canal (3h, presencial, grupos reduzidos; DXP em formato reduzido de 2h). Datas entram assim que a URC devolver a grade — Nó 1.</p>
+    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não consegui falar com o Supabase agora; mostrando a última cópia local (<span class="mono">data/agenda.js</span>).</p>
 
     <div class="legenda-vocab" id="legenda-vocab" aria-label="Legenda de status dos encontros"></div>
 
@@ -101,6 +102,8 @@
 <script src="data/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
+<script src="js/db-agenda.js"></script>
+<script src="js/db-plano.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/canais.js"></script>
@@ -114,11 +117,20 @@
 <script src="js/calendario.js"></script>
 <script src="js/timeline.js"></script>
 <script>
-(function(){
+(async function(){
+  "use strict";
   const hoje = hojeISO();
   montarShell("agenda.html");
 
-  const can02 = DB.plano.find(a => a.id === "CAN-02");
+  // item 3.1 do plano de melhorias — AGENDA (encontros) e PLANO (pro aviso do Nó 1, abaixo)
+  // agora vêm do Supabase, com data/agenda.js e data/plano.js como seed/fallback (js/db-agenda.js,
+  // js/db-plano.js). Um só aviso de "dados locais" cobre os dois: se qualquer um caiu pro
+  // fallback, o usuário já sabe que pode haver defasagem na página inteira.
+  const [{ lista: encontros, usandoFallback: fbAgenda }, { lista: plano, usandoFallback: fbPlano }] =
+    await Promise.all([DB_AGENDA.carregar(), DB_PLANO.carregar()]);
+  if (fbAgenda || fbPlano) document.getElementById("aviso-fallback").hidden = false;
+
+  const can02 = plano.find(a => a.id === "CAN-02");
   if (can02 && can02.status !== "Concluído")
     document.getElementById("aviso-no1").innerHTML =
       '<div class="aviso" style="margin-bottom:14px"><b>Nó 1 pendente:</b> a URC ainda não devolveu a grade (CAN-02). ' +
@@ -160,16 +172,16 @@
       "<td><b>" + esc(c.nome) + '</b><div style="color:var(--grafite);font-size:11.5px">' + esc(c.formato) + "</div></td>" +
       '<td style="font-size:12.5px;color:var(--grafite);max-width:340px">' + c.pauta.slice(0, 2).map(esc).join(" · ") +
         (c.pauta.length > 2 ? " · +" + (c.pauta.length - 2) : "") + "</td>" +
-      '<td class="mono" data-label="Data" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + " (" + diaSemanaAbrev(e.data) + ")" + (e.turno ? " · " + esc(e.turno) : "") + (e.hora ? " " + esc(e.hora) : "") : "—") + "</td>" +
-      '<td data-label="Local">' + (e.local ? esc(e.local) : "—") + ' <span style="color:var(--grafite);font-size:11.5px">' + esc(e.modo) + "</span></td>" +
-      '<td class="mono" data-label="Confirmações" style="font-size:12.5px">' + (e.convidados ? e.confirmados + "/" + e.convidados : "—") + "</td>" +
+      '<td class="mono" data-label="Data" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + " (" + diaSemanaAbrev(e.data) + ")" + (e.turno ? " · " + esc(e.turno) : "") : "—") + "</td>" +
+      '<td data-label="Local">' + (e.localModo ? esc(e.localModo) : "—") + "</td>" +
+      '<td class="mono" data-label="Confirmações" style="font-size:12.5px">' + (e.confirmacoes ? esc(e.confirmacoes) : "—") + "</td>" +
       '<td>' + CC_STATUS.badge(chaveStatus) + (e.nota ? '<div style="font-size:11px;color:var(--grafite)">' + esc(e.nota) + "</div>" : "") + "</td></tr>";
   }
 
   // um card por ciclo (título próprio) em vez de uma tabela única com coluna "Ciclo" —
   // a coluna sai porque o bloco já deixa isso implícito
   document.getElementById("encontros").innerHTML = DB.agenda.ciclos.map((c) => {
-    const linhas = DB.agenda.encontros.filter((e) => e.ciclo === c.id);
+    const linhas = encontros.filter((e) => e.ciclo === c.id);
     return '<h3 style="font-size:15px;margin:18px 0 8px">' + esc(c.nome) + "</h3>" +
       '<div class="card" style="padding:0;overflow:auto">' +
         '<table class="tabela-cards"><thead><tr><th>Canal</th><th>Pauta (resumo)</th><th>Data</th><th>Local · modo</th><th>Confirmações</th><th>Status</th></tr></thead>' +
@@ -202,10 +214,10 @@
     if (!calendarioMontado) {
       CALENDARIO.montar(elCal, {
         ciclos: DB.agenda.ciclos,
-        encontros: DB.agenda.encontros,
+        encontros: encontros,
         canais: DB.canais,
         nos: DB.nos.nos,
-        plano: DB.plano,
+        plano: plano,
         hojeISO: hoje
       });
       calendarioMontado = true;
@@ -217,7 +229,7 @@
     if (!timelineMontada) {
       TIMELINE.montar(elTimeline, {
         ciclos: DB.agenda.ciclos,
-        encontros: DB.agenda.encontros,
+        encontros: encontros,
         canais: DB.canais,
         hojeISO: hoje
       });

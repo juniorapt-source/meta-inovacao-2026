@@ -16,6 +16,7 @@
   <main class="conteudo">
     <h1 class="pagina-titulo">Caminho crítico</h1>
     <p class="pagina-sub">Os 7 nós de folga zero, com guardião, fallback pré-combinado e gatilho de escalada — mais os 2 SLAs a negociar.</p>
+    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não consegui falar com o Supabase agora; mostrando a última cópia local (<span class="mono">data/plano.js</span>).</p>
 
     <div class="legenda-vocab" id="legenda-vocab" aria-label="Legenda de status dos nós"></div>
 
@@ -31,6 +32,7 @@
 <script src="data/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
+<script src="js/db-plano.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/canais.js"></script>
@@ -42,9 +44,15 @@
 <script src="js/core.js"></script>
 <script src="js/busca.js"></script>
 <script>
-(function(){
+(async function(){
+  "use strict";
   const hoje = hojeISO();
   montarShell("caminho.html");
+
+  // item 3.1 do plano de melhorias — PLANO agora vem do Supabase (meta_inovacao_plano_acoes),
+  // com data/plano.js como seed/fallback se a rede falhar (DB_PLANO.carregar(), js/db-plano.js).
+  const { lista: plano, usandoFallback } = await DB_PLANO.carregar();
+  if (usandoFallback) document.getElementById("aviso-fallback").hidden = false;
 
   // taxonomia única (item 2.4): o vocabulário do NÓ (cumprido/vence hoje/venceu sem
   // concluir/em andamento/à frente) vive em window.CC_STATUS (js/status.js), contexto
@@ -62,8 +70,8 @@
     Object.values(CHAVE_NO).map((chave) => CC_STATUS.badge(chave)).join("");
 
   document.getElementById("lista-nos").innerHTML = DB.nos.nos.map(n => {
-    const st = CALC.estadoNo(n, DB.plano, hoje);
-    const acoes = DB.plano.filter(a => n.acoes.includes(a.id));
+    const st = CALC.estadoNo(n, plano, hoje);
+    const acoes = plano.filter(a => n.acoes.includes(a.id));
     return '<article class="card" id="no' + n.no + '">' +
       '<div style="display:flex;gap:14px;align-items:flex-start">' +
       '<div class="no-item no-' + st + '" style="min-width:64px"><span class="no-dot">' + n.no + '</span>' +

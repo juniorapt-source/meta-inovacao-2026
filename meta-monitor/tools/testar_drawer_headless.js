@@ -145,6 +145,11 @@ async function principal() {
     const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
     await cdp.send("Page.enable", {}, sessionId);
     await cdp.send("Runtime.enable", {}, sessionId);
+    // força fallback local (DB_PLANO/DB_AGENDA) em toda navegação desta sessão — inclusive
+    // as que acontecem por clique dentro da própria página (kpi-card, Enter na busca, drawer),
+    // não só na URL inicial; ?semrede=1 nas URLs de abrir() cobre o caso "URL direta", isto
+    // cobre o caso "navegação via JS" (item 3.1 — testes headless não podem depender de rede).
+    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.CC_FORCAR_FALLBACK = true;" }, sessionId);
 
     async function evaluate(expression) {
       const r = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }, sessionId);
@@ -169,7 +174,7 @@ async function principal() {
     }
 
     // ---- 1) #iniciativa=sebraetec ----
-    await abrir("http://127.0.0.1:" + port + "/plano.html#iniciativa=sebraetec");
+    await abrir("http://127.0.0.1:" + port + "/plano.html?semrede=1#iniciativa=sebraetec");
     await esperarBlocoAsync("drawer-regua");
     await esperarBlocoAsync("drawer-ativ-ini");
     await esperarBlocoAsync("drawer-matriz-ini");
@@ -198,7 +203,7 @@ async function principal() {
     if (depoisFechar.hash) erros.push('fechar não limpou o hash: ficou "' + depoisFechar.hash + '"');
 
     // ---- 2) #pessoa=sandra ----
-    await abrir("http://127.0.0.1:" + port + "/plano.html#pessoa=sandra");
+    await abrir("http://127.0.0.1:" + port + "/plano.html?semrede=1#pessoa=sandra");
     await esperarBlocoAsync("drawer-ativ-pessoa");
     const pessoa = JSON.parse(await evaluate(`JSON.stringify({
       aberto: document.querySelector('.drawer-painel').classList.contains('aberto'),
@@ -224,14 +229,14 @@ async function principal() {
     if (await evaluate("document.querySelector('.drawer-painel').classList.contains('aberto')")) erros.push("Esc não fechou o drawer");
 
     // clique fora (overlay) fecha
-    await abrir("http://127.0.0.1:" + port + "/plano.html#pessoa=sandra");
+    await abrir("http://127.0.0.1:" + port + "/plano.html?semrede=1#pessoa=sandra");
     await esperar(400);
     await evaluate("document.querySelector('.drawer-overlay').click()");
     await esperar(350);
     if (await evaluate("document.querySelector('.drawer-painel').classList.contains('aberto')")) erros.push("clique fora (overlay) não fechou o drawer");
 
     // ---- 4) nome clicável real ativa o drawer ----
-    await abrir("http://127.0.0.1:" + port + "/plano.html");
+    await abrir("http://127.0.0.1:" + port + "/plano.html?semrede=1");
     const existeClicavel = await evaluate("!!document.querySelector('[data-drawer-pessoa]')");
     if (!existeClicavel) erros.push("plano.html: nenhum responsável ficou clicável (data-drawer-pessoa ausente)");
     else {

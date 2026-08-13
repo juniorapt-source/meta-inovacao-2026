@@ -20,11 +20,11 @@ Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanh
 | `projetos.html` | Portfólio de projetos por núcleo, com representantes |
 | `plano-acao.html` | Atividades por iniciativa (CRUD via Supabase) |
 | `corsario.html` | Adequação de cada iniciativa ao ecossistema oficial (Supabase, somente leitura) — régua de 19 critérios, patente por faixa de % |
-| `editor.html` | Modo edição: altera plano, matriz, agenda ou pessoas no navegador e baixa o `data/*.js` atualizado |
+| `editor.html` | Modo edição: Plano de ação e Agenda editam ao vivo no Supabase (linha a linha, salva sozinho); matriz, pessoas, projetos e URC continuam no modelo "edita a cópia local, baixa `data/*.js`, publica no Git" |
 
 ## Como os dados funcionam
 
-Todo o conteúdo vive em `data/*.js`, um arquivo por conjunto, sempre no formato:
+A maior parte do conteúdo vive em `data/*.js`, um arquivo por conjunto, sempre no formato:
 
 ```js
 window.DB = window.DB || {};
@@ -32,6 +32,17 @@ window.DB.chave = { ...JSON puro... };
 ```
 
 Isso permite abrir o site direto do disco (file://) e publicar no Vercel sem fetch, CORS ou build. Datas textuais ("contínuo", "set–out") não entram no cálculo de atraso: viram o selo "janela".
+
+**Exceção — Plano de ação e Agenda vivem no Supabase** (`meta_inovacao_plano_acoes` e
+`meta_inovacao_agenda_encontros`, mesmo padrão de `plano_acao_atividades`/
+`meta_inovacao_matriz_demandas`): `js/db-plano.js`/`js/db-agenda.js` buscam de lá em toda
+página que consome esses dois conjuntos (`index.html`, `plano.html`, `caminho.html`,
+`minhas-acoes.html`, `agenda.html`); `data/plano.js`/`data/agenda.js` continuam no
+repositório, mas viraram **seed + fallback de leitura**: se o Supabase estiver fora do ar
+(ou a tabela ainda não existir), a página cai pra última cópia local e mostra um aviso
+discreto ("dados locais — pode haver defasagem"). Todo o resto (`nos`, `projetos`,
+`pessoas`, `matriz`, `config`, ...) continua só em `data/*.js`, editado via `editor.html` e
+publicado por commit — nada mudou nesses.
 
 ## Publicar no Vercel (uma vez)
 
@@ -48,7 +59,12 @@ A partir daí, todo `git push` publica sozinho.
 
 ## Manutenção do dia a dia (Sandra)
 
-1. Abra `editor.html` (no site publicado ou local), escolha o conjunto, edite e clique em **Gerar e baixar arquivo atualizado**.
+**Plano de ação e Agenda** — abra `editor.html`, escolha o conjunto, edite. Cada campo
+salva sozinho no Supabase assim que você sai dele (o indicador ao lado da linha mostra
+"salvando…"/"salvo"/o motivo se falhar). Não precisa baixar nem publicar nada.
+
+**Todo o resto** (matriz, pessoas, projetos, URC):
+1. Abra `editor.html`, escolha o conjunto, edite e clique em **Gerar e baixar arquivo atualizado**.
 2. Substitua o arquivo de mesmo nome em `data/`.
 3. Confira e publique:
 
@@ -99,6 +115,16 @@ node tools/testar_drawer_headless.js   # drawer de Iniciativa/Pessoa: #iniciativ
                                         # clicáveis abrem o painel certo
 ```
 
+Os testes headless que tocam páginas que leem Plano/Agenda (`index.html`, `plano.html`,
+`caminho.html`, `minhas-acoes.html`, `agenda.html`) não dependem de rede: cada sessão CDP
+injeta `window.CC_FORCAR_FALLBACK = true` antes de navegar (via
+`Page.addScriptToEvaluateOnNewDocument`) e várias URLs de teste também carregam
+`?semrede=1` — os dois mecanismos fazem `js/db-plano.js`/`js/db-agenda.js` pular a
+chamada ao Supabase e usar direto o seed local (`data/plano.js`/`data/agenda.js`),
+inclusive em navegações disparadas por clique dentro da própria página (kpi-card, Enter na
+busca, drawer). Pra testar manualmente o caminho do Supabase de verdade, abra a página sem
+esse parâmetro.
+
 ## Estrutura
 
 ```
@@ -113,11 +139,17 @@ js/timeline.js         componente de timeline por canal (agenda.html, visão Tim
 js/busca.js             busca global client-side: window.BUSCA (índice/filtro testáveis em node)
 js/drawer.js             drawer lateral de Iniciativa/Pessoa: window.DRAWER
 js/supabase.js           client Supabase centralizado + header x-cc-token: window.CC_SUPABASE
+js/db-plano.js           Plano de ação: window.DB_PLANO — lê/grava meta_inovacao_plano_acoes,
+                          cai pra data/plano.js (seed) se o Supabase falhar
+js/db-agenda.js          Agenda: window.DB_AGENDA — lê/grava meta_inovacao_agenda_encontros,
+                          cai pra data/agenda.js (seed) se o Supabase falhar
 js/editor_io.js       serialização canônica dos dados (testável em node)
 data/*.js             config, plano, nos, canais, agenda, iniciativas, matriz, pessoas
                        (+ pessoas.responsaveis: lista canônica de responsáveis), changelog
-tools/                geração de dados a partir do xlsx + os 13 testes
-tools/sql/             scripts SQL pra rodar manualmente no Supabase (RLS etc.)
+                       — plano e agenda aqui são só seed/fallback (dado ao vivo mora no
+                       Supabase, ver "Como os dados funcionam" acima)
+tools/                geração de dados a partir do xlsx + os testes
+tools/sql/             scripts SQL pra rodar manualmente no Supabase (RLS, tabelas etc.)
 docs/                 PLANO_EXECUCAO.md, BUILD_STATUS.md, PENDENCIAS.md (se houver)
 ```
 

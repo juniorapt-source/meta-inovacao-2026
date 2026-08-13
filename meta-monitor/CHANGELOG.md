@@ -1,5 +1,93 @@
 # Changelog
 
+## v0.17.0 — 2026-08-13
+Prompt 10 do plano de melhorias (item 3.1, "ajustado"): unificação da persistência —
+PLANO e AGENDA saem de `data/*.js` e passam a viver no Supabase, com `data/plano.js`/
+`data/agenda.js` virando seed + fallback de leitura. `nos`, `projetos`, `pessoas`,
+`matriz`, `config` continuam só em `data/*.js`, como sempre. Código pronto e testado;
+as duas tabelas ainda **não foram criadas** no Supabase — ver "Como ativar" no rodapé
+(não executei o SQL: só tenho a anon key, sem permissão de DDL; mesma situação da
+v0.16.0/P3, onde o JR. rodou o SQL manualmente).
+
+- **`tools/sql/2026-08_plano.sql`** e **`tools/sql/2026-08_agenda.sql`** (gerados, não
+  executados) — criam `meta_inovacao_plano_acoes` e `meta_inovacao_agenda_encontros`
+  (nomes seguindo o prefixo `meta_inovacao_` já usado por `meta_inovacao_matriz_demandas`,
+  reaproveitando a convenção em vez de inventar uma nova), com o mesmo padrão de RLS do
+  P3: remoção dinâmica de qualquer policy existente (`pg_policies`), SELECT público, e
+  INSERT/UPDATE exigindo `x-cc-token` — sem policy de DELETE (soft delete via
+  `deleted_at`, mesmo padrão de `plano_acao_atividades`). As duas reaproveitam
+  `cc_touch_updated_at()` se já existir (criada no P3) ou criam se não. As colunas de
+  status guardam as chaves canônicas de `js/status.js` (contexto `"acao"` em
+  `meta_inovacao_plano_acoes`, `"encontro"` em `meta_inovacao_agenda_encontros"`) — não é
+  vocabulário novo. `meta_inovacao_plano_acoes` ganhou colunas além do pedido literal do
+  prompt (`dependencias`, `cc_tipo`/`no_critico`, `como`/`monitor`/`ferramenta`) pra não
+  perder o bloco "Depende de/solução proposta" de `plano.html` nem os chips ★Nó/cadeia/SLA
+  de `caminho.html`; `meta_inovacao_agenda_encontros` funde `local`+`modo` num campo só
+  (`local_modo`), `confirmados`+`convidados` também (`confirmacoes`, texto livre "3/5") e
+  "hora" (sempre vazia até hoje) dentro de `turno` — 4 colunas em vez de 6, sem perder
+  informação nenhuma. Cada script tem um cabeçalho longo documentando essas decisões e
+  20/47 linhas de seed geradas de `data/plano.js`/`data/agenda.js` (`tools/gerar_seed_supabase.js`,
+  novo, não faz parte do site — só gera SQL).
+- **`js/db-plano.js`** e **`js/db-agenda.js`** (novos) — `window.DB_PLANO`/`window.DB_AGENDA`:
+  `.carregar()` busca do Supabase (via `CC_SUPABASE.obterClienteEsm()`) e traduz cada linha
+  pro MESMO formato de objeto que o site sempre usou (`id`/`frente`/`sub`/`atividade`/
+  `resp`/`prazo`/`status`/... pro plano; `id`/`ciclo`/`canal`/`data`/`status`/... pra
+  agenda) — o resto do código (`js/calc.js`, `js/core.js`, filtros de `plano.html`,
+  `js/timeline.js`) não precisa saber que o dado agora vem de outro lugar. Se a chamada
+  falhar (rede fora do ar, tabela ainda não criada, `file://`), cai sozinho pro seed local
+  (`window.DB.plano`/`window.DB.agenda.encontros`) e devolve `usandoFallback:true` — cada
+  página mostra um aviso discreto ("dados locais — pode haver defasagem") quando isso
+  acontece. `.salvar()`/`.criar()`/`.removerSoft()` (plano) e `.salvar()`/`.removerSoft()`
+  (agenda, sem `.criar()` — não existe UI de "novo encontro", são sempre os mesmos 20)
+  ficam só pro `editor.html`.
+- **`index.html`, `plano.html`, `caminho.html`, `minhas-acoes.html`** — trocaram
+  `window.DB.plano` por `await DB_PLANO.carregar()` uma vez no topo da IIFE (viraram
+  `async function`); `agenda.html` idem com `DB_AGENDA.carregar()` (+ `DB_PLANO.carregar()`
+  também, só pro aviso do Nó 1/CAN-02). Nenhum cálculo mudou — `js/calc.js`, `stClass`,
+  filtros e ordenação continuam exatamente os mesmos, só recebendo a lista carregada em
+  vez de ler `DB.plano` direto. `js/timeline.js` ajustado pro novo formato combinado
+  (`e.localModo`/`e.confirmacoes` em vez de `e.local`/`e.modo`/`e.confirmados`/`e.convidados`).
+  **Limitação conhecida, deixada de propósito**: `js/drawer.js` (painel de Pessoa/
+  Iniciativa) e `js/busca.js` (índice de busca global) continuam lendo o seed síncrono
+  (`window.DB.plano`/`window.DB.agenda.encontros`) em vez do dado ao vivo — não entraram
+  no escopo desta migração; se algum dia o plano/agenda mudar no Supabase sem um reload da
+  página, esses dois pontos especificamente não refletem na hora.
+- **`editor.html`** — "Plano de ação" e "Agenda" saem do modelo "edita cópia local → baixa
+  `data/*.js` → substitui no repo" e viram CRUD ao vivo, mesmo padrão de
+  `plano-acao.html`/`demandas.html`: cada campo grava direto no Supabase ao perder o foco
+  (`change`), com indicador por linha ("salvando…"/"salvo"/motivo do erro). Editor único —
+  hoje só o JR. usa o Modo edição — então essas duas linhas saíram sem rede de segurança de
+  revisão por download, igual `demandas.html` desde a v0.3.0. "+ Nova atividade" do plano
+  continua existindo, agora gravando via `DB_PLANO.criar()` em vez de só empilhar num array
+  local; Agenda não ganhou "+ Novo encontro" (não existia antes, fora de escopo). Matriz,
+  Pessoas, Projetos e URC continuam exatamente no modelo antigo (baixar/substituir/publicar).
+  "Como publicar a mudança" no rodapé passa a ser dinâmico conforme o conjunto selecionado.
+- **Testes headless adaptados pra não depender de rede** (item 3.1 exigia isso): toda
+  sessão CDP que navega por página que lê plano/agenda injeta
+  `window.CC_FORCAR_FALLBACK = true` antes do primeiro load
+  (`Page.addScriptToEvaluateOnNewDocument`) — cobre inclusive navegação disparada por
+  clique dentro da própria página (kpi-card do dashboard, Enter na busca, drawer), não só
+  a URL inicial. Várias URLs de teste também levam `?semrede=1` como reforço redundante.
+  Sem isso, `testar_dashboard_headless.js` falhava de verdade nesta sessão (o clique no
+  KPI navegava pra `plano.html` sem forçar fallback, e a tentativa real de rede — tabela
+  ainda não criada — não resolvia a tempo da checagem de 300ms).
+- **Versão**: o prompt original citava "v0.8.0", desatualizado (a numeração já estava em
+  v0.16.0) — bump seguiu a sequência real, v0.17.0, sem regredir.
+
+**Como ativar** (⚠️ decisão/execução do JR., não deste commit):
+  1. No SQL Editor do Supabase, rodar `tools/sql/2026-08_plano.sql` e depois
+     `tools/sql/2026-08_agenda.sql` (nessa ordem — não dependem um do outro, mas os dois
+     usam o mesmo token e a mesma função de trigger, então rodar plano primeiro deixa a
+     função já criada pro segundo script reaproveitar via `CREATE OR REPLACE`).
+  2. Cada script já vem com o token de escrita ATUAL preenchido (mesmo UUID de
+     `data/config.js.tokenEscrita`, o mesmo do P3) em vez do placeholder — não precisa
+     trocar nada antes de rodar.
+  3. Conferir a linha de verificação no fim de cada script: 47 linhas em
+     `meta_inovacao_plano_acoes`, 20 em `meta_inovacao_agenda_encontros`.
+  4. Recarregar qualquer página do site — sem fazer mais nada, `js/db-plano.js`/
+     `js/db-agenda.js` já passam a ler do Supabase (o `try/catch` que hoje cai no
+     fallback simplesmente para de disparar). Nenhum outro passo de código necessário.
+
 ## v0.16.0 — 2026-08-13
 Prompt 3 do plano de melhorias (item 2.1): proteção de escrita no Supabase por token
 compartilhado. Código do site pronto; falta só rodar o SQL manualmente (não incluído

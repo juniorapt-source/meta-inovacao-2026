@@ -73,9 +73,40 @@ campo ligando um encontro a uma pessoa — o prompt original pedia pra omitir a 
 caso em vez de inventar o vínculo, e foi o que se fez (comentário no HTML explica o porquê,
 pronto pra a seção entrar se esse campo existir um dia).
 
+## Item 3.1 — Unificação da persistência no Supabase (Plano e Agenda)
+
+**Status:** código pronto e testado (v0.17.0) — ativação manual pendente (rodar o SQL, não é passo de código)
+
+Plano de ação (status/prazos das 47 ações) e Agenda (datas/locais/confirmações dos 20
+encontros) viviam só em `data/plano.js`/`data/agenda.js`, editados via `editor.html` no
+modelo "edita cópia local → baixa arquivo → substitui no repo → commit" — o mesmo modelo
+que `plano_acao_atividades` e a matriz de demandas já tinham deixado pra trás bem antes
+(CRUD ao vivo no Supabase).
+
+**O que foi feito no código:** `tools/sql/2026-08_plano.sql`/`2026-08_agenda.sql` (novos,
+gerados por `tools/gerar_seed_supabase.js`) criam `meta_inovacao_plano_acoes`/
+`meta_inovacao_agenda_encontros` com o mesmo padrão de RLS/token do item 2.1, seed
+incluso. `js/db-plano.js`/`js/db-agenda.js` (novos) leem de lá com fallback automático
+pro seed local (`data/plano.js`/`data/agenda.js`, que continuam no repo só pra isso) se o
+Supabase estiver fora do ar — aviso discreto na tela quando isso acontece.
+`index.html`/`plano.html`/`caminho.html`/`minhas-acoes.html`/`agenda.html` migrados pra
+ler por essa camada; `editor.html` migrado pra CRUD ao vivo nesses dois conjuntos
+(matriz/pessoas/projetos/URC continuam no modelo antigo de baixar/publicar). Testes
+headless adaptados pra forçar o fallback local via `window.CC_FORCAR_FALLBACK`/
+`?semrede=1`, sem depender de rede real. Detalhes completos no CHANGELOG v0.17.0.
+
+**Limitação conhecida:** `js/drawer.js` (painel de Pessoa/Iniciativa) e `js/busca.js`
+(índice de busca global) continuam lendo o seed síncrono em vez do dado ao vivo — fora do
+escopo desta leva, registrado no CHANGELOG.
+
+**Passo a passo de ativação:** rodar `2026-08_plano.sql` e depois `2026-08_agenda.sql` no
+SQL Editor do Supabase (já vêm com o token real preenchido, mesmo de `data/config.js`) —
+sem nenhum passo de código depois disso, `js/db-plano.js`/`js/db-agenda.js` passam a ler
+do Supabase na próxima carga de página.
+
 ## Item 2.1 — Proteção de escrita no Supabase (token compartilhado)
 
-**Status:** código pronto (v0.16.0) — ativação manual pendente (não é passo de código)
+**Status:** ativo (v0.16.0 + commit "ativa token de escrita Supabase")
 
 Até a v0.15.0, as policies de RLS do Supabase aceitavam escrita anônima em
 `plano_acao_atividades` e `meta_inovacao_matriz_demandas` — qualquer um com a URL gravava.
@@ -90,14 +121,12 @@ CDN em `js/matriz-store.js`, `import()` dinâmico da lib ESM em `plano-acao.html
 `exigirSenha` virar `true` no futuro). Erro de escrita por permissão vira "Sem permissão
 de escrita — fale com o JR." em vez de stacktrace (`plano-acao.html`, `demandas.html`).
 `tools/sql/2026-08_protecao_escrita.sql` gerado (script de RLS pras 2 tabelas, com token
-placeholder e bloco de reversão) — **ainda não rodado no Supabase**, isso é decisão/
-execução do JR., não deste commit (padrão do projeto: SQL sempre roda manualmente). Até o
-SQL rodar, a escrita continua anônima livre como sempre foi — o código novo já manda o
-token em toda requisição, só não tem ainda ninguém checando ele do lado do banco.
-
-**Passo a passo de ativação** (registrado também no CHANGELOG v0.16.0): gerar token →
-substituir no SQL → rodar no Supabase → substituir `tokenEscrita` em `data/config.js` →
-commit. `js/gate.js` já documenta a distinção: é proteção client-side leve contra acesso
+placeholder e bloco de reversão). **Ativado:** o JR. rodou o SQL manualmente no Supabase e
+`data/config.js.tokenEscrita` foi trocado do placeholder pro token real (commit "ativa
+token de escrita Supabase") — as duas tabelas já exigem `x-cc-token` certo pra
+INSERT/UPDATE; o mesmo token passou a ser reaproveitado nas policies de
+`meta_inovacao_plano_acoes`/`meta_inovacao_agenda_encontros` (item 3.1) em vez de gerar um
+novo. `js/gate.js` documenta a distinção: é proteção client-side leve contra acesso
 casual, não impede escrita de quem tiver a senha do site (consegue extrair o token do
 sessionStorage) — proporcional à escolha de senha compartilhada sem usuários individuais;
 Supabase Auth com usuários fica registrado como evolução futura mais forte.

@@ -81,16 +81,16 @@ ALTER TABLE public.plano_acao_atividades ENABLE ROW LEVEL SECURITY;
 -- 1c) Novas policies — só quem manda o header x-cc-token certo escreve
 CREATE POLICY "escrita_com_token_insert" ON public.plano_acao_atividades
   FOR INSERT TO anon
-  WITH CHECK (current_setting('request.headers', true)::json->>'x-cc-token' = 'SUBSTITUIR_PELO_TOKEN_UUID');
+  WITH CHECK (current_setting('request.headers', true)::json->>'x-cc-token' = '90bb649c-0a59-43b1-b486-17ec58f99108');
 
 CREATE POLICY "escrita_com_token_update" ON public.plano_acao_atividades
   FOR UPDATE TO anon
-  USING (current_setting('request.headers', true)::json->>'x-cc-token' = 'SUBSTITUIR_PELO_TOKEN_UUID')
-  WITH CHECK (current_setting('request.headers', true)::json->>'x-cc-token' = 'SUBSTITUIR_PELO_TOKEN_UUID');
+  USING (current_setting('request.headers', true)::json->>'x-cc-token' = '90bb649c-0a59-43b1-b486-17ec58f99108')
+  WITH CHECK (current_setting('request.headers', true)::json->>'x-cc-token' = '90bb649c-0a59-43b1-b486-17ec58f99108');
 
 CREATE POLICY "escrita_com_token_delete" ON public.plano_acao_atividades
   FOR DELETE TO anon
-  USING (current_setting('request.headers', true)::json->>'x-cc-token' = 'SUBSTITUIR_PELO_TOKEN_UUID');
+  USING (current_setting('request.headers', true)::json->>'x-cc-token' = '90bb649c-0a59-43b1-b486-17ec58f99108');
 
 -- (as policies de SELECT desta tabela não são tocadas por este script — a leitura
 -- continua exatamente como está hoje, pública, sem token)
@@ -130,16 +130,16 @@ ALTER TABLE public.meta_inovacao_matriz_demandas ENABLE ROW LEVEL SECURITY;
 --     não um por tabela — mais simples de operar com uma senha compartilhada)
 CREATE POLICY "escrita_com_token_insert" ON public.meta_inovacao_matriz_demandas
   FOR INSERT TO anon
-  WITH CHECK (current_setting('request.headers', true)::json->>'x-cc-token' = 'SUBSTITUIR_PELO_TOKEN_UUID');
+  WITH CHECK (current_setting('request.headers', true)::json->>'x-cc-token' = '90bb649c-0a59-43b1-b486-17ec58f99108');
 
 CREATE POLICY "escrita_com_token_update" ON public.meta_inovacao_matriz_demandas
   FOR UPDATE TO anon
-  USING (current_setting('request.headers', true)::json->>'x-cc-token' = 'SUBSTITUIR_PELO_TOKEN_UUID')
-  WITH CHECK (current_setting('request.headers', true)::json->>'x-cc-token' = 'SUBSTITUIR_PELO_TOKEN_UUID');
+  USING (current_setting('request.headers', true)::json->>'x-cc-token' = '90bb649c-0a59-43b1-b486-17ec58f99108')
+  WITH CHECK (current_setting('request.headers', true)::json->>'x-cc-token' = '90bb649c-0a59-43b1-b486-17ec58f99108');
 
 CREATE POLICY "escrita_com_token_delete" ON public.meta_inovacao_matriz_demandas
   FOR DELETE TO anon
-  USING (current_setting('request.headers', true)::json->>'x-cc-token' = 'SUBSTITUIR_PELO_TOKEN_UUID');
+  USING (current_setting('request.headers', true)::json->>'x-cc-token' = '90bb649c-0a59-43b1-b486-17ec58f99108');
 
 -- (SELECT desta tabela também intocado — Realtime de leitura, usado por
 -- demandas.html pra atualizar a tela quando outra pessoa edita, continua igual)

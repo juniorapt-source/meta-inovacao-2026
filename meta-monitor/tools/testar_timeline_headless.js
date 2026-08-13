@@ -132,6 +132,11 @@ async function principal() {
     const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
     await cdp.send("Page.enable", {}, sessionId);
     await cdp.send("Runtime.enable", {}, sessionId);
+    // força fallback local (DB_PLANO/DB_AGENDA) em toda navegação desta sessão — inclusive
+    // as que acontecem por clique dentro da própria página (kpi-card, Enter na busca, drawer),
+    // não só na URL inicial; ?semrede=1 nas URLs de abrir() cobre o caso "URL direta", isto
+    // cobre o caso "navegação via JS" (item 3.1 — testes headless não podem depender de rede).
+    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.CC_FORCAR_FALLBACK = true;" }, sessionId);
 
     async function evaluate(expression) {
       const r = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }, sessionId);
@@ -140,7 +145,7 @@ async function principal() {
     }
 
     const carregou = cdp.once("Page.loadEventFired");
-    await cdp.send("Page.navigate", { url: "http://127.0.0.1:" + port + "/agenda.html" }, sessionId);
+    await cdp.send("Page.navigate", { url: "http://127.0.0.1:" + port + "/agenda.html?semrede=1" }, sessionId);
     await carregou;
     await esperar(300);
 
