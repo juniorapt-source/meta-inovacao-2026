@@ -50,6 +50,8 @@
         <div class="pa-carregando">Selecione uma iniciativa à esquerda.</div>
       </section>
     </div>
+
+    <div id="cc-editor-rodape-wrap"></div>
   </main>
 </div>
 
@@ -69,6 +71,7 @@
 <script src="js/drawer.js"></script>
 <script src="js/responsaveis.js"></script>
 <script src="js/config.js"></script>
+<script src="js/editor_atual.js"></script>
 <script>
 (async function () {
   "use strict";
@@ -210,7 +213,7 @@
     try {
       const { error } = await supa
         .from(TABELA)
-        .update(Object.assign({}, campos, { updated_at: new Date().toISOString() }))
+        .update(Object.assign({}, campos, { updated_at: new Date().toISOString(), updated_by: EDITOR_ATUAL.nomeAtual() }))
         .eq("id", id);
       if (error) throw error;
       marcarRowStatus(row, "salvo");
@@ -237,7 +240,7 @@
     try {
       const { data, error } = await supa
         .from(TABELA)
-        .insert({ iniciativa: iniciativaAtual, descricao: "", responsavel: "", status: "nao_iniciado", ordem: novaOrdem })
+        .insert({ iniciativa: iniciativaAtual, descricao: "", responsavel: "", status: "nao_iniciado", ordem: novaOrdem, updated_by: EDITOR_ATUAL.nomeAtual() })
         .select()
         .single();
       if (error) throw error;
@@ -258,7 +261,7 @@
       // filtra .is("deleted_at", null), então some da UI sem tirar o
       // histórico da tabela — nunca DELETE físico por aqui.
       const agora = new Date().toISOString();
-      const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_at: agora }).eq("id", id);
+      const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_at: agora, updated_by: EDITOR_ATUAL.nomeAtual() }).eq("id", id);
       if (error) throw error;
       listaAtual = listaAtual.filter((a) => a.id !== id);
       row.remove();
@@ -309,6 +312,7 @@
   }
   const projetos = (window.DB && window.DB.projetos) || [];
   if (projetos.length) selecionar(projetos[0].iniciativa);
+  EDITOR_ATUAL.montar(document.getElementById("cc-editor-rodape-wrap"));
 })();
 </script>
 </body>

@@ -108,6 +108,11 @@
     <div id="vista-kanban" style="display:none"></div>
 
     <p style="color:var(--grafite);font-size:12.5px;margin-top:10px" id="contagem"></p>
+
+    <!-- item 3.4 — só é relevante na visão Kanban (única escrita desta página), mas
+         fica sempre visível: é barato de mostrar e não faz sentido esconder/mostrar
+         junto com o toggle de visão só por causa disso. -->
+    <div id="cc-editor-rodape-wrap"></div>
   </main>
 </div>
 
@@ -128,6 +133,7 @@
 <script src="js/responsaveis.js"></script>
 <script src="js/busca.js"></script>
 <script src="js/drawer.js"></script>
+<script src="js/editor_atual.js"></script>
 <script>
 (async function(){
   "use strict";
@@ -144,17 +150,9 @@
         selR = document.getElementById("f-resp"), selC = document.getElementById("f-cc"),
         busca = document.getElementById("f-busca"), corpo = document.getElementById("tabela");
 
-  // item 3.3 do plano de melhorias — mesmo prompt de "seu nome/iniciais" de
-  // demandas.html/editor.html (window.prompt + localStorage, chave compartilhada
-  // "editor_nome") — identifica quem moveu cada card no Kanban (updated_by).
-  function nomeEditor() {
-    let nome = localStorage.getItem("editor_nome");
-    if (!nome) {
-      nome = (window.prompt("Seu nome ou iniciais, pra identificar suas edições:") || "").trim();
-      if (nome) localStorage.setItem("editor_nome", nome);
-    }
-    return nome || "anônimo";
-  }
+  // item 3.4 do plano de melhorias — identificação de quem edita agora é o módulo
+  // compartilhado window.EDITOR_ATUAL (js/editor_atual.js), com rodapé "Editando
+  // como…" (montado mais abaixo) em vez do prompt único de antes.
 
   const frentes = [...new Set(plano.map(a => a.frente))];
   selF.innerHTML = '<option value="">Todas as frentes</option>' + frentes.map(f => "<option>" + esc(f) + "</option>").join("");
@@ -354,7 +352,7 @@
     const timer = setTimeout(async () => {
       timersSalvar.delete(id);
       try {
-        await DB_PLANO.salvar(a.db_id, { status: DB_PLANO.CHAVE_POR_ROTULO[a.status] }, nomeEditor());
+        await DB_PLANO.salvar(a.db_id, { status: DB_PLANO.CHAVE_POR_ROTULO[a.status] }, EDITOR_ATUAL.nomeAtual());
         marcarCartaoSalvar(id, "salvo");
       } catch (err) {
         console.error("plano: falha ao mover ação via kanban", err);
@@ -477,6 +475,8 @@
   aplicarQuerystring();
   render();
   if (location.hash) abrir(location.hash.slice(1));
+
+  EDITOR_ATUAL.montar(document.getElementById("cc-editor-rodape-wrap"));
 })();
 </script>
 </body>

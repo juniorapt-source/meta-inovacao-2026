@@ -1,5 +1,84 @@
 # Changelog
 
+## v0.19.0 — 2026-08-13
+Prompt 13 do plano de melhorias (item 3.4, último da fila): histórico e auditoria —
+log de alterações no Supabase + identificação de quem edita + aba "Histórico" em
+editor.html. Código pronto e testado; o SQL **não foi executado** (mesma regra do
+P3/P10: só tenho a anon key, sem permissão de DDL) — ver "Como ativar" no rodapé.
+
+- **`tools/sql/2026-08_auditoria.sql`** (gerado, não executado) — cria
+  `meta_inovacao_audit_log` (id/tabela/registro_id/operacao/valor_anterior/valor_novo/
+  autor/criado_em) + função `cc_audit()` `SECURITY DEFINER` com trigger `AFTER INSERT
+  OR UPDATE OR DELETE` nas 4 tabelas editáveis (`meta_inovacao_plano_acoes`,
+  `meta_inovacao_agenda_encontros`, `plano_acao_atividades`,
+  `meta_inovacao_matriz_demandas`). RLS do log é a **exceção** documentada agora em
+  `tools/sql/PADRAO_TABELA.md`: leitura exige o token de escrita (`cc_token_select`),
+  não é pública como o resto — sem policy de INSERT/UPDATE/DELETE (só a função
+  `SECURITY DEFINER` escreve). **Desvio do desenho literal do prompt, registrado no
+  próprio script:** `cc_audit()` usa `COALESCE(to_jsonb(NEW)->>'updated_by',
+  to_jsonb(NEW)->>'atualizado_por', header x-cc-editor)` em vez de só
+  `COALESCE(NEW.updated_by, header)` — nem as 4 tabelas usam o mesmo nome de coluna pra
+  autoria (`meta_inovacao_matriz_demandas` usa `atualizado_por`, não renomeada agora pra
+  não quebrar `js/matriz-store.js`); `NEW.updated_by` direto nessa tabela faria a função
+  **estourar erro em todo INSERT/UPDATE** ("record new has no field updated_by") — a
+  extração via `to_jsonb()->>'...'` devolve `NULL` de forma inofensiva quando a coluna
+  não existe. `plano_acao_atividades` não tinha NENHUMA coluna de autoria até este
+  script — ganhou `updated_by` (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`), populada
+  por `plano-acao.html` a partir de agora.
+- **`js/editor_atual.js`** (novo) — `window.EDITOR_ATUAL`, substitui os `nomeEditor()`
+  locais que `editor.html`/`demandas.html`/`plano.html` cada um tinha a sua cópia
+  (`window.prompt` + `localStorage.editor_nome`). Chave nova (`localStorage.cc_editor`,
+  padrão `"JR."`) e UI de troca — rodapé "Editando como NOME · trocar", `<select>` com a
+  lista canônica de `data/pessoas.js.responsaveis` (P4) + opção "Outro" (texto livre) —
+  pronta pra fase de Expansão sem retrabalho, embutida via `EDITOR_ATUAL.montar()` nas 4
+  telas de escrita: `editor.html`, `demandas.html`, `plano-acao.html` (ganhou a UI pela
+  primeira vez — não tinha nenhuma antes) e `plano.html` (visão Kanban, P12).
+- **`js/supabase.js`** — toda escrita passa a mandar também o header `x-cc-editor`
+  (lido de `EDITOR_ATUAL.nomeAtual()`, ao lado do `x-cc-token` do P3) — é esse header
+  que `cc_audit()` usa como autor de último recurso. Novo `CC_SUPABASE.resetarClientes()`:
+  como os clients Supabase ficam em cache com os headers já "assados" desde a criação,
+  trocar de editor no meio da sessão invalida o cache pra próxima escrita já sair com o
+  header certo, sem precisar recarregar a página.
+- **`plano-acao.html`, `js/db-plano.js`/`js/db-agenda.js` (via editor.html/plano.html),
+  `js/matriz-store.js` (via demandas.html)** — toda chamada de escrita agora manda
+  `EDITOR_ATUAL.nomeAtual()` como autor, populando `updated_by`/`atualizado_por`
+  conforme a coluna de cada tabela (item 2.3 — redundância proposital com o header
+  x-cc-editor: autor no registro E no log).
+- **`editor.html`** — nova aba "Histórico" (toggle com "Editar dados"), lista as
+  últimas 100 alterações de `meta_inovacao_audit_log`, formato
+  `"12/08 15:42 · JR. · CMT-02 status: Não iniciado → Em andamento"`. Filtros por
+  tabela (server-side, `.eq("tabela",...)` antes do `.limit(100)`) e por autor
+  (client-side, sobre o lote já carregado — mesmo padrão de filtro do resto do site).
+  **Item 3.2 do prompt**, cumprido à risca: todo campo de status é traduzido via
+  `CC_STATUS.chaveDeEntrada(contexto, valor)` + `CC_STATUS.rotulo(...)` antes de
+  exibir — nunca a chave crua (`nao_iniciado`) — inclusive para
+  `meta_inovacao_matriz_demandas`, onde QUALQUER coluna (é uma por canal) pode
+  carregar um valor de `celula_matriz`, não só uma coluna chamada "status".
+  `js/status.js` estava faltando no `<script>` desta página — adicionado (sem ele,
+  `CC_STATUS` não existiria e a tradução acima quebraria).
+- **Mock do log em modo de teste** (item 4.1) — `?semrede=1`/`CC_FORCAR_FALLBACK` faz
+  a aba Histórico usar um array fixo embutido em `editor.html` em vez de consultar o
+  Supabase. Não é um fallback client-side "de verdade" (o log não precisa de um —
+  editar em `file://`/offline não gera escrita real pra ter o que mostrar) — existe só
+  pra exercitar a renderização (formatação de data/hora, diff de campos, tradução de
+  status, filtros) sem rede nos testes headless.
+- **`tools/testar_historico_headless.js`** (novo, F12) — confere as 3 linhas do mock,
+  que o diff do UPDATE vem com rótulo traduzido (nunca `nao_iniciado`/`em_andamento`
+  crus), que INSERT/DELETE mostram "criado"/"removido", e que os filtros por
+  tabela/autor funcionam.
+
+**Como ativar** (⚠️ decisão/execução do JR., não deste commit):
+  1. No SQL Editor do Supabase, rodar `tools/sql/2026-08_auditoria.sql` (depois de
+     `2026-08_plano.sql`/`2026-08_agenda.sql`/`2026-08_protecao_escrita.sql` — assume
+     que as 4 tabelas editáveis já existem).
+  2. O script já vem com o token de escrita ATUAL preenchido na policy de SELECT do
+     log — não precisa trocar nada antes de rodar.
+  3. Conferir a linha de verificação no fim do script: `0` (o log começa vazio — não
+     há backfill do histórico anterior a rodar o script).
+  4. Editar qualquer coisa numa das 4 telas de escrita e rodar de novo a mesma query —
+     deve aparecer 1 linha nova. Recarregar `editor.html` → aba Histórico já mostra o
+     log de verdade em vez do mock (o mock só aparece com `?semrede=1`).
+
 ## v0.18.0 — 2026-08-13
 Prompt 12 do plano de melhorias (item 3.3, opcional): visão Kanban em `plano.html`,
 toggle com a Lista — depende de P6 (taxonomia), P10 (persistência) e P11 (drawer), os

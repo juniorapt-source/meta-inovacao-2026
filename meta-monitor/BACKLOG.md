@@ -8,6 +8,28 @@ o outro arquivo pra ver o que ainda falta e em que ordem. Os números #001/#002 
 original não apareceram em nenhum prompt lido até agora (só #003/#004/#005) — se existirem,
 ainda não foram cruzados aqui.
 
+## Item 3.4 — Histórico e auditoria
+
+**Status:** código pronto e testado (v0.19.0) — ativação manual pendente (rodar o SQL, não é passo de código)
+
+Item 3.4 do plano de melhorias, último da fila — depende de P10 (persistência), já
+entregue. Com a edição direta no Supabase e a perspectiva da Expansão (mais gente
+editando), faltava saber quem mudou o quê e quando.
+
+**O que foi feito no código:** `tools/sql/2026-08_auditoria.sql` (novo) cria
+`meta_inovacao_audit_log` + a função `cc_audit()` `SECURITY DEFINER`, com trigger
+`AFTER INSERT/UPDATE/DELETE` nas 4 tabelas editáveis. `js/editor_atual.js` (novo,
+`window.EDITOR_ATUAL`) centraliza a identificação de quem edita — rodapé "Editando
+como… trocar" com a lista canônica de responsáveis + "Outro", embutido nas 4 telas de
+escrita (`editor.html`, `demandas.html`, `plano-acao.html`, `plano.html`). `editor.html`
+ganhou a aba "Histórico" (últimas 100 alterações, filtro por tabela/autor, status sempre
+traduzido via `CC_STATUS.rotulo` — nunca a chave crua). `js/supabase.js` manda o header
+`x-cc-editor` em toda escrita. Detalhes completos no CHANGELOG v0.19.0.
+
+**Ativação:** rodar `tools/sql/2026-08_auditoria.sql` no SQL Editor do Supabase (depois
+de plano/agenda/proteção de escrita) — sem nenhum passo de código depois disso, a aba
+Histórico de `editor.html` já passa a ler o log de verdade.
+
 ## Cobertura de teste com rede real
 
 **Status:** aberto — avaliar

@@ -20,7 +20,7 @@ Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanh
 | `projetos.html` | Portfólio de projetos por núcleo, com representantes |
 | `plano-acao.html` | Atividades por iniciativa (CRUD via Supabase) |
 | `corsario.html` | Adequação de cada iniciativa ao ecossistema oficial (Supabase, somente leitura) — régua de 19 critérios, patente por faixa de % |
-| `editor.html` | Modo edição: Plano de ação e Agenda editam ao vivo no Supabase (linha a linha, salva sozinho); matriz, pessoas, projetos e URC continuam no modelo "edita a cópia local, baixa `data/*.js`, publica no Git" |
+| `editor.html` | Modo edição: Plano de ação e Agenda editam ao vivo no Supabase (linha a linha, salva sozinho); matriz, pessoas, projetos e URC continuam no modelo "edita a cópia local, baixa `data/*.js`, publica no Git"; aba **Histórico** com as últimas 100 alterações (log de auditoria) |
 
 ## Como os dados funcionam
 
@@ -143,6 +143,9 @@ js/db-plano.js           Plano de ação: window.DB_PLANO — lê/grava meta_ino
                           cai pra data/plano.js (seed) se o Supabase falhar
 js/db-agenda.js          Agenda: window.DB_AGENDA — lê/grava meta_inovacao_agenda_encontros,
                           cai pra data/agenda.js (seed) se o Supabase falhar
+js/editor_atual.js       identificação de quem edita: window.EDITOR_ATUAL — rodapé
+                          "Editando como… trocar" nas 4 telas de escrita (editor.html,
+                          demandas.html, plano-acao.html, plano.html)
 js/editor_io.js       serialização canônica dos dados (testável em node)
 data/*.js             config, plano, nos, canais, agenda, iniciativas, matriz, pessoas
                        (+ pessoas.responsaveis: lista canônica de responsáveis), changelog

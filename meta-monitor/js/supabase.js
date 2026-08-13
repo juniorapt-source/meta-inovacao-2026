@@ -17,8 +17,20 @@
 (function (root) {
   "use strict";
 
+  // item 3.4 (P13) — além do x-cc-token (P3, quem PODE escrever), toda escrita agora
+  // também manda x-cc-editor (QUEM escreveu) — lido de window.EDITOR_ATUAL
+  // (js/editor_atual.js), se essa página carregar o módulo; páginas só-leitura não
+  // precisam dele, e a função continua funcionando normalmente sem o header extra
+  // (não é uma dependência obrigatória, só um bônus quando disponível). O nome da
+  // função ficou o mesmo (headersComToken) pra não quebrar corsario.html/js/drawer.js,
+  // que já chamam ela pros fetches crus de leitura — mandar x-cc-editor ali também é
+  // inofensivo (SELECT não olha esse header).
   function headersComToken() {
-    return root.CC_TOKEN ? { "x-cc-token": root.CC_TOKEN } : {};
+    const h = {};
+    if (root.CC_TOKEN) h["x-cc-token"] = root.CC_TOKEN;
+    const nomeEditor = root.EDITOR_ATUAL && root.EDITOR_ATUAL.nomeAtual ? root.EDITOR_ATUAL.nomeAtual() : null;
+    if (nomeEditor) h["x-cc-editor"] = nomeEditor;
+    return h;
   }
 
   function exigirConfig() {
@@ -80,10 +92,22 @@
     return ehErroDePermissao(err) ? MENSAGEM_SEM_PERMISSAO : null;
   }
 
+  // item 3.4 (P13) — os dois clients ficam em cache (acima) com os headers já "assados"
+  // desde a criação; se o nome do editor trocar no meio da sessão (rodapé "editando
+  // como… trocar", js/editor_atual.js), o client em cache continuaria mandando o nome
+  // ANTIGO em x-cc-editor. resetarClientes() limpa os dois caches — a próxima chamada a
+  // obterClienteClassico()/obterClienteEsm() recria o client do zero, com o header
+  // atualizado, sem precisar recarregar a página inteira.
+  function resetarClientes() {
+    clienteClassico = null;
+    promessaClienteEsm = null;
+  }
+
   const CC_SUPABASE = {
     obterClienteClassico: obterClienteClassico,
     obterClienteEsm: obterClienteEsm,
     headersComToken: headersComToken,
+    resetarClientes: resetarClientes,
     ehErroDePermissao: ehErroDePermissao,
     mensagemEscritaAmigavel: mensagemEscritaAmigavel,
     MENSAGEM_SEM_PERMISSAO: MENSAGEM_SEM_PERMISSAO,

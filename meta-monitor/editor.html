@@ -46,6 +46,17 @@
 .ed-row-status{font-size:10.5px;white-space:nowrap;min-width:52px;display:inline-block}
 .ed-carregando,.ed-erro-carregar{color:var(--grafite);font-size:13px;padding:10px 2px}
 .ed-erro-carregar{color:var(--critico)}
+
+/* item 3.4 — aba Histórico (mesmo .vista-toggle de agenda.html/plano.html) */
+.vista-toggle{display:flex;gap:8px;margin-bottom:14px}
+.vista-toggle button{font:600 12px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.06em;padding:8px 14px;border-radius:0;border:1px solid var(--linha);background:var(--branco);color:var(--tinta);cursor:pointer}
+.vista-toggle button.ativo{background:var(--azul);color:var(--branco);border-color:var(--azul)}
+.hist-linha{padding:8px 10px;border-top:1px solid var(--border-soft);font-size:13px}
+.hist-linha:first-child{border-top:0}
+.hist-linha .hist-autor{font-weight:600}
+.hist-linha .hist-resumo{color:var(--tinta)}
+.hist-linha .hist-op-insert{color:var(--verde)}
+.hist-linha .hist-op-delete{color:var(--critico)}
 </style>
 </head>
 <body>
@@ -53,20 +64,49 @@
   <nav class="nav" aria-label="Navegação do painel"></nav>
   <main class="conteudo">
     <h1 class="pagina-titulo">Modo edição</h1>
-    <p class="pagina-sub" id="ed-sub">Edite abaixo, gere o arquivo atualizado e substitua o correspondente na pasta <span class="ed-mono">data/</span> do repositório. Nada é salvo automaticamente nesta página.</p>
-    <section class="cartao">
-      <div class="ed-topo">
-        <label for="ed-conjunto" style="font:600 13px 'DM Sans',sans-serif">Conjunto:</label>
-        <select id="ed-conjunto" aria-label="Escolher conjunto de dados"></select>
-        <button id="ed-baixar" class="ed-btn">Gerar e baixar arquivo atualizado</button>
+
+    <!-- item 3.4 do plano de melhorias — "Histórico" é uma 2ª aba, separada do fluxo de
+         edição por conjunto (não é mais um conjunto de dado, é uma visão de leitura do
+         log de auditoria — tools/sql/2026-08_auditoria.sql). -->
+    <div class="vista-toggle">
+      <button type="button" id="btn-aba-dados" class="ativo">Editar dados</button>
+      <button type="button" id="btn-aba-historico">Histórico</button>
+    </div>
+
+    <div id="aba-dados">
+      <p class="pagina-sub" id="ed-sub">Edite abaixo, gere o arquivo atualizado e substitua o correspondente na pasta <span class="ed-mono">data/</span> do repositório. Nada é salvo automaticamente nesta página.</p>
+      <section class="cartao">
+        <div class="ed-topo">
+          <label for="ed-conjunto" style="font:600 13px 'DM Sans',sans-serif">Conjunto:</label>
+          <select id="ed-conjunto" aria-label="Escolher conjunto de dados"></select>
+          <button id="ed-baixar" class="ed-btn">Gerar e baixar arquivo atualizado</button>
+        </div>
+        <div id="ed-area"></div>
+        <textarea id="ed-saida" class="ed-saida" spellcheck="false" placeholder="O conteúdo do arquivo gerado aparece aqui para conferência."></textarea>
+        <div class="ed-passos" id="ed-passos"><strong>Como publicar a mudança</strong><br>
+        1. Baixe o arquivo gerado e substitua o de mesmo nome em <code>data/</code>.<br>
+        2. Valide: <code>python3 tools/validar_dados.py</code>.<br>
+        3. Publique: <code>git add data/ &amp;&amp; git commit -m "atualiza dados" &amp;&amp; git push</code> — o Vercel redistribui sozinho.</div>
+      </section>
+    </div>
+
+    <div id="aba-historico" style="display:none">
+      <p class="pagina-sub">Últimas 100 alterações nas 4 tabelas editáveis (plano, agenda, atividades por iniciativa, matriz de demandas) — quem mudou o quê e quando.</p>
+      <div class="filtros">
+        <select id="hist-tabela" aria-label="Filtrar por tabela">
+          <option value="">Todas as tabelas</option>
+          <option value="meta_inovacao_plano_acoes">Plano de ação</option>
+          <option value="meta_inovacao_agenda_encontros">Agenda</option>
+          <option value="plano_acao_atividades">Atividades por iniciativa</option>
+          <option value="meta_inovacao_matriz_demandas">Matriz de demandas</option>
+        </select>
+        <select id="hist-autor" aria-label="Filtrar por autor"><option value="">Todos os autores</option></select>
+        <button type="button" id="hist-recarregar" class="btn sec">Recarregar</button>
       </div>
-      <div id="ed-area"></div>
-      <textarea id="ed-saida" class="ed-saida" spellcheck="false" placeholder="O conteúdo do arquivo gerado aparece aqui para conferência."></textarea>
-      <div class="ed-passos" id="ed-passos"><strong>Como publicar a mudança</strong><br>
-      1. Baixe o arquivo gerado e substitua o de mesmo nome em <code>data/</code>.<br>
-      2. Valide: <code>python3 tools/validar_dados.py</code>.<br>
-      3. Publique: <code>git add data/ &amp;&amp; git commit -m "atualiza dados" &amp;&amp; git push</code> — o Vercel redistribui sozinho.</div>
-    </section>
+      <div class="card" id="hist-lista"></div>
+    </div>
+
+    <div id="cc-editor-rodape-wrap"></div>
   </main>
 </div>
 <script src="data/config.js"></script>
@@ -76,6 +116,7 @@
 <script src="js/db-plano.js"></script>
 <script src="js/db-agenda.js"></script>
 <script src="js/responsaveis.js"></script>
+<script src="js/editor_atual.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/canais.js"></script>
@@ -87,6 +128,7 @@
 <script src="data/urc.js"></script>
 <script src="data/changelog.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/status.js"></script>
 <script src="js/core.js"></script>
 <script src="js/busca.js"></script>
 <script src="js/editor_io.js"></script>
@@ -124,16 +166,9 @@ const ROTULO_CEL  = {"":"—","previsto":"previsto","oficina":"oficina feita","f
 const W = JSON.parse(JSON.stringify({ matriz:DB.matriz, pessoas:DB.pessoas, projetos:DB.projetos,
   urc_lideranca:DB.urc_lideranca, urc_canais:DB.urc_canais }));
 
-// mesmo prompt de "seu nome/iniciais" de demandas.html (window.prompt + localStorage,
-// chave compartilhada "editor_nome") — identifica quem editou cada linha (updated_by).
-function nomeEditor(){
-  let nome = localStorage.getItem("editor_nome");
-  if(!nome){
-    nome = (window.prompt("Seu nome ou iniciais, pra identificar suas edições:") || "").trim();
-    if(nome) localStorage.setItem("editor_nome", nome);
-  }
-  return nome || "anônimo";
-}
+// item 3.4 do plano de melhorias — identificação de quem edita agora é o módulo
+// compartilhado window.EDITOR_ATUAL (js/editor_atual.js), com rodapé "Editando
+// como…" (montado mais abaixo) em vez do prompt único de antes.
 
 // estado ao vivo do plano e da agenda — carregado sob demanda na primeira vez que o
 // conjunto é selecionado (DB_PLANO.carregar()/DB_AGENDA.carregar(), com fallback pro
@@ -253,7 +288,7 @@ async function renderPlano(){
       if(a) a[campo] = campo==="prazo_iso" && t.value.trim()==="" ? null : t.value;
       marcarLinhaStatus(tr,"salvando");
       try {
-        await DB_PLANO.salvar(id, { [coluna]: valorColuna }, nomeEditor());
+        await DB_PLANO.salvar(id, { [coluna]: valorColuna }, EDITOR_ATUAL.nomeAtual());
         marcarLinhaStatus(tr,"salvo");
       } catch(err){
         console.error("editor: falha ao salvar ação do plano",err);
@@ -315,7 +350,7 @@ async function adicionarAtividade(){
   const btn = document.getElementById("ed-confirmar-nova");
   btn.disabled = true;
   try {
-    const criada = await DB_PLANO.criar(nova, nomeEditor());
+    const criada = await DB_PLANO.criar(nova, EDITOR_ATUAL.nomeAtual());
     planoAtual.push(criada);
     formNovaAberto = false;
     render();
@@ -393,7 +428,7 @@ async function renderAgenda(){
     if(en) en[campo] = valorColuna;
     marcarLinhaStatus(tr,"salvando");
     try {
-      await DB_AGENDA.salvar(en ? en.db_id : dbId, { [coluna]: valorColuna }, nomeEditor());
+      await DB_AGENDA.salvar(en ? en.db_id : dbId, { [coluna]: valorColuna }, EDITOR_ATUAL.nomeAtual());
       marcarLinhaStatus(tr,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar encontro da agenda",err);
@@ -558,6 +593,165 @@ btnBaixar.addEventListener("click", function(){
   document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 400);
 });
+
+// ==================== item 3.4 — aba "Histórico" (log de auditoria) ====================
+const btnAbaDados = document.getElementById("btn-aba-dados");
+const btnAbaHistorico = document.getElementById("btn-aba-historico");
+const elAbaDados = document.getElementById("aba-dados");
+const elAbaHistorico = document.getElementById("aba-historico");
+
+function alternarAba(aba){
+  const historico = aba === "historico";
+  elAbaDados.style.display = historico ? "none" : "";
+  elAbaHistorico.style.display = historico ? "" : "none";
+  btnAbaDados.classList.toggle("ativo", !historico);
+  btnAbaHistorico.classList.toggle("ativo", historico);
+  if(historico && !historicoCarregadoUmaVez){ historicoCarregadoUmaVez = true; carregarHistorico(); }
+}
+btnAbaDados.addEventListener("click", ()=>alternarAba("dados"));
+btnAbaHistorico.addEventListener("click", ()=>alternarAba("historico"));
+
+const TABELAS_HISTORICO = {
+  meta_inovacao_plano_acoes: "Plano de ação",
+  meta_inovacao_agenda_encontros: "Agenda",
+  plano_acao_atividades: "Atividades por iniciativa",
+  meta_inovacao_matriz_demandas: "Matriz de demandas",
+};
+// contexto de js/status.js (CC_STATUS) pro campo "status" de cada tabela — a matriz não
+// tem uma coluna "status" única, tem uma por canal (id do canal), então ela é tratada à
+// parte em valorParaExibicao() abaixo, traduzindo TODO campo que não seja id/iniciativa.
+const CONTEXTO_STATUS_POR_TABELA = {
+  meta_inovacao_plano_acoes: "acao",
+  meta_inovacao_agenda_encontros: "encontro",
+  plano_acao_atividades: "atividade",
+};
+const CAMPOS_IGNORADOS_DIFF = ["updated_at", "created_at", "updated_by", "atualizado_por", "atualizado_em"];
+
+// item 3.2 do prompt — nunca mostra a chave crua (snake_case) de um campo de status;
+// sempre traduz via CC_STATUS.chaveDeEntrada + CC_STATUS.rotulo antes de exibir.
+function valorParaExibicaoHistorico(tabela, campo, valor){
+  if(valor === null || valor === undefined || valor === "") return "—";
+  if(Array.isArray(valor)) return valor.length ? valor.join(", ") : "—";
+  if(typeof valor === "boolean") return valor ? "sim" : "não";
+  if(window.CC_STATUS){
+    if(tabela === "meta_inovacao_matriz_demandas" && campo !== "id" && campo !== "iniciativa"){
+      return CC_STATUS.rotulo(CC_STATUS.chaveDeEntrada("celula_matriz", valor));
+    }
+    if(campo === "status" && CONTEXTO_STATUS_POR_TABELA[tabela]){
+      return CC_STATUS.rotulo(CC_STATUS.chaveDeEntrada(CONTEXTO_STATUS_POR_TABELA[tabela], valor));
+    }
+  }
+  return String(valor);
+}
+
+function diffCampos(anterior, novo){
+  const chaves = new Set([...Object.keys(anterior||{}), ...Object.keys(novo||{})]);
+  const mudou = [];
+  chaves.forEach((c)=>{
+    if(CAMPOS_IGNORADOS_DIFF.includes(c)) return;
+    const a = anterior ? anterior[c] : undefined, n = novo ? novo[c] : undefined;
+    if(JSON.stringify(a) === JSON.stringify(n)) return;
+    mudou.push(c);
+  });
+  return mudou;
+}
+
+function formatarDataHoraHistorico(iso){
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return String(iso);
+  const p = (n)=>String(n).padStart(2,"0");
+  return p(d.getDate())+"/"+p(d.getMonth()+1)+" "+p(d.getHours())+":"+p(d.getMinutes());
+}
+
+function resumoLinhaHistorico(l){
+  if(l.operacao === "INSERT") return '<span class="hist-op-insert">criado</span>';
+  if(l.operacao === "DELETE") return '<span class="hist-op-delete">removido</span>';
+  const mudou = diffCampos(l.valor_anterior, l.valor_novo);
+  if(!mudou.length) return "sem mudança visível";
+  return mudou.map((c)=>
+    esc(c)+": "+esc(valorParaExibicaoHistorico(l.tabela, c, l.valor_anterior && l.valor_anterior[c]))+
+    " → "+esc(valorParaExibicaoHistorico(l.tabela, c, l.valor_novo && l.valor_novo[c]))
+  ).join(", ");
+}
+
+function linhaHtmlHistorico(l){
+  return '<div class="hist-linha"><span class="mono">'+formatarDataHoraHistorico(l.criado_em)+'</span> · '+
+    '<span class="hist-autor">'+esc(l.autor || "—")+'</span> · '+
+    '<span class="mono">'+esc(l.registro_id)+'</span> '+
+    '<span class="hist-resumo">'+resumoLinhaHistorico(l)+'</span></div>';
+}
+
+// modo de teste (?semrede=1/CC_FORCAR_FALLBACK) — mesmo mecanismo de js/db-plano.js. O
+// log em si NÃO tem fallback client-side de verdade (não faz sentido: editar em
+// file:///offline não gera escrita real, então não haveria nada real pra "cair" pra um
+// seed) — este mock existe só pra exercitar a RENDERIZAÇÃO (formatação de data/hora,
+// diff de campos, tradução de status via CC_STATUS.rotulo, filtros) sem bater no
+// Supabase de produção durante os testes headless.
+function forcarFallbackHistorico(){
+  if(window.CC_FORCAR_FALLBACK) return true;
+  try { return new URLSearchParams(location.search).get("semrede") === "1"; } catch(e){ return false; }
+}
+const MOCK_HISTORICO = [
+  { id:1, tabela:"meta_inovacao_plano_acoes", registro_id:"CMT-02", operacao:"UPDATE",
+    valor_anterior:{ status:"nao_iniciado" }, valor_novo:{ status:"em_andamento" },
+    autor:"JR.", criado_em:"2026-08-12T15:42:00Z" },
+  { id:2, tabela:"plano_acao_atividades", registro_id:"42", operacao:"INSERT",
+    valor_anterior:null, valor_novo:{ descricao:"Nova atividade de teste", status:"nao_iniciado" },
+    autor:"Sandra", criado_em:"2026-08-12T10:05:00Z" },
+  { id:3, tabela:"meta_inovacao_matriz_demandas", registro_id:"9", operacao:"DELETE",
+    valor_anterior:{ iniciativa:"Sebraetec", cnr:"previsto" }, valor_novo:null,
+    autor:"JR.", criado_em:"2026-08-11T09:00:00Z" },
+];
+
+let historicoCarregadoUmaVez = false;
+let historicoBruto = []; // últimas 100 (ou menos, já filtradas por tabela) vindas do Supabase/mock
+
+function montarOpcoesAutorHistorico(){
+  const sel = document.getElementById("hist-autor");
+  const atual = sel.value;
+  const autores = [...new Set(historicoBruto.map((l)=>l.autor).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todos os autores</option>' +
+    autores.map((a)=>'<option value="'+esc(a)+'"'+(a===atual?" selected":"")+'>'+esc(a)+'</option>').join("");
+}
+
+function renderHistoricoFiltrado(){
+  const painel = document.getElementById("hist-lista");
+  const autorFiltro = document.getElementById("hist-autor").value;
+  const lista = autorFiltro ? historicoBruto.filter((l)=>l.autor===autorFiltro) : historicoBruto;
+  painel.innerHTML = lista.length ? lista.map(linhaHtmlHistorico).join("") : '<div class="ed-carregando">Nenhuma alteração registrada ainda.</div>';
+}
+
+async function carregarHistorico(){
+  const painel = document.getElementById("hist-lista");
+  painel.innerHTML = '<div class="ed-carregando">Carregando…</div>';
+  const tabelaFiltro = document.getElementById("hist-tabela").value;
+
+  if(forcarFallbackHistorico()){
+    historicoBruto = tabelaFiltro ? MOCK_HISTORICO.filter((l)=>l.tabela===tabelaFiltro) : MOCK_HISTORICO.slice();
+    montarOpcoesAutorHistorico();
+    renderHistoricoFiltrado();
+    return;
+  }
+  try {
+    const supa = await CC_SUPABASE.obterClienteEsm();
+    let q = supa.from("meta_inovacao_audit_log").select("*").order("criado_em", { ascending:false }).limit(100);
+    if(tabelaFiltro) q = q.eq("tabela", tabelaFiltro);
+    const { data, error } = await q;
+    if(error) throw error;
+    historicoBruto = data || [];
+    montarOpcoesAutorHistorico();
+    renderHistoricoFiltrado();
+  } catch(err){
+    console.error("editor: falha ao carregar histórico", err);
+    painel.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar o histórico — '+esc((err&&err.message)||String(err))+
+      '.<br>Confira se <span class="mono">tools/sql/2026-08_auditoria.sql</span> já foi rodado no SQL Editor.</div>';
+  }
+}
+document.getElementById("hist-tabela").addEventListener("change", carregarHistorico);
+document.getElementById("hist-autor").addEventListener("change", renderHistoricoFiltrado);
+document.getElementById("hist-recarregar").addEventListener("click", carregarHistorico);
+
+EDITOR_ATUAL.montar(document.getElementById("cc-editor-rodape-wrap"));
 })();
 </script>
 </body>

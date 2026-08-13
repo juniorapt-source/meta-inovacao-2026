@@ -246,6 +246,20 @@ tr.detalhe td{background:rgba(43,38,32,.02);border-left:3px solid var(--accent);
   background:var(--surface);font-family:'DM Sans';color:var(--ink)}
 .filtros input{min-width:200px}
 
+/* item 3.4 — rodapé "Editando como…" nas telas de escrita (editor.html/demandas.html/
+   plano-acao.html/plano.html), window.EDITOR_ATUAL (js/editor_atual.js) */
+.cc-editor-rodape{margin-top:22px;padding-top:12px;border-top:1px solid var(--linha);
+  font-size:12.5px;color:var(--grafite);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cc-editor-rodape b{color:var(--tinta)}
+.cc-editor-rodape .cc-editor-link{background:none;border:0;padding:0;color:var(--azul);
+  text-decoration:underline;cursor:pointer;font:inherit}
+.cc-editor-form{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cc-editor-form select,.cc-editor-form input[type=text]{font:400 12.5px 'DM Sans',sans-serif;
+  padding:5px 7px;border:1px solid var(--linha);border-radius:0;background:var(--branco);color:var(--tinta)}
+.cc-editor-form button{font:600 11px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.04em;
+  padding:5px 10px;border-radius:0;border:1px solid var(--linha);background:var(--branco);color:var(--tinta);cursor:pointer}
+.cc-editor-form button:hover{background:var(--ceu)}
+
 /* ---- matriz ---- */
 /* fundo sólido explícito — sem isso a textura quadriculada do body (e a rosa dos ventos
    de .conteudo::before) aparecem atrás das células sem cor própria (ex.: os "gaps" ao

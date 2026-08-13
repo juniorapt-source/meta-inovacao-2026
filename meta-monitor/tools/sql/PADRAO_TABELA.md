@@ -38,9 +38,22 @@ ligado, policy criada) e só quebra em produção contra o client de verdade.
 6. **Trigger de `updated_at`** via `cc_touch_updated_at()` (reaproveitar a função com
    `CREATE OR REPLACE FUNCTION` — idempotente, segura de repetir em todo script) —
    só se a tabela tiver coluna `updated_at`.
-7. **Trigger de auditoria** via `cc_audit` — a partir do P13, quando essa função/tabela
-   (`meta_inovacao_audit_log`) existir. Até lá, este item fica marcado como pendente no
-   script (comentário), não implementado.
+7. **Trigger de auditoria** via `cc_audit()` (`tools/sql/2026-08_auditoria.sql`, P13) —
+   `AFTER INSERT OR UPDATE OR DELETE ... FOR EACH ROW EXECUTE FUNCTION public.cc_audit()`.
+   Só entra nas 4 tabelas "editáveis de verdade" (hoje: `meta_inovacao_plano_acoes`,
+   `meta_inovacao_agenda_encontros`, `plano_acao_atividades`,
+   `meta_inovacao_matriz_demandas`) — não é obrigatório em toda tabela nova por padrão;
+   avaliar caso a caso se a tabela nova entra nesse grupo.
+
+## Exceção: tabelas cuja leitura NÃO é pública
+
+O item 4 acima (`cc_select_publico`, `USING (true)`) é o padrão — mas `SELECT` público
+nem sempre é certo. `meta_inovacao_audit_log` (P13) é a primeira exceção: é um log de
+quem mudou o quê, sensível o bastante pra exigir o mesmo token de escrita também pra
+LER, não só pra gravar. Nesses casos: troque a policy por `cc_token_select`
+(`FOR SELECT TO anon USING (current_setting('request.headers', true)::json->>'x-cc-token' = '<TOKEN>')`)
+em vez de `cc_select_publico`, e documente a exceção num comentário no topo do script —
+sem isso, quem ler o script depois assume o padrão errado.
 
 ## Template mínimo (copiar como base para tabela nova)
 

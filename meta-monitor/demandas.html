@@ -84,6 +84,10 @@
     </div>
 
     <div class="mz-rodape largura-desktop" id="mz-rodape"></div>
+
+    <!-- item 3.4 — a edição em si já é desktop-only (aviso no topo desta página), então
+         o rodapé "Editando como…" segue a mesma regra. -->
+    <div id="cc-editor-rodape-wrap" class="largura-desktop"></div>
   </main>
 </div>
 <div class="mz-badge-rt" id="mz-badge-rt"></div>
@@ -106,6 +110,7 @@
 <script src="js/busca.js"></script>
 <script src="js/drawer.js"></script>
 <script src="js/matriz-store.js"></script>
+<script src="js/editor_atual.js"></script>
 <script>
 (function(){
   "use strict";
@@ -135,14 +140,9 @@
   const elRodape = document.getElementById("mz-rodape");
   const elBadge = document.getElementById("mz-badge-rt");
 
-  function nomeEditor() {
-    let nome = localStorage.getItem("editor_nome");
-    if (!nome) {
-      nome = (window.prompt("Seu nome ou iniciais, pra identificar suas edições na matriz:") || "").trim();
-      if (nome) localStorage.setItem("editor_nome", nome);
-    }
-    return nome || "anônimo";
-  }
+  // item 3.4 do plano de melhorias — identificação de quem edita agora é o módulo
+  // compartilhado window.EDITOR_ATUAL (js/editor_atual.js), com rodapé "Editando
+  // como…" (montado mais abaixo) em vez do prompt único de antes.
 
   function fallbackLocal() {
     usandoFallback = true;
@@ -260,7 +260,7 @@
     const td = sel.closest("td");
     td.classList.remove("cel-salvo", "cel-falhou"); td.classList.add("cel-salvando");
     try {
-      const usuario = nomeEditor();
+      const usuario = EDITOR_ATUAL.nomeAtual();
       const atualizado = await window.matrizStore.saveCell(id, campo, valor, usuario);
       const linha = linhas.find(l => String(l.id) === id);
       if (linha) Object.assign(linha, atualizado);
@@ -298,7 +298,7 @@
       const dados = { iniciativa: nome };
       CANAL_IDS.forEach(c => { dados[c] = ""; });
       try {
-        const nova = await window.matrizStore.addRow(dados, nomeEditor());
+        const nova = await window.matrizStore.addRow(dados, EDITOR_ATUAL.nomeAtual());
         linhas.push(nova);
         renderTudo();
       } catch (err) {
@@ -332,11 +332,11 @@
     if (usandoFallback) { window.alert("Edição desativada: sem conexão com o Supabase, a matriz está em modo somente leitura."); return; }
     editando = !editando;
     e.target.textContent = editando ? "Sair da edição" : "Ativar edição";
-    if (editando) nomeEditor();
     renderTudo();
   });
 
   carregar(false);
+  EDITOR_ATUAL.montar(document.getElementById("cc-editor-rodape-wrap"));
 })();
 </script>
 </body>
