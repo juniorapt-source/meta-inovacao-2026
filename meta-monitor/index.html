@@ -49,7 +49,7 @@
       </div>
     </section>
 
-    <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:26px" id="duas-colunas">
+    <div class="grid duas-colunas" id="duas-colunas">
       <section>
         <h2 style="font-size:16px;margin-bottom:10px">Atrasadas agora</h2>
         <div class="card" id="atrasadas"></div>
@@ -270,8 +270,9 @@
       '<span class="chip ' + cls + '">' + rot + "</span></a>";
   }
 
-  if (window.matchMedia("(max-width:960px)").matches)
-    document.getElementById("duas-colunas").style.gridTemplateColumns = "1fr";
+  // empilhar "Atrasadas agora"/"Próximos 7 dias" em telas estreitas agora é só CSS
+  // (.duas-colunas, media query em css/base.css) — o matchMedia + style.gridTemplateColumns
+  // daqui saiu de propósito (item 2.5 do plano de melhorias: preferir CSS a JS pra isso).
 })();
 </script>
 </body>

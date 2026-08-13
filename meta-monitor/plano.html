@@ -17,6 +17,18 @@
 .tabela-ordenavel th .ord-ind{display:inline-block;margin-left:4px;font-size:9px;color:var(--grafite);width:8px}
 .tabela-ordenavel th[data-key].ord-ativo{color:var(--accent)}
 .tabela-ordenavel th[data-key].ord-ativo .ord-ind{color:var(--accent)}
+
+/* item 2.2 (mobile) — card empilhado: ID + atividade em cima, frente logo abaixo,
+   responsável/prazo/status embaixo. O mecanismo genérico (table.tabela-cards) é de
+   css/base.css; a ORDEM dos campos é só desta página (agenda.html não reordena). */
+@media (max-width:767px){
+  .tabela-ordenavel td:nth-child(1){order:1;font-weight:600}
+  .tabela-ordenavel td:nth-child(3){order:2;font-size:14px}
+  .tabela-ordenavel td:nth-child(2){order:3;font-size:11.5px;color:var(--grafite)}
+  .tabela-ordenavel td:nth-child(4){order:4}
+  .tabela-ordenavel td:nth-child(5){order:5}
+  .tabela-ordenavel td:nth-child(6){order:6;margin-top:2px}
+}
 </style>
 </head>
 <body>
@@ -44,7 +56,7 @@
     </div>
 
     <div class="card" style="padding:0;overflow:auto">
-      <table class="tabela-ordenavel">
+      <table class="tabela-ordenavel tabela-cards">
         <thead><tr>
           <th data-key="id" tabindex="0" role="button" aria-sort="none">ID<span class="ord-ind" aria-hidden="true"></span></th>
           <th data-key="frente" tabindex="0" role="button" aria-sort="none">Frente<span class="ord-ind" aria-hidden="true"></span></th>
@@ -139,8 +151,8 @@
         '<td class="mono" style="font-size:12px;white-space:nowrap">' + a.id + ccChip(a) + "</td>" +
         "<td>" + esc(a.frente.replace(/^\d+\.\s*/, "")) + '<div style="color:var(--grafite);font-size:11.5px">' + esc(a.sub) + "</div></td>" +
         "<td>" + esc(a.atividade) + "</td>" +
-        "<td>" + esc(a.resp) + "</td>" +
-        '<td class="mono" style="font-size:12px;white-space:nowrap">' + esc(a.prazo || "—") + "</td>" +
+        '<td data-label="Responsável">' + esc(a.resp) + "</td>" +
+        '<td class="mono" data-label="Prazo" style="font-size:12px;white-space:nowrap">' + esc(a.prazo || "—") + "</td>" +
         '<td><span class="chip ' + cls + '">' + rot + "</span></td></tr>";
       html += '<tr class="detalhe" data-det="' + a.id + '" hidden><td colspan="6">' +
         '<div style="margin-bottom:10px;font-size:12.5px"><b style="color:var(--grafite)">Depende de:</b> ' +

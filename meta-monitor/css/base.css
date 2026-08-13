@@ -102,6 +102,9 @@ a{color:inherit;text-decoration:none} a:hover{color:var(--accent);text-decoratio
 .card{background:var(--surface);border:1px solid var(--border);border-radius:0;padding:16px 18px}
 .grid{display:grid;gap:14px}
 .kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;border:1px solid var(--border);background:var(--surface)}
+/* index.html — "Atrasadas agora"/"Próximos 7 dias" lado a lado (era style="" inline;
+   virou classe pra a media query de mobile poder sobrepor sem precisar de !important) */
+.duas-colunas{grid-template-columns:1fr 1fr;margin-top:26px}
 .card.kpi{border:0;border-radius:0;background:transparent;border-left:1px solid var(--border-soft);border-top:1px solid var(--border-soft)}
 .kpi .n{font-family:var(--font-sans);font-weight:300;font-size:56px;line-height:1;color:var(--ink)}
 .kpi .l{font-family:'DM Sans';font-weight:600;font-size:11px;color:var(--ink-2);margin-top:8px;
@@ -204,16 +207,83 @@ tr.detalhe td{background:rgba(43,38,32,.02);border-left:3px solid var(--accent);
 .btn.sec:hover{background:#e1d7c0}
 .btn:focus-visible{outline-offset:3px}
 
-@media (max-width:960px){
-  .shell{grid-template-columns:1fr}
-  .nav{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:2px;padding:12px 14px}
-  .nav .marca{width:100%;margin-bottom:6px} .nav .marca small{display:inline;margin-left:6px}
-  .nav a{font-size:12.5px;padding:6px 9px} .nav .rodape{display:none} .nav .grupo-titulo{display:none}
+/* ---- mobile: menu hambúrguer (item 2.5 do plano de melhorias) ----
+   header/backdrop são injetados por window.montarShell (js/core.js) em TODAS as páginas —
+   zero mudança de HTML por página pra isso (o "shell" já é a mesma casca compartilhada em
+   todo lugar). Escondidos no desktop; só existem de verdade abaixo de 768px. */
+.mob-header{display:none}
+.mob-backdrop{display:none}
+/* idem — .aviso-mobile (demandas.html/corsario.html, item 2.4) só existe abaixo de
+   768px; escondida por padrão AQUI (fora da media query) porque um <div> sem "display"
+   nenhum já nasce display:block por padrão do navegador — só a regra de dentro da media
+   query não bastaria em desktop. */
+.aviso-mobile{display:none}
+
+@media (max-width:767px){
+  .mob-header{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;
+    background:var(--ink);color:#f4efe4;padding:13px 16px;font-family:var(--font-sans);font-weight:600;font-size:16px}
+  .mob-menu-btn{background:none;border:1px solid rgba(244,239,228,.35);color:#f4efe4;font-size:17px;line-height:1;
+    padding:6px 12px;cursor:pointer;border-radius:0;font-family:var(--font-sans)}
+  .mob-menu-btn:focus-visible{outline-offset:2px}
+  .mob-backdrop.show{display:block;position:fixed;inset:0;background:rgba(43,38,32,.55);z-index:45;
+    opacity:1;transition:opacity .2s ease}
+
+  /* .shell ganha uma 2ª linha (header + conteúdo) só no mobile — align-content:start
+     evita que o align-content:stretch padrão do grid divida o "sobrou de min-height:100vh"
+     entre as duas linhas quando o conteúdo é curto (ex.: demandas.html com a Matriz
+     escondida): sem isso, o header hambúrguer esticava pra ocupar metade da tela. */
+  .shell{grid-template-columns:1fr;align-content:start}
+  /* o sidebar vira painel deslizante (overlay) em vez de coluna fixa — mesmo conteúdo/
+     mesma folha de estilo do desktop (marca/grupos/links/rodapé), só a POSIÇÃO muda */
+  .nav{position:fixed;top:0;left:0;height:100vh;width:82vw;max-width:300px;z-index:50;
+    transform:translateX(-101%);transition:transform .22s ease;box-shadow:var(--sombra)}
+  .nav.aberto{transform:translateX(0)}
+
   .conteudo{padding:18px 14px 50px}
   .pagina-titulo::before{display:none}
   .conteudo::before{width:200px;height:200px;top:-8px;left:-8px}
   .conteudo::after{width:120px;height:120px}
   .trilho .nos{grid-template-columns:repeat(4,1fr);gap:14px} .trilho .linha-base{display:none}
   .det-grid{grid-template-columns:1fr}
+
+  /* item 2.1 — KPIs em grade 2 colunas (.kpi-largo continua ocupando as 2, span:2) */
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  /* item 2.1 — "Atrasadas agora"/"Próximos 7 dias" empilhadas (era feito via JS +
+     matchMedia em index.html; migrado pra CSS puro aqui — .duas-colunas substitui o
+     style="grid-template-columns:1fr 1fr" inline que existia antes) */
+  .duas-colunas{grid-template-columns:1fr}
+
+  /* item 2.2/2.3 — tabela vira lista de cards empilhados: uma linha (tr) = um card.
+     Marcador .tabela-cards nas tabelas que entram nesse tratamento (plano.html,
+     agenda.html); a ordem de campos dentro do card é ajustada por página via
+     td:nth-child(N){order:...} no <style> de cada uma — aqui só o mecanismo genérico. */
+  table.tabela-cards thead{display:none}
+  table.tabela-cards,table.tabela-cards tbody{display:block}
+  table.tabela-cards tr{display:flex;flex-direction:column;gap:3px;background:var(--surface);
+    border:1px solid var(--border);margin-bottom:10px;padding:11px 13px}
+  table.tabela-cards tr td{display:block;border:0;padding:2px 0}
+  table.tabela-cards tr td[data-label]::before{content:attr(data-label) ": ";font-weight:700;
+    color:var(--ink-2);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+  table.tabela-cards tr.detalhe{display:block;border:0;background:transparent;margin:-6px 0 10px;padding:0}
+  table.tabela-cards tr.detalhe td{display:block;padding:0 13px 12px}
+
+  /* item 2.2 — minhas-acoes.html: cada .ma-linha (nó/ação/atividade) já é uma linha
+     flex de largura total; em coluna, cada campo vira sua própria linha do card —
+     mesmo mecanismo de card empilhado, sem precisar de <table> pra isso */
+  .ma-linha{flex-direction:column;align-items:stretch;gap:2px;padding:11px 0}
+
+  /* item 2.2 — filtros em largura total, empilhados (vale em toda página que usa
+     .filtros: plano.html, projetos.html, corsario.html...) */
+  .filtros{flex-direction:column;align-items:stretch}
+  .filtros select,.filtros input{width:100%}
+
+  /* item 2.4 — Matriz de demandas (demandas.html) e a visão Matriz do Corsário ficam
+     desktop-only; aviso amigável + link pras demais visões entra no lugar. !important
+     de propósito: é uma classe utilitária de "esconder não importa o quê" — sem ele,
+     regras de display sem media query definidas DEPOIS de css/base.css no <style> de
+     cada página (ex.: .mz-topo{display:flex}) venceriam no empate de especificidade
+     só por causa da ordem de carregamento, e o aviso nunca apareceria de verdade. */
+  .largura-desktop{display:none!important}
+  .aviso-mobile.mostrar{display:block}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

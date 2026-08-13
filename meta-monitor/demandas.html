@@ -38,7 +38,18 @@
     <h1 class="pagina-titulo">Matriz de demandas</h1>
     <p class="pagina-sub">27 iniciativas × 10 canais. É aqui que o micro vira visível: oficina feita → formulário em 5 dias úteis (ou justificativa) → priorização do Comitê → encaminhado à URC. C1 até 01/09 · C2 até 30/09.</p>
 
-    <div class="card" style="margin-bottom:14px" id="legenda">
+    <!-- item 2.4 do plano de melhorias — Matriz é desktop-only abaixo de 768px: a tabela
+         não cabe em card nenhum sem virar sopa de letrinhas (27 iniciativas × 10 canais),
+         então em vez de forçar um layout ruim, mostra um aviso e manda pra outras páginas.
+         .largura-desktop some no mobile (css/base.css); .aviso-mobile.mostrar só aparece
+         lá — "mostrar" fica sempre presente porque esta página inteira É a Matriz (não há
+         uma visão alternativa dela mesma pra alternar, diferente do Corsário). -->
+    <div class="aviso aviso-mobile mostrar" id="mz-aviso-mobile">
+      <b>Esta carta é grande demais para o bolso</b> — abra num monitor pra ver a Matriz de demandas completa (27 iniciativas × 10 canais).
+      Enquanto isso: <a href="index.html">Dashboard</a> · <a href="plano.html">Plano de ação</a> · <a href="minhas-acoes.html">Minhas ações</a>.
+    </div>
+
+    <div class="card largura-desktop" style="margin-bottom:14px" id="legenda">
       <b style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite)">Fluxo da célula</b>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px;align-items:center">
         <span class="cel cel-vazia" style="width:auto;padding:3px 10px">—</span>→
@@ -57,7 +68,7 @@
       <div id="resumo" style="margin-top:10px;font-size:13px;color:var(--grafite)"></div>
     </div>
 
-    <div class="mz-topo">
+    <div class="mz-topo largura-desktop">
       <div class="mz-status" id="mz-status">Carregando…</div>
       <div class="mz-acoes">
         <button type="button" class="btn sec" id="mz-atualizar">Atualizar</button>
@@ -66,13 +77,13 @@
       </div>
     </div>
 
-    <div id="mz-estado"></div>
+    <div id="mz-estado" class="largura-desktop"></div>
 
-    <div class="matriz-wrap" id="mz-wrap" style="display:none">
+    <div class="matriz-wrap largura-desktop" id="mz-wrap" style="display:none">
       <table class="matriz"><thead id="cab"></thead><tbody id="matriz"></tbody></table>
     </div>
 
-    <div class="mz-rodape" id="mz-rodape"></div>
+    <div class="mz-rodape largura-desktop" id="mz-rodape"></div>
   </main>
 </div>
 <div class="mz-badge-rt" id="mz-badge-rt"></div>

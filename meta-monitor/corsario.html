@@ -177,7 +177,16 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     </div>
 
     <div class="crs-grid" id="crs-grid" style="display:none"></div>
-    <div class="crs-matriz-wrap" id="crs-matriz-wrap">
+    <!-- item 2.4 do plano de melhorias — visão Matriz é desktop-only abaixo de 768px
+         (a visão Cards continua normal no mobile, essa aqui que não cabe em tela
+         estreita). .mostrar é ligado/desligado pelo JS junto com a troca de visão
+         (renderTudo) — sem isso, o aviso apareceria também quando Cards estivesse
+         ativa, o que seria enganoso (a visão ativa nem é a Matriz). -->
+    <div class="aviso aviso-mobile" id="crs-aviso-mobile">
+      <b>Esta carta é grande demais para o bolso</b> — abra num monitor pra ver a Matriz completa.
+      A visão <a href="#cards">Cards</a> funciona bem no celular.
+    </div>
+    <div class="crs-matriz-wrap largura-desktop" id="crs-matriz-wrap">
       <table class="crs-matriz" id="crs-matriz"></table>
     </div>
     <p class="crs-contagem" id="crs-contagem"></p>
@@ -343,6 +352,7 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
   const elGrid = document.getElementById("crs-grid");
   const elMatrizWrap = document.getElementById("crs-matriz-wrap");
   const elMatriz = document.getElementById("crs-matriz");
+  const elAvisoMobile = document.getElementById("crs-aviso-mobile");
   const elContagem = document.getElementById("crs-contagem");
 
   let TODAS = [];      // uma entrada por iniciativa, com os 19 status já carregados e a régua já calculada
@@ -551,6 +561,7 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
   function renderTudo() {
     const lista = listaFiltrada();
     elContagem.textContent = lista.length + " de " + TODAS.length + " iniciativas exibidas.";
+    elAvisoMobile.classList.toggle("mostrar", visao === "matriz");
     if (visao === "matriz") {
       elGrid.style.display = "none";
       elMatrizWrap.style.display = "";

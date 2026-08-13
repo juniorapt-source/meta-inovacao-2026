@@ -1,5 +1,72 @@
 # Changelog
 
+## v0.13.0 — 2026-08-13
+Prompt 7 do plano de melhorias (item 2.5): responsividade mobile — sidebar vira menu
+hambúrguer abaixo de 768px, tabelas viram cards empilhados, Matriz fica desktop-only com
+aviso amigável. Máximo de CSS, mínimo de HTML — ver detalhe por tarefa.
+
+- **Sidebar → menu hambúrguer** — `js/core.js` (`montarShell`) passa a injetar um
+  `.mob-header` (título + botão ☰) e um `.mob-backdrop` dentro do `.shell` de TODA página
+  automaticamente — zero mudança de HTML por página só pra isso (a casca `.shell` já é
+  compartilhada). Abaixo de 768px, `.nav` vira painel `position:fixed` fora da tela
+  (`transform:translateX`) que desliza por cima do conteúdo ao abrir; fecha ao clicar no
+  botão, no backdrop, num link do menu ou com Esc. Rodapé de versão continua dentro do
+  painel aberto (a regra antiga que escondia `.nav .rodape` no breakpoint velho de 960px
+  não existe mais — o painel mobile é literalmente o mesmo `<nav>` do desktop, só
+  reposicionado). O breakpoint de 960px do painel anterior (nav virava chips horizontais)
+  foi substituído por este de 768px, que é o pedido neste prompt — de 768px pra cima o
+  site continua exatamente como sempre foi.
+- **`index.html`** — `#kpis` em grade de 2 colunas; `#duas-colunas` ("Atrasadas agora" /
+  "Próximos 7 dias") empilha em 1 coluna. O empilhamento era feito via
+  `window.matchMedia(...).matches` + `style.gridTemplateColumns` no carregamento da
+  página — saiu; virou classe (`.duas-colunas`, substitui o `style=""` inline que
+  impedia a media query de fazer efeito) + CSS puro (item 2.5 pede isso explicitamente).
+- **`plano.html`/`agenda.html`** — tabela vira pilha de cards abaixo de 768px (mecanismo
+  genérico `table.tabela-cards` em `css/base.css`, ordem dos campos por página via
+  `td:nth-child(N){order:...}`): em `plano.html`, ID + atividade em cima, frente logo
+  abaixo, responsável/prazo/status embaixo — os dois últimos ganham `data-label` (pedido
+  explícito do prompt: "onde inevitável, atributos data-* pros rótulos dos cards") pro
+  `::before{content:attr(data-label)}` rotular o campo sem precisar de mais marcação.
+  `agenda.html` segue a ordem natural das colunas (Canal, Pauta, Data, Local, Confirmações,
+  Status já lêem bem de cima pra baixo), com `data-label` em Data/Local/Confirmações.
+- **`minhas-acoes.html`** — não tem `<table>` (já eram linhas `.ma-linha` flex), mas o
+  mesmo problema de largura existia; `.ma-linha{flex-direction:column}` no mobile resolve
+  igual, sem precisar de marcação nova.
+- **`.filtros` empilhados em largura total** — vale em toda página que usa a classe
+  (`plano.html`, `projetos.html`, `corsario.html`...), não só nas citadas no prompt.
+- **Matriz desktop-only** (`demandas.html` + visão Matriz de `corsario.html`) — aviso
+  "Esta carta é grande demais para o bolso — abra num monitor" + links pras demais
+  páginas, no lugar da tabela. `demandas.html`: `.largura-desktop` nos blocos
+  (`.mz-topo`, `#mz-estado`, `.matriz-wrap`, `.mz-rodape`, `#legenda`), aviso sempre
+  presente (a página inteira É a Matriz). `corsario.html`: só a visão Matriz esconde (a
+  visão Cards continua normal no mobile) — `elAvisoMobile.classList.toggle("mostrar",
+  visao === "matriz")` em `renderTudo()`, mesmo lugar que já decide qual visão está ativa.
+  - **2 bugs achados e corrigidos durante a implementação** (pegos só ao tirar screenshot
+    real, não só checar propriedades isoladas — registrado aqui porque é o tipo de coisa
+    que passaria despercebida numa checagem só textual): (1) `.mob-backdrop.show` só
+    mudava `opacity`, nunca `display` — o backdrop (que nasce `display:none`) nunca
+    aparecia de verdade. (2) `.shell` mantém `min-height:100vh` do desktop; a versão
+    mobile ganhou uma 2ª linha de grid (header + conteúdo) e o `align-content:stretch`
+    padrão do CSS Grid distribuía o espaço sobrando de `min-height:100vh` entre as duas
+    linhas quando o conteúdo era curto — em `demandas.html`, com a Matriz escondida, o
+    header hambúrguer esticava pra ~284px de altura. Corrigido com
+    `.shell{align-content:start}` no mobile. Um 3º achado, de especificidade CSS pura
+    (sem chegar a aparecer errado numa tela, mas travava a lógica): `.largura-desktop`
+    (utilitário de esconder) perdia de regras sem media query definidas depois de
+    `css/base.css` no `<style>` de cada página (ex.: `.mz-topo{display:flex}`) no empate
+    de especificidade, por causa da ordem de carregamento — `!important` na classe
+    utilitária resolve (uso legítimo: "esconder não importa o quê").
+- `tools/testar_mobile_headless.js` — 11º teste do repo: viewport 390×844
+  (`Emulation.setDeviceMetricsOverride`), confere hambúrguer abrindo/fechando (clique,
+  backdrop, link, `aria-expanded`), KPIs em 2 colunas, `plano.html` com as 47 ações
+  ainda todas lá (só como cards), `agenda.html` idem, e a Matriz (demandas.html + visão
+  Matriz do Corsário) mostrando o aviso — com a visão Cards do Corsário continuando
+  normal.
+- Validado com Chrome headless real em dois viewports (1440×900 e 390×844, com
+  screenshot de cada): sidebar/hambúrguer, KPIs, cards de `plano.html`/`agenda.html`,
+  aviso de `demandas.html`, `minhas-acoes.html`; suíte completa (11 testes) passando em
+  ambos os viewports sem alterar nenhum valor calculado.
+
 ## v0.12.0 — 2026-08-13
 Prompt 9 do plano de melhorias (item 2.7): terceira visão em `agenda.html` — TIMELINE.
 

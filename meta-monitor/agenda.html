@@ -156,9 +156,9 @@
       "<td><b>" + esc(c.nome) + '</b><div style="color:var(--grafite);font-size:11.5px">' + esc(c.formato) + "</div></td>" +
       '<td style="font-size:12.5px;color:var(--grafite);max-width:340px">' + c.pauta.slice(0, 2).map(esc).join(" · ") +
         (c.pauta.length > 2 ? " · +" + (c.pauta.length - 2) : "") + "</td>" +
-      '<td class="mono" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + " (" + diaSemanaAbrev(e.data) + ")" + (e.turno ? " · " + esc(e.turno) : "") + (e.hora ? " " + esc(e.hora) : "") : "—") + "</td>" +
-      "<td>" + (e.local ? esc(e.local) : "—") + ' <span style="color:var(--grafite);font-size:11.5px">' + esc(e.modo) + "</span></td>" +
-      '<td class="mono" style="font-size:12.5px">' + (e.convidados ? e.confirmados + "/" + e.convidados : "—") + "</td>" +
+      '<td class="mono" data-label="Data" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + " (" + diaSemanaAbrev(e.data) + ")" + (e.turno ? " · " + esc(e.turno) : "") + (e.hora ? " " + esc(e.hora) : "") : "—") + "</td>" +
+      '<td data-label="Local">' + (e.local ? esc(e.local) : "—") + ' <span style="color:var(--grafite);font-size:11.5px">' + esc(e.modo) + "</span></td>" +
+      '<td class="mono" data-label="Confirmações" style="font-size:12.5px">' + (e.convidados ? e.confirmados + "/" + e.convidados : "—") + "</td>" +
       '<td>' + CC_STATUS.badge(chaveStatus) + (e.nota ? '<div style="font-size:11px;color:var(--grafite)">' + esc(e.nota) + "</div>" : "") + "</td></tr>";
   }
 
@@ -168,7 +168,7 @@
     const linhas = DB.agenda.encontros.filter((e) => e.ciclo === c.id);
     return '<h3 style="font-size:15px;margin:18px 0 8px">' + esc(c.nome) + "</h3>" +
       '<div class="card" style="padding:0;overflow:auto">' +
-        "<table><thead><tr><th>Canal</th><th>Pauta (resumo)</th><th>Data</th><th>Local · modo</th><th>Confirmações</th><th>Status</th></tr></thead>" +
+        '<table class="tabela-cards"><thead><tr><th>Canal</th><th>Pauta (resumo)</th><th>Data</th><th>Local · modo</th><th>Confirmações</th><th>Status</th></tr></thead>' +
         "<tbody>" + (linhas.length ? linhas.map(linhaEncontro).join("") : '<tr><td colspan="6" style="color:var(--grafite)">Nenhum encontro cadastrado.</td></tr>') + "</tbody></table>" +
       "</div>";
   }).join("");

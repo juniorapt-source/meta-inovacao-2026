@@ -77,5 +77,57 @@
     }
     html += '<div class="rodape">v' + esc(cfg.versao) + " · atualizado em " + esc(CALC.fmtBR(cfg.atualizado_em)) + "/2026<br>Repositório Git · deploy Vercel</div>";
     nav.innerHTML = html;
+    if (!nav.id) nav.id = "menu-principal";
+
+    montarMenuMobile(nav, cfg);
   };
+
+  // item 2.5 do plano de melhorias — abaixo de 768px o sidebar vira menu hambúrguer.
+  // Header + backdrop são injetados aqui (uma vez por página, dentro do .shell que já
+  // existe em toda página do painel) — zero mudança de HTML por página só pra isso; o
+  // conteúdo do <nav> continua o mesmo de sempre (marca/grupos/links/rodapé), só a
+  // POSIÇÃO dele muda em telas estreitas (position:fixed + transform, ver css/base.css).
+  function montarMenuMobile(nav, cfg) {
+    const shell = nav.closest(".shell");
+    if (!shell || shell.querySelector(".mob-header")) return; // já montado (ex.: 2ª chamada na mesma página)
+
+    const header = document.createElement("div");
+    header.className = "mob-header";
+    header.innerHTML =
+      '<span>' + esc(cfg.projeto || "Carta de Corso") + "</span>" +
+      '<button type="button" class="mob-menu-btn" aria-label="Abrir menu" aria-expanded="false" aria-controls="' + nav.id + '">☰ Menu</button>';
+
+    const backdrop = document.createElement("div");
+    backdrop.className = "mob-backdrop";
+
+    shell.insertBefore(header, nav);
+    shell.insertBefore(backdrop, nav);
+
+    const btn = header.querySelector(".mob-menu-btn");
+
+    function abrir() {
+      nav.classList.add("aberto");
+      backdrop.classList.add("show");
+      btn.setAttribute("aria-expanded", "true");
+      btn.textContent = "✕ Fechar";
+      document.body.style.overflow = "hidden"; // trava o scroll do fundo com o menu aberto
+    }
+    function fechar() {
+      nav.classList.remove("aberto");
+      backdrop.classList.remove("show");
+      btn.setAttribute("aria-expanded", "false");
+      btn.textContent = "☰ Menu";
+      document.body.style.overflow = "";
+    }
+    function alternar() {
+      if (nav.classList.contains("aberto")) fechar(); else abrir();
+    }
+
+    btn.addEventListener("click", alternar);
+    backdrop.addEventListener("click", fechar);
+    // fecha ao navegar (o clique num link de outra página já dispara o carregamento da
+    // página nova — isso só evita o "flash" do menu ainda aberto durante a transição)
+    nav.addEventListener("click", (e) => { if (e.target.closest("a")) fechar(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") fechar(); });
+  }
 })();
