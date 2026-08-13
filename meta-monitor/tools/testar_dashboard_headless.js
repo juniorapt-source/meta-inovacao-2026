@@ -1,18 +1,22 @@
-/* Teste F7: render_reflete_mutacao_sem_refresh — trava a decisão arquitetural da v0.3.6.
+/* Teste F7: kpi_card_navega_para_plano_filtrado — trava a decisão arquitetural do
+ * Bloco 2 do plano de melhorias (drill-down de KPI).
  *
- * Os cards de KPI clicáveis do dashboard (index.html) precisam re-renderizar a lista NO
- * MOMENTO DO CLIQUE, lendo window.DB.plano ao vivo — não só uma vez no carregamento da
- * página. Isso já quebrou antes: a primeira versão só alternava a visibilidade do HTML
- * montado no load, então uma edição feita depois (ex.: via editor.html) não aparecia sem
- * dar refresh. Este teste reproduz exatamente esse cenário: muta window.DB.plano em
- * memória DEPOIS da carga da página, clica no card, e confere que tanto a contagem quanto
- * os itens da lista refletem a mutação.
+ * Os cards de KPI do dashboard (index.html) eram clicáveis pra expandir uma lista
+ * inline (decisão da v0.3.6) — esse comportamento foi INTENCIONALMENTE substituído por
+ * links reais pra plano.html, já filtrados via querystring (?status=atrasada etc.),
+ * porque plano.html agora tem filtro completo + ordenação + busca, tornando a lista
+ * inline redundante. Este teste trava a decisão NOVA: clicar no card "Atrasadas" tem
+ * que navegar de verdade pra plano.html?status=atrasada, com o filtro de status já
+ * aplicado (select em "__atrasadas") e a contagem batendo com o número que o card
+ * mostrava antes do clique — sem esse teste, um recuo acidental pro <div>/toggle antigo
+ * (ou uma querystring que pare de bater com o vocabulário do select) passaria despercebido
+ * pelos outros 5 testes, que não abrem navegador.
  *
  * Sobe um Chrome/Chromium real em modo headless via CDP (Chrome DevTools Protocol) cru,
  * usando só WebSocket/fetch/child_process nativos do Node (>=22) — sem instalar Playwright
  * nem nenhuma outra dependência nova. Os outros 5 testes do repo não usam navegador; este
  * é o único que precisa, porque é o único comportamento que só existe no DOM (clique
- * disparando re-render), não em uma função pura testável isoladamente.
+ * disparando navegação real entre páginas), não em uma função pura testável isoladamente.
  */
 "use strict";
 const { spawn } = require("node:child_process");
@@ -162,39 +166,40 @@ async function principal() {
 
     const erros = [];
 
-    // --- cenário: card "Concluídas" ---
-    const antes = await evaluate('document.querySelector(\'.kpi-toggle[data-cat="concluida"]\').childNodes[0].textContent.trim()');
-
-    const idMutado = await evaluate(`(function(){
-      const alvo = window.DB.plano.find(a => a.status !== "Concluído");
-      if (!alvo) return null;
-      alvo.status = "Concluído";
-      return alvo.id;
+    // --- cenário: card "Atrasadas" ---
+    const antesTxt = await evaluate(`(function(){
+      const a = document.querySelector('#kpis a.kpi-link[href="plano.html?status=atrasada"]');
+      if (!a) return null;
+      return a.querySelector('.n').textContent.trim();
     })()`);
-    if (!idMutado) erros.push("não achei nenhuma ação não-concluída em window.DB.plano pra mutar (dataset mudou?)");
+    if (antesTxt === null) erros.push('não achei um <a class="kpi-link" href="plano.html?status=atrasada"> no dashboard');
+    const antesNum = Number(antesTxt);
 
-    await evaluate('document.querySelector(\'.kpi-toggle[data-cat="concluida"]\').click()');
-    await esperar(350); // a transição de abrir é ~200ms, dá folga
+    const carregouPlano = cdp.once("Page.loadEventFired");
+    await evaluate('document.querySelector(\'#kpis a.kpi-link[href="plano.html?status=atrasada"]\').click()');
+    await carregouPlano;
+    await esperar(300); // dá tempo do script inline de plano.html terminar de montar a tabela
 
     const depoisTxt = await evaluate(`JSON.stringify({
-      num: document.querySelector('.kpi-toggle[data-cat="concluida"]').childNodes[0].textContent.trim(),
-      ids: [...document.querySelectorAll('#kpi-lista-concluida .kpi-item-id')].map(e => e.textContent)
+      url: location.pathname + location.search,
+      statusSelect: document.getElementById('f-status') ? document.getElementById('f-status').value : null,
+      contagem: document.getElementById('contagem') ? document.getElementById('contagem').textContent : null
     })`);
     const depois = JSON.parse(depoisTxt);
 
-    if (Number(depois.num) !== Number(antes) + 1) {
-      erros.push(`contagem do card não refletiu a mutação: esperado ${Number(antes) + 1}, veio ${depois.num}`);
-    }
-    if (idMutado && !depois.ids.includes(idMutado)) {
-      erros.push(`lista renderizada no clique não inclui a ação mutada (${idMutado}): ${JSON.stringify(depois.ids)}`);
+    if (depois.url !== "/plano.html?status=atrasada") erros.push(`clique não navegou pra URL esperada: veio "${depois.url}"`);
+    if (depois.statusSelect !== "__atrasadas") erros.push(`select de status em plano.html não ficou em "__atrasadas": veio "${depois.statusSelect}"`);
+    const depoisNum = depois.contagem ? Number((depois.contagem.match(/^(\d+)/) || [])[1]) : NaN;
+    if (Number.isNaN(depoisNum) || depoisNum !== antesNum) {
+      erros.push(`contagem não bateu entre o card (${antesNum}) e plano.html filtrado (${depois.contagem})`);
     }
 
     if (erros.length) {
-      console.error("FALHOU render_reflete_mutacao_sem_refresh:");
+      console.error("FALHOU kpi_card_navega_para_plano_filtrado:");
       erros.forEach((e) => console.error(" -", e));
       process.exitCode = 1;
     } else {
-      console.log(`render_reflete_mutacao_sem_refresh OK — contagem ${antes} -> ${depois.num} · lista já inclui ${idMutado} sem refresh`);
+      console.log(`kpi_card_navega_para_plano_filtrado OK — card mostrava ${antesNum}, clique levou a ${depois.url} com select "${depois.statusSelect}" e a mesma contagem (${depoisNum})`);
     }
   } finally {
     cdp.close();

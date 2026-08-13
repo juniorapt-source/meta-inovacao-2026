@@ -65,6 +65,11 @@ a{color:inherit;text-decoration:none} a:hover{color:var(--accent);text-decoratio
 .nav .marca{font-family:var(--font-sans);font-weight:600;font-size:20px;color:#f4efe4;line-height:1.25;margin-bottom:6px}
 .nav .marca small{display:block;font-family:'DM Sans';font-weight:500;font-size:10.5px;text-transform:uppercase;
   letter-spacing:.13em;color:rgba(244,239,228,.5);margin-top:7px;line-height:1.5}
+/* títulos de seção do menu (Visão/Execução/Pessoas/Jornada/Admin) — discretos, sem link,
+   só pra agrupar visualmente; não entram na navegação por teclado nem no aria-current */
+.nav .grupo-titulo{font-family:'DM Sans';font-weight:700;font-size:10px;color:rgba(244,239,228,.4);
+  text-transform:uppercase;letter-spacing:.12em;padding:10px 12px 2px;margin-top:5px}
+.nav .grupo-titulo:first-of-type{margin-top:2px}
 .nav a{display:block;color:rgba(244,239,228,.7);padding:9px 12px;border-radius:0;font-family:'DM Sans';
   font-size:12.5px;font-weight:500;letter-spacing:.02em;border-left:3px solid transparent}
 .nav a:hover{background:rgba(244,239,228,.07);text-decoration:none;color:#f4efe4}
@@ -175,6 +180,13 @@ tr.detalhe td{background:rgba(43,38,32,.02);border-left:3px solid var(--accent);
 
 .aviso{background:var(--warn-w);border:1px solid rgba(43,38,32,.2);border-radius:0;padding:10px 14px;
   font-family:var(--font-sans);font-size:13.5px;color:#5c481a}
+
+/* legenda compacta de vocabulário próprio (usada em agenda.html e caminho.html — páginas
+   que reaproveitam as cores st-* do site com um significado diferente do de plano.html/
+   index.html: aqui não são "status de atividade", são o vocabulário local da página) */
+.legenda-vocab{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px;
+  font-family:'DM Sans';font-size:11px;color:var(--grafite)}
+.legenda-vocab b{font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:10px;margin-right:2px}
 .badge-dia{display:inline-block;background:var(--crit-w);color:var(--crit);border-radius:0;
   padding:3px 8px;font-family:'IBM Plex Mono';font-size:12px;font-weight:600;margin:2px 4px 2px 0}
 .btn{display:inline-block;background:var(--accent);color:#fff;border:none;border-radius:0;padding:9px 18px;
@@ -187,7 +199,7 @@ tr.detalhe td{background:rgba(43,38,32,.02);border-left:3px solid var(--accent);
   .shell{grid-template-columns:1fr}
   .nav{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:2px;padding:12px 14px}
   .nav .marca{width:100%;margin-bottom:6px} .nav .marca small{display:inline;margin-left:6px}
-  .nav a{font-size:12.5px;padding:6px 9px} .nav .rodape{display:none}
+  .nav a{font-size:12.5px;padding:6px 9px} .nav .rodape{display:none} .nav .grupo-titulo{display:none}
   .conteudo{padding:18px 14px 50px}
   .pagina-titulo::before{display:none}
   .conteudo::before{width:200px;height:200px;top:-8px;left:-8px}

@@ -17,6 +17,8 @@
     <h1 class="pagina-titulo">Caminho crítico</h1>
     <p class="pagina-sub">Os 7 nós de folga zero, com guardião, fallback pré-combinado e gatilho de escalada — mais os 2 SLAs a negociar.</p>
 
+    <div class="legenda-vocab" id="legenda-vocab" aria-label="Legenda de status dos nós"></div>
+
     <div id="lista-nos" class="grid" style="grid-template-columns:1fr"></div>
 
     <section class="secao">
@@ -38,6 +40,14 @@
   montarShell("caminho.html");
   const NOME = { ok:"cumprido", hoje:"vence hoje", risco:"venceu sem concluir", atencao:"em andamento", futuro:"à frente" };
   const CLS  = { ok:"st-concluido", hoje:"st-andamento", risco:"st-atrasada", atencao:"st-janela", futuro:"st-nao" };
+
+  // as cores st-* aqui são as mesmas de plano.html/index.html, mas o vocabulário do
+  // NÓ (cumprido/vence hoje/venceu sem concluir/em andamento/à frente) é outro — a
+  // legenda existe pra deixar isso explícito, gerada direto de NOME/CLS (fonte única,
+  // não duplica rótulo em outro lugar)
+  document.getElementById("legenda-vocab").innerHTML =
+    "<b>Vocabulário dos nós nesta página</b>" +
+    Object.keys(NOME).map((k) => '<span class="chip ' + CLS[k] + '">' + esc(NOME[k]) + "</span>").join("");
 
   document.getElementById("lista-nos").innerHTML = DB.nos.nos.map(n => {
     const st = CALC.estadoNo(n, DB.plano, hoje);

@@ -8,8 +8,8 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OBRIG = {
     "index.html": ["trilho", "kpis", "radar", "atrasadas", "prox"],
     "plano.html": ["tabela", "f-frente", "f-status", "f-resp", "f-busca"],
-    "caminho.html": ["lista-nos", "slas"],
-    "agenda.html": ["ciclos", "encontros"],
+    "caminho.html": ["lista-nos", "slas", "legenda-vocab"],
+    "agenda.html": ["ciclos", "encontros", "legenda-vocab"],
     "demandas.html": ["matriz", "legenda"],
     "participantes.html": ["pessoas", "pendencias"],
     "projetos.html": ["secoes", "f-nucleo", "f-busca", "contagem"],

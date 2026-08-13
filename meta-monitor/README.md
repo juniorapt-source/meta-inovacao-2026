@@ -71,9 +71,9 @@ node tools/testar_calc.js              # cálculos: KPIs, atraso, carga por dia,
 python3 tools/validar_site.py          # HTML: referências locais e ids obrigatórios por página
 python3 tools/testar_kpis_cruzado.py   # KPIs do Python == KPIs do JS
 node tools/testar_editor.js            # roundtrip da serialização do editor
-node tools/testar_dashboard_headless.js # dashboard num Chrome/Chromium real via CDP: clique nos
-                                        # cards de KPI re-renderiza a lista ao vivo, sem refresh
-                                        # (usa o navegador já instalado — sem instalar nada novo)
+node tools/testar_dashboard_headless.js # dashboard num Chrome/Chromium real via CDP: clique no
+                                        # card de KPI navega pra plano.html já filtrado (mesma
+                                        # contagem) — usa o navegador já instalado, nada novo
 ```
 
 ## Estrutura

@@ -32,6 +32,8 @@
         <option value="">Todos os status</option>
         <option>Concluído</option><option>Em andamento</option><option>Não iniciado</option>
         <option value="__atrasadas">Só atrasadas</option>
+        <option value="__vence7">Vencem em 7 dias</option>
+        <option value="__janela">Em janela (sem data fixa)</option>
       </select>
       <select id="f-resp" aria-label="Filtrar por responsável"></select>
       <select id="f-cc" aria-label="Filtrar caminho crítico">
@@ -66,6 +68,7 @@
 <script>
 (function(){
   const hoje = hojeISO();
+  const LIM7 = CALC.somaDias(hoje, 7);
   montarShell("plano.html");
 
   const selF = document.getElementById("f-frente"), selS = document.getElementById("f-status"),
@@ -117,7 +120,10 @@
     let lista = DB.plano.filter((a) => {
       const atras = CALC.ehAtrasada(a, hoje);
       if (fv && a.frente !== fv) return false;
-      if (sv === "__atrasadas" ? !atras : (sv && a.status !== sv)) return false;
+      if (sv === "__atrasadas") { if (!atras) return false; }
+      else if (sv === "__vence7") { if (!(a.prazo_iso && a.status !== "Concluído" && a.prazo_iso >= hoje && a.prazo_iso <= LIM7)) return false; }
+      else if (sv === "__janela") { if (!(!a.prazo_iso && a.prazo)) return false; }
+      else if (sv && a.status !== sv) return false;
       if (rv && a.resp !== rv) return false;
       if (cv === "cc" && !(a.cc && a.cc.tipo)) return false;
       if (q && !(a.id + " " + a.atividade + " " + a.sub).toLowerCase().includes(q)) return false;
@@ -186,6 +192,26 @@
 
   [selF, selS, selR, selC].forEach(s => s.addEventListener("change", render));
   busca.addEventListener("input", render);
+
+  // drill-down vindo de outra página (hoje só o Dashboard): ?status= pré-seleciona o
+  // filtro de status, ?q= pré-preenche a busca. Vocabulário do parâmetro é o mesmo
+  // do dropdown de status desta página, não os valores crus de a.status.
+  const STATUS_QUERY_MAP = {
+    concluida: "Concluído",
+    em_andamento: "Em andamento",
+    atrasada: "__atrasadas",
+    vence7: "__vence7",
+    janela: "__janela",
+  };
+  function aplicarQuerystring() {
+    const params = new URLSearchParams(location.search);
+    const statusParam = params.get("status");
+    if (statusParam && STATUS_QUERY_MAP[statusParam] !== undefined) selS.value = STATUS_QUERY_MAP[statusParam];
+    const qParam = params.get("q");
+    if (qParam) busca.value = qParam;
+  }
+
+  aplicarQuerystring();
   render();
   if (location.hash) abrir(location.hash.slice(1));
 })();

@@ -18,19 +18,16 @@
 .kpi .sub{font-size:11px;font-style:italic;color:var(--grafite);margin-top:4px}
 @media (max-width:960px){ .kpi-largo{grid-column:span 1} }
 
-/* cards de KPI clicáveis (Concluídas, Em andamento, Atrasadas, Vencem em 7 dias, Em janela) */
-.kpi .n.kpi-toggle{cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none;border-radius:0}
-.kpi .n.kpi-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.kpi-chevron{font-size:13px;line-height:1;color:var(--grafite);font-weight:600;transition:transform .15s}
-.kpi-lista{max-height:0;overflow:hidden;transition:max-height .2s ease}
-.kpi-lista-inner{padding-top:10px}
-.kpi-item{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--linha);font-size:.85rem;font-family:var(--font-sans)}
-.kpi-item:first-child{border-top:none}
-.kpi-item-id{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--grafite);min-width:54px;flex-shrink:0}
-.kpi-item-tit{flex:1;color:var(--tinta);min-width:0}
-.kpi-item-data{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--grafite);white-space:nowrap;flex-shrink:0}
-.kpi-item-vazio{padding:4px 0;font-style:italic;color:var(--grafite);font-size:.85rem}
-.kpi-item-nota{color:var(--grafite);font-size:10.5px}
+/* cards de KPI viram links pra plano.html (drill-down) — visual do card intacto,
+   só ganham cursor e um hover sutil (mesmo tom de wash já usado em tr.clicavel) */
+.kpi.kpi-link{display:block;cursor:pointer}
+.kpi.kpi-link:hover{color:inherit;text-decoration:none;background:rgba(43,38,32,.035)}
+.kpi.kpi-link:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* linhas de "Atrasadas agora"/"Próximos 7 dias" também viram links (plano.html?q=ID) */
+.linha-acao{display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--linha);
+  color:inherit;text-decoration:none}
+.linha-acao:hover{background:rgba(43,38,32,.035);color:inherit;text-decoration:none}
 </style>
 </head>
 <body>
@@ -135,9 +132,19 @@
       '<div class="t">' + esc(n.titulo) + '</div></a>';
   }).join("");
 
-  // kpis — total fica sem clique; os outros 5 expandem a lista das ações correspondentes
+  // kpis — cada card vira um link pra plano.html já filtrado (drill-down nível 1);
+  // "ações no plano" vai sem filtro. Vocabulário da querystring é o de plano.html
+  // (?status=vence7/janela/atrasada/concluida/em_andamento), não o das chaves internas
+  // de getAcoesPorCategoria (vence_7_dias/em_janela_sem_data) — o mapa abaixo traduz.
   const k = CALC.kpis(DB.plano, hoje);
   const atrasadasLista = getAcoesPorCategoria("atrasada"); // usada aqui só pra colorir o card (alerta)
+  const STATUS_QUERY = {
+    concluida: "concluida",
+    em_andamento: "em_andamento",
+    atrasada: "atrasada",
+    vence_7_dias: "vence7",
+    em_janela_sem_data: "janela",
+  };
   const itens = [
     [k.total, "ações no plano", "", null],
     [null, "concluídas", "", "concluida"],
@@ -147,47 +154,16 @@
     [null, "em janela (sem data fixa)", "", "em_janela_sem_data"],
   ];
 
-  function fmtItemData(a) {
-    return a.prazo_iso ? CALC.fmtBR(a.prazo_iso) : "sem data fixa";
-  }
-  function renderKpiItem(a, sufixo) {
-    return '<div class="kpi-item">' +
-      '<span class="kpi-item-id">' + esc(a.id) + '</span>' +
-      '<span class="kpi-item-tit">' + esc(a.atividade) +
-        (sufixo ? ' <span class="kpi-item-nota">· ' + esc(sufixo) + '</span>' : "") + '</span>' +
-      '<span class="kpi-item-data">' + esc(fmtItemData(a)) + '</span></div>';
-  }
-
-  // "Em andamento" e "Atrasada" se sobrepõem de propósito (ver getAcoesPorCategoria) — sem
-  // marca visual, a mesma ação aparecendo em duas listas parece bug. Chama getAcoesPorCategoria
-  // das duas categorias uma vez por render de lista (não por item) e devolve uma função de
-  // lookup; não reimplementa a regra de sobreposição, só reconsulta a fonte única.
-  function sufixoParaCategoria(categoria) {
-    if (categoria !== "em_andamento" && categoria !== "atrasada") return () => "";
-    const idsEmAndamento = new Set(getAcoesPorCategoria("em_andamento").map((a) => a.id));
-    const idsAtrasada = new Set(getAcoesPorCategoria("atrasada").map((a) => a.id));
-    return categoria === "em_andamento"
-      ? (a) => (idsAtrasada.has(a.id) ? "também atrasada" : "")
-      : (a) => (idsEmAndamento.has(a.id) ? "também em andamento" : "");
-  }
-
   let kpisHtml = itens.map(([numFixo, rot, cls, cat]) => {
     if (!cat) {
-      return '<div class="card kpi ' + cls + '"><div class="n">' + numFixo + '</div><div class="l">' + rot + "</div></div>";
+      return '<a class="card kpi kpi-link ' + cls + '" href="plano.html"><div class="n">' + numFixo + '</div><div class="l">' + rot + "</div></a>";
     }
     const lista = cat === "atrasada" ? atrasadasLista : getAcoesPorCategoria(cat);
-    const sufixo = sufixoParaCategoria(cat);
-    return '<div class="card kpi ' + cls + '">' +
-      '<div class="n kpi-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="kpi-lista-' + cat + '" data-cat="' + cat + '">' +
-        lista.length + '<span class="kpi-chevron" aria-hidden="true">▼</span>' +
-      '</div>' +
+    const href = "plano.html?status=" + STATUS_QUERY[cat];
+    return '<a class="card kpi kpi-link ' + cls + '" href="' + href + '">' +
+      '<div class="n">' + lista.length + '</div>' +
       '<div class="l">' + rot + '</div>' +
-      '<div class="kpi-lista" id="kpi-lista-' + cat + '">' +
-        '<div class="kpi-lista-inner">' +
-          (lista.length ? lista.map((a) => renderKpiItem(a, sufixo(a))).join("") : '<div class="kpi-item-vazio">Nenhuma ação nessa categoria.</div>') +
-        '</div>' +
-      '</div>' +
-    '</div>';
+    '</a>';
   }).join("");
 
   // cards de portfólio de projetos (calculados a partir de DB.projetos, nada hardcodado)
@@ -226,86 +202,6 @@
 
   document.getElementById("kpis").innerHTML = kpisHtml;
 
-  // expand/colapsa dos cards de KPI clicáveis — só um aberto por vez, altura medida via JS
-  // (scrollHeight) em vez de um max-height chumbado, pra não capar listas maiores
-  (function(){
-    const kpisEl = document.getElementById("kpis");
-    let abertoCat = null;
-
-    function elementos(cat) {
-      return {
-        painel: document.getElementById("kpi-lista-" + cat),
-        botao: kpisEl.querySelector('.kpi-toggle[data-cat="' + cat + '"]'),
-        chevron: kpisEl.querySelector('.kpi-toggle[data-cat="' + cat + '"] .kpi-chevron'),
-      };
-    }
-
-    function fechar(cat) {
-      const { painel, botao, chevron } = elementos(cat);
-      if (!painel) return;
-      painel.style.maxHeight = painel.scrollHeight + "px"; // trava a altura atual antes de animar até 0
-      painel.offsetHeight; // força reflow — sem isso o navegador colapsa a transição num só passo
-      requestAnimationFrame(() => { painel.style.maxHeight = "0px"; });
-      if (botao) botao.setAttribute("aria-expanded", "false");
-      if (chevron) chevron.textContent = "▼";
-    }
-
-    // reconstrói o número e a lista do painel a partir de getAcoesPorCategoria NA HORA do
-    // clique — é o que garante que uma edição feita em outro lugar (ex.: editor.html mutando
-    // window.DB.plano) apareça sem refresh; o HTML montado no carregamento da página é só o
-    // primeiro paint, não pode ser o que o clique reexibe
-    function renderPainel(cat) {
-      const { painel, botao } = elementos(cat);
-      if (!painel || !botao) return;
-      const lista = getAcoesPorCategoria(cat);
-      const sufixo = sufixoParaCategoria(cat);
-      const inner = painel.querySelector(".kpi-lista-inner");
-      inner.innerHTML = lista.length
-        ? lista.map((a) => renderKpiItem(a, sufixo(a))).join("")
-        : '<div class="kpi-item-vazio">Nenhuma ação nessa categoria.</div>';
-      botao.childNodes[0].textContent = lista.length; // 1º nó = número; 2º nó = chevron (preservado)
-    }
-
-    function abrir(cat) {
-      renderPainel(cat);
-      const { painel, botao, chevron } = elementos(cat);
-      if (!painel) return;
-      const alvo = painel.scrollHeight;
-      painel.style.maxHeight = alvo + "px";
-      if (botao) botao.setAttribute("aria-expanded", "true");
-      if (chevron) chevron.textContent = "▲";
-      painel.addEventListener("transitionend", function onEnd(e) {
-        if (e.propertyName !== "max-height") return;
-        painel.removeEventListener("transitionend", onEnd);
-        if (abertoCat === cat) painel.style.maxHeight = "none"; // altura livre no estado final aberto
-      });
-    }
-
-    function alternar(cat) {
-      if (abertoCat && abertoCat !== cat) fechar(abertoCat);
-      if (abertoCat === cat) {
-        fechar(cat);
-        abertoCat = null;
-      } else {
-        abrir(cat);
-        abertoCat = cat;
-      }
-    }
-
-    kpisEl.addEventListener("click", (e) => {
-      const alvo = e.target.closest(".kpi-toggle");
-      if (alvo) alternar(alvo.dataset.cat);
-    });
-    kpisEl.addEventListener("keydown", (e) => {
-      const alvo = e.target.closest(".kpi-toggle");
-      if (!alvo) return;
-      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
-        e.preventDefault();
-        alternar(alvo.dataset.cat);
-      }
-    });
-  })();
-
   // radar de carga
   const carga = CALC.cargaPorDia(DB.plano).filter(c => c.carga >= 2 && c.iso >= hoje);
   document.getElementById("radar").innerHTML = carga.length
@@ -328,12 +224,16 @@
 
   function linha(a) {
     const [cls, rot] = stClass(a, hoje);
-    return '<div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--linha)">' +
+    // ?q=ID preenche a busca em plano.html (pedido); #ID continua na URL pra também
+    // auto-abrir o detalhe da linha lá — os dois mecanismos já existiam separados,
+    // isso só junta os dois num link só (o texto da atividade não pode mais ser um
+    // <a> aninhado dentro do <a> que agora envolve a linha inteira)
+    return '<a class="linha-acao" href="plano.html?q=' + encodeURIComponent(a.id) + '#' + esc(a.id) + '">' +
       '<span class="mono" style="font-size:12px;color:var(--grafite);min-width:58px">' + esc(a.id) + "</span>" +
-      '<span style="flex:1"><a href="plano.html#' + esc(a.id) + '">' + esc(a.atividade) + "</a>" +
+      '<span style="flex:1">' + esc(a.atividade) +
       ' <span style="color:var(--grafite);font-size:12px">· ' + esc(a.resp) + "</span></span>" +
       '<span class="mono" style="font-size:12px">' + esc(a.prazo) + "</span>" +
-      '<span class="chip ' + cls + '">' + rot + "</span></div>";
+      '<span class="chip ' + cls + '">' + rot + "</span></a>";
   }
 
   if (window.matchMedia("(max-width:960px)").matches)
