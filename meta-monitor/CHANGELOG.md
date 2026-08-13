@@ -1,5 +1,44 @@
 # Changelog
 
+## v0.22.0 — 2026-08-13
+"O Caminho para o Corsário ganha edição ao vivo" — `corsario_status` (status por
+iniciativa×critério) era somente leitura desde sempre (README já documentava isso
+explicitamente); passa a ser o 5º conjunto "vivo" do `editor.html`, mesmo padrão de
+Plano/Agenda/Pessoas/Projetos/URC (grava direto no Supabase ao sair do campo, sem baixar
+arquivo). `corsario_criterios` (a lista dos 19 critérios) continua só leitura — este ciclo
+foi só os valores de status, que é o que muda no dia a dia.
+
+- **`js/db-corsario.js`** (novo) — camada de dados do conjunto, mesmo formato de
+  `js/db-projetos.js`: `carregar()` (critérios + status juntos), `salvar()` (update por
+  `id`), `criar()` (insert de uma célula), `criarIniciativa()` (insert em lote: 1 linha
+  por critério, todas como "não se aplica" — default honesto pra algo ainda não avaliado,
+  em vez de nascer parecendo "reprovada em tudo"). Sem fallback local — `corsario_status`
+  nunca teve seed em `data/` (a própria página sempre leu só do Supabase); em modo de
+  teste (`?semrede=1`) o conjunto some do editor.html com aviso, sem tentar rede.
+- **`editor.html`** — grade Iniciativa × Critério (`.ed-matriz`, mesma tabela já usada
+  pela Matriz de demandas), um `<select>` por célula (5 status + "Não se aplica") e um
+  botão pequeno (🗨/·) por célula pra ver/editar a observação daquele item via prompt.
+  Célula sem linha ainda no banco vira INSERT no primeiro `change` (não UPDATE) — o id
+  novo fica gravado no próprio elemento pras edições seguintes. "+ Nova iniciativa" cria
+  as 19 linhas de uma vez. Feedback de salvar/erro é no fundo da própria célula
+  (`.ed-cel-salvando`/`.ed-cel-erro`), não um texto do lado — célula estreita demais pra
+  isso. Entra também na aba Histórico como 5ª tabela auditada.
+- **`tools/sql/2026-08_corsario_edicao.sql`** (novo, a rodar manualmente no Supabase) —
+  diferente das migrações anteriores (que criavam tabela do zero), `corsario_status` já
+  existe em produção com dado real (28 iniciativas), então todo passo é defensivo
+  (`IF NOT EXISTS`/checagem antes de alterar): garante uma PK `id` estável (só adiciona se
+  faltar — necessária pra `cc_audit()` preencher `registro_id`, que é `NOT NULL`), coluna
+  `updated_by`, normaliza RLS pro padrão do projeto (`cc_select_publico` + `cc_token_insert`
+  + `cc_token_update`, mesmo token compartilhado), liga o trigger de auditoria.
+  `corsario_criterios` não é tocada por este script.
+- Testado: `node --check` (editor.html + js/db-corsario.js), `validar_site.py`,
+  `testar_editor.js` — todos OK. Smoke test funcional ad-hoc contra o Supabase de
+  produção (leitura real): grade monta com as 28 iniciativas × 19 critérios, opções de
+  status corretas, form de nova iniciativa abre/fecha certo, tentativa de salvar falha de
+  forma tratada (esperado — a escrita só passa a funcionar depois que o SQL acima rodar
+  em produção; commitado mesmo assim porque o código já degrada bem sem o SQL, sem
+  quebrar a página).
+
 ## v0.21.0 — 2026-08-13
 "Refactor de UI/UX — protagonismo da Matriz" — reorganização completa da apresentação de
 `corsario.html` (O Caminho para o Corsário). Só apresentação: nenhum dado, filtro, cálculo
