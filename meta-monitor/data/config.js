@@ -6,5 +6,5 @@ window.DB.config = {
  "atualizado_em": "2026-08-13",
  "hoje_referencia": null,
  "exigirSenha": false,
- "tokenEscrita": "SUBSTITUIR_PELO_TOKEN"
+ "tokenEscrita": "90bb649c-0a59-43b1-b486-17ec58f99108"
 };
