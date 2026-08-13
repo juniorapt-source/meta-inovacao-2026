@@ -103,8 +103,17 @@
     return promessa;
   }
 
-  // ---- escrita (usada só por editor.html, Modo edição) ----
+  // ---- escrita (editor.html, Modo edição, e o Kanban de plano.html a partir do item 3.3) ----
+  // Trava de segurança (item 3.3): em modo de teste (?semrede=1 / CC_FORCAR_FALLBACK) a
+  // ESCRITA fica bloqueada de propósito, não só a leitura — sem isso, um teste headless
+  // que exercitasse o drag-and-drop do Kanban gravaria de verdade no Supabase de produção.
+  // Erro claro em vez de deixar a chamada tentar rede (ou pior, escrever por acidente).
+  function bloquearEscritaEmTeste() {
+    if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
+  }
+
   async function salvar(id, campos, usuario) {
+    bloquearEscritaEmTeste();
     const supa = await root.CC_SUPABASE.obterClienteEsm();
     const patch = Object.assign({}, campos, { updated_by: usuario || null });
     const { data, error } = await supa.from(TABELA).update(patch).eq("id", id).select().single();
@@ -113,6 +122,7 @@
   }
 
   async function criar(acaoParcial, usuario) {
+    bloquearEscritaEmTeste();
     const supa = await root.CC_SUPABASE.obterClienteEsm();
     const payload = Object.assign({}, acaoParaLinha(acaoParcial), { updated_by: usuario || null });
     const { data, error } = await supa.from(TABELA).insert(payload).select().single();
@@ -121,6 +131,7 @@
   }
 
   async function removerSoft(id, usuario) {
+    bloquearEscritaEmTeste();
     const supa = await root.CC_SUPABASE.obterClienteEsm();
     const agora = new Date().toISOString();
     const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", id);

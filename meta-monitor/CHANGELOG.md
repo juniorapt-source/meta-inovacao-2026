@@ -1,5 +1,58 @@
 # Changelog
 
+## v0.18.0 — 2026-08-13
+Prompt 12 do plano de melhorias (item 3.3, opcional): visão Kanban em `plano.html`,
+toggle com a Lista — depende de P6 (taxonomia), P10 (persistência) e P11 (drawer), os
+três já entregues.
+
+- **Toggle Lista/Kanban** (`.vista-toggle`, mesmo componente de agenda.html/item 2.7),
+  preferência persistida em `localStorage.cc_plano_visao`. Um link direto com `#id`
+  (vindo de outra página) força a visão Lista só nessa carga — não existe o equivalente
+  de "abrir detalhe" em Kanban — sem mexer na preferência salva.
+- **3 colunas** (Não iniciado/Em andamento/Concluído) + **faixa "Em janela · sem data
+  fixa"** no rodapé da coluna Não Iniciado. **Decisão registrada:** a faixa mostra a
+  INTERSEÇÃO com Não Iniciado (`!prazo_iso && prazo && status Não iniciado`), não toda
+  ação "em janela" no sentido de `CALC.kpis.janela` (que soma qualquer status sem
+  prazo_iso — hoje 2 casos, INS-02/Em andamento e INS-03/Concluído). Arrancar uma ação
+  Concluída da coluna Concluído pra uma faixa dentro de Não Iniciado pareceu mais
+  confuso que ajudar, e quebraria o drag-and-drop (soltar esse card em "Em andamento"
+  faria ele sumir de novo, por ainda não ter prazo_iso). Se a leitura pretendida no
+  prompt era "toda ação em janela, de qualquer status", é um ajuste de uma linha em
+  `plano.html` (o filtro que separa `janela` de `naoIniciadoSemJanela`).
+- **Card**: ID + chip do caminho crítico, atividade (truncada em 2 linhas via
+  `-webkit-line-clamp`), responsável (`DRAWER.spanPessoasEmTexto`, mesmo componente do
+  P11 — clique abre o drawer da PESSOA), prazo, badge (`CC_STATUS.badge`, mesma chave
+  canônica de `chaveStatusAcao` do P6/item 2.4 — atrasada vem com borda esquerda
+  vermelha também). Clique no corpo do card (fora do nome do responsável) expande um
+  detalhe inline (Depende de/Como executar/Como monitorar/Ferramenta) — **não** abre o
+  drawer de P11: `js/drawer.js` só modela Iniciativa e Pessoa, não Ação; inventar uma
+  "ação" como entidade do drawer estava fora do que P11 construiu, e o responsável
+  (pessoa real) já é a entidade que o drawer sabe abrir.
+- **Drag-and-drop nativo** (HTML5 DnD, sem lib) entre as 3 colunas atualiza `a.status`
+  via `DB_PLANO.salvar()` (P10). Debounce de 600ms por ação (mesmo valor de
+  `plano-acao.html`): se o card for solto mais de uma vez em sequência rápida, só o
+  ALVO FINAL é gravado, e o revert em caso de falha volta pro status de ANTES da
+  primeira soltada da rajada (não o penúltimo). Indicador "salvando…/salvo" no próprio
+  card; falha reverte a posição do card e mostra `CC_SUPABASE.mensagemEscritaAmigavel`
+  via `window.alert` (o card já não existe mais na posição errada depois do revert, não
+  dá pra deixar um indicador "falhou" nele como em editor.html).
+- **Filtros existentes** (frente/status/responsável/caminho crítico/busca) e o
+  querystring de drill-down (`?status=`/`?q=`) valem pras duas visões — a lista
+  filtrada é calculada uma vez em `render()`; cada visão só decide como desenhá-la.
+- **Trava de segurança nova em `js/db-plano.js`/`js/db-agenda.js`**: `salvar`/`criar`/
+  `removerSoft` agora recusam rodar em modo de teste (`?semrede=1`/
+  `CC_FORCAR_FALLBACK`), lançando um erro claro em vez de tentar gravar. Não fazia parte
+  do prompt, mas ficou necessário: sem essa trava, um teste headless que simulasse o
+  drag-and-drop de verdade escreveria no Supabase de **produção**. Por causa dela, o
+  teste novo (abaixo) cobre só a renderização — a simulação de drop em si foi
+  deliberadamente deixada de fora da automação (comentário no próprio arquivo de teste
+  explica o porquê).
+- **`tools/testar_kanban_headless.js`** (novo, F11) — abre `plano.html?semrede=1`,
+  clica em KANBAN e confere que a contagem de cards por coluna bate com a contagem por
+  status de `window.DB.plano` (39 Não iniciado com 20 na faixa de janela · 4 Em
+  andamento · 4 Concluído · 47 no total), que pelo menos 1 card ficou com a borda de
+  atrasada, e que o filtro "Só atrasadas" (1.4) também funciona na visão Kanban.
+
 ## v0.17.1 — 2026-08-13
 Corrige ordem de carregamento de `js/config.js` antes de `js/db-plano.js`/`js/db-agenda.js`.
 

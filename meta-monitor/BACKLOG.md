@@ -8,6 +8,18 @@ o outro arquivo pra ver o que ainda falta e em que ordem. Os números #001/#002 
 original não apareceram em nenhum prompt lido até agora (só #003/#004/#005) — se existirem,
 ainda não foram cruzados aqui.
 
+## Cobertura de teste com rede real
+
+**Status:** aberto — avaliar
+
+Os testes headless atuais forçam fallback local via `?semrede=1` (e
+`window.CC_FORCAR_FALLBACK`) e por isso não pegam bugs de integração real com o
+Supabase — ex.: o GRANT esquecido no P10 e a ordem de `js/config.js` no bug fix seguinte
+(ambos só apareceram em produção, não na suíte).
+
+**A avaliar:** adicionar 1–2 testes headless por página crítica que rodem contra o
+Supabase de produção (ou um staging), acionados manualmente antes de deploys grandes.
+
 ## #005 — Rótulos de menu confusos
 
 **Status:** parcialmente resolvido (v0.7.1)

@@ -94,7 +94,15 @@
     return promessa;
   }
 
+  // Trava de segurança (item 3.3, replicada aqui de js/db-plano.js): bloqueia escrita em
+  // modo de teste (?semrede=1 / CC_FORCAR_FALLBACK) pra nenhum teste headless gravar de
+  // verdade no Supabase de produção.
+  function bloquearEscritaEmTeste() {
+    if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
+  }
+
   async function salvar(dbId, campos, usuario) {
+    bloquearEscritaEmTeste();
     const supa = await root.CC_SUPABASE.obterClienteEsm();
     const patch = Object.assign({}, campos, { updated_by: usuario || null });
     const { data, error } = await supa.from(TABELA).update(patch).eq("id", dbId).select().single();
@@ -103,6 +111,7 @@
   }
 
   async function removerSoft(dbId, usuario) {
+    bloquearEscritaEmTeste();
     const supa = await root.CC_SUPABASE.obterClienteEsm();
     const agora = new Date().toISOString();
     const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", dbId);

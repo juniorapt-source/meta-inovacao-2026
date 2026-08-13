@@ -29,6 +29,34 @@
   .tabela-ordenavel td:nth-child(5){order:5}
   .tabela-ordenavel td:nth-child(6){order:6;margin-top:2px}
 }
+
+/* item 3.3 — toggle Lista/Kanban (mesmo componente visual de agenda.html, item 2.7) */
+.vista-toggle{display:flex;gap:8px;margin-bottom:14px}
+.vista-toggle button{font:600 12px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.06em;padding:8px 14px;border-radius:0;border:1px solid var(--linha);background:var(--branco);color:var(--tinta);cursor:pointer}
+.vista-toggle button.ativo{background:var(--azul);color:var(--branco);border-color:var(--azul)}
+
+/* Kanban — 3 colunas (Não iniciado/Em andamento/Concluído); a faixa de "em janela" mora
+   só dentro da coluna Não iniciado (ver comentário no JS sobre por que não é cross-status) */
+.kb-board{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}
+.kb-coluna{background:var(--ceu);border:1px solid var(--linha);border-radius:0;display:flex;flex-direction:column;min-height:80px}
+.kb-coluna.kb-sobre-arraste{outline:2px dashed var(--accent);outline-offset:-2px}
+.kb-coluna-cab{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--linha);font:700 11.5px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite)}
+.kb-coluna-cab .kb-cont{font-family:'IBM Plex Mono',monospace;font-weight:400;color:var(--ink-3)}
+.kb-coluna-corpo{padding:10px;display:flex;flex-direction:column;gap:8px;min-height:40px}
+.kb-card{background:var(--branco);border:1px solid var(--linha);border-left:3px solid var(--linha);border-radius:0;padding:9px 10px;cursor:grab}
+.kb-card:active{cursor:grabbing}
+.kb-card.kb-arrastando{opacity:.4}
+.kb-card.kb-atrasada{border-left-color:var(--critico)}
+.kb-card .kb-id{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--grafite);white-space:nowrap}
+.kb-card .kb-atividade{font-size:13px;margin:3px 0 6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.kb-card .kb-meta{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11.5px;flex-wrap:wrap;margin-bottom:6px}
+.kb-card .kb-prazo{font-family:'IBM Plex Mono',monospace;color:var(--grafite);white-space:nowrap}
+.kb-card .kb-salvar{font-size:10.5px;display:block;margin-top:4px;min-height:13px}
+.kb-card .kb-detalhe{margin-top:8px;padding-top:8px;border-top:1px solid var(--linha)}
+.kb-card .det-grid{grid-template-columns:1fr;gap:6px}
+.kb-faixa-janela{margin-top:2px;padding-top:10px;border-top:1px dashed var(--linha);display:flex;flex-direction:column;gap:8px}
+.kb-faixa-janela-titulo{font:700 10px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite)}
+@media (max-width:960px){ .kb-board{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -38,6 +66,11 @@
     <h1 class="pagina-titulo">Plano de ação</h1>
     <p class="pagina-sub">47 ações em 5 frentes. Clique numa linha para ver dependências e a <b>solução proposta</b>: como executar, como monitorar e com qual ferramenta.</p>
     <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não consegui falar com o Supabase agora; mostrando a última cópia local (<span class="mono">data/plano.js</span>).</p>
+
+    <div class="vista-toggle">
+      <button type="button" id="btn-vista-lista" class="ativo">Lista</button>
+      <button type="button" id="btn-vista-kanban">Kanban</button>
+    </div>
 
     <div class="filtros">
       <select id="f-frente" aria-label="Filtrar por frente"></select>
@@ -56,19 +89,24 @@
       <input id="f-busca" type="search" placeholder="Buscar por texto ou ID…" aria-label="Buscar">
     </div>
 
-    <div class="card" style="padding:0;overflow:auto">
-      <table class="tabela-ordenavel tabela-cards">
-        <thead><tr>
-          <th data-key="id" tabindex="0" role="button" aria-sort="none">ID<span class="ord-ind" aria-hidden="true"></span></th>
-          <th data-key="frente" tabindex="0" role="button" aria-sort="none">Frente<span class="ord-ind" aria-hidden="true"></span></th>
-          <th data-key="atividade" tabindex="0" role="button" aria-sort="none">Atividade<span class="ord-ind" aria-hidden="true"></span></th>
-          <th data-key="resp" tabindex="0" role="button" aria-sort="none">Responsável<span class="ord-ind" aria-hidden="true"></span></th>
-          <th data-key="prazo" tabindex="0" role="button" aria-sort="none">Prazo<span class="ord-ind" aria-hidden="true"></span></th>
-          <th data-key="status" tabindex="0" role="button" aria-sort="none">Status<span class="ord-ind" aria-hidden="true"></span></th>
-        </tr></thead>
-        <tbody id="tabela"></tbody>
-      </table>
+    <div id="vista-lista">
+      <div class="card" style="padding:0;overflow:auto">
+        <table class="tabela-ordenavel tabela-cards">
+          <thead><tr>
+            <th data-key="id" tabindex="0" role="button" aria-sort="none">ID<span class="ord-ind" aria-hidden="true"></span></th>
+            <th data-key="frente" tabindex="0" role="button" aria-sort="none">Frente<span class="ord-ind" aria-hidden="true"></span></th>
+            <th data-key="atividade" tabindex="0" role="button" aria-sort="none">Atividade<span class="ord-ind" aria-hidden="true"></span></th>
+            <th data-key="resp" tabindex="0" role="button" aria-sort="none">Responsável<span class="ord-ind" aria-hidden="true"></span></th>
+            <th data-key="prazo" tabindex="0" role="button" aria-sort="none">Prazo<span class="ord-ind" aria-hidden="true"></span></th>
+            <th data-key="status" tabindex="0" role="button" aria-sort="none">Status<span class="ord-ind" aria-hidden="true"></span></th>
+          </tr></thead>
+          <tbody id="tabela"></tbody>
+        </table>
+      </div>
     </div>
+
+    <div id="vista-kanban" style="display:none"></div>
+
     <p style="color:var(--grafite);font-size:12.5px;margin-top:10px" id="contagem"></p>
   </main>
 </div>
@@ -105,6 +143,18 @@
   const selF = document.getElementById("f-frente"), selS = document.getElementById("f-status"),
         selR = document.getElementById("f-resp"), selC = document.getElementById("f-cc"),
         busca = document.getElementById("f-busca"), corpo = document.getElementById("tabela");
+
+  // item 3.3 do plano de melhorias — mesmo prompt de "seu nome/iniciais" de
+  // demandas.html/editor.html (window.prompt + localStorage, chave compartilhada
+  // "editor_nome") — identifica quem moveu cada card no Kanban (updated_by).
+  function nomeEditor() {
+    let nome = localStorage.getItem("editor_nome");
+    if (!nome) {
+      nome = (window.prompt("Seu nome ou iniciais, pra identificar suas edições:") || "").trim();
+      if (nome) localStorage.setItem("editor_nome", nome);
+    }
+    return nome || "anônimo";
+  }
 
   const frentes = [...new Set(plano.map(a => a.frente))];
   selF.innerHTML = '<option value="">Todas as frentes</option>' + frentes.map(f => "<option>" + esc(f) + "</option>").join("");
@@ -146,6 +196,33 @@
     });
   }
 
+  // item 3.3 do plano de melhorias — visão Kanban, toggle com a Lista. Os filtros (frente/
+  // status/responsável/cc/busca) e o querystring de drill-down (?status=/?q=) continuam
+  // valendo pras duas: a lista filtrada é calculada uma vez só em render() e cada visão
+  // (renderLista/renderKanban) só decide como desenhar o MESMO array `lista`.
+  let visaoAtual = localStorage.getItem("cc_plano_visao") === "kanban" ? "kanban" : "lista";
+  const elVistaLista = document.getElementById("vista-lista");
+  const elVistaKanban = document.getElementById("vista-kanban");
+  const btnVistaLista = document.getElementById("btn-vista-lista");
+  const btnVistaKanban = document.getElementById("btn-vista-kanban");
+
+  function aplicarVisao() {
+    const kanban = visaoAtual === "kanban";
+    elVistaLista.style.display = kanban ? "none" : "";
+    elVistaKanban.style.display = kanban ? "" : "none";
+    btnVistaLista.classList.toggle("ativo", !kanban);
+    btnVistaKanban.classList.toggle("ativo", kanban);
+  }
+  function alternarVisao(nova) {
+    if (nova === visaoAtual) return;
+    visaoAtual = nova;
+    localStorage.setItem("cc_plano_visao", nova);
+    aplicarVisao();
+    render();
+  }
+  btnVistaLista.addEventListener("click", () => alternarVisao("lista"));
+  btnVistaKanban.addEventListener("click", () => alternarVisao("kanban"));
+
   function render(){
     const fv = selF.value, sv = selS.value, rv = selR.value, cv = selC.value, q = busca.value.trim().toLowerCase();
     let lista = plano.filter((a) => {
@@ -162,6 +239,13 @@
     });
     if (ordem.chave) lista = lista.slice().sort(comparador);
 
+    if (visaoAtual === "kanban") renderKanban(lista);
+    else renderLista(lista);
+
+    document.getElementById("contagem").textContent = lista.length + " de " + plano.length + " ações exibidas.";
+  }
+
+  function renderLista(lista){
     let html = "";
     for (const a of lista) {
       const [cls, rot] = stClass(a, hoje);
@@ -181,9 +265,150 @@
         "<div><b>Ferramenta</b>" + esc(a.ferramenta) + "</div></div></td></tr>";
     }
     corpo.innerHTML = html || '<tr><td colspan="6" style="color:var(--grafite)">Nenhuma ação com esses filtros.</td></tr>';
-    document.getElementById("contagem").textContent = lista.length + " de " + plano.length + " ações exibidas.";
     atualizarIndicadoresOrdenacao();
   }
+
+  // ---- Kanban (item 3.3) ----
+  // 3 colunas por status (rótulo de sempre, mesmo vocabulário de a.status). A faixa "em
+  // janela" no rodapé é a INTERSEÇÃO com "Não iniciado" (!prazo_iso && prazo && status
+  // Não iniciado) — não toda ação "janela" no sentido de CALC.kpis.janela (que soma
+  // qualquer status sem prazo_iso). Os pouquíssimos casos de janela com outro status
+  // (hoje: INS-02 Em andamento, INS-03 Concluído) ficam normais na própria coluna —
+  // arrancar uma ação Concluída pra uma faixa dentro de Não Iniciado seria mais confuso
+  // que ajudar, e quebraria o drag-and-drop (soltar um card da faixa em "Em andamento"
+  // faria ele sumir de novo, já que continuaria sem prazo_iso). Decisão registrada no
+  // CHANGELOG — se a leitura pretendida era "toda ação em janela, de qualquer status",
+  // é só ajustar o filtro de `janela` abaixo.
+  function cardHtml(a) {
+    const chave = chaveStatusAcao(a, hoje);
+    return '<div class="kb-card' + (chave === "atrasada" ? " kb-atrasada" : "") + '" draggable="true" data-id="' + esc(a.id) + '">' +
+      '<div class="kb-id">' + a.id + ccChip(a) + "</div>" +
+      '<div class="kb-atividade">' + esc(a.atividade) + "</div>" +
+      '<div class="kb-meta">' + DRAWER.spanPessoasEmTexto(a.resp) +
+        '<span class="kb-prazo">' + esc(a.prazo || "—") + "</span></div>" +
+      CC_STATUS.badge(chave) +
+      '<span class="kb-salvar" aria-live="polite"></span>' +
+      '<div class="kb-detalhe" hidden>' +
+        '<div style="font-size:11.5px;margin-bottom:6px"><b style="color:var(--grafite)">Depende de:</b> ' +
+        (a.dep.length ? a.dep.map(esc).join(" · ") : "—") + "</div>" +
+        '<div class="det-grid">' +
+        "<div><b>Como executar</b>" + esc(a.como) + "</div>" +
+        "<div><b>Como monitorar</b>" + esc(a.monitor) + "</div>" +
+        "<div><b>Ferramenta</b>" + esc(a.ferramenta) + "</div></div></div>" +
+      "</div>";
+  }
+
+  const COLUNAS_KANBAN = ["Não iniciado", "Em andamento", "Concluído"];
+
+  function renderKanban(lista) {
+    const porStatus = { "Não iniciado": [], "Em andamento": [], "Concluído": [] };
+    lista.forEach((a) => (porStatus[a.status] || porStatus["Não iniciado"]).push(a));
+    const janela = porStatus["Não iniciado"].filter((a) => !a.prazo_iso && a.prazo);
+    const naoIniciadoSemJanela = porStatus["Não iniciado"].filter((a) => !(!a.prazo_iso && a.prazo));
+
+    function colunaHtml(rotulo) {
+      const itens = rotulo === "Não iniciado" ? naoIniciadoSemJanela : porStatus[rotulo];
+      const total = rotulo === "Não iniciado" ? itens.length + janela.length : itens.length;
+      return '<div class="kb-coluna" data-status-alvo="' + rotulo + '">' +
+        '<div class="kb-coluna-cab">' + esc(rotulo.toUpperCase()) + '<span class="kb-cont">' + total + "</span></div>" +
+        '<div class="kb-coluna-corpo">' +
+          (itens.length ? itens.map(cardHtml).join("") : "") +
+          (rotulo === "Não iniciado" && janela.length
+            ? '<div class="kb-faixa-janela"><div class="kb-faixa-janela-titulo">Em janela · sem data fixa</div>' + janela.map(cardHtml).join("") + "</div>"
+            : "") +
+          (!itens.length && !(rotulo === "Não iniciado" && janela.length)
+            ? '<p style="color:var(--grafite);font-size:12px;padding:2px">Nenhuma ação.</p>'
+            : "") +
+        "</div></div>";
+    }
+
+    elVistaKanban.innerHTML = '<div class="kb-board">' + COLUNAS_KANBAN.map(colunaHtml).join("") + "</div>";
+  }
+
+  function marcarCartaoSalvar(id, texto) {
+    const el = elVistaKanban.querySelector('.kb-card[data-id="' + id + '"] .kb-salvar');
+    if (!el) return;
+    if (texto === "salvando") { el.textContent = "salvando…"; el.style.color = "var(--grafite)"; }
+    else if (texto === "salvo") {
+      el.textContent = "salvo"; el.style.color = "var(--verde)";
+      setTimeout(() => { if (el.textContent === "salvo") el.textContent = ""; }, 1500);
+    }
+  }
+
+  // drag-and-drop nativo (sem lib) + debounce por id — mesmo padrão de plano-acao.html
+  // (agendarSalvar/salvarImediato): se o card for arrastado mais de uma vez em sequência
+  // rápida (ex.: soltou na coluna errada, corrigiu na hora), só a ÚLTIMA coluna alvo é
+  // gravada, e "original" guarda o status de ANTES da primeira soltada da rajada — não o
+  // penúltimo — pra reverter certo se a gravação final falhar.
+  const timersSalvar = new Map(); // id -> { timer, original }
+  function moverPara(id, novoRotulo) {
+    if (!novoRotulo || !COLUNAS_KANBAN.includes(novoRotulo)) return;
+    const a = plano.find((x) => x.id === id);
+    if (!a || a.status === novoRotulo) return;
+    const pendente = timersSalvar.get(id);
+    const original = pendente ? pendente.original : a.status;
+    if (pendente) clearTimeout(pendente.timer);
+    a.status = novoRotulo;
+    render();
+    marcarCartaoSalvar(id, "salvando");
+    const timer = setTimeout(async () => {
+      timersSalvar.delete(id);
+      try {
+        await DB_PLANO.salvar(a.db_id, { status: DB_PLANO.CHAVE_POR_ROTULO[a.status] }, nomeEditor());
+        marcarCartaoSalvar(id, "salvo");
+      } catch (err) {
+        console.error("plano: falha ao mover ação via kanban", err);
+        a.status = original;
+        render();
+        window.alert((window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "Não consegui mover a ação — " + ((err && err.message) || err));
+      }
+    }, 600);
+    timersSalvar.set(id, { timer: timer, original: original });
+  }
+
+  elVistaKanban.addEventListener("dragstart", (e) => {
+    const card = e.target.closest(".kb-card");
+    if (!card) return;
+    e.dataTransfer.setData("text/plain", card.dataset.id);
+    e.dataTransfer.effectAllowed = "move";
+    card.classList.add("kb-arrastando");
+  });
+  elVistaKanban.addEventListener("dragend", (e) => {
+    const card = e.target.closest(".kb-card");
+    if (card) card.classList.remove("kb-arrastando");
+    elVistaKanban.querySelectorAll(".kb-coluna.kb-sobre-arraste").forEach((c) => c.classList.remove("kb-sobre-arraste"));
+  });
+  elVistaKanban.addEventListener("dragover", (e) => {
+    const coluna = e.target.closest(".kb-coluna");
+    if (!coluna) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    coluna.classList.add("kb-sobre-arraste");
+  });
+  elVistaKanban.addEventListener("dragleave", (e) => {
+    const coluna = e.target.closest(".kb-coluna");
+    if (coluna && !coluna.contains(e.relatedTarget)) coluna.classList.remove("kb-sobre-arraste");
+  });
+  elVistaKanban.addEventListener("drop", (e) => {
+    const coluna = e.target.closest(".kb-coluna");
+    if (!coluna) return;
+    e.preventDefault();
+    coluna.classList.remove("kb-sobre-arraste");
+    const id = e.dataTransfer.getData("text/plain");
+    if (id) moverPara(id, coluna.dataset.statusAlvo);
+  });
+  // clique no card: fora do nome do responsável (que o próprio js/drawer.js já cuida,
+  // delegado no document — item 1.2/P11), abre/fecha o detalhe (Depende de/solução
+  // proposta) embutido no card. Não existe "drawer de ação" em js/drawer.js (só
+  // iniciativa/pessoa) — reaproveitar o painel pra uma entidade que ele não modela
+  // inventaria capacidade nova; o responsável (pessoa real) já abre o drawer de verdade.
+  elVistaKanban.addEventListener("click", (e) => {
+    if (e.target.closest("[data-drawer-pessoa]")) return;
+    const card = e.target.closest(".kb-card");
+    if (!card) return;
+    const det = card.querySelector(".kb-detalhe");
+    if (det) det.hidden = !det.hidden;
+  });
 
   function alternarOrdenacao(chave) {
     if (ordem.chave !== chave) ordem = { chave: chave, dir: "asc" };
@@ -241,6 +466,13 @@
     const qParam = params.get("q");
     if (qParam) busca.value = qParam;
   }
+
+  // link direto com #id (vindo de outra página, ex.: minhas-acoes.html) precisa da visão
+  // Lista pra abrir o detalhe — não existe o equivalente em Kanban. Só vale pra ESTA
+  // carga: não mexe no localStorage, então a preferência Kanban do usuário continua
+  // valendo nas próximas visitas sem hash.
+  if (location.hash && visaoAtual === "kanban") visaoAtual = "lista";
+  aplicarVisao();
 
   aplicarQuerystring();
   render();
