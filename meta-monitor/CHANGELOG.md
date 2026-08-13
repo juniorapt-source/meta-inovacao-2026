@@ -1,5 +1,46 @@
 # Changelog
 
+## v0.20.2 — 2026-08-13
+"Dashboard orientado à decisão" — 3 melhorias de amarração entre o Dashboard
+(`index.html`) e o Caminho crítico (`caminho.html`). Só exibição e navegação —
+nenhum campo novo, nenhuma mudança de dado ou de cálculo.
+
+- **Radar de carga — concentração por responsável (item 1a):** cada dia do radar
+  ganhou uma linha extra, ex. "concentradas em: JR. (José Júnior) (5)" — nome
+  (qtd), ordenado desc. Resolvido a partir de `a.responsavel_id[0]` (campo
+  canônico já existente, P4) contra `DB.responsaveis`; uma ação com mais de um
+  responsável conta só pro primeiro da lista (decisão deliberada: contar em
+  dobro faria a soma dos parênteses passar do total de entregas do dia, e
+  pareceria conta errada).
+- **Barra de alerta — recorte crítico nas atrasadas (item 1b):** "N ações
+  atrasadas" ganhou o sufixo "(M no caminho crítico)", M = atrasadas com
+  `a.cc.tipo === "no"`; sufixo omitido quando M = 0.
+- **Drill-down Dashboard → Caminho crítico (item 2):** o badge "★ Nó N" virou
+  link pra `caminho.html#no<N>` (mesma âncora que os cards de nó já expõem, e
+  que o trilho do Dashboard já usava) em todo lugar onde aparece — Kanban e
+  Lista de `plano.html`, e agora também "Atrasadas agora" do Dashboard.
+  Centralizado em `window.ccChip` (`js/core.js`, movido de dentro de
+  `plano.html`, que tinha uma cópia local) — recebe `semLink=true` nos
+  contextos em que o chip já fica dentro de outro `<a>` (a linha inteira de
+  "Atrasadas agora" já é um link pra `plano.html`), porque `<a>` aninhado
+  dentro de `<a>` é HTML inválido. Estilo discreto de propósito: só
+  cursor+underline no hover (`css/base.css`), sem mudar o visual do chip.
+  Guards de clique adicionados nos handlers delegados do Kanban e da Lista de
+  `plano.html` (`e.target.closest("a")`) pra o clique no link não também
+  abrir/fechar o detalhe do card/linha.
+- **Atrasadas ordenadas por criticidade (item 3):** nó crítico primeiro,
+  dentro de cada grupo mais antiga primeiro — extraído como
+  `CALC.comparadorAtrasadas` (`js/calc.js`, não duplicado) e usado tanto em
+  "Atrasadas agora" do Dashboard (que também passou a exibir o badge "★ Nó N",
+  reusando `window.ccChip`) quanto em "Ações do plano" de `minhas-acoes.html`
+  (só a ordenação — sem o badge, fora do escopo pedido).
+- **`tools/testar_calc.js`** — nova asserção pra `CALC.comparadorAtrasadas`
+  (nó crítico nunca depois de não-crítico; dentro do mesmo grupo, prazo_iso
+  não-decrescente).
+- **`tools/testar_status_badges_headless.js`** — contagem esperada de `.chip`
+  em "Atrasadas agora"/"Próximos 7 dias" de `index.html` subiu de 16 para 21
+  (as ações de nó crítico atrasadas agora também badge).
+
 ## v0.20.1 — 2026-08-13
 Ajustes de layout em `corsario.html` (O Caminho para o Corsário) — sem mudança de dados
 nem de lógica de cálculo (régua/pesos intocados).

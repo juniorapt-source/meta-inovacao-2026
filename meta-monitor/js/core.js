@@ -63,6 +63,28 @@
     return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   };
 
+  // chip do caminho crítico (★ Nó N / cadeia N / ◆ SLA) — antes só existia em plano.html
+  // (Lista + Kanban); centralizado aqui pra index.html ("Atrasadas agora") reusar o mesmo
+  // componente, não uma cópia ("Dashboard orientado à decisão", item 2 do drill-down).
+  // "no" vira link pra caminho.html#no<N> (mesmo id de âncora que os cards de nó de
+  // caminho.html já têm, e que o trilho do Dashboard já usa) — discreto (css/base.css:
+  // a.chip.cc só ganha cursor+underline no hover, sem mudar o visual do badge).
+  // semLink=true devolve span em vez de <a>: usado só onde o chip já fica DENTRO de outro
+  // <a> (ex.: a linha inteira de "Atrasadas agora" já é um link pra plano.html) — <a>
+  // aninhado dentro de <a> é HTML inválido e o navegador reordena a árvore de forma
+  // imprevisível, então não é opcional nesses casos.
+  window.ccChip = function (a, semLink) {
+    if (!a.cc || !a.cc.tipo) return "";
+    if (a.cc.tipo === "no") {
+      return semLink
+        ? ' <span class="chip cc">★ Nó ' + a.cc.no + "</span>"
+        : ' <a class="chip cc" href="caminho.html#no' + a.cc.no + '">★ Nó ' + a.cc.no + "</a>";
+    }
+    if (a.cc.tipo === "cadeia") return ' <span class="chip cc">cadeia ' + a.cc.no + "</span>";
+    if (a.cc.tipo === "sla") return ' <span class="chip sla">◆ SLA</span>';
+    return "";
+  };
+
   window.montarShell = function (paginaAtual) {
     const nav = document.querySelector(".nav");
     if (!nav) return;

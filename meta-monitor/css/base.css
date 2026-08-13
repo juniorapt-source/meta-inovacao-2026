@@ -211,6 +211,11 @@ a.drawer-linha:hover span:first-child{text-decoration:underline}
 .st-atrasada{background:var(--crit-w);color:var(--crit)}
 .st-janela{background:var(--warn-w);color:var(--warn)}
 .chip.cc{background:var(--cc-w);color:var(--cc)}
+/* "Dashboard orientado à decisão" (item 2, drill-down) — o badge ★ Nó N vira <a> em
+   alguns lugares (js/core.js, window.ccChip); discreto de propósito, sem parecer botão:
+   só cursor + underline no hover, nada do visual do chip muda. */
+a.chip.cc{text-decoration:none;cursor:pointer}
+a.chip.cc:hover{text-decoration:underline}
 .chip.sla{background:var(--sla-w);color:var(--sla)}
 .chip.pessoa{background:var(--neutro-w);color:var(--ink);margin:2px 4px 2px 0;font-family:var(--font-sans);
   font-weight:500;text-transform:none;letter-spacing:0;font-size:12.5px}

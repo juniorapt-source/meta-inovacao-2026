@@ -64,6 +64,19 @@
     return { atrasadas, nosCriticos, diasCargaConcentrada };
   };
 
+  // "Dashboard orientado à decisão" — comparador compartilhado por index.html
+  // ("Atrasadas agora") e minhas-acoes.html ("Ações do plano", dentro do grupo de
+  // atrasadas): nó crítico primeiro (a.cc.tipo === "no", o mesmo marcador que já vira o
+  // badge "★ Nó N"), dentro de cada grupo a mais antiga primeiro (prazo_iso asc). Extraído
+  // aqui (não duplicado nas duas páginas) pelo mesmo motivo de sempre — vocabulário/regra
+  // compartilhada só numa fonte.
+  C.comparadorAtrasadas = function (a, b) {
+    const critA = a.cc && a.cc.tipo === "no" ? 0 : 1;
+    const critB = b.cc && b.cc.tipo === "no" ? 0 : 1;
+    if (critA !== critB) return critA - critB;
+    return (a.prazo_iso || "").localeCompare(b.prazo_iso || "");
+  };
+
   C.fmtBR = function (iso) {
     if (!iso) return "";
     const [y, m, d] = iso.split("-");

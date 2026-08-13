@@ -28,7 +28,10 @@ const CAMINHOS_CHROME = [
 // #legenda) — só conta badge que representa um registro de dado.
 const PAGINAS = [
   { pagina: "plano.html?semrede=1", seletor: "#tabela .chip", esperado: 62 },
-  { pagina: "index.html?semrede=1", seletor: "#atrasadas .chip, #prox .chip", esperado: 16 },
+  // esperado subiu de 16→21 ("Dashboard orientado à decisão", item 3): "Atrasadas agora"
+  // agora mostra o badge ★ Nó N (ccChip(a, true)) nas ações de nó crítico, que antes só
+  // aparecia no Kanban/Lista de plano.html.
+  { pagina: "index.html?semrede=1", seletor: "#atrasadas .chip, #prox .chip", esperado: 21 },
   { pagina: "caminho.html?semrede=1", seletor: "#lista-nos .chip", esperado: 18 },
   { pagina: "agenda.html?semrede=1", seletor: "#encontros .chip", esperado: 20 },
   { pagina: "demandas.html", seletor: "#matriz .cel", esperado: 270 },

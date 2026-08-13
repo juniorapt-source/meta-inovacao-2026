@@ -156,12 +156,19 @@
   const urgencia = CALC.resumoUrgencia(plano, DB.nos.nos, hoje);
   const totalUrgente = urgencia.atrasadas + urgencia.nosCriticos + urgencia.diasCargaConcentrada;
   const fraseEl = document.getElementById("frase-contexto");
+  // "Dashboard orientado à decisão", item 1b — recorte crítico dentro do total de
+  // atrasadas: mesmo marcador ★ Nó N (a.cc.tipo==="no") que já vira badge em
+  // plano.html/Kanban. Se N=0 o parêntese some (não "0 no caminho crítico" — ruído).
+  const atrasadasNoCC = plano.filter((a) => CALC.ehAtrasada(a, hoje) && a.cc && a.cc.tipo === "no").length;
   if (totalUrgente === 0) {
     fraseEl.textContent = "Nenhum item crítico hoje — plano no ritmo.";
     fraseEl.classList.add("zerado");
   } else {
     const partesUrgencia = [];
-    if (urgencia.atrasadas) partesUrgencia.push(urgencia.atrasadas + (urgencia.atrasadas === 1 ? " ação atrasada" : " ações atrasadas"));
+    if (urgencia.atrasadas) {
+      const sufixoCC = atrasadasNoCC ? " (" + atrasadasNoCC + " no caminho crítico)" : "";
+      partesUrgencia.push(urgencia.atrasadas + (urgencia.atrasadas === 1 ? " ação atrasada" : " ações atrasadas") + sufixoCC);
+    }
     if (urgencia.nosCriticos) partesUrgencia.push(urgencia.nosCriticos + (urgencia.nosCriticos === 1 ? " nó crítico" : " nós críticos"));
     if (urgencia.diasCargaConcentrada) partesUrgencia.push(urgencia.diasCargaConcentrada + (urgencia.diasCargaConcentrada === 1 ? " dia com carga concentrada" : " dias com carga concentrada"));
     fraseEl.textContent = totalUrgente + (totalUrgente === 1 ? " item precisa" : " itens precisam") + " de atenção hoje · " + partesUrgencia.join(" · ");
@@ -251,18 +258,47 @@
   document.getElementById("kpis").innerHTML = kpisHtml;
   document.getElementById("portfolio").innerHTML = portfolioHtml;
 
+  // "Dashboard orientado à decisão", item 1a — concentração por responsável dentro de
+  // cada dia do Radar. Usa o MESMO campo que o resto do site já usa pra resolver pessoa
+  // (a.responsavel_id, canônico desde o P4 — nenhum campo novo). Uma ação com mais de um
+  // responsável (ex.: "JR. e Pova", responsavel_id ["jr","pova"]) conta só pro PRIMEIRO
+  // da lista — decisão deliberada: contar em dobro deixaria a soma dos parênteses maior
+  // que o nº de entregas do dia, parecendo conta errada à primeira vista.
+  function nomeResponsavelPrincipal(a) {
+    const id = a.responsavel_id && a.responsavel_id[0];
+    if (!id) return a.resp || "—";
+    const p = (DB.responsaveis || []).find((r) => r.id === id);
+    return p ? p.nome : (a.resp || id);
+  }
+  function concentracaoPorResponsavelHtml(idsDoDia) {
+    const contagem = new Map();
+    idsDoDia.forEach((id) => {
+      const a = plano.find((x) => x.id === id);
+      if (!a) return;
+      const nome = nomeResponsavelPrincipal(a);
+      contagem.set(nome, (contagem.get(nome) || 0) + 1);
+    });
+    const ordenado = [...contagem.entries()].sort((x, y) => y[1] - x[1]);
+    return ordenado.map(([nome, n]) => esc(nome) + " (" + n + ")").join(", ");
+  }
+
   // radar de carga
   const carga = CALC.cargaPorDia(plano).filter(c => c.carga >= 2 && c.iso >= hoje);
   document.getElementById("radar").innerHTML = carga.length
-    ? carga.map(c => '<div style="margin:4px 0"><span class="badge-dia"' + (c.carga >= 3 ? "" : ' style="background:var(--ambar-w);color:var(--ambar)"') + '>' +
+    ? carga.map(c => '<div style="margin:4px 0 10px">' +
+        '<div><span class="badge-dia"' + (c.carga >= 3 ? "" : ' style="background:var(--ambar-w);color:var(--ambar)"') + '>' +
         CALC.fmtBR(c.iso) + " · " + c.carga + ' entregas</span> <span class="mono" style="font-size:12px;color:var(--grafite)">' +
-        c.ids.join(" · ") + "</span></div>").join("")
+        c.ids.join(" · ") + "</span></div>" +
+        '<div style="font-size:11px;color:var(--grafite);margin-top:2px">concentradas em: ' + concentracaoPorResponsavelHtml(c.ids) + "</div>" +
+      "</div>").join("")
     : '<span style="color:var(--grafite)">Nenhum dia à frente concentra 2+ entregas.</span>';
 
-  // atrasadas
-  const atr = plano.filter(a => CALC.ehAtrasada(a, hoje));
+  // atrasadas — "Dashboard orientado à decisão", item 3: nó crítico primeiro (dentro do
+  // grupo, mais antiga primeiro), mesmo comparador de minhas-acoes.html
+  // (CALC.comparadorAtrasadas, js/calc.js — não duplicado nas duas páginas).
+  const atr = plano.filter(a => CALC.ehAtrasada(a, hoje)).sort(CALC.comparadorAtrasadas);
   document.getElementById("atrasadas").innerHTML = atr.length
-    ? atr.map(a => linha(a)).join("")
+    ? atr.map(a => linha(a, true)).join("")
     : '<span style="color:var(--grafite)">Nada atrasado. 👌</span>';
 
   // próximos 7 dias
@@ -271,7 +307,10 @@
                        .sort((a, b) => a.prazo_iso.localeCompare(b.prazo_iso));
   document.getElementById("prox").innerHTML = prox.length ? prox.map(a => linha(a)).join("") : "—";
 
-  function linha(a) {
+  // mostrarCC=true (só "Atrasadas agora", item 3) mostra o badge ★ Nó N — window.ccChip
+  // (js/core.js), semLink=true porque o chip já fica DENTRO do <a> que envolve a linha
+  // inteira (ver comentário logo abaixo) — <a> aninhado dentro de <a> é HTML inválido.
+  function linha(a, mostrarCC) {
     const [cls, rot] = stClass(a, hoje);
     // ?q=ID preenche a busca em plano.html (pedido); #ID continua na URL pra também
     // auto-abrir o detalhe da linha lá — os dois mecanismos já existiam separados,
@@ -280,7 +319,9 @@
     return '<a class="linha-acao" href="plano.html?q=' + encodeURIComponent(a.id) + '#' + esc(a.id) + '">' +
       '<span class="mono" style="font-size:12px;color:var(--grafite);min-width:58px">' + esc(a.id) + "</span>" +
       '<span style="flex:1">' + esc(a.atividade) +
-      ' <span style="color:var(--grafite);font-size:12px">· ' + esc(a.resp) + "</span></span>" +
+      ' <span style="color:var(--grafite);font-size:12px">· ' + esc(a.resp) + "</span>" +
+      (mostrarCC ? ccChip(a, true) : "") +
+      "</span>" +
       '<span class="mono" style="font-size:12px">' + esc(a.prazo) + "</span>" +
       '<span class="chip ' + cls + '">' + rot + "</span></a>";
   }

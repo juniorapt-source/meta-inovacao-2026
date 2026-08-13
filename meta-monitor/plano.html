@@ -159,13 +159,10 @@
   const resps = [...new Set(plano.map(a => a.resp))].sort();
   selR.innerHTML = '<option value="">Todos os responsáveis</option>' + resps.map(r => "<option>" + esc(r) + "</option>").join("");
 
-  function ccChip(a){
-    if (!a.cc || !a.cc.tipo) return "";
-    if (a.cc.tipo === "no") return ' <span class="chip cc">★ Nó ' + a.cc.no + "</span>";
-    if (a.cc.tipo === "cadeia") return ' <span class="chip cc">cadeia ' + a.cc.no + "</span>";
-    if (a.cc.tipo === "sla") return ' <span class="chip sla">◆ SLA</span>';
-    return "";
-  }
+  // ccChip(a) agora vem de js/core.js (window.ccChip) — "Dashboard orientado à decisão",
+  // item 2: index.html ("Atrasadas agora") reusa o mesmo componente/markup, não uma
+  // cópia; aqui (Lista e Kanban) o chip não está aninhado dentro de outro <a>, então usa
+  // a forma padrão (link pra caminho.html#no<N>).
 
   // ordenação clicável no cabeçalho — asc → desc → sem ordenação (ordem.chave = null).
   // Não mexe nos filtros: entra só como um sort() em cima da lista já filtrada.
@@ -402,6 +399,10 @@
   // inventaria capacidade nova; o responsável (pessoa real) já abre o drawer de verdade.
   elVistaKanban.addEventListener("click", (e) => {
     if (e.target.closest("[data-drawer-pessoa]")) return;
+    // item 2 (drill-down) — o badge ★ Nó N agora é um <a> de verdade (window.ccChip,
+    // js/core.js) pra caminho.html#no<N>; sem este bail, o clique nele TAMBÉM abriria/
+    // fecharia o detalhe do card (os dois listeners disparam pro mesmo clique).
+    if (e.target.closest("a")) return;
     const card = e.target.closest(".kb-card");
     if (!card) return;
     const det = card.querySelector(".kb-detalhe");
@@ -431,6 +432,10 @@
   corpo.addEventListener("click", (e) => {
     const goto = e.target.closest("[data-goto]");
     if (goto) { abrir(goto.dataset.goto); return; }
+    // item 2 (drill-down) — mesmo motivo do bail em elVistaKanban acima: o badge ★ Nó N
+    // (window.ccChip) agora é um <a> pra caminho.html dentro da célula do ID; sem isso o
+    // clique nele também abriria/fecharia o detalhe da linha.
+    if (e.target.closest("a")) return;
     const tr = e.target.closest("tr.clicavel");
     if (!tr) return;
     const det = corpo.querySelector('[data-det="' + tr.dataset.id + '"]');

@@ -130,10 +130,12 @@
 
   function acoesDaPessoa(id) {
     const lista = plano.filter((a) => Array.isArray(a.responsavel_id) && a.responsavel_id.includes(id));
-    // atrasadas primeiro (por prazo crescente) · depois quem tem prazo (por prazo crescente,
+    // atrasadas primeiro (dentro delas: nó crítico primeiro, depois mais antiga primeiro —
+    // CALC.comparadorAtrasadas, mesmo comparador de index.html "Atrasadas agora",
+    // "Dashboard orientado à decisão" item 3) · depois quem tem prazo (por prazo crescente,
     // cobre concluídas e futuras) · janelas (sem data fixa) por último — mesmo critério de
     // "janela" já usado no resto do site (!prazo_iso && prazo preenchido)
-    const atrasadas = lista.filter((a) => CALC.ehAtrasada(a, hoje)).sort((a, b) => a.prazo_iso.localeCompare(b.prazo_iso));
+    const atrasadas = lista.filter((a) => CALC.ehAtrasada(a, hoje)).sort(CALC.comparadorAtrasadas);
     const comPrazo = lista.filter((a) => !CALC.ehAtrasada(a, hoje) && a.prazo_iso).sort((a, b) => a.prazo_iso.localeCompare(b.prazo_iso));
     const janela = lista.filter((a) => !a.prazo_iso && a.prazo).sort((a, b) => a.id.localeCompare(b.id));
     const resto = lista.filter((a) => !atrasadas.includes(a) && !comPrazo.includes(a) && !janela.includes(a));
