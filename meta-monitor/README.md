@@ -89,6 +89,10 @@ node tools/testar_mobile_headless.js   # viewport 390×844: menu hambúrguer abr
                                         # plano.html/agenda.html viram cards, Matriz
                                         # (demandas.html e a visão Matriz do Corsário)
                                         # mostra o aviso desktop-only
+node tools/testar_busca_headless.js    # busca global: "/" foca o campo, um ID de ação
+                                        # conhecido navega certo, iniciativa abre o
+                                        # Corsário na visão Cards, pessoa e o painel do
+                                        # header mobile também batem
 ```
 
 ## Estrutura
@@ -102,10 +106,11 @@ js/responsaveis.js    lista canônica de responsáveis: texto livre → array de
 js/status.js           taxonomia única de status: window.CC_STATUS (testável em node)
 js/calendario.js      componente de calendário mensal (agenda.html, visão Calendário)
 js/timeline.js         componente de timeline por canal (agenda.html, visão Timeline)
+js/busca.js             busca global client-side: window.BUSCA (índice/filtro testáveis em node)
 js/editor_io.js       serialização canônica dos dados (testável em node)
 data/*.js             config, plano, nos, canais, agenda, iniciativas, matriz, pessoas
                        (+ pessoas.responsaveis: lista canônica de responsáveis), changelog
-tools/                geração de dados a partir do xlsx + os 11 testes
+tools/                geração de dados a partir do xlsx + os 12 testes
 docs/                 PLANO_EXECUCAO.md, BUILD_STATUS.md, PENDENCIAS.md (se houver)
 ```
 

@@ -104,9 +104,12 @@
 <script src="data/nos.js"></script>
 <script src="data/canais.js"></script>
 <script src="data/agenda.js"></script>
+<script src="data/projetos.js"></script>
+<script src="data/pessoas.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/status.js"></script>
 <script src="js/core.js"></script>
+<script src="js/busca.js"></script>
 <script src="js/calendario.js"></script>
 <script src="js/timeline.js"></script>
 <script>
@@ -152,7 +155,7 @@
   function linhaEncontro(e) {
     const c = porCanal[e.canal];
     const chaveStatus = CC_STATUS.chaveDeEntrada("encontro", e.status);
-    return "<tr>" +
+    return '<tr id="' + esc(e.id) + '">' +
       "<td><b>" + esc(c.nome) + '</b><div style="color:var(--grafite);font-size:11.5px">' + esc(c.formato) + "</div></td>" +
       '<td style="font-size:12.5px;color:var(--grafite);max-width:340px">' + c.pauta.slice(0, 2).map(esc).join(" · ") +
         (c.pauta.length > 2 ? " · +" + (c.pauta.length - 2) : "") + "</td>" +

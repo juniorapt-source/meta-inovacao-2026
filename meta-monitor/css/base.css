@@ -80,6 +80,42 @@ a{color:inherit;text-decoration:none} a:hover{color:var(--accent);text-decoratio
   font-family:'DM Sans';font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;
   color:rgba(244,239,228,.34)}
 .conteudo{position:relative;padding:26px 30px 60px;max-width:1180px;width:100%}
+
+/* ---- busca global (item 2.6 do plano de melhorias) — js/busca.js ----
+   campo dentro do <nav> (topo do sidebar, logo abaixo da marca) — mesmo <input> serve
+   pro desktop (sidebar sempre visível) e pro painel mobile deslizante (o mesmo <nav>).
+   O botão/painel .mob-* são a entrada extra pedida "no header mobile", pra buscar sem
+   precisar abrir o menu hambúrguer primeiro. */
+.busca-nav{padding:0 0 12px;position:relative}
+.busca-input{width:100%;padding:8px 10px;background:rgba(244,239,228,.09);
+  border:1px solid rgba(244,239,228,.28);color:#f4efe4;font-family:'DM Sans';font-size:12.5px;
+  border-radius:0}
+.busca-input::placeholder{color:rgba(244,239,228,.45)}
+.busca-input:focus{outline:2px solid var(--accent);outline-offset:1px;background:rgba(244,239,228,.15)}
+.busca-resultados{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--surface);
+  border:1px solid var(--border);max-height:60vh;overflow:auto;box-shadow:var(--sombra);z-index:60}
+.busca-grupo-titulo{font:700 10px 'DM Sans';color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em;
+  padding:8px 10px 3px}
+.busca-item{display:flex;flex-direction:column;gap:1px;padding:7px 10px;color:var(--ink)}
+.busca-item:hover,.busca-item.selecionado{background:var(--accent-w);text-decoration:none}
+.busca-item-rotulo{font-size:13px;font-weight:500}
+.busca-item-sub{font-size:11px;color:var(--ink-2)}
+.busca-vazio{padding:10px;color:var(--ink-2);font-size:12.5px}
+
+.mob-busca-btn{display:none}
+.mob-busca-painel{display:none}
+@media (max-width:767px){
+  .mob-busca-btn{display:inline-block;background:none;border:1px solid rgba(244,239,228,.35);
+    color:#f4efe4;font-size:15px;line-height:1;padding:6px 10px;cursor:pointer;border-radius:0;
+    margin-right:8px;font-family:var(--font-sans)}
+  .mob-busca-painel{position:fixed;top:57px;left:0;right:0;z-index:55;background:var(--ink);
+    padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:var(--sombra)}
+  .mob-busca-painel[hidden]{display:none}
+  .mob-busca-painel .busca-input{flex:1;min-width:0}
+  .mob-busca-fechar{background:none;border:1px solid rgba(244,239,228,.35);color:#f4efe4;
+    font-size:13px;padding:7px 10px;cursor:pointer;border-radius:0;font-family:var(--font-sans)}
+  .mob-busca-painel .busca-resultados{top:calc(100% + 4px);left:14px;right:14px}
+}
 .pagina-titulo{position:relative;font-family:var(--font-sans);font-weight:300;font-size:27px;margin-bottom:4px}
 .pagina-titulo::before{content:"lat 15°47′S · lon 47°52′O";position:absolute;top:8px;right:0;
   font-family:'IBM Plex Mono';font-size:11px;font-weight:400;color:var(--ink-3);letter-spacing:.02em;pointer-events:none}

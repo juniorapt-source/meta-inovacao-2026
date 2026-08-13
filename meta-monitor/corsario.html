@@ -222,8 +222,15 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
 
 <script src="data/config.js"></script>
 <script src="js/gate.js"></script>
+<script src="data/plano.js"></script>
+<script src="data/nos.js"></script>
+<script src="data/canais.js"></script>
+<script src="data/agenda.js"></script>
+<script src="data/projetos.js"></script>
+<script src="data/pessoas.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
+<script src="js/busca.js"></script>
 <script src="js/config.js"></script>
 <script>
 (function () {
@@ -625,6 +632,13 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
   });
   elBusca.addEventListener("input", renderTudo);
   elOrdenar.addEventListener("change", renderTudo);
+
+  // ?q=<nome> pré-preenche a busca (link direto da busca global, js/busca.js) — mesmo
+  // padrão de plano.html; a lista só é montada depois que carregar() trouxer os dados
+  // (renderTudo já lê elBusca.value.trim() a cada render), então só precisa preencher
+  // o campo aqui — nada de renderizar de novo antes da hora.
+  const qParam = new URLSearchParams(location.search).get("q");
+  if (qParam) elBusca.value = qParam;
 
   aplicarHash(); // respeita um #matriz vindo de link compartilhado antes mesmo do fetch terminar
   carregar();

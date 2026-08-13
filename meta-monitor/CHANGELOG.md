@@ -1,5 +1,48 @@
 # Changelog
 
+## v0.14.0 — 2026-08-13
+Prompt 8 do plano de melhorias (item 2.6): busca global client-side — `js/busca.js`.
+
+- **Índice** (`BUSCA.construirIndice`, função pura testável em node) — 5 entidades a
+  partir de `window.DB`: ações do plano (id/atividade/responsável, 47), iniciativas
+  (`data/projetos.js`, 27), pessoas (a lista CANÔNICA de `data/pessoas.js.responsaveis`,
+  31 — não `window.DB.pessoas`, que repete o mesmo nome em registros de papel diferente
+  sem id estável pra linkar sem ambiguidade), nós do caminho crítico (7), encontros da
+  agenda (`data/agenda.js` × `data/canais.js`/`data/agenda.js` ciclos, 20). Total: 132
+  entidades. Texto normalizado (acento fora, minúsculo) pra busca — mesma função de
+  `js/responsaveis.js`, duplicada de propósito (3 linhas, não vale criar dependência
+  cruzada entre módulos só por isso).
+  - Pra o índice ficar completo em TODA página (não só nas que já carregavam certos
+    `data/*.js` pro próprio uso), as 10 páginas com sidebar ganharam os `<script>` de
+    `data/*.js` que ainda não tinham (`editor.html` já carregava tudo). Sem isso, por
+    exemplo, buscar "Sandra" em `index.html` não achava a pessoa (a página nunca tinha
+    carregado `data/pessoas.js`) — achado rodando o teste headless real, não só lendo
+    o código.
+- **UI** (`js/core.js` só injeta os pontos de entrada — a lógica é toda de `js/busca.js`,
+  mesmo padrão do menu hambúrguer da v0.13.0, zero mudança de HTML por página):
+  - Desktop: campo de busca no topo do `<nav>` (logo abaixo da marca), dropdown de
+    resultados agrupados por tipo (Ações · Iniciativas · Pessoas · Nós · Encontros),
+    até 5 por grupo, navegável por ↑/↓ + Enter, fecha com Esc ou clique fora.
+  - Atalho de teclado "/" foca o campo — desviando de qualquer input/textarea/select/
+    contenteditable já focado, pra não roubar a barra de dentro de um campo de texto.
+  - Header mobile: botão 🔍 abre um painel de busca (mesmo mecanismo de índice/resultado)
+    sem precisar abrir o menu hambúrguer primeiro (pedido explícito do prompt); fecha o
+    menu se estiver aberto (os dois painéis não cabem juntos numa tela de 390px).
+- **Links por tipo** (pedido explícito): ação → `plano.html?q=ID#ID`; iniciativa →
+  `corsario.html?q=<nome>#cards` (visão CARDS, não a Matriz — `corsario.html` ganhou
+  suporte a `?q=` pré-preenchendo `#crs-busca` antes do primeiro render, mesmo padrão de
+  `?q=` que `plano.html` já tinha); pessoa → `minhas-acoes.html?pessoa=<id>`; nó →
+  `caminho.html#noN`; encontro → `agenda.html#<id-do-encontro>` (as linhas da tabela de
+  encontros ganharam `id="..."` — não tinham antes, precisou pra esse deep-link existir).
+- `tools/testar_busca_headless.js` — 12º teste do repo: "/" foca o campo; "CMT-01" acha
+  exatamente a ação certa e Enter navega de verdade pra `plano.html?q=CMT-01#CMT-01` (com
+  o filtro da página já aplicado); "Sebraetec" acha a iniciativa, abre `corsario.html` na
+  visão Cards com a busca preenchida; "Sandra" acha a pessoa certa; o painel de busca do
+  header mobile (390×844) faz tudo isso igual.
+- Validado com Chrome headless real (screenshots do dropdown desktop e do painel mobile):
+  132 entidades indexadas, os 5 cenários de link acima conferidos ponta a ponta, suíte
+  completa (12 testes) passando.
+
 ## v0.13.0 — 2026-08-13
 Prompt 7 do plano de melhorias (item 2.5): responsividade mobile — sidebar vira menu
 hambúrguer abaixo de 768px, tabelas viram cards empilhados, Matriz fica desktop-only com
