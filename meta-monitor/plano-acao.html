@@ -55,6 +55,7 @@
 
 <script src="data/config.js"></script>
 <script src="js/gate.js"></script>
+<script src="js/supabase.js"></script>
 <script src="data/projetos.js"></script>
 <script src="data/pessoas.js"></script>
 <script src="data/plano.js"></script>
@@ -116,16 +117,6 @@
   let iniciativaAtual = null;
   let listaAtual = [];
   const timers = new Map(); // debounce por "id:campo"
-
-  /* lib via CDN em formato ESM, carregada por import() dinâmico dentro de um
-     <script> clássico (não type="module") — assim o arquivo continua
-     testável por node --check junto com o resto do site, sem precisar de
-     bundler nem de mudar como as outras páginas carregam script. */
-  async function iniciarCliente() {
-    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-    if (!window.APP_CONFIG) throw new Error("js/config.js não carregado — falta window.APP_CONFIG.");
-    return createClient(window.APP_CONFIG.SUPABASE_URL, window.APP_CONFIG.SUPABASE_ANON_KEY);
-  }
 
   function renderNav() {
     const projetos = (window.DB && window.DB.projetos) || [];
@@ -225,7 +216,7 @@
       marcarRowStatus(row, "salvo");
     } catch (err) {
       console.error("plano-acao: falha ao salvar", err);
-      marcarRowStatus(row, "erro ao salvar");
+      marcarRowStatus(row, CC_SUPABASE.mensagemEscritaAmigavel(err) || "erro ao salvar");
     }
   }
 
@@ -256,7 +247,7 @@
       if (novoInput) novoInput.focus();
     } catch (err) {
       console.error("plano-acao: falha ao criar atividade", err);
-      window.alert("Não consegui criar a atividade: " + ((err && err.message) || err));
+      window.alert(CC_SUPABASE.mensagemEscritaAmigavel(err) || "Não consegui criar a atividade: " + ((err && err.message) || err));
     }
   }
 
@@ -274,7 +265,7 @@
       if (!listaAtual.length) renderPainel();
     } catch (err) {
       console.error("plano-acao: falha ao remover atividade", err);
-      window.alert("Não consegui remover: " + ((err && err.message) || err));
+      window.alert(CC_SUPABASE.mensagemEscritaAmigavel(err) || "Não consegui remover: " + ((err && err.message) || err));
     }
   }
 
@@ -309,7 +300,7 @@
 
   renderNav();
   try {
-    supa = await iniciarCliente();
+    supa = await CC_SUPABASE.obterClienteEsm();
   } catch (err) {
     console.error("plano-acao: falha ao iniciar o cliente Supabase", err);
     painel.innerHTML = '<div class="pa-erro">Não consegui carregar a biblioteca do Supabase via CDN — ' +

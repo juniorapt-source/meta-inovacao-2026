@@ -6,13 +6,16 @@
   const TABELA = "meta_inovacao_matriz_demandas";
   const CACHE_MS = 30000;
 
-  let cliente = null;
+  // client centralizado (item 2.1 do plano de melhorias) — window.CC_SUPABASE
+  // (js/supabase.js) garante o header x-cc-token em toda escrita (RLS por token
+  // compartilhado). Se por algum motivo js/supabase.js não tiver carregado antes desta
+  // página, cai pro jeito antigo (sem o header — só funciona enquanto a RLS não exigir
+  // o token, ou seja, antes do script SQL rodar).
   function getClient() {
-    if (cliente) return cliente;
+    if (root.CC_SUPABASE) return root.CC_SUPABASE.obterClienteClassico();
     if (!root.supabase || !root.supabase.createClient) throw new Error("supabase-js não carregado (confira o <script> do CDN).");
     if (!root.APP_CONFIG) throw new Error("js/config.js não carregado antes de matriz-store.js.");
-    cliente = root.supabase.createClient(root.APP_CONFIG.SUPABASE_URL, root.APP_CONFIG.SUPABASE_ANON_KEY);
-    return cliente;
+    return root.supabase.createClient(root.APP_CONFIG.SUPABASE_URL, root.APP_CONFIG.SUPABASE_ANON_KEY);
   }
 
   let cache = { linhas: null, ts: 0 };

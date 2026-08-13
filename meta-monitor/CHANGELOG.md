@@ -1,5 +1,62 @@
 # Changelog
 
+## v0.16.0 — 2026-08-13
+Prompt 3 do plano de melhorias (item 2.1): proteção de escrita no Supabase por token
+compartilhado. Código do site pronto; falta só rodar o SQL manualmente (não incluído
+neste push — ver "Como ativar" no rodapé, é decisão operacional, não de código).
+
+- **Tabelas com escrita client-side** (as únicas do repositório inteiro — conferido lendo
+  todo `.insert(`/`.update(`/`.delete(`/`fetch` do site): `plano_acao_atividades`
+  (`plano-acao.html`) e `meta_inovacao_matriz_demandas` (`demandas.html`, via
+  `js/matriz-store.js`). `corsario_criterios`/`corsario_status` são só leitura — não
+  entram na proteção porque não têm o que proteger.
+- **`tools/sql/2026-08_protecao_escrita.sql`** (gerado, não executado — SQL sempre roda
+  manualmente no Supabase, padrão do projeto) — pras 2 tabelas acima: remove qualquer
+  policy de INSERT/UPDATE/DELETE existente hoje (busca dinâmica no catálogo do Postgres
+  via `pg_policies`, não um nome adivinhado — os nomes atuais não estão documentados no
+  repo) e cria policies novas exigindo
+  `current_setting('request.headers', true)::json->>'x-cc-token' = '<TOKEN>'`. SELECT
+  intocado nas duas (leitura pública continua igual). Token como placeholder claramente
+  marcado (`SUBSTITUIR_PELO_TOKEN_UUID`, repetido em cada policy); bloco de reversão
+  comentado logo depois de cada tabela.
+- **`js/supabase.js`** (novo) — client Supabase centralizado, `window.CC_SUPABASE`. Antes
+  deste módulo, 3 lugares diferentes criavam client cada um do seu jeito
+  (`js/matriz-store.js` via SDK clássica do CDN; `plano-acao.html`/`minhas-acoes.html`
+  via `import()` dinâmico da lib ESM, cada uma com sua cópia da função). As duas formas
+  de carregar a lib continuam existindo (trocar isso tocaria em mais código do que o
+  necessário), mas agora as DUAS passam pelo módulo novo, que sempre configura o client
+  com o header `x-cc-token` (lido de `window.CC_TOKEN`) em toda requisição — inclusive
+  as de leitura raw-fetch de `corsario.html`/`js/drawer.js`, por consistência, mesmo
+  elas não precisando do token hoje (SELECT continua público).
+- **`window.CC_TOKEN`** — definido por `js/gate.js`, sempre, com ou sem `exigirSenha`
+  ativo (hoje `false`): nesse caso o token vem direto de `DB.config.tokenEscrita`
+  (comportamento preservado — sem barreira nova pra quem já podia editar). Se
+  `exigirSenha` virar `true` no futuro, o token só fica disponível depois da senha certa
+  — gravado em `sessionStorage.cc_token` junto do `cc_auth` já existente, e derivado de
+  lá nas próximas cargas da mesma aba (sem re-perguntar a senha). `data/config.js` ganha
+  o campo `tokenEscrita` (placeholder `"SUBSTITUIR_PELO_TOKEN"`).
+- **Erro de escrita amigável** (item 2.4) — `CC_SUPABASE.mensagemEscritaAmigavel(err)`
+  reconhece o formato de erro de permissão/RLS do PostgREST (status 401/403 quando
+  disponível, código Postgres `42501`, ou palavras-chave da mensagem — o client não
+  expõe sempre o mesmo formato, então a checagem não depende de um campo só) e devolve
+  "Sem permissão de escrita — fale com o JR." — aplicado em `plano-acao.html`
+  (salvar/criar/remover atividade) e `demandas.html` (salvar célula/remover linha/
+  adicionar linha). Qualquer OUTRO tipo de falha (rede fora do ar, etc.) continua
+  mostrando a mensagem de erro de sempre — só a permissão vira a frase amigável.
+- Validado com Chrome headless real contra o Supabase de produção: criei uma atividade
+  de teste em `plano-acao.html` pelo fluxo normal (client centralizado + `CC_TOKEN`
+  vindo do config), confirmei o autosave, removi (soft delete) pra não deixar rastro —
+  escrita real ponta a ponta funcionando com o novo client, do jeito que vai continuar
+  funcionando depois do SQL rodado (é o mesmo token, só passa a ser exigido). Suíte
+  completa (13 testes) passando, incluindo o roundtrip do editor.
+
+**Como ativar** (⚠️ decisão/execução do JR., não deste commit):
+  1. Gerar um token aleatório (UUID ou similar).
+  2. Substituir as 6 ocorrências de `SUBSTITUIR_PELO_TOKEN_UUID` no script SQL pelo token.
+  3. Rodar `tools/sql/2026-08_protecao_escrita.sql` no SQL Editor do Supabase.
+  4. Substituir `tokenEscrita` em `data/config.js` pelo MESMO token.
+  5. Commit e push do passo 4 (sem isso o site manda um token errado e ninguém escreve).
+
 ## v0.15.0 — 2026-08-13
 Prompt 11 do plano de melhorias (item 3.2): drawer lateral de Iniciativa/Pessoa —
 `js/drawer.js`. Fecha o ciclo indicador → causa → responsável → ação sem página nova.

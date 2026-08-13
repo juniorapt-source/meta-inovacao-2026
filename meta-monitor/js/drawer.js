@@ -46,7 +46,12 @@
     const cfg = supaCfg();
     if (!cfg) throw new Error("Supabase não configurado nesta página (falta js/config.js).");
     const url = cfg.SUPABASE_URL + "/rest/v1/" + tabela + "?" + (query || "select=*");
-    const r = await fetch(url, { headers: { apikey: cfg.SUPABASE_ANON_KEY, Authorization: "Bearer " + cfg.SUPABASE_ANON_KEY } });
+    // header x-cc-token (item 2.1) só entra se js/supabase.js carregou nesta página —
+    // essas buscas do drawer são todas leitura (SELECT continua público na RLS nova),
+    // então funcionam igual com ou sem o header; manda quando dá, por consistência.
+    const headers = Object.assign({ apikey: cfg.SUPABASE_ANON_KEY, Authorization: "Bearer " + cfg.SUPABASE_ANON_KEY },
+      root.CC_SUPABASE ? root.CC_SUPABASE.headersComToken() : {});
+    const r = await fetch(url, { headers: headers });
     if (!r.ok) {
       let detalhe = "HTTP " + r.status;
       try { const corpo = await r.json(); if (corpo && corpo.message) detalhe = corpo.message; } catch (e) { /* corpo não era JSON */ }

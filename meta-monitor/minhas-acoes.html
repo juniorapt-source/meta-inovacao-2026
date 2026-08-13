@@ -64,6 +64,7 @@
 
 <script src="data/config.js"></script>
 <script src="js/gate.js"></script>
+<script src="js/supabase.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/pessoas.js"></script>
@@ -132,14 +133,8 @@
     return atrasadas.concat(comPrazo, janela, resto);
   }
 
-  async function iniciarClienteSupabase() {
-    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-    if (!window.APP_CONFIG) throw new Error("js/config.js não carregado — falta window.APP_CONFIG.");
-    return createClient(window.APP_CONFIG.SUPABASE_URL, window.APP_CONFIG.SUPABASE_ANON_KEY);
-  }
-
   async function atividadesDaPessoa(id) {
-    const supa = await iniciarClienteSupabase();
+    const supa = await CC_SUPABASE.obterClienteEsm();
     const { data, error } = await supa.from(TABELA).select("*").eq("responsavel", id).is("deleted_at", null);
     if (error) throw error;
     return data || [];

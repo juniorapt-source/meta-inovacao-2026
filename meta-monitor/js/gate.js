@@ -1,14 +1,21 @@
 /* Gate de senha — proteção client-side LEVE contra acesso casual ao site (alguém que abre
    o link sem saber que é conteúdo interno). NÃO é autenticação de verdade: o HTML da página
    continua no DOM por trás do overlay, então quem souber usar o DevTools (ou desligar JS)
-   lê o conteúdo mesmo sem digitar a senha. Autenticação real de fato é o item 2.1 do plano
-   de melhorias — ainda não implementado. Isto aqui só evita o caso comum de alguém cair na
+   lê o conteúdo mesmo sem digitar a senha. Isto aqui só evita o caso comum de alguém cair na
    página sem querer (link compartilhado por engano, mecanismo de busca, etc.).
 
    Controlado por DB.config.exigirSenha (data/config.js):
-     - false (default) → este arquivo não faz nada, silenciosamente.
+     - false (default) → não cobre a tela com overlay nenhum.
      - true  → se não houver sessionStorage.cc_auth, cobre a tela com um overlay pedindo
        senha antes de deixar o resto da página aparecer.
+
+   window.CC_TOKEN (item 2.1 — proteção de escrita no Supabase, js/supabase.js) também sai
+   daqui, sempre, independente da flag acima: é o token compartilhado que a RLS do Supabase
+   passa a exigir pra escrita (tools/sql/2026-08_protecao_escrita.sql). Com exigirSenha
+   false, o token vem direto de DB.config.tokenEscrita (comportamento de hoje preservado —
+   nenhuma barreira nova pra quem já podia editar). Com exigirSenha true, o token só fica
+   disponível depois da senha certa, gravado em sessionStorage.cc_token junto do cc_auth —
+   assim o token não fica solto em window antes de alguém provar que passou pelo gate.
 
    A senha nunca fica em texto claro em lugar nenhum do repositório — só o SHA-256 hex dela
    (HASH_SENHA abaixo). Pra gerar o hash de uma senha nova sem expor ela no chat/repo, use
@@ -20,11 +27,23 @@
   // tools/gerar_hash_senha.html e cole o resultado aqui (mantendo as aspas).
   const HASH_SENHA = "SUBSTITUIR_PELO_HASH";
   const CHAVE_SESSAO = "cc_auth";
+  const CHAVE_TOKEN = "cc_token";
 
   const cfg = (window.DB && window.DB.config) || {};
-  if (cfg.exigirSenha !== true) return; // flag desligada — comportamento de hoje, sem overlay
 
-  if (sessionStorage.getItem(CHAVE_SESSAO) === "1") return; // já autenticado nesta aba
+  if (cfg.exigirSenha !== true) {
+    // flag desligada — comportamento de hoje, sem overlay; token vem direto do config
+    window.CC_TOKEN = cfg.tokenEscrita || "";
+    return;
+  }
+
+  if (sessionStorage.getItem(CHAVE_SESSAO) === "1") {
+    // já autenticado nesta aba — token derivado do sessionStorage (gravado na hora da
+    // senha certa, ver montarOverlay abaixo); cai pro config se por algum motivo faltar
+    // (sessão antiga de antes deste campo existir, por exemplo)
+    window.CC_TOKEN = sessionStorage.getItem(CHAVE_TOKEN) || cfg.tokenEscrita || "";
+    return;
+  }
 
   async function sha256Hex(texto) {
     const dados = new TextEncoder().encode(texto);
@@ -80,6 +99,8 @@
       sha256Hex(campo.value).then(function (hash) {
         if (hash === HASH_SENHA) {
           sessionStorage.setItem(CHAVE_SESSAO, "1");
+          sessionStorage.setItem(CHAVE_TOKEN, cfg.tokenEscrita || "");
+          window.CC_TOKEN = cfg.tokenEscrita || "";
           overlay.remove();
         } else {
           erro.hidden = false;

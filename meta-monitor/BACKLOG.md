@@ -75,14 +75,29 @@ pronto pra a seção entrar se esse campo existir um dia).
 
 ## Item 2.1 — Proteção de escrita no Supabase (token compartilhado)
 
-**Status:** não iniciado — é o PROMPT 3 de `prompts_code_melhorias_carta_corso.md`
+**Status:** código pronto (v0.16.0) — ativação manual pendente (não é passo de código)
 
-Hoje as policies de RLS do Supabase aceitam escrita anônima em `plano_acao_atividades` e
-na(s) tabela(s) da Matriz — qualquer um com a URL grava. O plano é restringir a escrita a
-um header `x-cc-token` validado por RLS, com o token liberado só depois do gate de senha
-(`js/gate.js`) desbloquear — por isso o PROMPT 3 depende do gate já estar no repositório
-(mesmo desativado, que é o estado atual). `js/gate.js` já documenta essa distinção no
-comentário de topo: é proteção client-side leve contra acesso casual, não impede escrita
-de quem tiver a senha — o token compartilhado do item 2.1 é o que fecha essa lacuna
-(dentro da proporção que uma senha compartilhada sem usuários individuais permite; o
-próprio PROMPT 3 registra Supabase Auth com usuários como evolução futura mais forte).
+Até a v0.15.0, as policies de RLS do Supabase aceitavam escrita anônima em
+`plano_acao_atividades` e `meta_inovacao_matriz_demandas` — qualquer um com a URL gravava.
+
+**O que foi feito no código:** `js/supabase.js` novo (client Supabase centralizado,
+`window.CC_SUPABASE`) — as duas formas que já existiam de criar client (SDK clássica via
+CDN em `js/matriz-store.js`, `import()` dinâmico da lib ESM em `plano-acao.html`/
+`minhas-acoes.html`) passam a configurar o header `x-cc-token` em toda requisição, lido de
+`window.CC_TOKEN`. `js/gate.js` define `CC_TOKEN` sempre (direto de
+`DB.config.tokenEscrita` enquanto `exigirSenha` for `false`, como é hoje; derivado de
+`sessionStorage.cc_token` — gravado junto do `cc_auth` na hora da senha certa — se
+`exigirSenha` virar `true` no futuro). Erro de escrita por permissão vira "Sem permissão
+de escrita — fale com o JR." em vez de stacktrace (`plano-acao.html`, `demandas.html`).
+`tools/sql/2026-08_protecao_escrita.sql` gerado (script de RLS pras 2 tabelas, com token
+placeholder e bloco de reversão) — **ainda não rodado no Supabase**, isso é decisão/
+execução do JR., não deste commit (padrão do projeto: SQL sempre roda manualmente). Até o
+SQL rodar, a escrita continua anônima livre como sempre foi — o código novo já manda o
+token em toda requisição, só não tem ainda ninguém checando ele do lado do banco.
+
+**Passo a passo de ativação** (registrado também no CHANGELOG v0.16.0): gerar token →
+substituir no SQL → rodar no Supabase → substituir `tokenEscrita` em `data/config.js` →
+commit. `js/gate.js` já documenta a distinção: é proteção client-side leve contra acesso
+casual, não impede escrita de quem tiver a senha do site (consegue extrair o token do
+sessionStorage) — proporcional à escolha de senha compartilhada sem usuários individuais;
+Supabase Auth com usuários fica registrado como evolução futura mais forte.

@@ -222,6 +222,7 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
 
 <script src="data/config.js"></script>
 <script src="js/gate.js"></script>
+<script src="js/supabase.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/canais.js"></script>
@@ -249,9 +250,12 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
 
   async function buscar(tabela, params) {
     const url = SUPABASE_URL + "/rest/v1/" + tabela + "?select=*" + (params || "");
-    const r = await fetch(url, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY },
-    });
+    // header x-cc-token (item 2.1) — esta página só lê (corsario_criterios/corsario_status
+    // continuam SELECT público na RLS nova), então funciona igual com ou sem; manda
+    // quando window.CC_SUPABASE carregou, por consistência com o resto do site.
+    const headers = Object.assign({ apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY },
+      window.CC_SUPABASE ? window.CC_SUPABASE.headersComToken() : {});
+    const r = await fetch(url, { headers: headers });
     if (!r.ok) {
       // PostgREST devolve {message, hint} no corpo (ex.: GRANT faltando pro role anon) —
       // repassa isso no erro em vez de só "HTTP 401", que é o de fato acionável pra quem for corrigir.

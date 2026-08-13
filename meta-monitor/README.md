@@ -112,10 +112,12 @@ js/calendario.js      componente de calendário mensal (agenda.html, visão Cale
 js/timeline.js         componente de timeline por canal (agenda.html, visão Timeline)
 js/busca.js             busca global client-side: window.BUSCA (índice/filtro testáveis em node)
 js/drawer.js             drawer lateral de Iniciativa/Pessoa: window.DRAWER
+js/supabase.js           client Supabase centralizado + header x-cc-token: window.CC_SUPABASE
 js/editor_io.js       serialização canônica dos dados (testável em node)
 data/*.js             config, plano, nos, canais, agenda, iniciativas, matriz, pessoas
                        (+ pessoas.responsaveis: lista canônica de responsáveis), changelog
 tools/                geração de dados a partir do xlsx + os 13 testes
+tools/sql/             scripts SQL pra rodar manualmente no Supabase (RLS etc.)
 docs/                 PLANO_EXECUCAO.md, BUILD_STATUS.md, PENDENCIAS.md (se houver)
 ```
 

@@ -90,6 +90,7 @@
 
 <script src="data/config.js"></script>
 <script src="js/gate.js"></script>
+<script src="js/supabase.js"></script>
 <script src="data/canais.js"></script>
 <script src="data/iniciativas.js"></script>
 <script src="data/matriz.js"></script>
@@ -269,7 +270,7 @@
     } catch (err) {
       console.error("saveCell falhou:", err);
       td.classList.remove("cel-salvando"); td.classList.add("cel-falhou");
-      sel.title = "Falhou: " + ((err && err.message) || err) + " — mude de novo pra tentar salvar outra vez.";
+      sel.title = (CC_SUPABASE.mensagemEscritaAmigavel(err) || ("Falhou: " + ((err && err.message) || err) + " — mude de novo pra tentar salvar outra vez."));
     }
   }
 
@@ -283,7 +284,7 @@
       linhas = linhas.filter(l => String(l.id) !== id);
       renderTudo();
     } catch (err) {
-      window.alert("Não consegui remover: " + ((err && err.message) || err));
+      window.alert(CC_SUPABASE.mensagemEscritaAmigavel(err) || "Não consegui remover: " + ((err && err.message) || err));
     }
   }
 
@@ -301,7 +302,7 @@
         linhas.push(nova);
         renderTudo();
       } catch (err) {
-        window.alert("Não consegui adicionar: " + ((err && err.message) || err));
+        window.alert(CC_SUPABASE.mensagemEscritaAmigavel(err) || "Não consegui adicionar: " + ((err && err.message) || err));
       }
     });
   }
