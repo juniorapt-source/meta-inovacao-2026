@@ -42,6 +42,28 @@
   .cal-dia{min-height:56px}
   .cal-faixa{font-size:8.5px}
 }
+
+/* visão Timeline (item 2.7) — grid CSS puro, colunas em px fixo de propósito (ver
+   js/timeline.js): a largura total do grid fica maior que o container, então o scroll
+   horizontal do mobile já sai de graça do overflow-x abaixo, sem layout mobile à parte. */
+.tl-outer{overflow-x:auto;position:relative;border:1px solid var(--linha);background:var(--branco)}
+.tl-grid{display:grid}
+.tl-canal-cab,.tl-canal,.tl-dia-cab,.tl-adefinir-cab,.tl-cel{min-height:34px;box-sizing:border-box}
+.tl-canal-cab,.tl-canal{position:sticky;left:0;z-index:2;display:flex;align-items:center;padding:4px 10px;
+  border-right:1px solid var(--linha);border-bottom:1px solid var(--border-soft)}
+.tl-canal-cab{background:var(--ceu)}
+.tl-canal{background:var(--branco);font:500 10.5px 'DM Sans',sans-serif;line-height:1.2;color:var(--tinta)}
+.tl-dia-cab,.tl-adefinir-cab{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;font:600 9.5px 'IBM Plex Mono',monospace;color:var(--grafite);
+  border-bottom:1px solid var(--linha);border-right:1px solid var(--border-soft)}
+.tl-adefinir-cab{font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:9px}
+.tl-cel{display:flex;align-items:center;justify-content:center;gap:2px;flex-wrap:wrap;padding:2px;
+  border-bottom:1px solid var(--border-soft);border-right:1px solid var(--border-soft)}
+.tl-cel.tl-adefinir{background:var(--neutro-w)}
+.tl-marcador{width:12px;height:12px;border-radius:50%;flex-shrink:0;cursor:default}
+.tl-hoje{position:absolute;top:0;width:0;border-left:2px dashed var(--accent);pointer-events:none;z-index:3}
+.tl-hoje::after{content:"hoje";position:absolute;top:-15px;left:-13px;font:700 9px 'DM Sans',sans-serif;
+  color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
 </style>
 </head>
 <body>
@@ -62,6 +84,7 @@
       <div class="vista-toggle">
         <button type="button" id="btn-vista-lista" class="ativo">Lista</button>
         <button type="button" id="btn-vista-calendario">Calendário</button>
+        <button type="button" id="btn-vista-timeline">Timeline</button>
       </div>
 
       <div id="vista-lista">
@@ -69,6 +92,8 @@
       </div>
 
       <div id="vista-calendario" class="card" style="display:none"></div>
+
+      <div id="vista-timeline" style="display:none"></div>
     </section>
   </main>
 </div>
@@ -83,6 +108,7 @@
 <script src="js/status.js"></script>
 <script src="js/core.js"></script>
 <script src="js/calendario.js"></script>
+<script src="js/timeline.js"></script>
 <script>
 (function(){
   const hoje = hojeISO();
@@ -147,20 +173,28 @@
       "</div>";
   }).join("");
 
-  /* toggle Lista / Calendário — o calendário só é montado na primeira vez que é aberto */
+  /* toggle Lista / Calendário / Timeline — cada visão só é montada na primeira vez que é
+     aberta (mesmo padrão já usado pro Calendário, agora com a 3ª visão junto) */
   const elLista = document.getElementById("vista-lista");
   const elCal = document.getElementById("vista-calendario");
+  const elTimeline = document.getElementById("vista-timeline");
   const btnLista = document.getElementById("btn-vista-lista");
   const btnCal = document.getElementById("btn-vista-calendario");
+  const btnTimeline = document.getElementById("btn-vista-timeline");
   let calendarioMontado = false;
+  let timelineMontada = false;
 
+  function limparAtivos() {
+    elLista.style.display = "none"; elCal.style.display = "none"; elTimeline.style.display = "none";
+    btnLista.classList.remove("ativo"); btnCal.classList.remove("ativo"); btnTimeline.classList.remove("ativo");
+  }
   function mostrarLista() {
-    elLista.style.display = ""; elCal.style.display = "none";
-    btnLista.classList.add("ativo"); btnCal.classList.remove("ativo");
+    limparAtivos();
+    elLista.style.display = ""; btnLista.classList.add("ativo");
   }
   function mostrarCalendario() {
-    elLista.style.display = "none"; elCal.style.display = "";
-    btnCal.classList.add("ativo"); btnLista.classList.remove("ativo");
+    limparAtivos();
+    elCal.style.display = ""; btnCal.classList.add("ativo");
     if (!calendarioMontado) {
       CALENDARIO.montar(elCal, {
         ciclos: DB.agenda.ciclos,
@@ -173,8 +207,22 @@
       calendarioMontado = true;
     }
   }
+  function mostrarTimeline() {
+    limparAtivos();
+    elTimeline.style.display = ""; btnTimeline.classList.add("ativo");
+    if (!timelineMontada) {
+      TIMELINE.montar(elTimeline, {
+        ciclos: DB.agenda.ciclos,
+        encontros: DB.agenda.encontros,
+        canais: DB.canais,
+        hojeISO: hoje
+      });
+      timelineMontada = true;
+    }
+  }
   btnLista.addEventListener("click", mostrarLista);
   btnCal.addEventListener("click", mostrarCalendario);
+  btnTimeline.addEventListener("click", mostrarTimeline);
 })();
 </script>
 </body>

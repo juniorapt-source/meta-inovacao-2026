@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.12.0 — 2026-08-13
+Prompt 9 do plano de melhorias (item 2.7): terceira visão em `agenda.html` — TIMELINE.
+
+- **`js/timeline.js`** (novo módulo, mesmo padrão sem framework de `js/calendario.js`) —
+  `TIMELINE.montar(container, {ciclos, encontros, canais, hojeISO})`. Grid CSS puro (sem
+  SVG, sem lib nova): 1 linha por canal (10, ordem de `data/canais.js`), 1 coluna por dia
+  do eixo + 1 coluna final "A definir". Eixo cobre do início do Ciclo 1 ao fim do último
+  ciclo cadastrado; como o Ciclo 2 ainda não tem "fim" definido (`ini`/`fim` `null`, "a
+  agendar"), o eixo cai pro maior valor conhecido entre o fim do Ciclo 1 e as datas já
+  marcadas de qualquer encontro — nunca corta um marcador com data pra fora do eixo por
+  falta do fim do Ciclo 2; quando o Ciclo 2 ganhar datas, o eixo cresce sozinho, sem
+  mudar código. Cada encontro é um marcador (pontinho de 12px, cor sólida do status
+  canônico — `window.CC_STATUS`, contexto "encontro", `js/status.js`) com tooltip nativo
+  (`title=`: data, turno, local/modo, confirmações). Linha vertical tracejada de "hoje"
+  quando a data cai dentro do eixo (fora dele — caso de hoje, 13/08, antes do Ciclo 1
+  começar em 18/08 — a linha simplesmente não aparece, sem erro).
+  - Colunas em largura FIXA em px (não `1fr`) de propósito: a largura total do grid supera
+    o container só quando há muitos dias, e o scroll horizontal pedido pro mobile sai de
+    graça do `overflow-x:auto` do wrapper — mesmo mecanismo, sem layout mobile à parte.
+    Nome do canal `position:sticky;left:0` (mesmo pedido).
+  - `js/calendario.js` não mudou de comportamento; só reaproveitado como referência de
+    padrão (namespace `window.TIMELINE`, mesmo jeito de consumir `DB.agenda`/`DB.canais`).
+- `agenda.html` — botão "Timeline" no `.vista-toggle` (Lista · Calendário · Timeline);
+  visão montada só na primeira vez que é aberta (mesmo padrão já usado pro Calendário).
+- `tools/testar_timeline_headless.js` — 10º teste do repo: nº de marcadores renderizados
+  = nº de encontros em `data/agenda.js` (20 = 20), nº de linhas de canal = nº de canais em
+  `data/canais.js` (10 = 10), coluna "A definir" presente, marcador com tooltip preenchido,
+  e a troca de volta pro botão Lista reativa a visão Lista corretamente.
+- Validado com Chrome headless real: 20 marcadores batendo 1:1 com os 20 encontros (8
+  datados no Ciclo 1 nas colunas de dia certas + 12 sem data — 2 do Ciclo 1 (DXP,
+  Contabilizações) + os 10 do Ciclo 2 inteiro — na coluna "A definir"), linha de "hoje"
+  testada also com uma data simulada dentro do eixo (posição em px conferida à mão),
+  suíte completa (10 testes) passando.
+
 ## v0.11.0 — 2026-08-13
 Prompt 6 do plano de melhorias (item 2.4): taxonomia única de status — `js/status.js`
 (`window.CC_STATUS`) consumido por todas as páginas, sem mudar o significado de nenhum
