@@ -58,6 +58,7 @@
 <script src="data/projetos.js"></script>
 <script src="data/pessoas.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/status.js"></script>
 <script src="js/core.js"></script>
 <script src="js/responsaveis.js"></script>
 <script src="js/config.js"></script>
@@ -67,11 +68,16 @@
   montarShell("plano-acao.html");
 
   const TABELA = "plano_acao_atividades";
-  const STATUS_OPCOES = [
-    ["nao_iniciado", "Não iniciado"],
-    ["em_execucao", "Em execução"],
-    ["atrasado", "Atrasado"],
-  ];
+  // valores gravados no Supabase (contrato de dado intocado neste prompt) — o rótulo de
+  // cada um passa a vir de window.CC_STATUS (js/status.js, contexto "atividade", chaves
+  // "atividade_*"), taxonomia única (item 2.4), em vez de um array hardcoded só desta
+  // página. A classe CSS da linha (.pa-row.st-nao_iniciado etc., cor de fundo) continua a
+  // mesma de sempre — é estilo local desta página, não um badge de chip/cel, fora do
+  // escopo da migração.
+  const STATUS_VALORES = ["nao_iniciado", "em_execucao", "atrasado"];
+  function rotuloAtividade(valorBruto) {
+    return CC_STATUS.rotulo(CC_STATUS.chaveDeEntrada("atividade", valorBruto));
+  }
 
   // BACKLOG #004 — campo livre "Responsável" virou select alimentado pela lista canônica
   // (data/pessoas.js.responsaveis). Atividades gravadas antes desta mudança guardam texto
@@ -145,7 +151,7 @@
       '<input type="text" class="pa-desc" data-campo="descricao" value="' + esc(a.descricao || "") + '" placeholder="Descrição da atividade" aria-label="Descrição">' +
       '<select class="pa-resp" data-campo="responsavel" aria-label="Responsável">' + opcoesResponsavel(a.responsavel || "") + "</select>" +
       '<select class="pa-status" data-campo="status" aria-label="Status">' +
-        STATUS_OPCOES.map(([v, r]) => '<option value="' + v + '"' + (v === a.status ? " selected" : "") + ">" + r + "</option>").join("") +
+        STATUS_VALORES.map((v) => '<option value="' + v + '"' + (v === a.status ? " selected" : "") + ">" + esc(rotuloAtividade(v)) + "</option>").join("") +
       "</select>" +
       '<span class="pa-row-status" aria-live="polite"></span>' +
       '<button type="button" class="pa-del" title="Remover atividade" aria-label="Remover atividade">×</button>' +

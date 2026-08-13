@@ -68,6 +68,7 @@
 <script src="data/nos.js"></script>
 <script src="data/pessoas.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/status.js"></script>
 <script src="js/core.js"></script>
 <script src="js/responsaveis.js"></script>
 <script src="js/config.js"></script>
@@ -87,10 +88,10 @@
   const blocoAcoes = document.getElementById("bloco-acoes"), secaoAcoes = document.getElementById("secao-acoes");
   const blocoAtividades = document.getElementById("bloco-atividades"), secaoAtividades = document.getElementById("secao-atividades");
 
-  // mesmo vocabulário de estado de nó já usado em caminho.html (NOME/CLS) — reaproveitado
-  // aqui pra não inventar um segundo rótulo pro mesmo estado calculado por CALC.estadoNo.
-  const NOME_NO = { ok: "cumprido", hoje: "vence hoje", risco: "venceu sem concluir", atencao: "em andamento", futuro: "à frente" };
-  const CLS_NO = { ok: "st-concluido", hoje: "st-andamento", risco: "st-atrasada", atencao: "st-janela", futuro: "st-nao" };
+  // taxonomia única (item 2.4): mesmo mapa de caminho.html, traduzindo a chave curta de
+  // CALC.estadoNo pra chave canônica de window.CC_STATUS (js/status.js, contexto
+  // "no_critico") — fonte única do rótulo/cor, não duplica o dicionário local de novo.
+  const CHAVE_NO = { ok: "no_cumprido", hoje: "no_vence_hoje", risco: "no_venceu_sem_concluir", atencao: "no_em_andamento", futuro: "no_a_frente" };
 
   // select "Ver como" — agrupado por grupo (Coordenação/Coletivo/Núcleos/Projetos), mesma
   // fonte canônica do select de Responsável em plano-acao.html.
@@ -147,7 +148,7 @@
       '<div class="ma-titulo"><a href="caminho.html#no' + n.no + '">' + esc(n.titulo) + "</a>" +
       '<div class="ma-no-resumo"><b>Fallback:</b> ' + esc(n.fallback) + '</div>' +
       '<div class="ma-no-resumo"><b>Gatilho:</b> ' + esc(n.gatilho) + "</div></div>" +
-      '<span class="chip ' + CLS_NO[st] + '">' + NOME_NO[st] + "</span></div>";
+      CC_STATUS.badge(CHAVE_NO[st]) + "</div>";
   }
 
   function linhaAcao(a) {
@@ -159,12 +160,14 @@
       '<span class="chip ' + cls + '">' + rot + "</span></a>";
   }
 
-  const STATUS_ATIVIDADE = { nao_iniciado: ["st-nao", "Não iniciado"], em_execucao: ["st-andamento", "Em execução"], atrasado: ["st-atrasada", "Atrasado"] };
+  // mesma chave canônica "atividade_*" de plano-acao.html (window.CC_STATUS, contexto
+  // "atividade") — os dois lugares que mostram status de plano_acao_atividades agora
+  // compartilham a mesma fonte de rótulo/cor.
   function linhaAtividade(at) {
-    const [cls, rot] = STATUS_ATIVIDADE[at.status] || ["st-nao", at.status || "—"];
+    const chave = CC_STATUS.chaveDeEntrada("atividade", at.status);
     return '<div class="ma-linha" data-atividade-id="' + esc(at.id) + '">' +
       '<span class="ma-titulo">' + esc(at.descricao || "(sem descrição)") + '<div class="ma-no-resumo">' + esc(at.iniciativa || "") + "</div></span>" +
-      '<span class="chip ' + cls + '">' + rot + "</span></div>";
+      CC_STATUS.badge(chave) + "</div>";
   }
 
   async function render(id) {

@@ -80,6 +80,7 @@
 <script src="data/canais.js"></script>
 <script src="data/agenda.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/status.js"></script>
 <script src="js/core.js"></script>
 <script src="js/calendario.js"></script>
 <script>
@@ -108,29 +109,23 @@
     return DIAS_SEMANA_ABREV[new Date(y, m - 1, d).getDay()];
   }
 
-  // "agendado" e "confirmado" ficam com a mesma cor (azul) — precisa bater com
-  // COR_ENCONTRO de js/calendario.js (a visão Calendário já tratava os dois iguais;
-  // a Lista estava caindo os dois no fallback âmbar, cor diferente pro mesmo status
-  // dentro da mesma página — bug pego na auditoria de status do plano de melhorias).
-  // Função única usada tanto pra colorir as linhas quanto pra montar a legenda.
-  function classeEncontro(status) {
-    if (status === "realizado") return "st-concluido";
-    if (status === "confirmado" || status === "agendado") return "st-andamento";
-    return "st-janela";
-  }
-
-  // as cores st-* aqui são as mesmas de plano.html/index.html, mas o vocabulário do
-  // ENCONTRO (agendado/confirmado, a agendar, realizado) é outro — a legenda deixa
-  // isso explícito
+  // taxonomia única (item 2.4): vocabulário do ENCONTRO vive em window.CC_STATUS
+  // (js/status.js), contexto "encontro" — 4 estados reais (agendado/confirmado/a
+  // agendar/realizado; "agendado" e "confirmado" com a mesma cor, mesma decisão de
+  // sempre — precisa bater com COR_ENCONTRO de js/calendario.js, migrado junto nesta
+  // mesma leva). CC_STATUS.chaveDeEntrada traduz o valor bruto salvo em data/agenda.js
+  // (ex.: "agendado") pra chave canônica (ex.: "encontro_agendado"); o rótulo do badge
+  // por linha passa a vir capitalizado do dicionário ("Agendado") em vez do texto bruto
+  // salvo em minúsculo — mesmo significado, só a caixa do texto muda.
   document.getElementById("legenda-vocab").innerHTML =
     "<b>Vocabulário dos encontros nesta página</b>" +
-    '<span class="chip ' + classeEncontro("agendado") + '">Agendado/confirmado</span>' +
-    '<span class="chip ' + classeEncontro("a agendar") + '">A agendar</span>' +
-    '<span class="chip ' + classeEncontro("realizado") + '">Realizado</span>';
+    '<span class="chip ' + CC_STATUS.classeCss("encontro_agendado") + '">Agendado/confirmado</span>' +
+    '<span class="chip ' + CC_STATUS.classeCss("encontro_a_agendar") + '">A agendar</span>' +
+    '<span class="chip ' + CC_STATUS.classeCss("encontro_realizado") + '">Realizado</span>';
 
   function linhaEncontro(e) {
     const c = porCanal[e.canal];
-    const stCls = classeEncontro(e.status);
+    const chaveStatus = CC_STATUS.chaveDeEntrada("encontro", e.status);
     return "<tr>" +
       "<td><b>" + esc(c.nome) + '</b><div style="color:var(--grafite);font-size:11.5px">' + esc(c.formato) + "</div></td>" +
       '<td style="font-size:12.5px;color:var(--grafite);max-width:340px">' + c.pauta.slice(0, 2).map(esc).join(" · ") +
@@ -138,7 +133,7 @@
       '<td class="mono" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + " (" + diaSemanaAbrev(e.data) + ")" + (e.turno ? " · " + esc(e.turno) : "") + (e.hora ? " " + esc(e.hora) : "") : "—") + "</td>" +
       "<td>" + (e.local ? esc(e.local) : "—") + ' <span style="color:var(--grafite);font-size:11.5px">' + esc(e.modo) + "</span></td>" +
       '<td class="mono" style="font-size:12.5px">' + (e.convidados ? e.confirmados + "/" + e.convidados : "—") + "</td>" +
-      '<td><span class="chip ' + stCls + '">' + esc(e.status) + "</span>" + (e.nota ? '<div style="font-size:11px;color:var(--grafite)">' + esc(e.nota) + "</div>" : "") + "</td></tr>";
+      '<td>' + CC_STATUS.badge(chaveStatus) + (e.nota ? '<div style="font-size:11px;color:var(--grafite)">' + esc(e.nota) + "</div>" : "") + "</td></tr>";
   }
 
   // um card por ciclo (título próprio) em vez de uma tabela única com coluna "Ciclo" —

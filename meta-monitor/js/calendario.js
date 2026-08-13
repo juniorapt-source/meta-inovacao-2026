@@ -6,8 +6,20 @@
 
   const DIAS_SEMANA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
   const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  // COR_NO fica de fora da taxonomia única (js/status.js): é a cor do MARCADOR (bolinha)
+  // do dia no calendário, não um badge de "cor + rótulo em texto" — decoração ao lado de
+  // um tooltip, não texto por si só, então não é o mesmo tipo de coisa que CC_STATUS.badge
+  // padroniza.
   const COR_NO = { ok: "no-ok", risco: "no-risco", atencao: "no-atencao", hoje: "no-hoje", futuro: "" };
-  const COR_ENCONTRO = { realizado: "st-concluido", confirmado: "st-andamento", agendado: "st-andamento" };
+  // cor do marcador de encontro no calendário — mesma fonte de CC_STATUS (contexto
+  // "encontro", js/status.js) que agenda.html usa na visão Lista, pra nunca mais divergir
+  // cor entre as duas visões da mesma página (era um bug real, corrigido na v0.8.0).
+  function corEncontro(status) {
+    if (!root.CC_STATUS) return "st-janela"; // mesmo fallback de sempre se status.js não carregou
+    const chave = root.CC_STATUS.chaveDeEntrada("encontro", status);
+    const estado = root.CC_STATUS.ESTADOS[chave];
+    return estado ? estado.classe : "st-janela"; // status desconhecido cai em "a agendar" (cor), igual antes
+  }
 
   function pad(n) { return String(n).padStart(2, "0"); }
   function iso(y, m, d) { return y + "-" + pad(m + 1) + "-" + pad(d); }
@@ -37,7 +49,7 @@
         if (!e.data) return;
         const c = porCanal[e.canal];
         (mapa[e.data] = mapa[e.data] || []).push({
-          tipo: "encontro", cls: COR_ENCONTRO[e.status] || "st-janela",
+          tipo: "encontro", cls: corEncontro(e.status),
           rotulo: c ? c.nome : e.canal, titulo: (c ? c.nome : e.canal) + " · " + e.status, detalhe: e
         });
       });

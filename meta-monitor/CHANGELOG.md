@@ -1,5 +1,65 @@
 # Changelog
 
+## v0.11.0 — 2026-08-13
+Prompt 6 do plano de melhorias (item 2.4): taxonomia única de status — `js/status.js`
+(`window.CC_STATUS`) consumido por todas as páginas, sem mudar o significado de nenhum
+estado. Migrado página a página, suíte completa rodada depois de CADA uma.
+
+- **`js/status.js`** (novo) — dicionário único: 26 estados canônicos em 5 contextos
+  (`acao`, `no_critico`, `encontro`, `celula_matriz`, `atividade` — o pedido original
+  listava só os 4 primeiros; `atividade` entrou por auditoria, ver nota abaixo), cada um
+  com chave estável, rótulo de exibição e `classe` (nome de classe CSS que já existe em
+  `css/base.css` — este arquivo não duplica cor em hex/var() nenhuma). `CC_STATUS.badge(chave)`
+  monta o HTML padronizado (cor + rótulo em texto — nunca cor sozinha);
+  `CC_STATUS.chaveDeEntrada(contexto, valorBruto)` traduz um valor já gravado em
+  `data/*.js`/Supabase pra chave canônica, sem exigir migração de dado nenhuma.
+  - Auditoria encontrou mais estados em uso real do que o pedido original listava:
+    5 estados de nó (não 3 — faltavam "cumprido"/"ok" e "em andamento"/"atencao"), 9
+    células de matriz (não 6 — faltavam "vazia", "oficina_confirmada" e "nao_aplica",
+    as duas últimas adicionadas na v0.7.0) e um 5º contexto inteiro, "atividade"
+    (plano-acao.html/Supabase: nao_iniciado/em_execucao/atrasado — vocabulário PRÓPRIO,
+    nem os 5 estados de "acao" nem nenhum dos outros 3). Todos entraram no dicionário.
+  - Chaves de nó e de atividade levam prefixo (`no_`/`atividade_`) pra nunca colidir no
+    mesmo namespace plano com as chaves de "acao" — ex.: "em andamento" de nó usa
+    `st-janela` (âmbar), bem diferente da cor de "em_andamento" de ação (`st-andamento`,
+    azul); tratar os dois como uma chave só teria sido uma fusão de significado errada.
+- **Migração, nesta ordem, suíte completa depois de cada uma:**
+  - `plano.html` — `stClass` (`js/core.js`, compartilhada por plano.html/index.html/
+    caminho.html/minhas-acoes.html) passa a delegar pra `CC_STATUS` internamente; nenhuma
+    das 4 páginas precisou de mudança própria pra esse pedaço.
+  - `index.html` — já coberto pela migração de `stClass` acima; nada de local pra migrar.
+  - `caminho.html` — dicionário local `NOME`/`CLS` (5 estados de nó) trocado por lookup em
+    `CC_STATUS` via mapa de tradução `estado curto → chave canônica`; legenda gerada com
+    `CC_STATUS.badge`.
+  - `agenda.html` — `classeEncontro()` local trocada por `CC_STATUS.chaveDeEntrada`/`badge`;
+    rótulo por linha passa a vir capitalizado do dicionário ("Agendado") em vez do texto
+    bruto salvo em minúsculo ("agendado") — mesmo significado, só a caixa do texto muda.
+    `js/calendario.js` (visão Calendário, mesma página): `COR_ENCONTRO` local trocado por
+    `CC_STATUS` também, fechando de vez a divergência de cor entre Lista/Calendário que a
+    v0.8.0 já tinha corrigido manualmente (agora as duas leem da mesma fonte, não tem mais
+    como divergir de novo). `COR_NO` do calendário ficou de fora de propósito — é a cor de
+    um marcador (bolinha), não um badge de "cor + texto".
+  - `demandas.html` — dicionário local `ROTULO` trocado por `CC_STATUS.rotulo`; `ORDEM`
+    (valores gravados no Supabase/`data/matriz.js`) intocado — contrato de dado não muda.
+    Legenda estática do fluxo da célula (`#legenda`, HTML fixo) ficou de fora de propósito:
+    é um diagrama de fluxo ilustrativo (não lista todos os 9 estados, só o caminho feliz),
+    não uma listagem exaustiva de vocabulário como as `legenda-vocab` de outras páginas.
+  - `plano-acao.html` — array local `STATUS_OPCOES` (valor + rótulo hardcoded) trocado por
+    `STATUS_VALORES` (só os valores, contrato do Supabase intocado) + `CC_STATUS.rotulo`.
+  - `minhas-acoes.html` (por último, como pedido) — os dois dicionários locais que ela
+    duplicava (`NOME_NO`/`CLS_NO`, cópia do de `caminho.html`; `STATUS_ATIVIDADE`, cópia
+    do de `plano-acao.html`) saem — os dois agora leem de `CC_STATUS`, mesma fonte das
+    páginas originais. Badges de ação já vinham de `stClass`, sem mudança própria aqui.
+- `tools/testar_status_badges_headless.js` — 9º teste do repo: pra cada uma das 6 páginas
+  migradas, confere que a contagem de badges renderizados (linhas/células/cards — legendas
+  excluídas de propósito, são texto explicativo fixo, não um badge por registro) é
+  EXATAMENTE a mesma de antes da migração (62/16/18/20/270/17, capturadas contra o código
+  pré-migração e registradas no teste).
+- Validado com Chrome headless real depois de cada página: suíte completa (9 testes)
+  passando em todas as 6 rodadas, badges intactos, select de status/responsável com os
+  mesmos rótulos de antes (conferido também via comparação direta em Node, sem depender
+  só do navegador).
+
 ## v0.10.0 — 2026-08-13
 Prompt 5 do plano de melhorias (item 2.3): Dashboard reordenado por urgência decisória —
 mesmos componentes de sempre, ordem nova, nenhum cálculo mudou de resultado.

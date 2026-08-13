@@ -34,12 +34,29 @@
     return new Date().toISOString().slice(0, 10);
   };
 
+  // resolve a chave canônica de status de uma ação (window.CC_STATUS, js/status.js) —
+  // mesma precedência de sempre: atrasada vence tudo (mesmo uma ação "Em andamento" com
+  // prazo vencido conta como atrasada, decisão preservada de antes deste módulo existir),
+  // depois o status bruto traduzido pela chave canônica, depois "janela" (sem prazo_iso
+  // mas com prazo em texto), com "não iniciado" de fallback.
+  window.chaveStatusAcao = function (acao, hojeISO) {
+    if (window.CALC && CALC.ehAtrasada(acao, hojeISO)) return "atrasada";
+    const chaveDoStatusBruto = window.CC_STATUS ? CC_STATUS.chaveDeEntrada("acao", acao.status) : acao.status;
+    if (chaveDoStatusBruto === "concluida" || chaveDoStatusBruto === "em_andamento") return chaveDoStatusBruto;
+    if (!acao.prazo_iso && acao.prazo) return "janela";
+    return "nao_iniciado";
+  };
+
+  // [classe, rótulo] pro chip — mesmo formato de retorno de sempre; migrado pra taxonomia
+  // única (item 2.4 do plano de melhorias): a fonte do texto/cor agora é window.CC_STATUS
+  // (js/status.js), não mais um if/else duplicado aqui.
   window.stClass = function (acao, hojeISO) {
-    if (window.CALC && CALC.ehAtrasada(acao, hojeISO)) return ["st-atrasada", "Atrasada"];
-    if (acao.status === "Concluído") return ["st-concluido", "Concluído"];
-    if (acao.status === "Em andamento") return ["st-andamento", "Em andamento"];
-    if (!acao.prazo_iso && acao.prazo) return ["st-janela", "Não iniciado · janela"];
-    return ["st-nao", "Não iniciado"];
+    const chave = chaveStatusAcao(acao, hojeISO);
+    if (window.CC_STATUS) return CC_STATUS.par(chave);
+    // fallback se por algum motivo js/status.js não carregou nesta página — mesmo texto
+    // de antes, só pra nunca deixar a UI sem badge.
+    const FALLBACK = { atrasada: ["st-atrasada", "Atrasada"], concluida: ["st-concluido", "Concluído"], em_andamento: ["st-andamento", "Em andamento"], janela: ["st-janela", "Não iniciado · janela"], nao_iniciado: ["st-nao", "Não iniciado"] };
+    return FALLBACK[chave] || FALLBACK.nao_iniciado;
   };
 
   window.esc = function (s) {

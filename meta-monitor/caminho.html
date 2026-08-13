@@ -33,21 +33,27 @@
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/status.js"></script>
 <script src="js/core.js"></script>
 <script>
 (function(){
   const hoje = hojeISO();
   montarShell("caminho.html");
-  const NOME = { ok:"cumprido", hoje:"vence hoje", risco:"venceu sem concluir", atencao:"em andamento", futuro:"à frente" };
-  const CLS  = { ok:"st-concluido", hoje:"st-andamento", risco:"st-atrasada", atencao:"st-janela", futuro:"st-nao" };
 
-  // as cores st-* aqui são as mesmas de plano.html/index.html, mas o vocabulário do
-  // NÓ (cumprido/vence hoje/venceu sem concluir/em andamento/à frente) é outro — a
-  // legenda existe pra deixar isso explícito, gerada direto de NOME/CLS (fonte única,
-  // não duplica rótulo em outro lugar)
+  // taxonomia única (item 2.4): o vocabulário do NÓ (cumprido/vence hoje/venceu sem
+  // concluir/em andamento/à frente) vive em window.CC_STATUS (js/status.js), contexto
+  // "no_critico" — mesmas cores/rótulos de antes, só que numa fonte compartilhada com o
+  // resto do site em vez de um dicionário local (NOME/CLS) só desta página. O mapa abaixo
+  // só traduz a chave curta que CALC.estadoNo já devolvia (ok/hoje/risco/atencao/futuro)
+  // pra chave canônica — CALC.estadoNo continua igual, não é o que muda aqui.
+  const CHAVE_NO = { ok: "no_cumprido", hoje: "no_vence_hoje", risco: "no_venceu_sem_concluir", atencao: "no_em_andamento", futuro: "no_a_frente" };
+
+  // as cores st-* aqui são as mesmas de plano.html/index.html, mas o vocabulário do NÓ é
+  // outro — a legenda existe pra deixar isso explícito, gerada direto de CC_STATUS.badge
+  // (fonte única, não duplica rótulo em outro lugar)
   document.getElementById("legenda-vocab").innerHTML =
     "<b>Vocabulário dos nós nesta página</b>" +
-    Object.keys(NOME).map((k) => '<span class="chip ' + CLS[k] + '">' + esc(NOME[k]) + "</span>").join("");
+    Object.values(CHAVE_NO).map((chave) => CC_STATUS.badge(chave)).join("");
 
   document.getElementById("lista-nos").innerHTML = DB.nos.nos.map(n => {
     const st = CALC.estadoNo(n, DB.plano, hoje);
@@ -59,7 +65,7 @@
       '<div style="flex:1">' +
       '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">' +
       '<h3 style="font-size:15.5px">' + esc(n.titulo) + "</h3>" +
-      '<span class="chip ' + CLS[st] + '">' + NOME[st] + "</span>" +
+      CC_STATUS.badge(CHAVE_NO[st]) +
       '<span style="color:var(--grafite);font-size:12.5px">guardião: ' + esc(n.guardiao) + "</span></div>" +
       '<div style="margin:7px 0 9px">' + acoes.map(a => {
         const [c, r] = stClass(a, hoje);

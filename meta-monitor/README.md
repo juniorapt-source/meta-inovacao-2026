@@ -80,6 +80,9 @@ node tools/testar_dashboard_headless.js # dashboard num Chrome/Chromium real via
                                         # contagem) — usa o navegador já instalado, nada novo
 node tools/testar_minhas_acoes_headless.js # minhas-acoes.html?pessoa=<id>: nós + ações listadas
                                         # batem com a contagem recalculada a partir dos dados
+node tools/testar_status_badges_headless.js # taxonomia única de status (js/status.js):
+                                        # contagem de badges por página idêntica à de antes
+                                        # da migração, nas 6 páginas migradas
 ```
 
 ## Estrutura
@@ -90,10 +93,11 @@ css/base.css          identidade visual herdada do painel original
 js/calc.js            funções puras de cálculo (testáveis em node)
 js/core.js            shell de navegação e utilitários
 js/responsaveis.js    lista canônica de responsáveis: texto livre → array de ids (testável em node)
+js/status.js           taxonomia única de status: window.CC_STATUS (testável em node)
 js/editor_io.js       serialização canônica dos dados (testável em node)
 data/*.js             config, plano, nos, canais, agenda, iniciativas, matriz, pessoas
                        (+ pessoas.responsaveis: lista canônica de responsáveis), changelog
-tools/                geração de dados a partir do xlsx + os 8 testes
+tools/                geração de dados a partir do xlsx + os 9 testes
 docs/                 PLANO_EXECUCAO.md, BUILD_STATUS.md, PENDENCIAS.md (se houver)
 ```
 

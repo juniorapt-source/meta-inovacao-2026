@@ -83,6 +83,7 @@
 <script src="data/iniciativas.js"></script>
 <script src="data/matriz.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/status.js"></script>
 <script src="js/core.js"></script>
 <script src="js/matriz-store.js"></script>
 <script>
@@ -90,8 +91,11 @@
   "use strict";
   montarShell("demandas.html");
 
+  // ORDEM continua a lista dos valores BRUTOS gravados no Supabase/data/matriz.js (o
+  // contrato de dado não muda neste prompt) — só os RÓTULOS saem daqui e passam a vir de
+  // window.CC_STATUS (js/status.js, contexto "celula_matriz"), taxonomia única (item 2.4).
+  // CC_STATUS.chaveDeEntrada traduz "" -> "vazia" e os demais 1:1 (já eram snake_case).
   const ORDEM = ["", "previsto", "oficina_confirmada", "oficina", "formulario", "justificado", "nao_aplica", "priorizado", "encaminhado"];
-  const ROTULO = {"":"—","previsto":"previsto","oficina_confirmada":"Oficina confirmada","oficina":"oficina feita","formulario":"formulário ok","justificado":"justificado","nao_aplica":"Não se aplica o uso","priorizado":"priorizado","encaminhado":"encaminhado"};
   const CANAIS = DB.canais;
   const CANAL_IDS = CANAIS.map(c => c.id);
 
@@ -199,13 +203,16 @@
   }
 
   function celulaEstatica(v) {
-    const cls = v ? "cel-" + v : "cel-vazia";
-    return '<td><span class="cel ' + cls + '">' + (v || "—") + "</span></td>";
+    const chave = CC_STATUS.chaveDeEntrada("celula_matriz", v || "");
+    return "<td>" + CC_STATUS.badge(chave) + "</td>";
   }
 
   function celulaEditavel(linha, canalId) {
     const v = linha[canalId] || "";
-    const opts = ORDEM.map(o => '<option value="' + esc(o) + '"' + (o===v?" selected":"") + '>' + esc(ROTULO[o]) + "</option>").join("");
+    const opts = ORDEM.map(o => {
+      const chave = CC_STATUS.chaveDeEntrada("celula_matriz", o);
+      return '<option value="' + esc(o) + '"' + (o === v ? " selected" : "") + '>' + esc(CC_STATUS.rotulo(chave)) + "</option>";
+    }).join("");
     return '<td><select class="cel-editar" data-id="' + esc(String(linha.id)) + '" data-campo="' + canalId + '">' + opts + "</select></td>";
   }
 
