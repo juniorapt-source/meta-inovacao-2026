@@ -75,7 +75,7 @@ pronto pra a seção entrar se esse campo existir um dia).
 
 ## Item 3.1 — Unificação da persistência no Supabase (Plano e Agenda)
 
-**Status:** código pronto e testado (v0.17.0) — ativação manual pendente (rodar o SQL, não é passo de código)
+**Status:** ativo em produção (v0.17.0 + correção pós-ativação abaixo)
 
 Plano de ação (status/prazos das 47 ações) e Agenda (datas/locais/confirmações dos 20
 encontros) viviam só em `data/plano.js`/`data/agenda.js`, editados via `editor.html` no
@@ -99,10 +99,18 @@ headless adaptados pra forçar o fallback local via `window.CC_FORCAR_FALLBACK`/
 (índice de busca global) continuam lendo o seed síncrono em vez do dado ao vivo — fora do
 escopo desta leva, registrado no CHANGELOG.
 
-**Passo a passo de ativação:** rodar `2026-08_plano.sql` e depois `2026-08_agenda.sql` no
-SQL Editor do Supabase (já vêm com o token real preenchido, mesmo de `data/config.js`) —
-sem nenhum passo de código depois disso, `js/db-plano.js`/`js/db-agenda.js` passam a ler
-do Supabase na próxima carga de página.
+**Ativação:** `2026-08_plano.sql` e `2026-08_agenda.sql` foram rodados no Supabase — as
+duas tabelas estão em produção, `js/db-plano.js`/`js/db-agenda.js` já leem de lá.
+
+**Bug do gerador de SQL do P10:** os dois scripts saíram sem `GRANT SELECT, INSERT,
+UPDATE` pras roles `anon`/`authenticated` e criavam a policy de SELECT com o nome
+`select_publico` (duplicando o padrão que devia ser único, `cc_select_publico`). Sem o
+GRANT, RLS nunca chega a ser avaliado — o site recebeu `401 permission denied for table`
+em produção mesmo com a policy de SELECT certa criada. Corrigido em produção (GRANT
+aplicado manualmente, policy renomeada) e nos scripts versionados (`tools/sql/2026-08_plano.sql`/
+`2026-08_agenda.sql`, cabeçalho documenta o antes/depois). Padrão documentado em
+`tools/sql/PADRAO_TABELA.md` — checklist obrigatório pra qualquer tabela nova daqui em
+diante (P13/`meta_inovacao_audit_log` incluído).
 
 ## Item 2.1 — Proteção de escrita no Supabase (token compartilhado)
 

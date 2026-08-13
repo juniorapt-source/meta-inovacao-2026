@@ -88,6 +88,17 @@ v0.16.0/P3, onde o JR. rodou o SQL manualmente).
      `js/db-agenda.js` já passam a ler do Supabase (o `try/catch` que hoje cai no
      fallback simplesmente para de disparar). Nenhum outro passo de código necessário.
 
+**Correção pós-ativação (2026-08-13):** os dois scripts acima, depois de rodados em
+produção, se mostraram incompletos — faltava `GRANT SELECT, INSERT, UPDATE ... TO anon,
+authenticated` e a policy de SELECT saiu com o nome `select_publico` em vez do padrão
+`cc_select_publico`. Sem o GRANT, RLS nunca chega a ser avaliado (é a barreira anterior à
+policy no Postgres), então o site recebia `401 permission denied for table` mesmo com a
+policy de SELECT certa. Corrigido manualmente em produção (GRANT aplicado, policy
+renomeada) e nos scripts versionados, pra ficarem coerentes com o banco real — **não
+precisa rodar de novo** quem já rodou a versão anterior. Documentado o checklist completo
+de toda tabela nova em `tools/sql/PADRAO_TABELA.md`, pra não repetir isso no P13
+(`meta_inovacao_audit_log`) nem em qualquer tabela futura.
+
 ## v0.16.0 — 2026-08-13
 Prompt 3 do plano de melhorias (item 2.1): proteção de escrita no Supabase por token
 compartilhado. Código do site pronto; falta só rodar o SQL manualmente (não incluído

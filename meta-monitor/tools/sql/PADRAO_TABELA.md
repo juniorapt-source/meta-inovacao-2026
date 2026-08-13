@@ -1,0 +1,123 @@
+# Padrão de criação de tabela — Carta de Corso / Supabase
+
+Checklist obrigatório para **toda tabela nova** deste projeto (escrita client-side sem
+usuários individuais, protegida por um token compartilhado — `x-cc-token`, ver
+`2026-08_protecao_escrita.sql`). Existe porque os scripts do P10
+(`2026-08_plano.sql`/`2026-08_agenda.sql`) esqueceram dois passos e isso quebrou a
+leitura em produção: `401 permission denied for table`, mesmo com a policy de SELECT
+certa criada.
+
+**Por que faltar o GRANT quebra mesmo com a policy certa:** no Postgres, RLS é a
+*segunda* barreira, não a primeira. O `GRANT` decide se o role (`anon`/`authenticated`)
+tem permissão de base pra operação naquela tabela; as *policies* de RLS só entram em
+jogo depois disso, filtrando quais linhas. Sem `GRANT SELECT`, o Postgres nega o acesso
+antes de sequer avaliar `cc_select_publico` — não importa que a policy exista e esteja
+com `USING (true)`. É um erro fácil de cometer porque a tabela "parece" pronta (RLS
+ligado, policy criada) e só quebra em produção contra o client de verdade.
+
+## Checklist
+
+1. **`CREATE TABLE`** com prefixo `meta_inovacao_` — exceto as tabelas legadas de antes
+   deste padrão (`plano_acao_atividades`, `corsario_criterios`, `corsario_status`), que
+   não são renomeadas retroativamente.
+2. **`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`**.
+3. **`GRANT SELECT, INSERT, UPDATE ON <tabela> TO anon, authenticated;`** — sempre,
+   logo depois do `ENABLE ROW LEVEL SECURITY`, antes de criar qualquer policy. **Sem
+   isso, RLS nunca chega a ser avaliado** (ver explicação acima). `GRANT DELETE` só
+   entra se a tabela **não** usa soft delete via `deleted_at` — o padrão do projeto é
+   soft delete (remoção = `UPDATE deleted_at`), então a maioria das tabelas **não**
+   precisa de `GRANT DELETE` nem de policy de `DELETE`.
+4. **Uma única policy de SELECT**, sempre chamada `cc_select_publico` (não
+   `select_publico`, não duplicar com outro nome). Antes de criar, remover
+   dinamicamente qualquer policy pré-existente na tabela via `pg_policies` (bloco `DO $$`
+   — não um `DROP POLICY IF EXISTS <nome-adivinhado>`, porque o nome real pode não ser
+   conhecido/documentado).
+5. **Policies `cc_token_insert` e `cc_token_update`**, exigindo
+   `current_setting('request.headers', true)::json->>'x-cc-token' = '<TOKEN>'` — mesmo
+   token de `data/config.js.tokenEscrita`, não gerar um novo por tabela.
+6. **Trigger de `updated_at`** via `cc_touch_updated_at()` (reaproveitar a função com
+   `CREATE OR REPLACE FUNCTION` — idempotente, segura de repetir em todo script) —
+   só se a tabela tiver coluna `updated_at`.
+7. **Trigger de auditoria** via `cc_audit` — a partir do P13, quando essa função/tabela
+   (`meta_inovacao_audit_log`) existir. Até lá, este item fica marcado como pendente no
+   script (comentário), não implementado.
+
+## Template mínimo (copiar como base para tabela nova)
+
+```sql
+-- ============================================================================
+-- <descrição da migração> — <referência ao prompt/item do plano de melhorias>
+-- ============================================================================
+
+-- 1) Tabela
+CREATE TABLE IF NOT EXISTS public.<TABELA> (
+  id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  -- ... colunas específicas da tabela ...
+  deleted_at timestamptz,                 -- soft delete — nunca DELETE físico
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  updated_by text
+);
+
+-- 2) Trigger de updated_at (reaproveita a função se já existir)
+CREATE OR REPLACE FUNCTION public.cc_touch_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS cc_touch_updated_at_<sufixo> ON public.<TABELA>;
+CREATE TRIGGER cc_touch_updated_at_<sufixo>
+  BEFORE UPDATE ON public.<TABELA>
+  FOR EACH ROW EXECUTE FUNCTION public.cc_touch_updated_at();
+
+-- 3) RLS — remove qualquer policy existente, liga RLS, GRANT, policies
+DO $$
+DECLARE
+  pol RECORD;
+BEGIN
+  FOR pol IN
+    SELECT policyname FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = '<TABELA>'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.<TABELA>', pol.policyname);
+  END LOOP;
+END $$;
+
+ALTER TABLE public.<TABELA> ENABLE ROW LEVEL SECURITY;
+
+-- GRANT vem ANTES das policies — sem ele, RLS nunca é avaliado (ver nota acima).
+-- DELETE fica de fora: esta tabela usa soft delete (deleted_at).
+GRANT SELECT, INSERT, UPDATE ON public.<TABELA> TO anon, authenticated;
+
+CREATE POLICY "cc_select_publico" ON public.<TABELA>
+  FOR SELECT TO anon
+  USING (true);
+
+CREATE POLICY "cc_token_insert" ON public.<TABELA>
+  FOR INSERT TO anon
+  WITH CHECK (current_setting('request.headers', true)::json->>'x-cc-token' = 'SUBSTITUIR_PELO_TOKEN_UUID');
+
+CREATE POLICY "cc_token_update" ON public.<TABELA>
+  FOR UPDATE TO anon
+  USING (current_setting('request.headers', true)::json->>'x-cc-token' = 'SUBSTITUIR_PELO_TOKEN_UUID')
+  WITH CHECK (current_setting('request.headers', true)::json->>'x-cc-token' = 'SUBSTITUIR_PELO_TOKEN_UUID');
+
+-- TODO (a partir do P13, quando cc_audit existir): trigger de auditoria em <TABELA>.
+
+-- Pra REVERTER (só faz sentido logo depois de criar, antes de qualquer edição real):
+--   DROP TABLE IF EXISTS public.<TABELA>;
+--   DROP TRIGGER IF EXISTS cc_touch_updated_at_<sufixo> ON public.<TABELA>;
+
+-- 4) Seed (se houver)
+-- INSERT INTO public.<TABELA> (...) VALUES (...) ON CONFLICT DO NOTHING;
+
+-- 5) Verificação
+SELECT count(*) FROM public.<TABELA> WHERE deleted_at IS NULL;
+```
+
+Placeholders a substituir: `<TABELA>` (nome real, com o prefixo `meta_inovacao_`),
+`<sufixo>` (nome curto pro trigger, ex.: `plano`, `agenda`, `audit`) e
+`SUBSTITUIR_PELO_TOKEN_UUID` (token real de `data/config.js.tokenEscrita` — mesmo token
+em todas as tabelas, não gerar um novo).

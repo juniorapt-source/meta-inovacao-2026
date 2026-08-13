@@ -1,6 +1,18 @@
 -- ============================================================================
 -- Migração do conjunto AGENDA pro Supabase — item 3.1 do plano de melhorias (Prompt 10)
 -- ============================================================================
+-- Corrigido em 2026-08-13 — a versão original deste script (rodada em produção) não
+-- tinha o GRANT SELECT/INSERT/UPDATE e criava a policy de SELECT como "select_publico"
+-- em vez de "cc_select_publico". Sem o GRANT, o Postgres nega o acesso ANTES de avaliar
+-- qualquer policy de RLS — mesmo com a policy de SELECT certa no lugar, o site recebia
+-- 401 "permission denied for table" em produção. Corrigido manualmente no banco (GRANT
+-- aplicado, policy renomeada) e aqui no script, pra ficar coerente com o estado real e
+-- servir de referência (padrão completo em tools/sql/PADRAO_TABELA.md). Se você já
+-- rodou a versão anterior deste script, não precisa rodar de novo — aplique só o diff:
+--   GRANT SELECT, INSERT, UPDATE ON public.meta_inovacao_agenda_encontros TO anon, authenticated;
+--   DROP POLICY IF EXISTS select_publico ON public.meta_inovacao_agenda_encontros;
+--   CREATE POLICY "cc_select_publico" ON public.meta_inovacao_agenda_encontros FOR SELECT TO anon USING (true);
+--
 -- Cria meta_inovacao_agenda_encontros (datas/locais/confirmações dos 20 encontros da
 -- agenda dos ciclos — hoje só em data/agenda.js). data/agenda.js continua existindo
 -- como SEED + fallback de leitura (js/db-agenda.js cai pra lá se o Supabase estiver
@@ -74,6 +86,8 @@ CREATE TRIGGER cc_touch_updated_at_agenda
 -- ---------------------------------------------------------------------------
 -- 3) RLS — mesmo padrão do 2026-08_plano.sql: SELECT público, escrita só com
 --    x-cc-token certo, sem policy de DELETE (soft delete via UPDATE em deleted_at).
+--    Segue tools/sql/PADRAO_TABELA.md: GRANT antes das policies e uma única
+--    policy de SELECT, "cc_select_publico".
 -- ---------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -89,7 +103,11 @@ END $$;
 
 ALTER TABLE public.meta_inovacao_agenda_encontros ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "select_publico" ON public.meta_inovacao_agenda_encontros
+-- GRANT vem ANTES das policies — sem ele, o Postgres nega o acesso antes de
+-- sequer avaliar RLS, não importa a policy. DELETE fica de fora (soft delete).
+GRANT SELECT, INSERT, UPDATE ON public.meta_inovacao_agenda_encontros TO anon, authenticated;
+
+CREATE POLICY "cc_select_publico" ON public.meta_inovacao_agenda_encontros
   FOR SELECT TO anon
   USING (true);
 
