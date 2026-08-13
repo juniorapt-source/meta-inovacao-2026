@@ -10,92 +10,147 @@
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 <style>
-/* nesta página o subtítulo ocupa a largura toda do container — ao contrário do padrão
-   .pagina-sub (max-width:74ch) usado nas outras páginas. Override só local (carregado
-   depois de css/base.css no <head>, então vence por ordem sem precisar tocar no arquivo
-   compartilhado); os respiros laterais continuam vindo do padding de .conteudo. */
-.pagina-sub{max-width:none}
-
-/* item 3 (ajustes v0.20.x) — .conteudo vem com max-width:1180px em css/base.css (bom
-   padrão pro resto do site, ruim aqui: a Matriz tem 19 colunas de critério + núcleo +
-   iniciativa + % + patente, e sobrava margem enquanto colunas cortavam com scroll). Mesmo
-   técnica de override local do .pagina-sub acima: sem o cap, .conteudo volta a só
-   `width:100%` da coluna 1fr do grid .shell (var(--nav-w) 1fr) — cresce até encostar no
-   menu, sem cálculo de viewport (a barra lateral já é descontada pelo próprio grid). A
-   visão Cards reflui pra mais colunas automaticamente (grid auto-fill), não quebra.
-   min-width:0 é OBRIGATÓRIO aqui, não cosmético: item de grid tem min-width:auto por
-   padrão, que equivale ao min-content do conteúdo — a tabela da Matriz (width:max-content,
-   .crs-matriz) tem um min-content igual à sua largura total, e sem essa linha esse valor
-   "vazava" pra .conteudo e pro grid .shell inteiro, empurrando a PÁGINA TODA pra largura
-   da tabela (scroll horizontal no body, menu incluído) em vez do scroll ficar contido só
-   dentro de .crs-matriz-wrap{overflow:auto}, que é o comportamento pretendido. */
+/* item 3 (ajustes v0.20.x, mantido no refactor v0.21) — .conteudo vem com max-width:1180px
+   em css/base.css (bom padrão pro resto do site, ruim aqui: a Matriz tem 19 colunas de
+   critério + iniciativa + % + patente, e sobrava margem enquanto colunas cortavam com
+   scroll). Override local (carregado depois de css/base.css no <head>, então vence por
+   ordem sem precisar tocar no arquivo compartilhado); os respiros laterais continuam
+   vindo do padding de .conteudo. min-width:0 é OBRIGATÓRIO, não cosmético: item de grid
+   tem min-width:auto por padrão (= min-content do conteúdo) — a tabela da Matriz
+   (width:max-content) tem um min-content igual à sua largura total, e sem essa linha esse
+   valor "vazava" pra .conteudo e pro grid .shell inteiro, empurrando a PÁGINA TODA pra
+   largura da tabela (scroll horizontal no body, menu incluído) em vez do scroll ficar
+   contido só dentro de .crs-matriz-wrap{overflow:auto}, que é o comportamento pretendido. */
 .conteudo{max-width:none;min-width:0}
 
-/* painel da frota (resumo) — item 1 (ajustes v0.20.x): "Última atualização" saiu (item 2,
-   só a exibição — o dado de origem/por-iniciativa continua computado em processar(), só
-   não sobe mais até aqui); a coluna de patentes ganhou mais espaço (flex maior, mínimo
-   maior) porque cada card de patente agora também carrega faixa + descrição curta —
-   informação que antes só existia na Legenda lá embaixo. */
-.crs-frota{display:flex;gap:22px;flex-wrap:wrap;align-items:stretch;margin-bottom:8px}
-.crs-frota-media{flex:0 0 auto;min-width:150px}
-.crs-frota-media .n{font-family:var(--font-sans);font-weight:300;font-size:46px;line-height:1;color:var(--tinta)}
-.crs-frota-media .l{font-family:'DM Sans';font-weight:600;font-size:11px;color:var(--grafite);margin-top:6px;
-  text-transform:uppercase;letter-spacing:.1em}
-.crs-frota-patentes-bloco{flex:3;min-width:480px}
-.crs-frota-patentes{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--linha)}
-.crs-patente-mini{padding:9px 8px;text-align:center;border-left:1px solid var(--linha)}
-.crs-patente-mini:first-child{border-left:none}
-.crs-patente-mini .n{font-family:var(--font-sans);font-weight:600;font-size:19px;color:var(--tinta)}
-.crs-patente-mini.crs-pat-corsario .n{color:#8A6A12}
-.crs-patente-mini .l{font-family:'DM Sans';font-weight:500;font-size:9px;color:var(--grafite);margin-top:2px;
-  text-transform:uppercase;letter-spacing:.04em}
-.crs-patente-faixa{font-family:'IBM Plex Mono';font-size:9.5px;color:var(--grafite);margin-top:4px}
-.crs-patente-desc{font-family:var(--font-sans);font-size:10px;line-height:1.25;color:var(--ink-2);margin-top:2px}
-.crs-frota-nota{font-size:11px;color:var(--grafite);font-style:italic;margin-top:6px}
-@media (max-width:640px){ .crs-frota{flex-direction:column;align-items:stretch} }
-@media (max-width:900px){ .crs-frota-patentes{grid-template-columns:repeat(3,1fr)} .crs-patente-mini:nth-child(3n+1){border-left:none} }
+/* refactor v0.21 — decisão de produto registrada aqui porque não tem outro lugar natural:
+   a Matriz tem 19 colunas de critério (não 7-8). Mesmo com cabeçalhos curtos, chips com
+   rótulo por extenso (ok/em andamento/a iniciar/entendimento/n/a, decisão deliberada pra
+   não reintroduzir a inconsistência "entend." que existia antes) mais 19 colunas não cabem
+   em nenhuma largura razoável de desktop sem virar ilegível. Mantido o scroll horizontal
+   contido em .crs-matriz-wrap (já existia desde v0.20.1) com cabeçalho E coluna Iniciativa
+   sticky nos dois eixos — o que muda neste ciclo é tudo o resto: cabeçalhos abreviados com
+   tooltip, chips por extenso, grupos por núcleo colapsáveis, sticky também na linha de
+   grupo. Sem isso o objetivo "matriz protagonista, sem textão fixo" já é cumprido; o
+   scroll horizontal na tabela em si é aceito como o trade-off certo pra 19 colunas.
+   ================================================================================
+   HEADER COMPACTO — título + subtítulo de uma linha + alternador de visão à direita */
+.crs-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.crs-header-txt{min-width:0}
+.crs-header .pagina-titulo{margin-bottom:2px}
+.crs-subtitulo{font-family:var(--font-sans);color:var(--ink-2);font-size:13px;margin:0}
+.crs-header .crs-segmento{flex-shrink:0;margin-top:2px}
 
-/* item 1 (ajustes v0.20.x) — "Status e pesos" + regra de ouro viram uma faixa compacta
-   logo acima dos controles/tabela (antes ficavam na Legenda no rodapé da página, agora
-   removida — ver #crs-legenda excluída). Reaproveita as classes .crs-leg-status/
-   .crs-leg-peso/.crs-regra-ouro que a Legenda antiga já tinha (mesmo chip/peso/itálico),
-   só a moldura ao redor é nova. */
-.crs-status-pesos{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;background:var(--branco);
-  border:1px solid var(--linha);padding:10px 16px;margin-bottom:16px}
-.crs-status-pesos-titulo{font-family:'DM Sans';font-weight:700;font-size:10.5px;color:var(--grafite);
-  text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
-.crs-status-pesos .crs-regra-ouro{flex-basis:100%;border-top:1px solid var(--border-soft);
-  padding-top:8px;margin-top:2px;font-size:12.5px}
+/* botão ⓘ compartilhado — dispara o tooltip acessível (JS: initTooltip()), usado no
+   título (conceito da página), na média da frota (regra de ouro) e em cada cabeçalho de
+   critério da Matriz (definição completa) */
+.crs-info-icone{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+  border:1px solid var(--linha);border-radius:50%;background:var(--branco);color:var(--grafite);
+  font-size:11px;line-height:1;cursor:pointer;padding:0;vertical-align:middle;margin-left:5px}
+.crs-info-icone:hover,.crs-info-icone:focus-visible{background:var(--accent-w);color:var(--accent);border-color:var(--accent)}
 
-/* controles: alternador de visão, chips de núcleo, busca, ordenação */
-.crs-controles{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:20px 0 14px}
-.crs-segmento{display:inline-flex;border:1px solid var(--linha);flex-shrink:0}
-.crs-segmento button{background:var(--branco);border:0;border-radius:0;padding:7px 14px;font-family:'DM Sans';
-  font-weight:600;font-size:11px;color:var(--tinta);cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
-.crs-segmento button+button{border-left:1px solid var(--linha)}
-.crs-segmento button.ativo{background:var(--tinta);color:#fff}
-.crs-chips{display:flex;gap:6px;flex-wrap:wrap}
-.crs-chip-filtro{cursor:pointer;border:1px solid var(--linha);background:var(--branco);border-radius:0;
-  padding:6px 12px;font-family:'DM Sans';font-weight:600;font-size:11px;color:var(--tinta);
-  text-transform:uppercase;letter-spacing:.04em}
-.crs-chip-filtro.ativo{background:var(--cor-chip,var(--tinta));border-color:var(--cor-chip,var(--tinta));color:#fff}
-.crs-controles input[type=search]{border:1px solid var(--linha);border-radius:0;padding:7px 10px;font-size:13px;
-  background:var(--branco);font-family:'DM Sans';color:var(--tinta);min-width:200px}
-.crs-controles select{border:1px solid var(--linha);border-radius:0;padding:7px 10px;font-size:13px;
-  background:var(--branco);font-family:'DM Sans';color:var(--tinta)}
-.crs-contagem{color:var(--grafite);font-size:12.5px;margin-top:10px}
+/* tooltip flutuante único, reaproveitado por todo elemento com [data-tip] via delegação de
+   evento (JS: initTooltip()) — funciona por hover E por foco de teclado (P1-1), sem lib
+   externa. Mais leve que um nó de tooltip por elemento (chegam a existir ~25 gatilhos:
+   ⓘ do título, ⓘ da régua, 5 cabeçalhos de patente, 19 cabeçalhos de critério + 2 de
+   %/Patente). */
+.crs-tip{position:fixed;z-index:60;background:var(--tinta);color:#fff;font-family:var(--font-sans);
+  font-size:12px;line-height:1.35;padding:6px 10px;max-width:260px;pointer-events:none;
+  box-shadow:0 2px 8px rgba(0,0,0,.2)}
+
+/* popover — usado pela Legenda (ⓘ Legenda, junto do título da Matriz) e pelos dropdowns
+   de filtro (Núcleos/Patentes); mesmo padrão de abrir/fechar (JS: initPopover()) */
+.crs-popover{position:absolute;z-index:40;background:var(--branco);border:1px solid var(--linha);
+  box-shadow:0 4px 16px rgba(43,38,32,.18);padding:12px 14px;min-width:230px;margin-top:6px}
+.crs-popover-linha{display:flex;align-items:center;gap:10px;margin-bottom:5px}
+.crs-popover-linha:last-of-type{margin-bottom:9px}
+.crs-popover-peso{font-family:'IBM Plex Mono';font-size:11px;color:var(--grafite)}
+.crs-popover-nota{font-family:var(--font-sans);font-style:italic;font-size:12.5px;color:var(--tinta);
+  border-top:1px solid var(--linha);padding-top:9px;margin:0;max-width:280px}
+
+/* FAIXA ÚNICA DE GAMIFICAÇÃO — condensa o antigo painel "34,8% grande + 5 cards com
+   descrição longa" num painel de uma linha (duas em telas estreitas). 100% da informação
+   antiga continua: % médio, nome/contagem/faixa de cada patente — as descrições longas
+   ("embarcou; ainda mapeando o próprio navio" etc.) viram tooltip (D3/D4 do briefing). */
+.crs-frota{padding:10px 16px;margin-bottom:14px}
+.crs-frota-linha{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.crs-frota-media{flex-shrink:0}
+.crs-frota-media .valor{display:flex;align-items:center;gap:2px}
+/* pedido do JR. — o "34,8%" deixou de ser destaque grande: mesma cor do link "Legenda"
+   (var(--accent)) e mesmo tamanho do rótulo "Adequação média da frota" (.l, 10px) */
+.crs-frota-media .n{font-family:var(--font-sans);font-weight:300;font-size:10px;line-height:1;color:var(--accent)}
+.crs-frota-media .l{font-family:'DM Sans';font-weight:600;font-size:10px;color:var(--grafite);margin-top:3px;
+  text-transform:uppercase;letter-spacing:.08em}
+.crs-frota-patentes{display:flex;flex-wrap:wrap;border:1px solid var(--linha)}
+/* patentes clicáveis (D3): clicar filtra a Matriz/Cards por aquela faixa, sincronizado com
+   o dropdown "Patentes" da toolbar — JS: alternarFiltroPatente() */
+.crs-patente-chip{display:flex;align-items:baseline;gap:5px;background:var(--branco);border:0;
+  border-left:1px solid var(--linha);padding:7px 12px;cursor:pointer;font-family:'DM Sans';color:var(--tinta)}
+.crs-patente-chip:first-child{border-left:0}
+.crs-patente-chip .nome{font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.crs-patente-chip .n{font-weight:700;font-size:13px}
+.crs-patente-chip .faixa{font-family:'IBM Plex Mono';font-size:9px;color:var(--grafite)}
+.crs-patente-chip:hover{background:rgba(43,38,32,.04)}
+.crs-patente-chip.crs-pat-corsario{color:#8A6A12}
+.crs-patente-chip.ativo{background:var(--tinta);color:#fff}
+.crs-patente-chip.ativo .faixa{color:rgba(255,255,255,.75)}
+.crs-patente-chip.crs-pat-corsario.ativo{background:#8A6A12}
+.crs-frota-nota{flex-basis:100%;font-size:10.5px;color:var(--grafite);font-style:italic}
+@media (max-width:640px){ .crs-frota-linha{flex-direction:column;align-items:stretch} .crs-frota-patentes{flex-wrap:wrap} }
+
+/* TOOLBAR ÚNICA DE FILTROS — busca sempre visível + 2 dropdowns multi-seleção (núcleos,
+   patentes) + ordenação; substitui as duas fileiras antigas de botões (chips de núcleo e
+   chips de patente). <1100px quebra em 2 linhas (busca em cima) — só flex-wrap, sem JS. */
+.crs-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;position:relative}
+.crs-toolbar input[type=search]{flex:1 1 200px;min-width:160px;border:1px solid var(--linha);border-radius:0;
+  padding:7px 10px;font-size:13px;background:var(--branco);font-family:'DM Sans';color:var(--tinta)}
+.crs-toolbar select{border:1px solid var(--linha);border-radius:0;padding:7px 10px;font-size:13px;
+  background:var(--branco);font-family:'DM Sans';color:var(--tinta);margin-left:auto}
+.crs-dd{position:relative;flex-shrink:0}
+.crs-dd-btn{border:1px solid var(--linha);background:var(--branco);border-radius:0;padding:7px 12px;
+  font-family:'DM Sans';font-weight:600;font-size:11.5px;color:var(--tinta);cursor:pointer;
+  text-transform:uppercase;letter-spacing:.03em}
+.crs-dd-btn[aria-expanded=true]{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+.crs-dd-painel{max-height:min(320px,60vh);overflow:auto}
+.crs-dd-todos{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--border-soft);
+  padding:5px 4px 7px;margin-bottom:5px;font-family:'DM Sans';font-weight:700;font-size:11px;color:var(--accent);
+  text-transform:uppercase;letter-spacing:.04em;cursor:pointer}
+.crs-dd-item{display:flex;align-items:center;gap:7px;padding:4px;font-family:var(--font-sans);font-size:13px;
+  color:var(--tinta);cursor:pointer;white-space:nowrap}
+.crs-dd-item:hover{background:var(--accent-w)}
+.crs-dd-marcador{width:9px;height:9px;flex-shrink:0;border-radius:50%}
+.crs-limpar{border:1px solid var(--linha);background:var(--branco);border-radius:0;padding:7px 12px;
+  font-family:'DM Sans';font-weight:600;font-size:11.5px;color:var(--accent);cursor:pointer;
+  text-transform:uppercase;letter-spacing:.03em}
+.crs-limpar:hover{background:var(--accent-w)}
+.crs-limpar-inline{background:none;border:0;color:var(--accent);font:inherit;font-weight:700;cursor:pointer;
+  text-decoration:underline;padding:0}
+@media (max-width:1100px){ .crs-toolbar input[type=search]{flex-basis:100%} .crs-toolbar select{margin-left:0} }
+
+/* TÍTULO DA MATRIZ + ⓘ LEGENDA + CONTADOR — fica logo acima do conteúdo (Cards ou
+   Matriz), nunca dentro dele; contador de resultados sempre visível (torna o estado de
+   filtragem legível mesmo com dropdowns escondendo a seleção, ao contrário dos botões
+   antigos) */
+.crs-resultados-topo{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+.crs-resultados-titulo{font-family:var(--font-sans);font-weight:600;font-size:15px;color:var(--tinta);margin:0}
+.crs-legenda-btn{background:none;border:0;color:var(--accent);font-family:'DM Sans';font-weight:600;
+  font-size:11.5px;cursor:pointer;padding:0;text-transform:uppercase;letter-spacing:.04em}
+.crs-legenda-btn:hover{text-decoration:underline}
+.crs-contagem{color:var(--grafite);font-size:12.5px;margin:0}
 
 /* estado de carregamento/erro */
 .crs-erro{background:var(--critico-w);border:1px solid rgba(43,38,32,.2);border-radius:0;padding:10px 14px;
   font-family:var(--font-sans);font-size:13.5px;color:var(--critico);margin-bottom:14px;
   display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 
-/* grid de cards */
-.crs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-top:4px}
+.crs-vazio{color:var(--grafite)}
+
+/* grid de cards (visão Cards — sem redesenho neste ciclo, R9) */
+.crs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
 .crs-card{padding:0;overflow:hidden}
 .crs-card summary{cursor:pointer;list-style:none;padding:16px 18px}
 .crs-card summary::-webkit-details-marker{display:none}
-.crs-card summary::after{content:"▾ ver os 19 critérios";display:block;margin-top:12px;font-family:'DM Sans';
+.crs-card summary::after{content:"▾ ver os critérios";display:block;margin-top:12px;font-family:'DM Sans';
   font-weight:500;font-size:10.5px;color:var(--grafite);text-transform:uppercase;letter-spacing:.05em}
 .crs-card[open] summary::after{content:"▴ recolher"}
 .crs-card-topo{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
@@ -129,102 +184,99 @@
 .crs-st-entendimento{background:var(--neutro-w);color:var(--ink-2)}
 .crs-crit-na{background:transparent;color:var(--ink-3);font-style:italic;box-shadow:inset 0 0 0 1px var(--border)}
 
-/* visão matriz: iniciativas × critérios, cabeçalho e 2 primeiras colunas fixos */
-.crs-matriz-wrap{overflow:auto;max-height:70vh;border:1px solid var(--linha);margin-top:4px}
+/* VISÃO MATRIZ — iniciativas × critérios; cabeçalho e coluna Iniciativa sticky nos dois
+   eixos; linha de grupo de núcleo também sticky logo abaixo do cabeçalho (D2 — "sticky
+   group header" via posicionamento CSS puro, --crs-thead-h ajustado por JS após cada
+   render porque a altura do thead varia com o wrap dos rótulos) */
+.crs-matriz-wrap{overflow:auto;max-height:70vh;border:1px solid var(--linha)}
 .crs-matriz{border-collapse:separate;border-spacing:0;font-size:12px;width:max-content;min-width:100%}
-.crs-matriz th,.crs-matriz td{padding:4px 6px;border-bottom:1px solid var(--border-soft);
+.crs-matriz th,.crs-matriz td{padding:4px 5px;border-bottom:1px solid var(--border-soft);
   border-right:1px solid var(--border-soft);box-sizing:border-box;height:30px}
 /* text-transform:none explícito (não só "sem declarar") — o th{} genérico de css/base.css
-   já vem com uppercase; sem essa linha ele reaparece por baixo (item 15: sem caixa alta aqui) */
-.crs-matriz thead th{position:sticky;top:0;z-index:2;background:var(--ceu);font-family:'DM Sans';font-weight:700;
-  color:var(--grafite);text-align:left;vertical-align:bottom;white-space:normal;line-height:1.3;font-size:10.5px;
-  text-transform:none;letter-spacing:normal;padding:6px 5px}
-.crs-mz-th-crit,.crs-mz-td-crit{min-width:128px;max-width:128px;width:128px;text-align:center}
-.crs-mz-td-crit{font-family:'DM Sans';font-weight:600;font-size:10.5px;letter-spacing:.02em}
-.crs-mz-td-pct{min-width:92px;max-width:92px;width:92px;text-align:center;font-family:'IBM Plex Mono';font-weight:700;color:var(--tinta)}
-.crs-mz-td-pat{min-width:100px;max-width:100px;width:100px;text-align:center}
-/* uppercase/peso de "badge" só na CÉLULA de patente (corpo) — o header "Patente" fica em
-   caixa normal, igual aos demais (item 15: sem text-transform:uppercase nos cabeçalhos) */
+   já vem com uppercase; sem essa linha ele reaparece por baixo */
+.crs-matriz thead th{position:sticky;top:0;z-index:3;background:var(--ceu);font-family:'DM Sans';font-weight:700;
+  color:var(--grafite);text-align:left;vertical-align:bottom;white-space:normal;line-height:1.25;font-size:10px;
+  text-transform:none;letter-spacing:normal;padding:6px 5px;cursor:default}
+.crs-matriz thead th:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.crs-mz-th-crit,.crs-mz-td-crit{min-width:90px;max-width:90px;width:90px;text-align:center}
+.crs-mz-td-crit{font-family:'DM Sans';font-weight:600;font-size:10px;letter-spacing:.01em}
+.crs-mz-td-pct{min-width:88px;max-width:88px;width:88px;text-align:center;font-family:'IBM Plex Mono';font-weight:700;color:var(--tinta)}
+.crs-mz-td-pat{min-width:96px;max-width:96px;width:96px;text-align:center}
 .crs-mz-patente-valor{font-family:'DM Sans';font-weight:700;font-size:10.5px;text-transform:uppercase;
   letter-spacing:.03em;color:var(--tinta)}
 .crs-mz-pat-corsario{color:#8A6A12}
-.crs-mz-col-nucleo{position:sticky;left:0;z-index:1;width:100px;min-width:100px;max-width:100px;color:#fff;
-  font-family:'DM Sans';font-weight:600;font-size:9.5px;text-align:left;white-space:normal;line-height:1.2}
-.crs-mz-col-iniciativa{position:sticky;left:100px;z-index:1;width:168px;min-width:168px;max-width:168px;
+.crs-mz-col-iniciativa{position:sticky;left:0;z-index:1;width:172px;min-width:172px;max-width:172px;
   background:var(--branco);font-family:var(--font-sans);font-size:12.5px;color:var(--tinta);white-space:normal}
-thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(--ceu)}
-/* a célula de núcleo tem cor inline (por linha) — a especificidade do inline já vence a zebra por conta própria */
-.crs-matriz tbody tr.crs-mz-zebra td{background:rgba(43,38,32,.025)}
+thead .crs-mz-col-iniciativa{z-index:4;background:var(--ceu)}
 .crs-mz-na{color:var(--ink-3);font-style:italic;font-weight:400;background:transparent}
 .crs-matriz tbody tr td.crs-mz-vazia{text-align:center;color:var(--grafite);padding:16px;position:static}
+/* linha de grupo por núcleo (D2) — cor do núcleo na borda esquerda, nome + contagem,
+   ▼/▶ colapsável (estado em localStorage, JS: cc_corsario_grupos) */
+.crs-mz-grupo-td{position:sticky;top:var(--crs-thead-h,58px);left:0;z-index:2;background:var(--ceu);padding:0;
+  border-bottom:1px solid var(--linha);border-right:0;height:auto}
+.crs-mz-grupo-btn{display:flex;align-items:center;gap:8px;width:100%;background:transparent;border:0;
+  border-left:4px solid var(--cor-grupo,var(--grafite));padding:7px 10px;cursor:pointer;text-align:left;
+  font-family:'DM Sans';font-weight:700;font-size:11px;color:var(--tinta);text-transform:uppercase;letter-spacing:.05em}
+.crs-mz-grupo-btn:hover{background:rgba(43,38,32,.05)}
+.crs-mz-grupo-seta{color:var(--cor-grupo,var(--grafite));font-size:9px;width:9px;flex-shrink:0}
+.crs-mz-grupo-count{font-weight:500;color:var(--grafite);text-transform:none;letter-spacing:0}
 @media (max-width:960px){ .crs-matriz-wrap{max-height:60vh} }
-
-/* legenda — item 1 (ajustes v0.20.x): a seção #crs-legenda de baixo foi removida (info
-   movida pro topo — patentes nos cards da frota, status/pesos na faixa compacta acima
-   dos controles). .crs-leg-status/.crs-leg-peso/.crs-regra-ouro continuam em uso ali;
-   as classes só do bloco "Patentes" da legenda antiga (crs-leg-bloco/titulo/patentes/
-   item/faixa/desc) saíram junto com o HTML que as usava. */
-.crs-leg-status{display:flex;flex-wrap:wrap;gap:6px 4px;align-items:center}
-.crs-leg-peso{font-family:'IBM Plex Mono';font-size:11px;color:var(--grafite);margin-right:10px}
-.crs-regra-ouro{font-family:var(--font-sans);font-style:italic;font-size:13.5px;color:var(--tinta);
-  border-top:1px solid var(--linha);padding-top:10px}
 </style>
 </head>
 <body>
 <div class="shell">
   <nav class="nav" aria-label="Navegação do painel"></nav>
   <main class="conteudo">
-    <h1 class="pagina-titulo">O Caminho para o Corsário</h1>
-    <p class="pagina-sub">A jornada de cada iniciativa até a carta de corso: operar com tudo registrado e visível no ecossistema oficial (Foco, catálogo e canais da URC). Nenhum status é punição: a régua mede distância, não mérito.</p>
+    <div class="crs-header">
+      <div class="crs-header-txt">
+        <h1 class="pagina-titulo">O Caminho para o Corsário<button type="button" class="crs-info-icone" aria-label="Sobre esta página" data-tip="A jornada de cada iniciativa até a carta de corso: operar com tudo registrado e visível no ecossistema oficial (Foco, catálogo e canais da URC). Nenhum status é punição: a régua mede distância, não mérito.">ⓘ</button></h1>
+        <p class="crs-subtitulo">Acompanhe a evolução das iniciativas até sua carta de corso.</p>
+      </div>
+      <div class="crs-segmento" id="crs-segmento" role="group" aria-label="Visualização">
+        <button type="button" data-visao="cards">▤ Cards</button>
+        <button type="button" class="ativo" data-visao="matriz">▦ Matriz</button>
+      </div>
+    </div>
 
     <div id="crs-estado"></div>
 
-    <section class="card" id="crs-frota-wrap" aria-label="Painel da frota"></section>
+    <section class="card crs-frota" id="crs-frota-wrap" aria-label="Painel da frota"></section>
 
-    <!-- item 1 (ajustes v0.20.x) — antes vivia na Legenda no rodapé da página; agora é
-         uma faixa fixa (não depende do Supabase responder, por isso é HTML estático, não
-         gerado em JS) logo acima dos controles/tabela, pra quem chega já entender a régua
-         antes de ver os dados. -->
-    <div class="crs-status-pesos" aria-label="Legenda de status e pesos">
-      <b class="crs-status-pesos-titulo">Status e pesos</b>
-      <span class="crs-leg-status">
-        <span class="crs-chip-crit crs-st-ok">ok</span><span class="crs-leg-peso">100%</span>
-        <span class="crs-chip-crit crs-st-andamento">ajuste em andamento</span><span class="crs-leg-peso">70%</span>
-        <span class="crs-chip-crit crs-st-iniciar">a iniciar</span><span class="crs-leg-peso">40%</span>
-        <span class="crs-chip-crit crs-st-entendimento">em entendimento</span><span class="crs-leg-peso">20%</span>
-        <span class="crs-chip-crit crs-crit-na">não se aplica</span><span class="crs-leg-peso">fora da régua</span>
-      </span>
-      <p class="crs-regra-ouro">A regra de ouro: não se aplica não conta contra ninguém — 100% significa ok em tudo que se aplica à iniciativa.</p>
-    </div>
-
-    <div class="crs-controles" id="crs-controles">
-      <div class="crs-segmento" id="crs-segmento" role="group" aria-label="Visualização">
-        <button type="button" data-visao="cards">Cards</button>
-        <button type="button" class="ativo" data-visao="matriz">Matriz</button>
+    <div class="crs-toolbar" id="crs-toolbar">
+      <input type="search" id="crs-busca" placeholder="Buscar iniciativa…" aria-label="Buscar iniciativa">
+      <div class="crs-dd" id="crs-dd-nucleos">
+        <button type="button" class="crs-dd-btn" id="crs-dd-nucleos-btn" aria-haspopup="true" aria-expanded="false" aria-controls="crs-dd-nucleos-painel">Núcleos</button>
+        <div class="crs-popover crs-dd-painel" id="crs-dd-nucleos-painel" hidden></div>
       </div>
-      <div class="crs-chips" id="crs-chips">
-        <button type="button" class="crs-chip-filtro ativo" data-nucleo="">Todos</button>
+      <div class="crs-dd" id="crs-dd-patentes">
+        <button type="button" class="crs-dd-btn" id="crs-dd-patentes-btn" aria-haspopup="true" aria-expanded="false" aria-controls="crs-dd-patentes-painel">Patentes</button>
+        <div class="crs-popover crs-dd-painel" id="crs-dd-patentes-painel" hidden></div>
       </div>
-      <div class="crs-chips" id="crs-chips-patente" role="group" aria-label="Filtrar por patente">
-        <button type="button" class="crs-chip-filtro ativo" data-patente="">Todas as patentes</button>
-        <button type="button" class="crs-chip-filtro" data-patente="Grumete">Grumete</button>
-        <button type="button" class="crs-chip-filtro" data-patente="Marujo">Marujo</button>
-        <button type="button" class="crs-chip-filtro" data-patente="Timoneiro">Timoneiro</button>
-        <button type="button" class="crs-chip-filtro" data-patente="Capitão">Capitão</button>
-        <button type="button" class="crs-chip-filtro" data-patente="Corsário">Corsário</button>
-      </div>
-      <input type="search" id="crs-busca" placeholder="Buscar por iniciativa…" aria-label="Buscar iniciativa">
+      <button type="button" class="crs-limpar" id="crs-limpar" hidden>Limpar filtros</button>
       <select id="crs-ordenar" aria-label="Ordenar iniciativas">
         <option value="pct_desc">% de adequação (maior primeiro)</option>
-        <option value="nome_asc">Nome A-Z</option>
+        <option value="nome_asc">Nome (A–Z)</option>
         <option value="nucleo">Núcleo</option>
       </select>
     </div>
 
+    <div class="crs-resultados-topo">
+      <h2 class="crs-resultados-titulo">Aderência das iniciativas</h2>
+      <button type="button" class="crs-legenda-btn" id="crs-legenda-btn" aria-haspopup="true" aria-expanded="false" aria-controls="crs-legenda-pop">ⓘ Legenda</button>
+      <p class="crs-contagem" id="crs-contagem"></p>
+    </div>
+    <div class="crs-popover" id="crs-legenda-pop" hidden role="dialog" aria-label="Legenda de status e pesos">
+      <div class="crs-popover-linha"><span class="crs-chip-crit crs-st-ok">ok</span><span class="crs-popover-peso">peso 100%</span></div>
+      <div class="crs-popover-linha"><span class="crs-chip-crit crs-st-andamento">em andamento</span><span class="crs-popover-peso">peso 70%</span></div>
+      <div class="crs-popover-linha"><span class="crs-chip-crit crs-st-iniciar">a iniciar</span><span class="crs-popover-peso">peso 40%</span></div>
+      <div class="crs-popover-linha"><span class="crs-chip-crit crs-st-entendimento">entendimento</span><span class="crs-popover-peso">peso 20%</span></div>
+      <div class="crs-popover-linha"><span class="crs-chip-crit crs-crit-na">n/a</span><span class="crs-popover-peso">fora da régua</span></div>
+      <p class="crs-popover-nota">A regra de ouro: "não se aplica" não conta contra ninguém — 100% significa ok em tudo que se aplica à iniciativa.</p>
+    </div>
+
     <div class="crs-grid" id="crs-grid" style="display:none"></div>
-    <!-- item 2.4 do plano de melhorias — visão Matriz é desktop-only abaixo de 768px
-         (a visão Cards continua normal no mobile, essa aqui que não cabe em tela
-         estreita). .mostrar é ligado/desligado pelo JS junto com a troca de visão
+    <!-- visão Matriz é desktop-only abaixo de 768px (a visão Cards continua normal no
+         mobile). .mostrar é ligado/desligado pelo JS junto com a troca de visão
          (renderTudo) — sem isso, o aviso apareceria também quando Cards estivesse
          ativa, o que seria enganoso (a visão ativa nem é a Matriz). -->
     <div class="aviso aviso-mobile" id="crs-aviso-mobile">
@@ -234,7 +286,6 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     <div class="crs-matriz-wrap largura-desktop" id="crs-matriz-wrap">
       <table class="crs-matriz" id="crs-matriz"></table>
     </div>
-    <p class="crs-contagem" id="crs-contagem"></p>
   </main>
 </div>
 
@@ -293,6 +344,7 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
 
   /* ---- a régua (não mexer sem revalidar contra o card da ALI Ecossistema) ---- */
   const PESOS = { "ok": 1, "ajuste em andamento": 0.7, "a iniciar": 0.4, "em entendimento": 0.2 };
+  const REGRA_OURO_TEXTO = "Como calculamos? \"Não se aplica\" não reduz a adequação — a média considera apenas os itens aplicáveis à iniciativa. 100% significa ok em tudo que se aplica.";
 
   function calcular(listaDeStatus) {
     const aplicaveis = listaDeStatus.filter((s) => s !== "não se aplica");
@@ -306,9 +358,8 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
   }
 
   const ORDEM_PATENTES = ["Grumete", "Marujo", "Timoneiro", "Capitão", "Corsário"];
-  // item 1 (ajustes v0.20.x) — faixa/descrição de cada patente, antes só na Legenda (fixa,
-  // no rodapé); agora alimenta os cards de patente no painel da frota (topo), que é
-  // JS-gerado (frotaHtml()) — por isso virou dado aqui, não só texto solto no HTML.
+  // faixa/descrição de cada patente — alimenta o tooltip de cada chip de patente na faixa
+  // de gamificação (antes era texto fixo na Legenda do rodapé)
   const INFO_PATENTES = {
     "Grumete": { faixa: "0–24%", desc: "embarcou; ainda mapeando o próprio navio" },
     "Marujo": { faixa: "25–49%", desc: "primeiras entregas dentro do ecossistema" },
@@ -322,6 +373,14 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     "a iniciar": "crs-st-iniciar",
     "em entendimento": "crs-st-entendimento",
   };
+  // rótulo do chip de status na Matriz/detalhe do card — por extenso e consistente
+  // (elimina a abreviação "entend." que convivia com "em entendimento" na versão anterior)
+  const ROTULO_CHIP_STATUS = {
+    "ok": "ok",
+    "ajuste em andamento": "em andamento",
+    "a iniciar": "a iniciar",
+    "em entendimento": "entendimento",
+  };
   // cores por núcleo: em vez dos tons vivos da planilha-fonte (usados só pra status de
   // critério, que precisa bater com a origem), reaproveita a família "carta náutica" já
   // definida em css/base.css — mesma lógica de matiz (azul/verde/roxo/laranja), só que
@@ -334,37 +393,62 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
   };
   const ORDEM_NUCLEOS = Object.keys(NUCLEO_CORES);
 
-  // cabeçalhos da matriz batendo com o_caminho_para_o_corsario_v3.xlsx (aba "Jornada",
-  // linha 2), com os erros de digitação do original corrigidos — texto por extenso, sem
-  // caixa alta (o `rotulo` cru do banco, que pode ainda ter a grafia antiga, não é usado
-  // aqui; a régua e os cards continuam lendo `rotulo` do banco normalmente, intocado)
+  // cabeçalhos curtos da Matriz (refactor v0.21) — nomenclatura definida junto com o JR.;
+  // a definição completa (usada no tooltip de cada coluna, data-tip) fica em
+  // DESCRICOES_MATRIZ logo abaixo. Ordem batendo com o_caminho_para_o_corsario_v3.xlsx
+  // (aba "Jornada", linha 2); a régua e os cards de detalhe continuam lendo `rotulo` cru
+  // do banco normalmente — só o cabeçalho da Matriz usa este mapa.
   const ROTULOS_MATRIZ = {
-    base_foco: "Base de clientes centralizadas/integradas ao Foco",
-    instrumentos: "Instrumentos adequados",
-    solucao: "Solução criada",
-    atend_foco: "Atendimentos registrados/integrados ao Foco",
-    painel_dw: "Painel para acompanhamento dos atendimentos no Foco / DW",
-    campanha_foco: "Campanha criada no Foco",
-    portal: "Site no portal Sebrae",
-    lp_mc: "Formulários em LP do Mkt Cloud",
-    captura_mc: "Captura de lead/clientes pelo Mkt Cloud",
-    transbordo_mc: "Transbordo do Mkt para o Foco",
-    transbordo_ufs: "Transbordo de leads/clientes para as UFs",
-    email_mc: "Disparo de e-mail via Mkt Cloud",
-    whats_mc: "Disparo de WhatsApp via Mkt Cloud",
-    jornadas_mc: "Jornadas via Mkt Cloud",
-    loja: "Uso da Loja",
+    base_foco: "Clientes no Foco",
+    instrumentos: "Instrumentos",
+    solucao: "Solução",
+    atend_foco: "Atendimentos no Foco",
+    painel_dw: "Acompanhamento no DW/Foco",
+    campanha_foco: "Campanha no Foco",
+    portal: "Site no Portal",
+    lp_mc: "LP no Mkt Cloud",
+    captura_mc: "Captura de lead Mkt Cloud",
+    transbordo_mc: "Transbordo Mkt/Foco",
+    transbordo_ufs: "Transbordo para as UFs",
+    email_mc: "E-mail Mkt Cloud",
+    whats_mc: "WhatsApp Mkt Cloud",
+    jornadas_mc: "Jornadas",
+    loja: "Loja",
     cnr_receptiva: "CNR Receptiva",
     cnr_ativa: "CNR Ativa",
-    assessoria: "Parceria com Assessoria de Negócios",
-    rede: "Parceria com a rede própria e parceira",
+    assessoria: "Assessoria",
+    rede: "Rede de atendimento",
   };
-  const ABREV_STATUS = { "ok": "ok", "ajuste em andamento": "andamento", "a iniciar": "a iniciar", "em entendimento": "entend." };
+  const DESCRICOES_MATRIZ = {
+    base_foco: "Base de clientes centralizada/integrada ao Foco.",
+    instrumentos: "Adequação dos instrumentos necessários à iniciativa.",
+    solucao: "Solução prevista criada/registrada no sistema.",
+    atend_foco: "Atendimentos registrados/integrados ao Foco.",
+    painel_dw: "Painel de acompanhamento dos atendimentos no Foco/DW.",
+    campanha_foco: "Campanha da iniciativa criada no Foco.",
+    portal: "Site da iniciativa publicado no portal Sebrae.",
+    lp_mc: "Formulários em LP do Mkt Cloud.",
+    captura_mc: "Captura de lead/clientes pelo Mkt Cloud.",
+    transbordo_mc: "Transbordo do Mkt Cloud para o Foco.",
+    transbordo_ufs: "Transbordo de leads/clientes para as UFs.",
+    email_mc: "Disparo de e-mail via Mkt Cloud.",
+    whats_mc: "Disparo de WhatsApp via Mkt Cloud.",
+    jornadas_mc: "Jornadas via Mkt Cloud.",
+    loja: "Uso da Loja.",
+    cnr_receptiva: "CNR Receptiva.",
+    cnr_ativa: "CNR Ativa.",
+    assessoria: "Parceria com Assessoria de Negócios.",
+    rede: "Parceria com a rede própria e parceira.",
+  };
 
   function rotuloColunaMatriz(c) {
     if (ROTULOS_MATRIZ[c.chave]) return ROTULOS_MATRIZ[c.chave];
     const r = c.rotulo || c.chave || ""; // critério novo, sem mapeamento — cai pro rótulo cru do banco, truncado, nunca quebra
-    return r.length > 60 ? r.slice(0, 59) + "…" : r;
+    return r.length > 40 ? r.slice(0, 39) + "…" : r;
+  }
+
+  function descricaoColunaMatriz(c) {
+    return DESCRICOES_MATRIZ[c.chave] || c.rotulo || c.chave || "";
   }
 
   function corNucleo(nome) {
@@ -376,35 +460,142 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     return (p * 100).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
   }
 
-  function fmtDataHora(iso) {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-  }
-
   const elEstado = document.getElementById("crs-estado");
   const elFrota = document.getElementById("crs-frota-wrap");
-  const elControles = document.getElementById("crs-controles");
+  const elToolbar = document.getElementById("crs-toolbar");
   const elSegmento = document.getElementById("crs-segmento");
-  const elChips = document.getElementById("crs-chips");
-  const elChipsPatente = document.getElementById("crs-chips-patente");
+  const elDdNucleosBtn = document.getElementById("crs-dd-nucleos-btn");
+  const elDdNucleosPainel = document.getElementById("crs-dd-nucleos-painel");
+  const elDdPatentesBtn = document.getElementById("crs-dd-patentes-btn");
+  const elDdPatentesPainel = document.getElementById("crs-dd-patentes-painel");
+  const elLimpar = document.getElementById("crs-limpar");
   const elBusca = document.getElementById("crs-busca");
   const elOrdenar = document.getElementById("crs-ordenar");
+  const elLegendaBtn = document.getElementById("crs-legenda-btn");
+  const elLegendaPop = document.getElementById("crs-legenda-pop");
   const elGrid = document.getElementById("crs-grid");
   const elMatrizWrap = document.getElementById("crs-matriz-wrap");
   const elMatriz = document.getElementById("crs-matriz");
   const elAvisoMobile = document.getElementById("crs-aviso-mobile");
   const elContagem = document.getElementById("crs-contagem");
 
-  let TODAS = [];      // uma entrada por iniciativa, com os 19 status já carregados e a régua já calculada
+  let TODAS = [];      // uma entrada por iniciativa, com os status já carregados e a régua já calculada
   let GRUPOS = [];     // critérios agrupados por `grupo`, na ordem de `ordem` — usado pelo detalhe dos cards
-  let CRITERIOS = [];  // os mesmos 19 critérios, em lista plana e na ordem de `ordem` — usado pelas colunas da matriz
-  let filtroNucleo = "";  // "" = todos
-  let filtroPatente = ""; // "" = todas
+  let CRITERIOS = [];  // os mesmos critérios, em lista plana e na ordem de `ordem` — usado pelas colunas da matriz
+  let filtroNucleos = new Set();  // vazio = todos; valores normalizados (normalizar(x.nucleo))
+  let filtroPatentes = new Set(); // vazio = todas; valores = ORDEM_PATENTES
+  let gruposColapsados = new Set(); // núcleos (normalizados) com a linha de grupo recolhida na Matriz
   let visao = "cards";   // "cards" | "matriz" — espelhado em location.hash
 
+  // ---- persistência leve (P1-4/P1-3) — chaves namespaced, mesma convenção do resto do
+  // site; busca NÃO persiste (de propósito — é um filtro de sessão, não de preferência) ----
+  const LS_FILTROS = "cc_corsario_filtros";
+  const LS_GRUPOS = "cc_corsario_grupos";
+
+  function carregarFiltrosPersistidos() {
+    try {
+      const raw = localStorage.getItem(LS_FILTROS);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; } // localStorage indisponível (modo privado etc.) — segue sem persistir
+  }
+  function salvarFiltrosPersistidos() {
+    try {
+      localStorage.setItem(LS_FILTROS, JSON.stringify({
+        nucleos: Array.from(filtroNucleos),
+        patentes: Array.from(filtroPatentes),
+        ordenar: elOrdenar.value,
+      }));
+    } catch (e) { /* idem — falha ao salvar não quebra o filtro em uso, só não persiste */ }
+  }
+  function carregarGruposColapsados() {
+    try {
+      const raw = localStorage.getItem(LS_GRUPOS);
+      if (raw) gruposColapsados = new Set(JSON.parse(raw));
+    } catch (e) { /* segue com todos expandidos (estado default) */ }
+  }
+  function salvarGruposColapsados() {
+    try { localStorage.setItem(LS_GRUPOS, JSON.stringify(Array.from(gruposColapsados))); } catch (e) { /* ver acima */ }
+  }
+
+  (function aplicarPersistidoInicial() {
+    carregarGruposColapsados();
+    const salvo = carregarFiltrosPersistidos();
+    if (!salvo) return;
+    (salvo.nucleos || []).forEach((n) => filtroNucleos.add(n));
+    (salvo.patentes || []).forEach((p) => filtroPatentes.add(p));
+    if (salvo.ordenar) elOrdenar.value = salvo.ordenar;
+  })();
+
+  // ---- tooltip acessível único (P1-1) — delegado em [data-tip], funciona por hover E
+  // por foco de teclado; aria-describedby aponta pro nó flutuante compartilhado ----
+  function initTooltip() {
+    const tip = document.createElement("div");
+    tip.className = "crs-tip";
+    tip.id = "crs-tip";
+    tip.setAttribute("role", "tooltip");
+    tip.hidden = true;
+    document.body.appendChild(tip);
+    let alvo = null;
+
+    function posicionar(el) {
+      const r = el.getBoundingClientRect();
+      tip.style.left = "0px";
+      tip.style.top = "0px";
+      const tr = tip.getBoundingClientRect();
+      let left = r.left + r.width / 2 - tr.width / 2;
+      left = Math.max(8, Math.min(left, window.innerWidth - tr.width - 8));
+      let top = r.top - tr.height - 8;
+      if (top < 8) top = r.bottom + 8; // sem espaço em cima (ex.: cabeçalho da Matriz) — mostra embaixo
+      tip.style.left = left + "px";
+      tip.style.top = top + "px";
+    }
+    function mostrar(el) {
+      const texto = el.getAttribute("data-tip");
+      if (!texto) return;
+      tip.textContent = texto;
+      tip.hidden = false;
+      el.setAttribute("aria-describedby", "crs-tip");
+      alvo = el;
+      posicionar(el);
+    }
+    function esconder() {
+      tip.hidden = true;
+      if (alvo) alvo.removeAttribute("aria-describedby");
+      alvo = null;
+    }
+    document.addEventListener("mouseover", (e) => { const el = e.target.closest("[data-tip]"); if (el) mostrar(el); });
+    document.addEventListener("mouseout", (e) => {
+      const el = e.target.closest("[data-tip]");
+      if (el && !el.contains(e.relatedTarget)) esconder();
+    });
+    document.addEventListener("focusin", (e) => { const el = e.target.closest("[data-tip]"); if (el) mostrar(el); });
+    document.addEventListener("focusout", (e) => { const el = e.target.closest("[data-tip]"); if (el) esconder(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") esconder(); });
+    window.addEventListener("scroll", () => { if (alvo) posicionar(alvo); }, true);
+  }
+
+  // ---- popover genérico (P1-2) — Legenda e os 2 dropdowns de filtro reaproveitam o
+  // mesmo padrão: clique no botão abre/fecha; Esc e clique fora fecham ----
+  function initPopover(btn, painel) {
+    function abrir() {
+      document.querySelectorAll(".crs-popover[data-aberto]").forEach((p) => { if (p !== painel) fecharPainel(p); });
+      painel.hidden = false;
+      painel.setAttribute("data-aberto", "");
+      btn.setAttribute("aria-expanded", "true");
+    }
+    function fechar() { fecharPainel(painel); btn.setAttribute("aria-expanded", "false"); }
+    function fecharPainel(p) { p.hidden = true; p.removeAttribute("data-aberto"); }
+    btn.addEventListener("click", (e) => { e.stopPropagation(); painel.hidden ? abrir() : fechar(); });
+    document.addEventListener("click", (e) => {
+      if (!painel.hidden && !painel.contains(e.target) && e.target !== btn) fechar();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !painel.hidden) { fechar(); btn.focus(); }
+    });
+  }
+
   function mostrarSkeleton() {
-    elControles.style.visibility = "hidden";
+    elToolbar.style.visibility = "hidden";
     elFrota.innerHTML = "";
     elGrid.innerHTML = "";
     elMatriz.innerHTML = "";
@@ -454,29 +645,40 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     const comRegua = TODAS.filter((x) => x.calc.pct !== null);
     const media = comRegua.length ? comRegua.reduce((s, x) => s + x.calc.pct, 0) / comRegua.length : null;
     const foraDaRegua = TODAS.length - comRegua.length;
-    // "Última atualização" saiu da exibição (item 2, ajustes v0.20.x) — o dado de origem
-    // por iniciativa (x.ultimaAtualizacao, de r.atualizado_em) continua computado em
-    // processar(), intocado, só não sobe mais até um agregado pra mostrar aqui.
 
     const patentesHtml = ORDEM_PATENTES.map((p) => {
       const n = TODAS.filter((x) => x.calc.patente === p).length;
       const info = INFO_PATENTES[p];
-      return '<div class="crs-patente-mini' + (p === "Corsário" ? " crs-pat-corsario" : "") + '">' +
-        '<div class="n">' + n + '</div><div class="l">' + esc(p) + '</div>' +
-        '<div class="crs-patente-faixa">' + esc(info.faixa) + '</div>' +
-        '<div class="crs-patente-desc">' + esc(info.desc) + '</div>' +
-      '</div>';
+      const tip = p + " · " + info.faixa + ": " + info.desc;
+      return '<button type="button" class="crs-patente-chip' + (p === "Corsário" ? " crs-pat-corsario" : "") + '" data-patente="' + esc(p) + '" data-tip="' + esc(tip) + '" aria-pressed="' + (filtroPatentes.has(p) ? "true" : "false") + '">' +
+        '<span class="nome">' + esc(p) + '</span><span class="n">' + n + '</span><span class="faixa">' + esc(info.faixa) + '</span>' +
+      '</button>';
     }).join("");
 
-    return '<div class="crs-frota">' +
-      '<div class="crs-frota-media"><div class="n">' + fmtPct(media) + '</div><div class="l">Adequação média da frota</div></div>' +
-      '<div class="crs-frota-patentes-bloco"><div class="crs-frota-patentes">' + patentesHtml + '</div>' +
-        (foraDaRegua ? '<div class="crs-frota-nota">' + foraDaRegua + (foraDaRegua === 1 ? " iniciativa fora" : " iniciativas fora") + ' da régua (nenhum critério aplicável).</div>' : "") +
-      '</div>' +
+    return '<div class="crs-frota-linha">' +
+      '<div class="crs-frota-media"><div class="valor"><span class="n">' + fmtPct(media) + '</span>' +
+        '<button type="button" class="crs-info-icone" aria-label="Como calculamos a adequação" data-tip="' + esc(REGRA_OURO_TEXTO) + '">ⓘ</button></div>' +
+        '<div class="l">Adequação média da frota</div></div>' +
+      '<div class="crs-frota-patentes" role="group" aria-label="Patentes — clique para filtrar">' + patentesHtml + '</div>' +
+      (foraDaRegua ? '<div class="crs-frota-nota">' + foraDaRegua + (foraDaRegua === 1 ? " iniciativa fora" : " iniciativas fora") + ' da régua (nenhum critério aplicável).</div>' : "") +
     '</div>';
   }
 
-  function montarChips() {
+  function atualizarPatentesAtivas() {
+    elFrota.querySelectorAll(".crs-patente-chip[data-patente]").forEach((btn) => {
+      const ativo = filtroPatentes.has(btn.dataset.patente);
+      btn.classList.toggle("ativo", ativo);
+      btn.setAttribute("aria-pressed", ativo ? "true" : "false");
+    });
+  }
+
+  function montarDropdownPatentes() {
+    elDdPatentesPainel.innerHTML =
+      '<button type="button" class="crs-dd-todos" data-limpar-patentes>Todas as patentes</button>' +
+      ORDEM_PATENTES.map((p) => '<label class="crs-dd-item"><input type="checkbox" value="' + esc(p) + '">' + esc(p) + '</label>').join("");
+  }
+
+  function montarDropdownNucleos() {
     const nucleos = Array.from(new Set(TODAS.map((x) => x.nucleo).filter(Boolean)));
     nucleos.sort((a, b) => {
       const ia = ORDEM_NUCLEOS.indexOf(normalizar(a));
@@ -486,8 +688,43 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
       if (ib === -1) return -1;
       return ia - ib;
     });
-    elChips.innerHTML = '<button type="button" class="crs-chip-filtro ativo" data-nucleo="">Todos</button>' +
-      nucleos.map((n) => '<button type="button" class="crs-chip-filtro" data-nucleo="' + esc(normalizar(n)) + '" style="--cor-chip:' + corNucleo(n).cor + '">' + esc(n) + '</button>').join("");
+    elDdNucleosPainel.innerHTML =
+      '<button type="button" class="crs-dd-todos" data-limpar-nucleos>Todos os núcleos</button>' +
+      nucleos.map((n) => '<label class="crs-dd-item"><input type="checkbox" value="' + esc(normalizar(n)) + '">' +
+        '<span class="crs-dd-marcador" style="background:' + corNucleo(n).cor + '"></span>' + esc(n) + '</label>').join("");
+  }
+
+  function sincronizarCheckboxes(painel, selecionados) {
+    painel.querySelectorAll("input[type=checkbox]").forEach((chk) => { chk.checked = selecionados.has(chk.value); });
+  }
+
+  function atualizarBadgesFiltro() {
+    elDdNucleosBtn.textContent = "Núcleos" + (filtroNucleos.size ? " · " + filtroNucleos.size : "");
+    elDdPatentesBtn.textContent = "Patentes" + (filtroPatentes.size ? " · " + filtroPatentes.size : "");
+  }
+
+  function algumFiltroAtivo() {
+    return filtroNucleos.size > 0 || filtroPatentes.size > 0 || elBusca.value.trim() !== "";
+  }
+
+  function limparFiltros() {
+    filtroNucleos.clear();
+    filtroPatentes.clear();
+    elBusca.value = "";
+    sincronizarCheckboxes(elDdNucleosPainel, filtroNucleos);
+    sincronizarCheckboxes(elDdPatentesPainel, filtroPatentes);
+    salvarFiltrosPersistidos();
+    renderTudo();
+  }
+
+  // clicar numa patente da faixa de gamificação equivale a marcar só ela no dropdown
+  // "Patentes" (D3) — clique de novo na mesma desfaz o filtro
+  function alternarFiltroPatente(p) {
+    if (filtroPatentes.size === 1 && filtroPatentes.has(p)) filtroPatentes.clear();
+    else { filtroPatentes.clear(); filtroPatentes.add(p); }
+    sincronizarCheckboxes(elDdPatentesPainel, filtroPatentes);
+    salvarFiltrosPersistidos();
+    renderTudo();
   }
 
   function chipCriterioHtml(l) {
@@ -546,37 +783,39 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
   // ordenação valem igual pras duas visões; cards e matriz só decidem COMO desenhar esta lista
   function listaFiltrada() {
     let lista = TODAS.slice();
-    if (filtroNucleo) lista = lista.filter((x) => normalizar(x.nucleo) === filtroNucleo);
-    if (filtroPatente) lista = lista.filter((x) => x.calc.patente === filtroPatente);
+    if (filtroNucleos.size) lista = lista.filter((x) => filtroNucleos.has(normalizar(x.nucleo)));
+    if (filtroPatentes.size) lista = lista.filter((x) => filtroPatentes.has(x.calc.patente));
     const q = elBusca.value.trim().toLowerCase();
     if (q) lista = lista.filter((x) => x.nome.toLowerCase().includes(q));
     lista.sort(comparador);
     return lista;
   }
 
+  function vazioHtml() {
+    return '<div class="crs-vazio">Nenhuma iniciativa corresponde aos filtros. <button type="button" class="crs-limpar-inline" data-limpar-tudo>Limpar filtros</button></div>';
+  }
+
   function renderGrid(lista) {
     elGrid.innerHTML = lista.length
       ? lista.map(cardHtml).join("")
-      : '<div class="card" style="color:var(--grafite)">Nenhuma iniciativa com esses filtros.</div>';
+      : '<div class="card">' + vazioHtml() + '</div>';
   }
 
   function celulaMatrizHtml(item, crit) {
     if (!item || item.status === "não se aplica") {
-      return '<td class="crs-mz-td-crit crs-mz-na" title="' + esc(crit.rotulo) + ': não se aplica">n.a.</td>';
+      return '<td class="crs-mz-td-crit crs-mz-na" title="' + esc(descricaoColunaMatriz(crit)) + ': não se aplica">n/a</td>';
     }
     const cls = CLASSE_STATUS[item.status] || "";
-    const texto = ABREV_STATUS[item.status] || item.status;
+    const texto = ROTULO_CHIP_STATUS[item.status] || item.status;
     const tituloObs = item.observacao ? " — " + item.observacao : "";
-    return '<td class="crs-mz-td-crit ' + cls + '" title="' + esc(crit.rotulo + ": " + item.status + tituloObs) + '">' + esc(texto) + '</td>';
+    return '<td class="crs-mz-td-crit ' + cls + '" title="' + esc(descricaoColunaMatriz(crit) + ": " + item.status + tituloObs) + '">' + esc(texto) + '</td>';
   }
 
-  function linhaMatrizHtml(x, idx) {
-    const nc = corNucleo(x.nucleo);
+  function linhaMatrizHtml(x) {
     const porChave = new Map(x.itens.map((i) => [i.criterio, i]));
     const celulas = CRITERIOS.map((c) => celulaMatrizHtml(porChave.get(c.chave), c)).join("");
     const patCls = x.calc.patente === "Corsário" ? " crs-mz-pat-corsario" : "";
-    return '<tr class="' + (idx % 2 ? "crs-mz-zebra" : "") + '">' +
-      '<td class="crs-mz-col-nucleo" style="background:' + nc.cor + '" title="' + esc(x.nucleo || "") + '">' + esc(x.nucleo || "—") + '</td>' +
+    return '<tr>' +
       '<td class="crs-mz-col-iniciativa">' + DRAWER.spanIniciativa(x.nome) + '</td>' +
       celulas +
       '<td class="crs-mz-td-pct">' + fmtPct(x.calc.pct) + '</td>' +
@@ -584,29 +823,86 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     '</tr>';
   }
 
-  // ordem e textos batendo com o_caminho_para_o_corsario_v3.xlsx (aba "Jornada", linha 2)
-  function theadMatrizHtml() {
-    return '<tr>' +
-      '<th class="crs-mz-col-nucleo">Núcleo</th>' +
-      '<th class="crs-mz-col-iniciativa">Iniciativa</th>' +
-      CRITERIOS.map((c) => '<th class="crs-mz-th-crit" title="' + esc(c.rotulo) + '">' + esc(rotuloColunaMatriz(c)) + '</th>').join("") +
-      '<th class="crs-mz-td-pct">% de adequação</th>' +
-      '<th class="crs-mz-td-pat">Patente</th>' +
+  function colspanMatriz() {
+    return 1 + CRITERIOS.length + 2; // Iniciativa + critérios + % + Patente
+  }
+
+  // agrupamento por núcleo (D2) — a ordem de cada grupo já vem correta porque `lista` já
+  // está ordenada por listaFiltrada()/comparador(); só balda por chave normalizada
+  function agruparPorNucleo(lista) {
+    const grupos = new Map();
+    lista.forEach((x) => {
+      const nome = x.nucleo || "Sem núcleo";
+      const chave = normalizar(nome);
+      if (!grupos.has(chave)) grupos.set(chave, { nome: nome, chave: chave, itens: [] });
+      grupos.get(chave).itens.push(x);
+    });
+    const chaves = Array.from(grupos.keys());
+    chaves.sort((a, b) => {
+      const ia = ORDEM_NUCLEOS.indexOf(a), ib = ORDEM_NUCLEOS.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b, "pt-BR");
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+    return chaves.map((chave) => grupos.get(chave));
+  }
+
+  function grupoLinhaHtml(grupo) {
+    const nc = corNucleo(grupo.nome);
+    const colapsado = gruposColapsados.has(grupo.chave);
+    return '<tr class="crs-mz-grupo">' +
+      '<td class="crs-mz-grupo-td" colspan="' + colspanMatriz() + '">' +
+        '<button type="button" class="crs-mz-grupo-btn" data-toggle-grupo="' + esc(grupo.chave) + '" aria-expanded="' + (!colapsado) + '" style="--cor-grupo:' + nc.cor + '">' +
+          '<span class="crs-mz-grupo-seta" aria-hidden="true">' + (colapsado ? "▶" : "▼") + '</span>' +
+          '<span class="crs-mz-grupo-nome">' + esc(grupo.nome) + '</span>' +
+          '<span class="crs-mz-grupo-count">· ' + grupo.itens.length + '</span>' +
+        '</button>' +
+      '</td>' +
     '</tr>';
   }
 
+  // ordem e textos batendo com o_caminho_para_o_corsario_v3.xlsx (aba "Jornada", linha 2);
+  // rótulos abreviados (dicionário do refactor v0.21) com a definição completa em
+  // data-tip — cada th é focável (tabindex=0) pra funcionar por teclado também (P1-1)
+  function theadMatrizHtml() {
+    return '<tr>' +
+      '<th class="crs-mz-col-iniciativa">Iniciativa</th>' +
+      CRITERIOS.map((c) => '<th class="crs-mz-th-crit" tabindex="0" data-tip="' + esc(descricaoColunaMatriz(c)) + '">' + esc(rotuloColunaMatriz(c)) + '</th>').join("") +
+      '<th class="crs-mz-td-pct" tabindex="0" data-tip="Percentual de itens aplicáveis em ok, ponderado pelo peso de cada status (ver ⓘ Legenda).">% de adequação</th>' +
+      '<th class="crs-mz-td-pat" tabindex="0" data-tip="Patente calculada a partir do % de adequação (ver ⓘ Legenda).">Patente</th>' +
+    '</tr>';
+  }
+
+  function ajustarStickyGrupo() {
+    const thead = elMatriz.querySelector("thead");
+    if (thead) elMatriz.style.setProperty("--crs-thead-h", thead.offsetHeight + "px");
+  }
+
   function renderMatriz(lista) {
-    const corpo = lista.length
-      ? lista.map(linhaMatrizHtml).join("")
-      : '<tr><td class="crs-mz-vazia" colspan="' + (CRITERIOS.length + 4) + '">Nenhuma iniciativa com esses filtros.</td></tr>';
+    if (!lista.length) {
+      elMatriz.innerHTML = '<thead>' + theadMatrizHtml() + '</thead><tbody><tr><td class="crs-mz-vazia" colspan="' + colspanMatriz() + '">' + vazioHtml() + '</td></tr></tbody>';
+      ajustarStickyGrupo();
+      return;
+    }
+    const grupos = agruparPorNucleo(lista);
+    const corpo = grupos.map((g) => {
+      const linhaGrupo = grupoLinhaHtml(g);
+      if (gruposColapsados.has(g.chave)) return linhaGrupo;
+      return linhaGrupo + g.itens.map(linhaMatrizHtml).join("");
+    }).join("");
     elMatriz.innerHTML = '<thead>' + theadMatrizHtml() + '</thead><tbody>' + corpo + '</tbody>';
+    ajustarStickyGrupo();
   }
 
   // dispatcher único: filtra/ordena uma vez, decide qual visão está ativa e delega o
-  // desenho — filtro/busca/ordenação e o contador de baixo valem pras duas por igual
+  // desenho — filtro/busca/ordenação e o contador de cima valem pras duas por igual
   function renderTudo() {
     const lista = listaFiltrada();
-    elContagem.textContent = lista.length + " de " + TODAS.length + " iniciativas exibidas.";
+    elContagem.textContent = "Mostrando " + lista.length + " de " + TODAS.length + " iniciativas.";
+    elLimpar.hidden = !algumFiltroAtivo();
+    atualizarBadgesFiltro();
+    atualizarPatentesAtivas();
     elAvisoMobile.classList.toggle("mostrar", visao === "matriz");
     if (visao === "matriz") {
       elGrid.style.display = "none";
@@ -622,8 +918,7 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
   // visão em location.hash (#cards/#matriz) — link compartilhável, sem localStorage;
   // hashchange cobre tanto o clique no alternador quanto voltar/avançar no navegador
   function aplicarHash() {
-    // Matriz é o default agora (era Cards) — só #cards explícito abre em Cards; o
-    // mecanismo de hash/toggle em si não muda, só qual visão cai no "sem hash"
+    // Matriz é o default — só #cards explícito abre em Cards
     visao = location.hash === "#cards" ? "cards" : "matriz";
     elSegmento.querySelectorAll("button[data-visao]").forEach((b) => b.classList.toggle("ativo", b.dataset.visao === visao));
     renderTudo();
@@ -637,14 +932,23 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
       processar(criterios, statusRows);
       elEstado.innerHTML = "";
       elFrota.innerHTML = frotaHtml();
-      montarChips();
-      elControles.style.visibility = "";
+      montarDropdownNucleos();
+      sincronizarCheckboxes(elDdNucleosPainel, filtroNucleos);
+      sincronizarCheckboxes(elDdPatentesPainel, filtroPatentes);
+      elToolbar.style.visibility = "";
       renderTudo();
     } catch (err) {
       console.error("corsario: falha ao carregar", err);
       mostrarErro(err);
     }
   }
+
+  initTooltip();
+  initPopover(elLegendaBtn, elLegendaPop);
+  initPopover(elDdNucleosBtn, elDdNucleosPainel);
+  initPopover(elDdPatentesBtn, elDdPatentesPainel);
+  montarDropdownPatentes();
+  sincronizarCheckboxes(elDdPatentesPainel, filtroPatentes);
 
   elSegmento.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-visao]");
@@ -653,24 +957,42 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
   });
   window.addEventListener("hashchange", aplicarHash);
 
-  elChips.addEventListener("click", (e) => {
-    const btn = e.target.closest(".crs-chip-filtro");
-    if (!btn) return;
-    elChips.querySelectorAll(".crs-chip-filtro").forEach((b) => b.classList.remove("ativo"));
-    btn.classList.add("ativo");
-    filtroNucleo = btn.dataset.nucleo || "";
+  elFrota.addEventListener("click", (e) => {
+    const btn = e.target.closest(".crs-patente-chip[data-patente]");
+    if (btn) alternarFiltroPatente(btn.dataset.patente);
+  });
+
+  elDdNucleosPainel.addEventListener("click", (e) => { if (e.target.closest("[data-limpar-nucleos]")) { filtroNucleos.clear(); sincronizarCheckboxes(elDdNucleosPainel, filtroNucleos); salvarFiltrosPersistidos(); renderTudo(); } });
+  elDdNucleosPainel.addEventListener("change", (e) => {
+    const chk = e.target.closest("input[type=checkbox]");
+    if (!chk) return;
+    if (chk.checked) filtroNucleos.add(chk.value); else filtroNucleos.delete(chk.value);
+    salvarFiltrosPersistidos();
     renderTudo();
   });
-  elChipsPatente.addEventListener("click", (e) => {
-    const btn = e.target.closest(".crs-chip-filtro");
-    if (!btn) return;
-    elChipsPatente.querySelectorAll(".crs-chip-filtro").forEach((b) => b.classList.remove("ativo"));
-    btn.classList.add("ativo");
-    filtroPatente = btn.dataset.patente || "";
+  elDdPatentesPainel.addEventListener("click", (e) => { if (e.target.closest("[data-limpar-patentes]")) { filtroPatentes.clear(); sincronizarCheckboxes(elDdPatentesPainel, filtroPatentes); salvarFiltrosPersistidos(); renderTudo(); } });
+  elDdPatentesPainel.addEventListener("change", (e) => {
+    const chk = e.target.closest("input[type=checkbox]");
+    if (!chk) return;
+    if (chk.checked) filtroPatentes.add(chk.value); else filtroPatentes.delete(chk.value);
+    salvarFiltrosPersistidos();
     renderTudo();
   });
+
+  elLimpar.addEventListener("click", limparFiltros);
+  document.addEventListener("click", (e) => { if (e.target.closest("[data-limpar-tudo]")) limparFiltros(); });
+
+  elMatrizWrap.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-toggle-grupo]");
+    if (!btn) return;
+    const chave = btn.dataset.toggleGrupo;
+    if (gruposColapsados.has(chave)) gruposColapsados.delete(chave); else gruposColapsados.add(chave);
+    salvarGruposColapsados();
+    renderTudo();
+  });
+
   elBusca.addEventListener("input", renderTudo);
-  elOrdenar.addEventListener("change", renderTudo);
+  elOrdenar.addEventListener("change", () => { salvarFiltrosPersistidos(); renderTudo(); });
 
   // ?q=<nome> pré-preenche a busca (link direto da busca global, js/busca.js) — mesmo
   // padrão de plano.html; a lista só é montada depois que carregar() trouxer os dados

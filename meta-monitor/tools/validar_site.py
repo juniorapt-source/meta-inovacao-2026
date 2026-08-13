@@ -15,7 +15,9 @@ OBRIG = {
     "participantes.html": ["pessoas", "pendencias"],
     "projetos.html": ["secoes", "f-nucleo", "f-busca", "contagem"],
     "plano-acao.html": ["pa-nav", "pa-painel"],
-    "corsario.html": ["crs-frota-wrap", "crs-controles", "crs-segmento", "crs-grid", "crs-matriz-wrap", "crs-matriz"],
+    # refactor v0.21 — "crs-controles" (fileiras de chips) virou "crs-toolbar" (busca +
+    # dropdowns Núcleos/Patentes + ordenação); os demais ids não mudaram.
+    "corsario.html": ["crs-frota-wrap", "crs-toolbar", "crs-segmento", "crs-grid", "crs-matriz-wrap", "crs-matriz"],
     "editor.html": ["ed-conjunto", "ed-area", "ed-baixar"],
 }
 

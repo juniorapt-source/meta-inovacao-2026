@@ -8,6 +8,20 @@ o outro arquivo pra ver o que ainda falta e em que ordem. Os números #001/#002 
 original não apareceram em nenhum prompt lido até agora (só #003/#004/#005) — se existirem,
 ainda não foram cruzados aqui.
 
+## Sidebar compacta/colapsável — sugestão fora de escopo (refactor v0.21 do Corsário)
+
+**Status:** aberto — sugestão registrada, não implementada
+
+Durante o refactor de UI/UX de `corsario.html` (v0.21.0, "protagonismo da Matriz"), a
+sidebar ficou fora de escopo por instrução explícita (não alterar largura, itens ou
+comportamento — componente compartilhado entre páginas). Registrando aqui como sugestão
+pra uma rodada futura: uma sidebar compactável (largura reduzida ou colapsável) daria mais
+espaço horizontal útil pra páginas com tabelas largas, como a Matriz do Corsário (19
+colunas de critério) e a Matriz de demandas — hoje as duas dependem de scroll horizontal
+contido justamente por essa disputa de espaço com o menu lateral.
+
+**Nenhuma implementação feita** — só o registro da sugestão.
+
 ## Item 3.4 — Histórico e auditoria
 
 **Status:** código pronto e testado (v0.19.0) — ativação manual pendente (rodar o SQL, não é passo de código)

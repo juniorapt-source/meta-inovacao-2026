@@ -1,5 +1,67 @@
 # Changelog
 
+## v0.21.0 — 2026-08-13
+"Refactor de UI/UX — protagonismo da Matriz" — reorganização completa da apresentação de
+`corsario.html` (O Caminho para o Corsário). Só apresentação: nenhum dado, filtro, cálculo
+ou recurso de gamificação foi removido — só reorganizado, compactado ou movido pra acesso
+sob demanda (tooltip/popover). `data/*.js` (exceto o bump de versão abaixo), `editor.html`,
+a sidebar e as demais páginas não foram tocados.
+
+- **Header compacto** — título + subtítulo de uma linha; o parágrafo conceitual antigo
+  virou tooltip do ⓘ ao lado do título. Alternador ▤ Cards/▦ Matriz movido pra direita do
+  header, separado dos filtros (antes vivia junto com os chips de núcleo).
+- **Faixa única de gamificação** — o antigo painel (número grande + 5 cards com descrição
+  longa) virou uma linha: % médio + ⓘ com a regra de ouro em tooltip, e as 5 patentes como
+  chips clicáveis (nome, contagem e faixa sempre visíveis; a descrição longa de cada uma
+  virou tooltip). Clicar numa patente filtra a Matriz/Cards por aquela faixa — sincronizado
+  bidirecional com o novo dropdown "Patentes" (clique de novo desfaz). Nota "N fora da
+  régua" preservada. A cor/tamanho do "34,8%" foram ajustados a pedido do JR. — mesma cor
+  do link "ⓘ Legenda" (`var(--accent)`) e mesmo tamanho do rótulo "Adequação média da
+  frota" (10px), deixando de ser um número grande em destaque.
+- **Toolbar única de filtros** — busca + dois dropdowns de seleção múltipla (Núcleos,
+  Patentes — checkboxes, com marcador de cor pro núcleo) + ordenação, substituindo as duas
+  fileiras antigas de botões. Cada dropdown ganha badge de contagem quando há seleção
+  parcial (`Núcleos · 2`); "Limpar filtros" aparece só quando algum filtro (busca, núcleo,
+  patente ou patente clicada na faixa) está ativo. Contador "Mostrando X de Y iniciativas"
+  sempre visível, acima do conteúdo. Opção de ordenação "Nome (A–Z)" adicionada (ordenação
+  por núcleo e por % já existiam).
+- **Legenda virou popover** — "ⓘ Legenda" junto do título da Matriz abre um popover com os
+  5 status/pesos e a regra de ouro; a faixa fixa "Status e pesos" que ficava acima da
+  tabela (desde a v0.20.1) saiu.
+- **Matriz: agrupamento por núcleo colapsável** — a coluna Núcleo (repetida em cada linha)
+  virou uma linha de grupo por núcleo (cor, nome, contagem, ▼/▶), estado de colapso
+  persistido em `localStorage` (`cc_corsario_grupos`, todos expandidos por padrão).
+  Cabeçalhos de critério abreviados (dicionário definido com o JR. — ex. "Base de clientes
+  centralizadas/integradas ao Foco" → "Clientes no Foco") com a definição completa em
+  tooltip acessível por hover **e** por foco de teclado (`data-tip`/`aria-describedby`,
+  tooltip único delegado por evento, sem lib externa). Chips de status por extenso e
+  consistentes (`ok`/`em andamento`/`a iniciar`/`entendimento`/`n/a`) — elimina a
+  inconsistência "entend." que convivia com "em entendimento" na versão anterior.
+  Cabeçalho **e** a linha de grupo corrente ficam sticky durante o scroll vertical
+  (`--crs-thead-h` recalculado por JS a cada render, porque a altura do thead varia com o
+  wrap dos rótulos).
+- **Scroll horizontal da Matriz mantido, deliberadamente** — a Matriz tem 19 colunas de
+  critério (não 7–8, como uma leitura inicial do print sugeria); mesmo com cabeçalhos
+  curtos e chips compactos, 19 colunas com rótulo de status por extenso não cabem em
+  nenhuma largura razoável de desktop sem ficar ilegíveis. Decisão tomada com o JR. durante
+  o planejamento: mantido o scroll horizontal contido em `.crs-matriz-wrap` (já existia
+  desde a v0.20.1), com cabeçalho e coluna Iniciativa sticky nos dois eixos.
+- **Persistência leve** — núcleos/patentes selecionados e ordenação em `localStorage`
+  (`cc_corsario_filtros`); busca não persiste, de propósito.
+- **Cards** — só o seletor de modo mudou de lugar; grid e detalhe intocados (redesenho
+  fora de escopo neste ciclo).
+- **`tools/validar_site.py`** — id obrigatório de `corsario.html` ajustado de
+  `crs-controles` (fileira de chips antiga, removida) pra `crs-toolbar` (toolbar única
+  nova).
+- **`data/config.js`** — `versao` 0.20.2 → 0.21.0 (rodapé); nenhum outro campo tocado.
+- Testado: `node --check` no JS inline, `testar_calc.js`, `testar_mobile_headless.js`,
+  `testar_busca_headless.js`, `testar_drawer_headless.js`, `testar_status_badges_headless.js`,
+  `validar_site.py`, `testar_kpis_cruzado.py` — todos OK. `testar_iniciativas_cruzado.js`
+  segue em modo aviso com a divergência pré-existente já registrada (27 vs. 28 iniciativas,
+  não relacionada a esta mudança). Smoke test funcional ad-hoc (dropdowns, badges,
+  contador, limpar filtros, sincronização patente↔dropdown, grupos colapsáveis + sticky,
+  popover da Legenda, tooltip por teclado) confirmou os fluxos novos antes do commit.
+
 ## v0.20.2 — 2026-08-13
 "Dashboard orientado à decisão" — 3 melhorias de amarração entre o Dashboard
 (`index.html`) e o Caminho crítico (`caminho.html`). Só exibição e navegação —
