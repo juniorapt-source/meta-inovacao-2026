@@ -65,6 +65,7 @@
 <script src="js/status.js"></script>
 <script src="js/core.js"></script>
 <script src="js/busca.js"></script>
+<script src="js/drawer.js"></script>
 <script src="js/responsaveis.js"></script>
 <script src="js/config.js"></script>
 <script>
@@ -148,7 +149,7 @@
   }
 
   function tituloPainel(nome) {
-    return "<h2>" + esc(nome) + '</h2><p class="pa-sub">Descrição, responsável e status de cada atividade.</p>';
+    return "<h2>" + DRAWER.spanIniciativa(nome) + '</h2><p class="pa-sub">Descrição, responsável e status de cada atividade.</p>';
   }
 
   function linhaHtml(a) {

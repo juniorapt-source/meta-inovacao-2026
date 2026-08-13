@@ -40,6 +40,7 @@
 </div>
 
 <script src="data/config.js"></script>
+<script src="js/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="data/projetos.js"></script>
 <script src="data/plano.js"></script>
@@ -49,7 +50,9 @@
 <script src="data/pessoas.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
+<script src="js/responsaveis.js"></script>
 <script src="js/busca.js"></script>
+<script src="js/drawer.js"></script>
 <script>
 (function(){
   montarShell("projetos.html");
@@ -75,7 +78,7 @@
 
   function repsHtml(reps){
     return '<div class="proj-reps">' +
-      [...reps].sort((a, b) => a.localeCompare(b, "pt-BR")).map(r => '<span class="chip pessoa">' + esc(r) + "</span>").join("") +
+      [...reps].sort((a, b) => a.localeCompare(b, "pt-BR")).map(r => '<span class="chip pessoa">' + DRAWER.spanPessoa(r) + "</span>").join("") +
       "</div>";
   }
 
@@ -99,7 +102,7 @@
         "</span>" +
         "</summary>" +
         '<div class="tab-wrap"><table><thead><tr><th>Iniciativa</th><th>Representante(s)</th><th style="width:40px"></th></tr></thead><tbody>' +
-        itens.map(p => "<tr><td>" + esc(p.iniciativa) + "</td><td>" + repsHtml(p.representantes) + "</td>" +
+        itens.map(p => "<tr><td>" + DRAWER.spanIniciativa(p.iniciativa) + "</td><td>" + repsHtml(p.representantes) + "</td>" +
           '<td class="proj-num">' + p.representantes.length + "</td></tr>").join("") +
         "</tbody></table></div></details>";
     }

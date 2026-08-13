@@ -23,6 +23,7 @@
 </div>
 
 <script src="data/config.js"></script>
+<script src="js/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="data/pessoas.js"></script>
 <script src="data/urc.js"></script>
@@ -33,7 +34,9 @@
 <script src="data/projetos.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
+<script src="js/responsaveis.js"></script>
 <script src="js/busca.js"></script>
+<script src="js/drawer.js"></script>
 <script>
 (function(){
   montarShell("participantes.html");
@@ -63,7 +66,7 @@
     DB.pessoas.filter(p => p.grupo === g).map(p => {
       const desc = SEM_DESCRICAO.has(g) ? "" : (p.papel || "");
       return '<div style="padding:7px 0;border-bottom:1px solid var(--linha)">' +
-        "<b>" + esc(p.nome) + "</b>" + sufixoNucleo(p.nome) + (p.pendente ? ' <span class="chip st-atrasada">pendente</span>' : "") +
+        "<b>" + DRAWER.spanPessoa(p.nome) + "</b>" + sufixoNucleo(p.nome) + (p.pendente ? ' <span class="chip st-atrasada">pendente</span>' : "") +
         (desc ? '<div style="font-size:12.5px;color:var(--grafite)">' + esc(desc) + "</div>" : "") + "</div>";
     }).join("") +
     "</section>");
@@ -75,7 +78,7 @@
 
     let h = '<section class="card"><h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin-bottom:8px">URC</h3>';
     h += lid.map(p =>
-      '<div style="padding:7px 0;border-bottom:1px solid var(--linha)"><b>' + esc(p.nome) + "</b>" + sufixoNucleo(p.nome) +
+      '<div style="padding:7px 0;border-bottom:1px solid var(--linha)"><b>' + DRAWER.spanPessoa(p.nome) + "</b>" + sufixoNucleo(p.nome) +
       '<div style="font-size:12.5px;color:var(--grafite)">' + esc(p.papel) + "</div></div>"
     ).join("");
 
@@ -84,7 +87,7 @@
     h += canais.map(c => {
       const reps = c.responsaveis || [];
       const conteudo = reps.length
-        ? reps.map(r => '<span class="chip pessoa">' + esc(r.nome) + sufixoNucleo(r.nome) + "</span>").join("")
+        ? reps.map(r => '<span class="chip pessoa">' + DRAWER.spanPessoa(r.nome) + sufixoNucleo(r.nome) + "</span>").join("")
         : '<span class="chip st-janela">aguardando indicação</span>';
       return '<div style="padding:6px 0;border-bottom:1px solid var(--linha)"><b style="font-size:13px">' + esc(c.canal) + "</b>" +
         '<div style="margin-top:4px">' + conteudo + "</div></div>";

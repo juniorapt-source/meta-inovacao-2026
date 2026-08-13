@@ -230,7 +230,9 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
 <script src="data/pessoas.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
+<script src="js/responsaveis.js"></script>
 <script src="js/busca.js"></script>
+<script src="js/drawer.js"></script>
 <script src="js/config.js"></script>
 <script>
 (function () {
@@ -485,7 +487,7 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     return '<details class="card crs-card">' +
       '<summary>' +
         '<div class="crs-card-topo">' +
-          '<div class="crs-card-nome">' + esc(x.nome) + '</div>' +
+          '<div class="crs-card-nome">' + DRAWER.spanIniciativa(x.nome) + '</div>' +
           '<span class="crs-chip-nucleo" style="background:' + nc.fundo + ';color:' + nc.cor + '">' + esc(x.nucleo || "sem núcleo") + '</span>' +
         '</div>' +
         barraOuAviso +
@@ -538,7 +540,7 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     const patCls = x.calc.patente === "Corsário" ? " crs-mz-pat-corsario" : "";
     return '<tr class="' + (idx % 2 ? "crs-mz-zebra" : "") + '">' +
       '<td class="crs-mz-col-nucleo" style="background:' + nc.cor + '" title="' + esc(x.nucleo || "") + '">' + esc(x.nucleo || "—") + '</td>' +
-      '<td class="crs-mz-col-iniciativa">' + esc(x.nome) + '</td>' +
+      '<td class="crs-mz-col-iniciativa">' + DRAWER.spanIniciativa(x.nome) + '</td>' +
       celulas +
       '<td class="crs-mz-td-pct">' + fmtPct(x.calc.pct) + '</td>' +
       '<td class="crs-mz-td-pat crs-mz-patente-valor' + patCls + '">' + esc(x.calc.patente) + '</td>' +

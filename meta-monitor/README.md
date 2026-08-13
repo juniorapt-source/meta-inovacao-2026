@@ -93,6 +93,10 @@ node tools/testar_busca_headless.js    # busca global: "/" foca o campo, um ID d
                                         # conhecido navega certo, iniciativa abre o
                                         # Corsário na visão Cards, pessoa e o painel do
                                         # header mobile também batem
+node tools/testar_drawer_headless.js   # drawer de Iniciativa/Pessoa: #iniciativa=sebraetec
+                                        # e #pessoa=sandra renderizam os blocos esperados,
+                                        # fechar (X/Esc/clique fora) limpa o hash, nomes
+                                        # clicáveis abrem o painel certo
 ```
 
 ## Estrutura
@@ -107,10 +111,11 @@ js/status.js           taxonomia única de status: window.CC_STATUS (testável e
 js/calendario.js      componente de calendário mensal (agenda.html, visão Calendário)
 js/timeline.js         componente de timeline por canal (agenda.html, visão Timeline)
 js/busca.js             busca global client-side: window.BUSCA (índice/filtro testáveis em node)
+js/drawer.js             drawer lateral de Iniciativa/Pessoa: window.DRAWER
 js/editor_io.js       serialização canônica dos dados (testável em node)
 data/*.js             config, plano, nos, canais, agenda, iniciativas, matriz, pessoas
                        (+ pessoas.responsaveis: lista canônica de responsáveis), changelog
-tools/                geração de dados a partir do xlsx + os 12 testes
+tools/                geração de dados a partir do xlsx + os 13 testes
 docs/                 PLANO_EXECUCAO.md, BUILD_STATUS.md, PENDENCIAS.md (se houver)
 ```
 

@@ -101,7 +101,9 @@
 <script src="js/calc.js"></script>
 <script src="js/status.js"></script>
 <script src="js/core.js"></script>
+<script src="js/responsaveis.js"></script>
 <script src="js/busca.js"></script>
+<script src="js/drawer.js"></script>
 <script src="js/matriz-store.js"></script>
 <script>
 (function(){
@@ -235,7 +237,7 @@
 
   function renderTabela() {
     elMatriz.innerHTML = linhas.map(l =>
-      "<tr><td>" + esc(l.iniciativa) +
+      "<tr><td>" + DRAWER.spanIniciativa(l.iniciativa) +
         (editando && !usandoFallback ? '<button type="button" class="mz-del" data-del="' + esc(String(l.id)) + '" title="Remover linha">×</button>' : "") +
       "</td>" +
       CANAL_IDS.map(c => (editando && !usandoFallback) ? celulaEditavel(l, c) : celulaEstatica(l[c])).join("") +

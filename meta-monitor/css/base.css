@@ -116,6 +116,56 @@ a{color:inherit;text-decoration:none} a:hover{color:var(--accent);text-decoratio
     font-size:13px;padding:7px 10px;cursor:pointer;border-radius:0;font-family:var(--font-sans)}
   .mob-busca-painel .busca-resultados{top:calc(100% + 4px);left:14px;right:14px}
 }
+
+/* ---- drawer lateral (item 3.2 do plano de melhorias) — js/drawer.js ----
+   painel único pras duas entidades (Iniciativa/Pessoa); desliza da direita no desktop
+   (~480px), tela cheia no mobile. z-index acima de tudo (nav/busca/hambúrguer incluídos)
+   — pode abrir de qualquer tela, com qualquer um desses outros painéis aberto ou não. */
+.drawer-overlay{position:fixed;inset:0;background:rgba(43,38,32,.55);z-index:70;opacity:0;
+  pointer-events:none;transition:opacity .2s ease}
+.drawer-overlay.aberto{opacity:1;pointer-events:auto}
+.drawer-painel{position:fixed;top:0;right:0;height:100vh;width:480px;max-width:92vw;
+  background:var(--surface);z-index:71;transform:translateX(101%);transition:transform .25s ease;
+  box-shadow:var(--sombra);display:flex;flex-direction:column}
+.drawer-painel.aberto{transform:translateX(0)}
+.drawer-cabecalho{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  padding:18px 20px;border-bottom:1px solid var(--border);background:var(--ceu);flex-shrink:0}
+.drawer-titulo{font:300 19px var(--font-sans);color:var(--ink);line-height:1.3}
+.drawer-fechar{background:none;border:1px solid var(--border);color:var(--ink);font-size:15px;
+  padding:6px 11px;cursor:pointer;border-radius:0;flex-shrink:0;font-family:var(--font-sans)}
+.drawer-fechar:hover{background:var(--accent-w);border-color:var(--accent);color:var(--accent)}
+.drawer-corpo{flex:1;overflow-y:auto;padding:18px 20px}
+.drawer-bloco{margin-bottom:22px}
+.drawer-bloco:last-child{margin-bottom:4px}
+.drawer-bloco h3{font:700 11px 'DM Sans';color:var(--accent);text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:8px}
+.drawer-vazio,.drawer-carregando{color:var(--ink-2);font-size:12.5px;font-style:italic}
+.drawer-erro{color:var(--crit);font-size:12.5px}
+.drawer-nota{color:var(--ink-2);font-size:11.5px;font-style:italic;margin-top:4px}
+.drawer-linha{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:6px 0;border-bottom:1px solid var(--border-soft);color:var(--ink);font-size:13px}
+a.drawer-linha:hover{color:var(--accent);text-decoration:none}
+a.drawer-linha:hover span:first-child{text-decoration:underline}
+.drawer-lista-curta{font-size:12.5px;color:var(--ink);margin-top:6px;line-height:1.5}
+.drawer-lista-curta b{color:var(--ink-2);font-weight:700}
+.ver-mais{display:inline-block;margin-top:8px;font-size:12px;font-weight:600;color:var(--accent)}
+.ver-mais:hover{text-decoration:underline}
+.drawer-regua{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.drawer-regua-pct{font:300 32px var(--font-sans);color:var(--ink)}
+.drawer-regua-patente{font:700 11px 'DM Sans';text-transform:uppercase;letter-spacing:.05em;
+  color:var(--grafite);background:var(--neutro-w);padding:3px 10px}
+.drawer-barra{height:6px;background:var(--neutro-w);margin-top:8px;flex-basis:100%}
+.drawer-barra-fill{height:100%;background:var(--accent)}
+@media (max-width:767px){
+  .drawer-painel{width:100vw;max-width:100vw}
+}
+
+/* affordance discreta pra qualquer nome de Iniciativa/Pessoa que abre o drawer —
+   sublinhado pontilhado, cor de acento no hover, cursor pointer (pedido explícito) */
+.entidade-clicavel{cursor:pointer;text-decoration-line:underline;text-decoration-style:dotted;
+  text-decoration-color:var(--ink-3);text-underline-offset:3px}
+.entidade-clicavel:hover{color:var(--accent);text-decoration-color:var(--accent)}
+
 .pagina-titulo{position:relative;font-family:var(--font-sans);font-weight:300;font-size:27px;margin-bottom:4px}
 .pagina-titulo::before{content:"lat 15°47′S · lon 47°52′O";position:absolute;top:8px;right:0;
   font-family:'IBM Plex Mono';font-size:11px;font-weight:400;color:var(--ink-3);letter-spacing:.02em;pointer-events:none}

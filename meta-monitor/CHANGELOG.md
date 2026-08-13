@@ -1,5 +1,57 @@
 # Changelog
 
+## v0.15.0 — 2026-08-13
+Prompt 11 do plano de melhorias (item 3.2): drawer lateral de Iniciativa/Pessoa —
+`js/drawer.js`. Fecha o ciclo indicador → causa → responsável → ação sem página nova.
+
+- **`js/drawer.js`** (novo) — painel único (`window.DRAWER`): desliza da direita (~480px)
+  no desktop, tela cheia no mobile; fecha por X, Esc ou clique fora; fechar limpa o hash.
+  Roteamento leve por `#iniciativa=<slug>`/`#pessoa=<id>` — link direto compartilhável,
+  reage a `hashchange` (volta/avança do navegador também abre/fecha certo).
+  - Painel de **Iniciativa**: núcleo + representante(s) (síncrono, `data/projetos.js`) ·
+    posição na régua do Corsário (assíncrono, REST puro no Supabase — mesma fórmula de
+    `corsario.html`, pesos ok=100%/andamento=70%/iniciar=40%/entendimento=20%, duplicada
+    de propósito num arquivo à parte pra não mexer numa página que já funciona) com os
+    critérios "em movimento" e "a iniciar" resumidos · atividades da iniciativa
+    (`plano_acao_atividades`, com status) · linha na Matriz de demandas (só células
+    ≠ vazia) · próximos 3 encontros (agenda geral dos ciclos — rotulado como tal: não há
+    vínculo encontro↔iniciativa nos dados, e o painel não inventa um).
+  - Painel de **Pessoa**: papéis (cruza `data/pessoas.js` + representações em
+    `data/projetos.js` pelo id canônico — pode listar mais de um papel, ex.: Comitê E
+    núcleo) · nós do caminho crítico onde é guardiã · ações do plano sob responsabilidade
+    (atrasadas primeiro) · atividades por iniciativa (`plano_acao_atividades` filtrado por
+    `responsavel`) · link "ver tudo em Minhas ações".
+  - Cada bloco linka pra página de origem já filtrada (pedido explícito): régua →
+    `corsario.html?q=<nome>#cards`, atividades → `plano-acao.html`, Matriz →
+    `demandas.html`, ação → `plano.html?q=ID#ID`, "ver tudo" → `minhas-acoes.html?pessoa=id`.
+- **Helpers de marcação** — `DRAWER.spanIniciativa(nome)`/`DRAWER.spanPessoa(nomeOuId)`/
+  `DRAWER.spanPessoasEmTexto(texto)` (pra campos combinados tipo "Sandra/Gerência", cada
+  pedaço resolvido separadamente, texto original preservado). Resolução de pessoa usa
+  `js/responsaveis.js` (já existia desde a v0.9.0) — um nome só vira link se resolver pra
+  exatamente um id canônico; gente sem id (ex.: liderança externa da URC) fica texto
+  plano, sem inventar vínculo. `js/core.js`/páginas não precisaram de wiring por clique
+  nenhum: um único listener delegado em `js/drawer.js` cobre todos os pontos de ativação.
+- **Pontos de clique ativados** (item 4.1 — sublinhado pontilhado + cursor pointer no
+  hover, `.entidade-clicavel`):
+  - Iniciativa: `demandas.html` (linhas da Matriz), `projetos.html` (tabela), `corsario.html`
+    (cards e matriz), `plano-acao.html` (título do painel da iniciativa selecionada).
+  - Pessoa: `participantes.html` (nome em cada card de grupo + liderança/canais da URC —
+    só os que resolvem), `projetos.html` (chips de representante), `plano.html` (coluna
+    Responsável, por token).
+  - `js/config.js`/`js/responsaveis.js` adicionados nas páginas que ainda não tinham
+    (`projetos.html`, `participantes.html`, `plano.html` ganham `js/config.js`; as 5
+    páginas do drawer que não tinham ganham `js/responsaveis.js`) — mesmo raciocínio da
+    v0.14.0 pro índice de busca: sem isso, o drawer não teria como resolver nome→id nem
+    falar com o Supabase nessas páginas.
+- `tools/testar_drawer_headless.js` — 13º teste do repo: `#iniciativa=sebraetec` renderiza
+  os 5 blocos esperados com a régua batendo (~49,5% · Marujo — mesmo valor já validado em
+  `corsario.html` desde a v0.6.1); `#pessoa=sandra` renderiza os 4 blocos com 3 nós e as
+  ações certas; fechar por X/Esc/clique fora limpa o estado e o hash; um nome clicável
+  real em `plano.html` abre o drawer certo; iniciativas clicáveis conferidas em
+  `demandas.html` e na visão Cards do Corsário.
+- Validado com Chrome headless real (screenshots desktop e mobile): painéis completos
+  pra Sebraetec e Sandra, suíte completa (13 testes) passando.
+
 ## v0.14.0 — 2026-08-13
 Prompt 8 do plano de melhorias (item 2.6): busca global client-side — `js/busca.js`.
 

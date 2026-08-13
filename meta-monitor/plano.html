@@ -73,6 +73,7 @@
 </div>
 
 <script src="data/config.js"></script>
+<script src="js/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
@@ -83,7 +84,9 @@
 <script src="js/calc.js"></script>
 <script src="js/status.js"></script>
 <script src="js/core.js"></script>
+<script src="js/responsaveis.js"></script>
 <script src="js/busca.js"></script>
+<script src="js/drawer.js"></script>
 <script>
 (function(){
   const hoje = hojeISO();
@@ -157,7 +160,7 @@
         '<td class="mono" style="font-size:12px;white-space:nowrap">' + a.id + ccChip(a) + "</td>" +
         "<td>" + esc(a.frente.replace(/^\d+\.\s*/, "")) + '<div style="color:var(--grafite);font-size:11.5px">' + esc(a.sub) + "</div></td>" +
         "<td>" + esc(a.atividade) + "</td>" +
-        '<td data-label="Responsável">' + esc(a.resp) + "</td>" +
+        '<td data-label="Responsável">' + DRAWER.spanPessoasEmTexto(a.resp) + "</td>" +
         '<td class="mono" data-label="Prazo" style="font-size:12px;white-space:nowrap">' + esc(a.prazo || "—") + "</td>" +
         '<td><span class="chip ' + cls + '">' + rot + "</span></td></tr>";
       html += '<tr class="detalhe" data-det="' + a.id + '" hidden><td colspan="6">' +
