@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.17.1 — 2026-08-13
+Corrige ordem de carregamento de `js/config.js` antes de `js/db-plano.js`/`js/db-agenda.js`.
+
+Depois da correção dos GRANTs (nota "Correção pós-ativação" na v0.17.0 abaixo), o 401
+sumiu mas apareceu outro erro no console: `Error: js/config.js não carregado — falta
+window.APP_CONFIG` (`supabase.js:25`, disparado de dentro de `buscarDoSupabase()` em
+`db-plano.js`). Causa raiz: `js/config.js` — o arquivo que define
+`window.APP_CONFIG` (URL + anon key do Supabase), sem o qual `js/supabase.js` não monta
+client nenhum — **não estava sendo carregado** em `index.html`, `caminho.html`,
+`agenda.html` e `editor.html` (tag `<script>` ausente, não é questão de ordem: faltava o
+`<script src="js/config.js">` inteiro). Em `minhas-acoes.html` a tag existia, mas
+posicionada depois de `js/db-plano.js` no documento — não chegava a quebrar nada de fato
+(o `<script>` final que chama `DB_PLANO.carregar()` só roda depois que todas as tags
+anteriores, incluindo a de `js/config.js`, já executaram), mas ficava inconsistente com
+o resto do site. `plano.html` já estava correto e não mudou.
+
+- **`index.html`, `caminho.html`, `agenda.html`, `editor.html`** — adicionado
+  `<script src="js/config.js"></script>` logo depois de `data/config.js` e antes de
+  `js/gate.js`/`js/supabase.js`/`js/db-plano.js`/`js/db-agenda.js` (mesma posição de
+  `plano.html`, `participantes.html` e `projetos.html`, que já estavam certos).
+- **`minhas-acoes.html`** — `js/config.js` movido do fim da lista de scripts pra logo
+  depois de `data/config.js`, mesma posição das outras páginas.
+- Nenhum `defer`/`async` em nenhum desses `<script>` (confirmado) — o bug era 100%
+  ausência/posição da tag, não um problema de carregamento assíncrono; não havia
+  nenhuma chamada a `APP_CONFIG` em tempo de módulo (top-level) fora de uma função, então
+  não foi necessário nenhum guard `if (!window.APP_CONFIG) return`.
+- Suíte completa (headless + node) permanece verde — esses testes forçam
+  `window.CC_FORCAR_FALLBACK`/`?semrede=1`, então não bateram nesse bug (o fallback local
+  nunca chega a chamar `buscarDoSupabase()`). Validado à parte com um script CDP ad-hoc
+  que abre as 6 páginas SEM `?semrede=1` (rede real) e confere que nenhuma emite mais o
+  erro "js/config.js não carregado" — confirmado limpo nas 6, e sem nenhuma outra
+  exceção nova (o que também confirma, de quebra, que o GRANT da correção anterior está
+  funcionando de ponta a ponta em produção).
+
 ## v0.17.0 — 2026-08-13
 Prompt 10 do plano de melhorias (item 3.1, "ajustado"): unificação da persistência —
 PLANO e AGENDA saem de `data/*.js` e passam a viver no Supabase, com `data/plano.js`/
