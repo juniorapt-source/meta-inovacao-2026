@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.10.0 — 2026-08-13
+Prompt 5 do plano de melhorias (item 2.3): Dashboard reordenado por urgência decisória —
+mesmos componentes de sempre, ordem nova, nenhum cálculo mudou de resultado.
+
+- **Frase de contexto** — `js/calc.js` ganha `CALC.resumoUrgencia(plano, nos, hojeISO)`,
+  reunindo 3 números que já existiam espalhados noutros cálculos da própria página (não
+  reimplementados: reusa `C.ehAtrasada`, `C.estadoNo`, `C.cargaPorDia`): ações atrasadas,
+  nós do caminho crítico em "venceu sem concluir" ou "vence hoje", dias do radar de carga
+  com 2+ entregas a partir de hoje. `index.html` exibe logo abaixo do título "Dashboard":
+  "N itens precisam de atenção hoje · X ações atrasadas · Y nós críticos · Z dias com carga
+  concentrada" — parcela zerada some da frase; se as 3 forem zero, "Nenhum item crítico
+  hoje — plano no ritmo." (`.frase-contexto`/`.zerado`, classes novas em `css/base.css`,
+  já usadas antes pela v0.9.0 em `minhas-acoes.html` — mesmo componente, dois lugares).
+  Nota: o pedido original citava só 2 das 3 parcelas na frase-exemplo ("X ações atrasadas
+  · Y nós críticos"); as 3 entram citadas porque a 1ª tarefa pediu explicitamente o cálculo
+  das 3 — se o total "N itens" somasse só 2 das 3 parcelas nomeadas, o número não bateria
+  com a soma do que está escrito ao lado dele.
+- **Reordenação por urgência decisória** (`index.html`) — nova ordem: frase de contexto ·
+  timeline dos 7 nós (mantida — mapa mental do plano) · Atrasadas agora + Próximos 7 dias
+  lado a lado · Radar de carga · KPIs numéricos (os 6 cards clicáveis) · Composição do
+  portfólio. Os dois últimos eram um grid só (`#kpis` com os 6 cards de status + os 2 cards
+  de portfólio dentro do mesmo container); separados em `#kpis` e `#portfolio` (containers
+  distintos, mesma classe `.grid.kpis`, mesmo HTML de cada card) pra virarem blocos 5º/6º
+  de verdade — nenhum card mudou de conteúdo ou cálculo, só o container que o recebe.
+- `tools/testar_calc.js`: cobre `CALC.resumoUrgencia` (nós 1 e 2 em risco na data de
+  referência do teste, atrasadas batendo com `CALC.kpis().atrasadas`).
+- `tools/validar_site.py`: `frase-contexto` e `portfolio` entram nos ids obrigatórios de
+  `index.html`.
+- Validado com Chrome headless real: ordem das 8 seções do `<main>` batendo com a nova
+  sequência, frase de contexto com o texto certo, `#kpis` com 6 cards e `#portfolio` com 2,
+  suíte completa (8 testes) passando sem mudança nos valores de KPI já cross-validados.
+
 ## v0.9.0 — 2026-08-13
 Prompt 4 do plano de melhorias (item 2.2): lista canônica de responsáveis (BACKLOG #004) e
 a página "Minhas ações" (BACKLOG #003) — a visão transversal "o que eu tenho que fazer?".

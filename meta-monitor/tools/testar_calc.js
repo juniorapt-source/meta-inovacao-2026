@@ -19,4 +19,13 @@ console.log("Carga 14/08:", c14 ? c14.ids.join(", ") : "—");
 if (!c14 || c14.carga < 3) throw new Error("14/08 deveria concentrar >=3 entregas");
 const nos = db("nos.js").nos;
 console.log("Estados dos nós:", nos.map((n) => n.no + ":" + C.estadoNo(n, plano, hoje)).join(" "));
+
+// item 2.3 — frase de contexto do Dashboard: nosCriticos conta "risco" (venceu sem
+// concluir, nós 1 e 2 nesta data de referência) + "hoje" (nenhum nesta data) = 2.
+const resumo = C.resumoUrgencia(plano, nos, hoje);
+console.log("Resumo de urgência:", JSON.stringify(resumo));
+if (resumo.atrasadas !== k.atrasadas) throw new Error("resumoUrgencia.atrasadas deveria bater com C.kpis().atrasadas");
+if (resumo.nosCriticos !== 2) throw new Error("resumoUrgencia.nosCriticos esperado 2 (nós 1 e 2 em risco em " + hoje + ")");
+if (resumo.diasCargaConcentrada < 1) throw new Error("resumoUrgencia.diasCargaConcentrada deveria contar pelo menos o dia 14/08");
+
 console.log("F2 OK");

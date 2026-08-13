@@ -46,6 +46,24 @@
     return d.toISOString().slice(0, 10);
   };
 
+  // Item 2.3 do plano de melhorias — frase de contexto do Dashboard ("o que precisa de
+  // atenção hoje"): 3 números que já existiam espalhados por outros cálculos desta página,
+  // reunidos aqui numa função só pra não duplicar a regra em index.html.
+  //   - atrasadas: mesma regra de C.ehAtrasada.
+  //   - nosCriticos: nós em estado "risco" (venceu sem concluir) OU "hoje" (vence hoje) —
+  //     os dois estados de C.estadoNo que pedem ação HOJE, diferente de "atencao"/"futuro".
+  //   - diasCargaConcentrada: dias de C.cargaPorDia com 2+ entregas, olhando só pra hoje em
+  //     diante (mesmo filtro `iso >= hojeISO` que o Radar de carga já aplica na tela).
+  C.resumoUrgencia = function (plano, nos, hojeISO) {
+    const atrasadas = plano.filter((a) => C.ehAtrasada(a, hojeISO)).length;
+    const nosCriticos = nos.filter((n) => {
+      const st = C.estadoNo(n, plano, hojeISO);
+      return st === "risco" || st === "hoje";
+    }).length;
+    const diasCargaConcentrada = C.cargaPorDia(plano).filter((c) => c.carga >= 2 && c.iso >= hojeISO).length;
+    return { atrasadas, nosCriticos, diasCargaConcentrada };
+  };
+
   C.fmtBR = function (iso) {
     if (!iso) return "";
     const [y, m, d] = iso.split("-");

@@ -36,21 +36,17 @@
   <main class="conteudo">
     <h1 class="pagina-titulo">Dashboard</h1>
     <p class="pagina-sub" id="sub"></p>
+    <p class="frase-contexto" id="frase-contexto"></p>
 
+    <!-- 1º frase de contexto (acima) · 2º timeline dos 7 nós · 3º atrasadas + próximos 7 dias ·
+         4º radar de carga · 5º KPIs numéricos · 6º composição do portfólio — ordem por
+         urgência decisória (item 2.3 do plano de melhorias); nenhum componente foi removido,
+         só reordenado, e todos os cálculos abaixo continuam os mesmos de antes. -->
     <section class="card" aria-label="Trilho do caminho crítico">
       <div class="trilho">
         <div class="linha-base"></div>
         <div class="nos" id="trilho"></div>
       </div>
-    </section>
-
-    <section class="secao">
-      <div class="grid kpis" id="kpis"></div>
-    </section>
-
-    <section class="secao">
-      <h2>Radar de carga <span class="hint">dias com 2+ entregas pendentes</span></h2>
-      <div class="card" id="radar"></div>
     </section>
 
     <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:26px" id="duas-colunas">
@@ -63,6 +59,20 @@
         <div class="card" id="prox"></div>
       </section>
     </div>
+
+    <section class="secao">
+      <h2>Radar de carga <span class="hint">dias com 2+ entregas pendentes</span></h2>
+      <div class="card" id="radar"></div>
+    </section>
+
+    <section class="secao">
+      <div class="grid kpis" id="kpis"></div>
+    </section>
+
+    <section class="secao">
+      <h2>Composição do portfólio</h2>
+      <div class="grid kpis" id="portfolio"></div>
+    </section>
   </main>
 </div>
 
@@ -122,6 +132,25 @@
   document.getElementById("sub").textContent =
     "Visão geral do plano · hoje é " + CALC.fmtBR(hoje) + "/2026. Nós vencidos sem conclusão aparecem em vermelho; fallbacks estão no Caminho crítico.";
 
+  // frase de contexto (item 2.3) — "o que precisa de atenção hoje", logo abaixo do título.
+  // Os 3 números vêm de CALC.resumoUrgencia (fonte única, mesma regra usada no Radar de
+  // carga/trilho/KPIs abaixo — nada recalculado diferente aqui). Parcelas zeradas somem da
+  // frase; o total (N itens) soma as 3, não só as 2 citadas no pedido original, senão N
+  // ficaria maior que a soma das partes nomeadas — inconsistência pior que citar a 3ª parte.
+  const urgencia = CALC.resumoUrgencia(DB.plano, DB.nos.nos, hoje);
+  const totalUrgente = urgencia.atrasadas + urgencia.nosCriticos + urgencia.diasCargaConcentrada;
+  const fraseEl = document.getElementById("frase-contexto");
+  if (totalUrgente === 0) {
+    fraseEl.textContent = "Nenhum item crítico hoje — plano no ritmo.";
+    fraseEl.classList.add("zerado");
+  } else {
+    const partesUrgencia = [];
+    if (urgencia.atrasadas) partesUrgencia.push(urgencia.atrasadas + (urgencia.atrasadas === 1 ? " ação atrasada" : " ações atrasadas"));
+    if (urgencia.nosCriticos) partesUrgencia.push(urgencia.nosCriticos + (urgencia.nosCriticos === 1 ? " nó crítico" : " nós críticos"));
+    if (urgencia.diasCargaConcentrada) partesUrgencia.push(urgencia.diasCargaConcentrada + (urgencia.diasCargaConcentrada === 1 ? " dia com carga concentrada" : " dias com carga concentrada"));
+    fraseEl.textContent = totalUrgente + (totalUrgente === 1 ? " item precisa" : " itens precisam") + " de atenção hoje · " + partesUrgencia.join(" · ");
+  }
+
   // trilho dos nós
   const trilho = document.getElementById("trilho");
   trilho.innerHTML = DB.nos.nos.map(n => {
@@ -154,7 +183,7 @@
     [null, "em janela (sem data fixa)", "", "em_janela_sem_data"],
   ];
 
-  let kpisHtml = itens.map(([numFixo, rot, cls, cat]) => {
+  const kpisHtml = itens.map(([numFixo, rot, cls, cat]) => {
     if (!cat) {
       return '<a class="card kpi kpi-link ' + cls + '" href="plano.html"><div class="n">' + numFixo + '</div><div class="l">' + rot + "</div></a>";
     }
@@ -188,10 +217,13 @@
   // não entra aqui (0 é ruído visual, não informação)
   const porNucleo = nucleosProj.map(n => [n, projetos.filter(p => p.nucleo === n).length]).filter(([, c]) => c > 0);
 
-  kpisHtml += '<div class="card kpi"><div class="n">' + projetos.length + '</div>' +
+  // item 2.3: composição do portfólio virou seção própria (6ª, depois dos KPIs numéricos),
+  // não mais anexada ao mesmo grid dos 6 cards de status — mesmos dois cards de antes,
+  // só num container (#portfolio) separado do #kpis.
+  let portfolioHtml = '<div class="card kpi"><div class="n">' + projetos.length + '</div>' +
     '<div class="l">Projetos no portfólio</div><div class="sub">Iniciativas mapeadas pela UI</div></div>';
 
-  kpisHtml += '<div class="card kpi kpi-largo">' +
+  portfolioHtml += '<div class="card kpi kpi-largo">' +
     '<div class="kpi-largo-num"><div class="n">' + totalGestores + '</div><div class="l">Gestores de projetos na UI</div>' +
       '<div class="sub">' + totalGestores + " gestores de projetos</div></div>" +
     '<div class="kpi-largo-lista">' + porNucleo.map(([n, c]) => "<div>" + esc(n) + " — " + c + (c === 1 ? " projeto" : " projetos") + "</div>").join("") + "</div>" +
@@ -201,6 +233,7 @@
     "</div>";
 
   document.getElementById("kpis").innerHTML = kpisHtml;
+  document.getElementById("portfolio").innerHTML = portfolioHtml;
 
   // radar de carga
   const carga = CALC.cargaPorDia(DB.plano).filter(c => c.carga >= 2 && c.iso >= hoje);
