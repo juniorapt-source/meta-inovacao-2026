@@ -87,11 +87,14 @@
   text-transform:uppercase;letter-spacing:.08em}
 .crs-grupo-chips{display:flex;flex-wrap:wrap;gap:5px}
 .crs-chip-crit{display:inline-block;padding:3px 9px;border-radius:0;font-family:'DM Sans';font-weight:500;font-size:11px}
-.crs-st-ok{background:#E8F5E9;color:#2E7D32}
-.crs-st-andamento{background:#E3F0FB;color:#005EB8}
-.crs-st-iniciar{background:#FFF8E1;color:#B28704}
-.crs-st-entendimento{background:#ECEFF1;color:#78909C}
-.crs-crit-na{background:transparent;color:#8B98A5;font-style:italic;box-shadow:inset 0 0 0 1px rgba(139,152,165,.4)}
+/* paleta de status alinhada aos tokens "lavados" do resto do site (mesma família usada
+   em .st-concluido/.st-andamento/.st-janela/.st-nao) em vez dos hex vivos copiados
+   direto da planilha-fonte — mesma lógica já aplicada nas cores de núcleo desta página */
+.crs-st-ok{background:var(--ok-w);color:var(--ok)}
+.crs-st-andamento{background:var(--prog-w);color:var(--prog)}
+.crs-st-iniciar{background:var(--warn-w);color:var(--warn)}
+.crs-st-entendimento{background:var(--neutro-w);color:var(--ink-2)}
+.crs-crit-na{background:transparent;color:var(--ink-3);font-style:italic;box-shadow:inset 0 0 0 1px var(--border)}
 
 /* visão matriz: iniciativas × critérios, cabeçalho e 2 primeiras colunas fixos */
 .crs-matriz-wrap{overflow:auto;max-height:70vh;border:1px solid var(--linha);margin-top:4px}
@@ -119,7 +122,7 @@
 thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(--ceu)}
 /* a célula de núcleo tem cor inline (por linha) — a especificidade do inline já vence a zebra por conta própria */
 .crs-matriz tbody tr.crs-mz-zebra td{background:rgba(43,38,32,.025)}
-.crs-mz-na{color:#8B98A5;font-style:italic;font-weight:400;background:transparent}
+.crs-mz-na{color:var(--ink-3);font-style:italic;font-weight:400;background:transparent}
 .crs-matriz tbody tr td.crs-mz-vazia{text-align:center;color:var(--grafite);padding:16px;position:static}
 @media (max-width:960px){ .crs-matriz-wrap{max-height:60vh} }
 

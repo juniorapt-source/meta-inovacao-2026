@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.1 — 2026-08-13
+- `corsario.html`: paleta de status (ok/ajuste em andamento/a iniciar/em entendimento/não se aplica) trocada dos hex vivos copiados direto da planilha-fonte (`#E8F5E9`/`#2E7D32` etc.) pelos tokens "lavados" do resto do site (`--ok`/`--prog`/`--warn`/`--ink-2`/`--ink-3`) — mesma lógica já aplicada às cores de núcleo desta página (v0.6.2). Vale nos três lugares que reaproveitam as mesmas classes (`.crs-st-*`/`.crs-crit-na`/`.crs-mz-na`): legenda, células da matriz e chips do detalhe expandido dos cards — conferido nos três via Chrome headless contra o Supabase de produção.
+- Achado ao trocar: `var(--warn)`/`var(--warn-w)` (usado aqui em "a iniciar") mede 3.6:1 de contraste — abaixo de WCAG AA (4.5:1). É o mesmo par de tokens já usado em `.st-janela`, `.cel-oficina` e `.aviso` em várias páginas; mantido por consistência com o padrão já estabelecido no restante do site, mas fica registrado como possível item futuro do plano de melhorias (ajustar `--warn`/`--warn-w` em `css/base.css` teria efeito em todas essas páginas de uma vez, não só aqui).
+
 ## v0.8.0 — 2026-08-13
 Prompt 2 do plano de melhorias: menu em domínios, KPIs do Dashboard viram drill-down real pra `plano.html`, e auditoria + legenda de status.
 
