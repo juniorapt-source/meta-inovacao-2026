@@ -8,6 +8,7 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OBRIG = {
     "index.html": ["trilho", "kpis", "radar", "atrasadas", "prox"],
     "plano.html": ["tabela", "f-frente", "f-status", "f-resp", "f-busca"],
+    "minhas-acoes.html": ["ver-como", "resumo-cabecalho", "secao-nos", "secao-acoes", "secao-atividades"],
     "caminho.html": ["lista-nos", "slas", "legenda-vocab"],
     "agenda.html": ["ciclos", "encontros", "legenda-vocab"],
     "demandas.html": ["matriz", "legenda"],
@@ -69,4 +70,4 @@ def _checar_inline(paginas):
 
 if __name__ == "__main__":
     import sys as _sys
-    _checar_inline(_sys.argv[1:] or ["index.html","plano.html","caminho.html","agenda.html","demandas.html","participantes.html","projetos.html","plano-acao.html","corsario.html","editor.html"])
+    _checar_inline(_sys.argv[1:] or ["index.html","plano.html","minhas-acoes.html","caminho.html","agenda.html","demandas.html","participantes.html","projetos.html","plano-acao.html","corsario.html","editor.html"])

@@ -181,6 +181,15 @@ tr.detalhe td{background:rgba(43,38,32,.02);border-left:3px solid var(--accent);
 .aviso{background:var(--warn-w);border:1px solid rgba(43,38,32,.2);border-radius:0;padding:10px 14px;
   font-family:var(--font-sans);font-size:13.5px;color:#5c481a}
 
+/* frase de contexto — destaque discreto de uma linha logo abaixo do título da página,
+   resumindo "o que precisa de atenção agora" (minhas-acoes.html; index.html no Bloco 2.3
+   do plano de melhorias reaproveita a mesma classe, fonte única de estilo). .zerado é o
+   estado "nada crítico" — tom calmo (verde) em vez de alerta (acento). */
+.frase-contexto{display:block;font-family:'DM Sans';font-weight:600;font-size:13px;
+  color:var(--accent);background:var(--accent-w);border-left:3px solid var(--accent);
+  padding:9px 14px;margin-bottom:18px}
+.frase-contexto.zerado{color:var(--ok);background:var(--ok-w);border-left-color:var(--ok)}
+
 /* legenda compacta de vocabulário próprio (usada em agenda.html e caminho.html — páginas
    que reaproveitam as cores st-* do site com um significado diferente do de plano.html/
    index.html: aqui não são "status de atividade", são o vocabulário local da página) */

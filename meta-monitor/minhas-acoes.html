@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Minhas ações · Carta de Corso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<style>
+.ma-selecao{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.ma-selecao label{font-family:'DM Sans';font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--grafite)}
+.ma-vazio{color:var(--grafite);font-size:13.5px}
+.ma-linha{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--linha)}
+.ma-linha:last-child{border-bottom:0}
+.ma-linha .ma-id{font-size:12px;color:var(--grafite);min-width:58px;flex-shrink:0}
+.ma-linha .ma-titulo{flex:1;min-width:0}
+.ma-linha .ma-meta{font-size:12px;color:var(--grafite)}
+.ma-no-resumo{font-size:12.5px;color:var(--ink-2);margin-top:4px}
+.ma-no-resumo b{color:var(--ink)}
+.ma-erro{color:var(--critico);font-size:13px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Minhas ações</h1>
+    <p class="pagina-sub">O que está sob a guarda de cada pessoa, reunido de três fontes: nós do caminho crítico, ações do plano e atividades por iniciativa. Escolha "Ver como" ou abra um link direto (<span class="mono">?pessoa=id</span>) compartilhado no WhatsApp.</p>
+
+    <div class="ma-selecao">
+      <label for="ver-como">Ver como</label>
+      <select id="ver-como" aria-label="Ver como (pessoa)"></select>
+    </div>
+
+    <p class="frase-contexto" id="resumo-cabecalho" hidden></p>
+
+    <div id="ma-conteudo">
+      <p class="ma-vazio" id="ma-vazio">Escolha uma pessoa acima para ver o que está sob a guarda dela.</p>
+
+      <section class="secao" id="bloco-nos" hidden>
+        <h2>Nós do caminho crítico <span class="hint">onde é guardiã</span></h2>
+        <div class="card" id="secao-nos"></div>
+      </section>
+
+      <section class="secao" id="bloco-acoes" hidden>
+        <h2>Ações do plano <span class="hint">atrasadas primeiro, depois por prazo, janelas por último</span></h2>
+        <div class="card" id="secao-acoes"></div>
+      </section>
+
+      <section class="secao" id="bloco-atividades" hidden>
+        <h2>Atividades por iniciativa <span class="hint">Supabase · plano-acao.html</span></h2>
+        <div class="card" id="secao-atividades"></div>
+      </section>
+    </div>
+    <!-- "Próximos encontros" (item 2.2.d do prompt) foi omitida de propósito: data/agenda.js
+         não tem nenhum campo ligando um encontro a uma pessoa específica — inventar esse
+         vínculo aqui seria inventar dado que não existe na fonte. Se um dia a agenda ganhar
+         esse campo, a seção entra aqui do mesmo jeito que as outras três. -->
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="js/gate.js"></script>
+<script src="data/plano.js"></script>
+<script src="data/nos.js"></script>
+<script src="data/pessoas.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script src="js/responsaveis.js"></script>
+<script src="js/config.js"></script>
+<script>
+(async function () {
+  "use strict";
+  const hoje = hojeISO();
+  const LIM7 = CALC.somaDias(hoje, 7);
+  montarShell("minhas-acoes.html");
+
+  const TABELA = "plano_acao_atividades";
+  const RESPONSAVEIS = (window.DB && window.DB.responsaveis) || [];
+  const selVerComo = document.getElementById("ver-como");
+  const resumoEl = document.getElementById("resumo-cabecalho");
+  const vazioEl = document.getElementById("ma-vazio");
+  const blocoNos = document.getElementById("bloco-nos"), secaoNos = document.getElementById("secao-nos");
+  const blocoAcoes = document.getElementById("bloco-acoes"), secaoAcoes = document.getElementById("secao-acoes");
+  const blocoAtividades = document.getElementById("bloco-atividades"), secaoAtividades = document.getElementById("secao-atividades");
+
+  // mesmo vocabulário de estado de nó já usado em caminho.html (NOME/CLS) — reaproveitado
+  // aqui pra não inventar um segundo rótulo pro mesmo estado calculado por CALC.estadoNo.
+  const NOME_NO = { ok: "cumprido", hoje: "vence hoje", risco: "venceu sem concluir", atencao: "em andamento", futuro: "à frente" };
+  const CLS_NO = { ok: "st-concluido", hoje: "st-andamento", risco: "st-atrasada", atencao: "st-janela", futuro: "st-nao" };
+
+  // select "Ver como" — agrupado por grupo (Coordenação/Coletivo/Núcleos/Projetos), mesma
+  // fonte canônica do select de Responsável em plano-acao.html.
+  function montarSelect() {
+    const grupos = [...new Set(RESPONSAVEIS.map((p) => p.grupo))];
+    let html = '<option value="">— selecione —</option>';
+    grupos.forEach((g) => {
+      html += '<optgroup label="' + esc(g) + '">';
+      html += RESPONSAVEIS.filter((p) => p.grupo === g).map((p) => '<option value="' + esc(p.id) + '">' + esc(p.nome) + "</option>").join("");
+      html += "</optgroup>";
+    });
+    selVerComo.innerHTML = html;
+  }
+
+  function pessoaDaQuerystring() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get("pessoa");
+    return id && RESPONSAVEIS.some((p) => p.id === id) ? id : "";
+  }
+
+  function nosDaPessoa(id) {
+    return DB.nos.nos.filter((n) => RESP.mapearTexto(RESPONSAVEIS, n.guardiao).ids.includes(id));
+  }
+
+  function acoesDaPessoa(id) {
+    const lista = DB.plano.filter((a) => Array.isArray(a.responsavel_id) && a.responsavel_id.includes(id));
+    // atrasadas primeiro (por prazo crescente) · depois quem tem prazo (por prazo crescente,
+    // cobre concluídas e futuras) · janelas (sem data fixa) por último — mesmo critério de
+    // "janela" já usado no resto do site (!prazo_iso && prazo preenchido)
+    const atrasadas = lista.filter((a) => CALC.ehAtrasada(a, hoje)).sort((a, b) => a.prazo_iso.localeCompare(b.prazo_iso));
+    const comPrazo = lista.filter((a) => !CALC.ehAtrasada(a, hoje) && a.prazo_iso).sort((a, b) => a.prazo_iso.localeCompare(b.prazo_iso));
+    const janela = lista.filter((a) => !a.prazo_iso && a.prazo).sort((a, b) => a.id.localeCompare(b.id));
+    const resto = lista.filter((a) => !atrasadas.includes(a) && !comPrazo.includes(a) && !janela.includes(a));
+    return atrasadas.concat(comPrazo, janela, resto);
+  }
+
+  async function iniciarClienteSupabase() {
+    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+    if (!window.APP_CONFIG) throw new Error("js/config.js não carregado — falta window.APP_CONFIG.");
+    return createClient(window.APP_CONFIG.SUPABASE_URL, window.APP_CONFIG.SUPABASE_ANON_KEY);
+  }
+
+  async function atividadesDaPessoa(id) {
+    const supa = await iniciarClienteSupabase();
+    const { data, error } = await supa.from(TABELA).select("*").eq("responsavel", id).is("deleted_at", null);
+    if (error) throw error;
+    return data || [];
+  }
+
+  function linhaNo(n) {
+    const st = CALC.estadoNo(n, DB.plano, hoje);
+    return '<div class="ma-linha" data-no="' + n.no + '">' +
+      '<span class="ma-id mono">Nó ' + n.no + "</span>" +
+      '<div class="ma-titulo"><a href="caminho.html#no' + n.no + '">' + esc(n.titulo) + "</a>" +
+      '<div class="ma-no-resumo"><b>Fallback:</b> ' + esc(n.fallback) + '</div>' +
+      '<div class="ma-no-resumo"><b>Gatilho:</b> ' + esc(n.gatilho) + "</div></div>" +
+      '<span class="chip ' + CLS_NO[st] + '">' + NOME_NO[st] + "</span></div>";
+  }
+
+  function linhaAcao(a) {
+    const [cls, rot] = stClass(a, hoje);
+    return '<a class="ma-linha" data-id="' + esc(a.id) + '" href="plano.html?q=' + encodeURIComponent(a.id) + "#" + esc(a.id) + '">' +
+      '<span class="ma-id mono">' + esc(a.id) + "</span>" +
+      '<span class="ma-titulo">' + esc(a.atividade) + "</span>" +
+      '<span class="ma-meta mono">' + esc(a.prazo || "—") + "</span>" +
+      '<span class="chip ' + cls + '">' + rot + "</span></a>";
+  }
+
+  const STATUS_ATIVIDADE = { nao_iniciado: ["st-nao", "Não iniciado"], em_execucao: ["st-andamento", "Em execução"], atrasado: ["st-atrasada", "Atrasado"] };
+  function linhaAtividade(at) {
+    const [cls, rot] = STATUS_ATIVIDADE[at.status] || ["st-nao", at.status || "—"];
+    return '<div class="ma-linha" data-atividade-id="' + esc(at.id) + '">' +
+      '<span class="ma-titulo">' + esc(at.descricao || "(sem descrição)") + '<div class="ma-no-resumo">' + esc(at.iniciativa || "") + "</div></span>" +
+      '<span class="chip ' + cls + '">' + rot + "</span></div>";
+  }
+
+  async function render(id) {
+    // reflete a pessoa atual na URL (link compartilhável), sem empilhar histórico
+    const url = new URL(location.href);
+    if (id) url.searchParams.set("pessoa", id); else url.searchParams.delete("pessoa");
+    history.replaceState(null, "", url.pathname + url.search);
+
+    if (!id) {
+      resumoEl.hidden = true;
+      vazioEl.hidden = false;
+      blocoNos.hidden = blocoAcoes.hidden = blocoAtividades.hidden = true;
+      return;
+    }
+    vazioEl.hidden = true;
+
+    const nos = nosDaPessoa(id);
+    const acoes = acoesDaPessoa(id);
+
+    blocoNos.hidden = !nos.length;
+    secaoNos.innerHTML = nos.length ? nos.map(linhaNo).join("") : "";
+
+    blocoAcoes.hidden = !acoes.length;
+    secaoAcoes.innerHTML = acoes.length ? acoes.map(linhaAcao).join("") : "";
+
+    const atrasadosNos = nos.filter((n) => CALC.estadoNo(n, DB.plano, hoje) === "risco").length;
+    const atrasadosAcoes = acoes.filter((a) => CALC.ehAtrasada(a, hoje)).length;
+    const vence7Acoes = acoes.filter((a) => a.prazo_iso && a.status !== "Concluído" && a.prazo_iso >= hoje && a.prazo_iso <= LIM7).length;
+
+    let atividades = [];
+    blocoAtividades.hidden = false;
+    secaoAtividades.innerHTML = '<div class="ma-vazio">Carregando…</div>';
+    try {
+      atividades = await atividadesDaPessoa(id);
+      blocoAtividades.hidden = !atividades.length;
+      secaoAtividades.innerHTML = atividades.length ? atividades.map(linhaAtividade).join("") : "";
+    } catch (err) {
+      console.error("minhas-acoes: falha ao carregar atividades por iniciativa", err);
+      secaoAtividades.innerHTML = '<div class="ma-erro">Não consegui carregar do Supabase — ' + esc((err && err.message) || String(err)) + ".</div>";
+    }
+    const atrasadosAtividades = atividades.filter((a) => a.status === "atrasado").length;
+
+    const totalItens = nos.length + acoes.length + atividades.length;
+    const totalAtrasados = atrasadosNos + atrasadosAcoes + atrasadosAtividades;
+    resumoEl.hidden = false;
+    resumoEl.className = "frase-contexto" + (totalItens === 0 ? " zerado" : "");
+    resumoEl.textContent = totalItens === 0
+      ? "Nada sob a guarda dessa pessoa hoje."
+      : totalItens + (totalItens === 1 ? " item" : " itens") + " sob sua guarda · " +
+        totalAtrasados + (totalAtrasados === 1 ? " atrasado" : " atrasados") + " · " +
+        vence7Acoes + (vence7Acoes === 1 ? " vence" : " vencem") + " em 7 dias";
+  }
+
+  montarSelect();
+  const inicial = pessoaDaQuerystring() || localStorage.getItem("cc_ver_como") || "";
+  if (inicial) selVerComo.value = inicial;
+  selVerComo.addEventListener("change", () => {
+    localStorage.setItem("cc_ver_como", selVerComo.value);
+    render(selVerComo.value);
+  });
+  render(inicial);
+})();
+</script>
+</body>
+</html>

@@ -12,6 +12,7 @@ Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanh
 |---|---|
 | `index.html` | Dashboard: trilho dos 7 nós, KPIs, radar de carga por dia, atrasadas, próximos 7 dias |
 | `plano.html` | 47 ações com filtros e busca; cada linha expande com dependências e a solução proposta (como executar, como monitorar, ferramenta) |
+| `minhas-acoes.html` | "O que eu tenho que fazer?" por responsável: nós do caminho crítico onde é guardiã, ações do plano e atividades por iniciativa sob sua guarda |
 | `caminho.html` | Os 7 nós do caminho crítico com estado calculado, fallbacks e gatilhos; SLAs pactuados e janelas de folga |
 | `agenda.html` | Ciclos 1 e 2 com a URC e os 20 encontros (10 canais × 2 ciclos; Ciclo 1 já com grade v2, Ciclo 2 "a agendar") |
 | `demandas.html` | Matriz 27 iniciativas × 10 canais com o fluxo previsto → oficina → formulário → priorizado → encaminhado |
@@ -71,21 +72,28 @@ node tools/testar_calc.js              # cálculos: KPIs, atraso, carga por dia,
 python3 tools/validar_site.py          # HTML: referências locais e ids obrigatórios por página
 python3 tools/testar_kpis_cruzado.py   # KPIs do Python == KPIs do JS
 node tools/testar_editor.js            # roundtrip da serialização do editor
+node tools/gerar_responsavel_id.js --check # data/plano.js.responsavel_id ainda bate com "resp"
+                                        # (roda de novo sem --check se alguém editou "resp" à
+                                        # mão sem regenerar)
 node tools/testar_dashboard_headless.js # dashboard num Chrome/Chromium real via CDP: clique no
                                         # card de KPI navega pra plano.html já filtrado (mesma
                                         # contagem) — usa o navegador já instalado, nada novo
+node tools/testar_minhas_acoes_headless.js # minhas-acoes.html?pessoa=<id>: nós + ações listadas
+                                        # batem com a contagem recalculada a partir dos dados
 ```
 
 ## Estrutura
 
 ```
-index.html plano.html caminho.html agenda.html demandas.html participantes.html editor.html
+index.html plano.html minhas-acoes.html caminho.html agenda.html demandas.html participantes.html editor.html
 css/base.css          identidade visual herdada do painel original
 js/calc.js            funções puras de cálculo (testáveis em node)
 js/core.js            shell de navegação e utilitários
+js/responsaveis.js    lista canônica de responsáveis: texto livre → array de ids (testável em node)
 js/editor_io.js       serialização canônica dos dados (testável em node)
-data/*.js             config, plano, nos, canais, agenda, iniciativas, matriz, pessoas, changelog
-tools/                geração de dados a partir do xlsx + os 6 testes
+data/*.js             config, plano, nos, canais, agenda, iniciativas, matriz, pessoas
+                       (+ pessoas.responsaveis: lista canônica de responsáveis), changelog
+tools/                geração de dados a partir do xlsx + os 8 testes
 docs/                 PLANO_EXECUCAO.md, BUILD_STATUS.md, PENDENCIAS.md (se houver)
 ```
 

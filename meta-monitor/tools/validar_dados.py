@@ -111,16 +111,27 @@ for nome in db.get("matriz", {}).keys():
 # guardrail anti-duplicação: nenhum outro data/*.js pode reintroduzir um campo de autoria
 # (isso é o que causou o "Criss"/"Cris" e o "Dario / Rafa" divergindo do array de projetos.js)
 CAMPO_AUTORIA = re.compile(r"respons|dono|gestor|representante|owner", re.I)
-def campos_suspeitos(obj, origem, caminho=""):
+
+# exceção pontual e documentada: "plano.responsavel_id" (BACKLOG #004/#003, prompt "Minhas
+# ações") é a versão estruturada (ids estáveis de data/pessoas.js.responsaveis) do campo
+# "resp" que já existe ação a ação em data/plano.js há muito mais tempo do que este
+# guardrail — mesmo domínio (quem executa a AÇÃO do plano de governança), não a autoria de
+# INICIATIVA que data/projetos.js protege. Gerado só por tools/gerar_responsavel_id.js a
+# partir do próprio "resp" (nunca editado à mão); "node tools/gerar_responsavel_id.js
+# --check" (rodado nos testes, ver README) falha se os dois ficarem fora de sincronia —
+# isso fecha a mesma lacuna de drift que motivou o guardrail, sem duplicar autoria de fato.
+CAMPOS_PERMITIDOS_POR_EXCECAO = {("plano", "responsavel_id")}
+
+def campos_suspeitos(obj, origem, nome_ds, caminho=""):
     if isinstance(obj, dict):
         for k, v in obj.items():
             p = f"{caminho}.{k}" if caminho else k
-            if CAMPO_AUTORIA.search(k):
+            if CAMPO_AUTORIA.search(k) and (nome_ds, k) not in CAMPOS_PERMITIDOS_POR_EXCECAO:
                 erros.append(f"{origem}: campo {p!r} duplica autoria — fonte canônica é data/projetos.js")
-            campos_suspeitos(v, origem, p)
+            campos_suspeitos(v, origem, nome_ds, p)
     elif isinstance(obj, list):
         for i, v in enumerate(obj):
-            campos_suspeitos(v, origem, f"{caminho}[{i}]")
+            campos_suspeitos(v, origem, nome_ds, f"{caminho}[{i}]")
 
 # exceções ao guardrail: "projetos" é a fonte canônica de autoria por INICIATIVA da UI;
 # "urc_lideranca"/"urc_canais" são a fonte canônica de responsáveis pela relação com a URC —
@@ -128,7 +139,7 @@ def campos_suspeitos(obj, origem, caminho=""):
 DATASETS_AUTORIA_PROPRIA = {"projetos", "urc_lideranca", "urc_canais"}
 for nome_ds, dados in db.items():
     if nome_ds in DATASETS_AUTORIA_PROPRIA: continue
-    campos_suspeitos(dados, f"data/{nome_ds}.js")
+    campos_suspeitos(dados, f"data/{nome_ds}.js", nome_ds)
 
 # --- URC: liderança + responsáveis por canal (data/urc.js) ---
 CANAIS_URC = ["CNR", "Assessoria de Negócios", "Portal", "Loja", "Marketing Cloud",

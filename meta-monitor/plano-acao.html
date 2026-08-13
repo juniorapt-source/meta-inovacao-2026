@@ -31,6 +31,8 @@
 .pa-row-status{font-size:11px;min-width:34px;flex-shrink:0;white-space:nowrap}
 .pa-row .pa-del{background:none;border:0;color:var(--critico);cursor:pointer;font-size:16px;padding:4px 8px;line-height:1;border-radius:0;flex-shrink:0}
 .pa-row .pa-del:hover{background:var(--critico-w)}
+.pa-row select.pa-resp{min-width:190px}
+.pa-row select.pa-resp option.pa-legado{color:var(--critico);font-style:italic}
 #pa-nova{margin-top:6px}
 @media (max-width:960px){ .pa-layout{grid-template-columns:1fr} .pa-nav{position:static;max-height:none} .pa-row{flex-wrap:wrap} }
 </style>
@@ -54,8 +56,10 @@
 <script src="data/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="data/projetos.js"></script>
+<script src="data/pessoas.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
+<script src="js/responsaveis.js"></script>
 <script src="js/config.js"></script>
 <script>
 (async function () {
@@ -68,6 +72,30 @@
     ["em_execucao", "Em execução"],
     ["atrasado", "Atrasado"],
   ];
+
+  // BACKLOG #004 — campo livre "Responsável" virou select alimentado pela lista canônica
+  // (data/pessoas.js.responsaveis). Atividades gravadas antes desta mudança guardam texto
+  // livre no Supabase (ex.: "Fulano"); se esse texto não bate com nenhum id canônico, a opção
+  // "legada" é montada na hora, marcada visualmente (.pa-legado) — sem apagar nada. Ao trocar
+  // pra uma opção real, a próxima gravação já sai com o id canônico (conversão silenciosa,
+  // só quando alguém mexe na linha).
+  const RESPONSAVEIS = (window.DB && window.DB.responsaveis) || [];
+  function opcoesResponsavel(valorAtual) {
+    let html = '<option value="">— sem responsável —</option>';
+    const ehCanonico = valorAtual && RESPONSAVEIS.some((p) => p.id === valorAtual);
+    if (valorAtual && !ehCanonico) {
+      html += '<option class="pa-legado" value="' + esc(valorAtual) + '" selected>⚠ legado: "' + esc(valorAtual) + '"</option>';
+    }
+    const grupos = [...new Set(RESPONSAVEIS.map((p) => p.grupo))];
+    grupos.forEach((g) => {
+      html += '<optgroup label="' + esc(g) + '">';
+      html += RESPONSAVEIS.filter((p) => p.grupo === g)
+        .map((p) => '<option value="' + esc(p.id) + '"' + (p.id === valorAtual ? " selected" : "") + ">" + esc(p.nome) + "</option>")
+        .join("");
+      html += "</optgroup>";
+    });
+    return html;
+  }
 
   const navEl = document.getElementById("pa-nav");
   const painel = document.getElementById("pa-painel");
@@ -115,7 +143,7 @@
   function linhaHtml(a) {
     return '<div class="pa-row st-' + esc(a.status) + '" data-id="' + esc(a.id) + '">' +
       '<input type="text" class="pa-desc" data-campo="descricao" value="' + esc(a.descricao || "") + '" placeholder="Descrição da atividade" aria-label="Descrição">' +
-      '<input type="text" class="pa-resp" data-campo="responsavel" value="' + esc(a.responsavel || "") + '" placeholder="Responsável" aria-label="Responsável">' +
+      '<select class="pa-resp" data-campo="responsavel" aria-label="Responsável">' + opcoesResponsavel(a.responsavel || "") + "</select>" +
       '<select class="pa-status" data-campo="status" aria-label="Status">' +
         STATUS_OPCOES.map(([v, r]) => '<option value="' + v + '"' + (v === a.status ? " selected" : "") + ">" + r + "</option>").join("") +
       "</select>" +
@@ -250,8 +278,8 @@
     const sel = e.target.closest("select[data-campo]");
     if (!sel) return;
     const row = sel.closest(".pa-row");
-    row.className = "pa-row st-" + sel.value;
-    salvarImediato(row.dataset.id, { status: sel.value }, row);
+    if (sel.dataset.campo === "status") row.className = "pa-row st-" + sel.value;
+    salvarImediato(row.dataset.id, { [sel.dataset.campo]: sel.value }, row);
   });
   painel.addEventListener("click", (e) => {
     if (e.target.closest("#pa-nova")) { criarAtividade(); return; }

@@ -12,6 +12,7 @@
     ] },
     { titulo: "Execução", paginas: [
       ["plano.html", "Plano de ação"],
+      ["minhas-acoes.html", "Minhas ações"],
       ["agenda.html", "Agenda dos ciclos"],
       ["demandas.html", "Matriz de demandas"],
       ["plano-acao.html", "Atividades por iniciativa"],

@@ -1,5 +1,56 @@
 # Changelog
 
+## v0.9.0 — 2026-08-13
+Prompt 4 do plano de melhorias (item 2.2): lista canônica de responsáveis (BACKLOG #004) e
+a página "Minhas ações" (BACKLOG #003) — a visão transversal "o que eu tenho que fazer?".
+
+- **Lista canônica de responsáveis** — `data/pessoas.js` ganha `window.DB.responsaveis`: 31
+  entradas (id estável + nome + grupo de agrupamento) extraídas varrendo `resp` de
+  `data/plano.js`, `guardiao` de `data/nos.js` e `representantes` de `data/projetos.js`.
+  `js/responsaveis.js` novo (funções puras, testável em node como `js/calc.js`) resolve
+  texto livre — "JR. e Pova", "Comitê e Sandra" — pra array de ids, separando por " e ",
+  "/", "+" e ",". `data/plano.js` ganha `responsavel_id` nas 47 ações (campo `resp`
+  original intocado), gerado por `tools/gerar_responsavel_id.js` — idempotente, com modo
+  `--check` que falha se `resp` for editado sem regenerar o campo derivado (novo passo na
+  suíte de testes). Único valor livre sem mapeamento: `"Núcleo de Startups"` em
+  `data/projetos.js` — placeholder de indicação pendente, não pessoa, deixado de fora de
+  propósito (mesmo tratamento que `index.html` já dava a ele).
+  - `tools/validar_dados.py` tinha um guardrail genérico contra qualquer campo de autoria
+    fora de `data/projetos.js` (histórico real: "Criss"/"Cris" divergindo entre datasets).
+    `responsavel_id` entra como exceção pontual e comentada no próprio arquivo — é a versão
+    estruturada de um campo (`resp`) que já existia antes do guardrail, não autoria nova; a
+    consistência entre os dois fica garantida pelo `--check` acima, fechando a mesma lacuna
+    de drift que o guardrail existe pra evitar.
+  - `plano-acao.html`: campo livre "Responsável" vira `<select>` alimentado pela lista
+    canônica (agrupado por Coordenação/Coletivo/Núcleos/Projetos). Atividade gravada antes
+    desta mudança com texto que não bate com nenhum id canônico ganha uma opção "⚠ legado"
+    marcada visualmente (`.pa-legado`), sem apagar nada — some sozinha na próxima vez que
+    alguém escolher uma pessoa de verdade pra aquela linha. Hoje as 22 atividades reais no
+    Supabase têm `responsavel` vazio — a via legada existe pronta pro dia em que não tiver.
+- **`minhas-acoes.html`** (nova, menu Execução logo após "Plano de ação") — seletor "Ver
+  como" (lista canônica), persistido em `localStorage` (`cc_ver_como`) e com link direto
+  `?pessoa=<id>` compartilhável (a página reflete a pessoa atual na URL via
+  `history.replaceState`, sem empilhar histórico). Três seções por pessoa: nós do caminho
+  crítico onde é guardiã (`data/nos.js`, casado por `js/responsaveis.js` — mesmo
+  vocabulário de estado de `caminho.html`), ações do plano onde `responsavel_id` inclui a
+  pessoa (ordenadas: atrasadas → prazo crescente → janelas por último, mesmo critério de
+  "janela" do resto do site), atividades por iniciativa do Supabase onde `responsavel` é a
+  pessoa. Cabeçalho com o resumo "N itens sob sua guarda · X atrasados · Y vencem em 7
+  dias" (`.frase-contexto`, classe nova em `css/base.css` — destaque discreto, reaproveitada
+  pelo item 2.3 do plano de melhorias no Dashboard).
+  - Seção de "Próximos encontros" (pedida no prompt original) foi omitida de propósito:
+    `data/agenda.js` não tem nenhum campo ligando um encontro a uma pessoa — sem esse
+    vínculo nos dados, inventar um seria inventar dado; comentário no HTML documenta o
+    porquê e deixa o lugar pronto pro dia em que esse campo existir.
+- `tools/testar_minhas_acoes_headless.js` — 8º teste do repo: abre
+  `minhas-acoes.html?pessoa=sandra` num Chrome real via CDP e confere que a contagem de nós
+  (3) e de ações (14) listadas bate com a recalculada em Node a partir dos mesmos dados
+  (não hardcoded às cegas), e que o resumo do cabeçalho cita os números certos.
+- Validado com Chrome headless real (contra o Supabase de produção): select de responsável
+  em `plano-acao.html` com as 31 opções agrupadas, `minhas-acoes.html` com nós/ações/
+  atividades corretas pra "sandra" e resumo batendo, `node tools/gerar_responsavel_id.js
+  --check` OK, suíte completa (8 testes) passando.
+
 ## v0.8.1 — 2026-08-13
 - `corsario.html`: paleta de status (ok/ajuste em andamento/a iniciar/em entendimento/não se aplica) trocada dos hex vivos copiados direto da planilha-fonte (`#E8F5E9`/`#2E7D32` etc.) pelos tokens "lavados" do resto do site (`--ok`/`--prog`/`--warn`/`--ink-2`/`--ink-3`) — mesma lógica já aplicada às cores de núcleo desta página (v0.6.2). Vale nos três lugares que reaproveitam as mesmas classes (`.crs-st-*`/`.crs-crit-na`/`.crs-mz-na`): legenda, células da matriz e chips do detalhe expandido dos cards — conferido nos três via Chrome headless contra o Supabase de produção.
 - Achado ao trocar: `var(--warn)`/`var(--warn-w)` (usado aqui em "a iniciar") mede 3.6:1 de contraste — abaixo de WCAG AA (4.5:1). É o mesmo par de tokens já usado em `.st-janela`, `.cel-oficina` e `.aviso` em várias páginas; mantido por consistência com o padrão já estabelecido no restante do site, mas fica registrado como possível item futuro do plano de melhorias (ajustar `--warn`/`--warn-w` em `css/base.css` teria efeito em todas essas páginas de uma vez, não só aqui).
