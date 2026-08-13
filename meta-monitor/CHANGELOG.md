@@ -1,5 +1,33 @@
 # Changelog
 
+## v0.20.1 — 2026-08-13
+Ajustes de layout em `corsario.html` (O Caminho para o Corsário) — sem mudança de dados
+nem de lógica de cálculo (régua/pesos intocados).
+
+- **Legenda movida pra antes da tabela** — a seção "Legenda" que ficava no rodapé da
+  página foi removida; a informação de patentes (faixa + descrição curta) passou a
+  viver nos próprios cards de patente do painel da frota (topo), e "Status e pesos" +
+  a regra de ouro viraram uma faixa compacta estática logo acima dos
+  controles/tabela. `INFO_PATENTES` (novo, JS) alimenta a descrição de cada patente —
+  antes só existia como texto solto na Legenda.
+- **"Última atualização registrada" removida** — só a exibição; o dado de origem por
+  iniciativa (`atualizado_em`/`ent.ultimaAtualizacao`, calculado em `processar()`)
+  continua intocado, só não sobe mais até um agregado pra mostrar no card de resumo.
+- **Tabela (visão Matriz) em largura total** — `.conteudo` ganhou `max-width:none` só
+  nesta página (mesma técnica de override local já usada por `.pagina-sub`), então a
+  área de conteúdo cresce até encostar no menu lateral em vez de ficar presa nos
+  1180px padrão do resto do site. **Bug pego e corrigido na hora**: sem
+  `min-width:0` junto, o item de grid (`.conteudo`) herda `min-width:auto`, que
+  equivale ao min-content da tabela (`width:max-content`) — a página INTEIRA ficava
+  larga o bastante pra caber a tabela sem cortar nada, com scroll horizontal no
+  `body` (menu incluído) em vez de ficar contido só dentro de `.crs-matriz-wrap`
+  (que já tinha `overflow:auto` de propósito). Corrigido com `min-width:0` — a tabela
+  ainda tem scroll horizontal interno (mais raso que antes: menos colunas cortadas),
+  mas a página em si não estica mais. Visão Cards conferida — reflui pra mais colunas
+  (grid auto-fill), não quebra.
+- **`tools/validar_site.py`** — `#crs-legenda` removido da lista de ids obrigatórios de
+  `corsario.html` (a seção não existe mais, de propósito).
+
 ## v0.20.0 — 2026-08-13
 "Correções v0.18.x" — typos/enums/capitalização + migração dos conjuntos restantes do
 Modo edição pro Supabase. (O prompt original citava "v0.19.0" pro bump — já usado pelo

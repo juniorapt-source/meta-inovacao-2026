@@ -16,23 +16,56 @@
    compartilhado); os respiros laterais continuam vindo do padding de .conteudo. */
 .pagina-sub{max-width:none}
 
-/* painel da frota (resumo) */
-.crs-frota{display:flex;gap:26px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
-.crs-frota-bloco{flex:1;min-width:170px}
+/* item 3 (ajustes v0.20.x) — .conteudo vem com max-width:1180px em css/base.css (bom
+   padrão pro resto do site, ruim aqui: a Matriz tem 19 colunas de critério + núcleo +
+   iniciativa + % + patente, e sobrava margem enquanto colunas cortavam com scroll). Mesmo
+   técnica de override local do .pagina-sub acima: sem o cap, .conteudo volta a só
+   `width:100%` da coluna 1fr do grid .shell (var(--nav-w) 1fr) — cresce até encostar no
+   menu, sem cálculo de viewport (a barra lateral já é descontada pelo próprio grid). A
+   visão Cards reflui pra mais colunas automaticamente (grid auto-fill), não quebra.
+   min-width:0 é OBRIGATÓRIO aqui, não cosmético: item de grid tem min-width:auto por
+   padrão, que equivale ao min-content do conteúdo — a tabela da Matriz (width:max-content,
+   .crs-matriz) tem um min-content igual à sua largura total, e sem essa linha esse valor
+   "vazava" pra .conteudo e pro grid .shell inteiro, empurrando a PÁGINA TODA pra largura
+   da tabela (scroll horizontal no body, menu incluído) em vez do scroll ficar contido só
+   dentro de .crs-matriz-wrap{overflow:auto}, que é o comportamento pretendido. */
+.conteudo{max-width:none;min-width:0}
+
+/* painel da frota (resumo) — item 1 (ajustes v0.20.x): "Última atualização" saiu (item 2,
+   só a exibição — o dado de origem/por-iniciativa continua computado em processar(), só
+   não sobe mais até aqui); a coluna de patentes ganhou mais espaço (flex maior, mínimo
+   maior) porque cada card de patente agora também carrega faixa + descrição curta —
+   informação que antes só existia na Legenda lá embaixo. */
+.crs-frota{display:flex;gap:22px;flex-wrap:wrap;align-items:stretch;margin-bottom:8px}
+.crs-frota-media{flex:0 0 auto;min-width:150px}
 .crs-frota-media .n{font-family:var(--font-sans);font-weight:300;font-size:46px;line-height:1;color:var(--tinta)}
 .crs-frota-media .l{font-family:'DM Sans';font-weight:600;font-size:11px;color:var(--grafite);margin-top:6px;
   text-transform:uppercase;letter-spacing:.1em}
+.crs-frota-patentes-bloco{flex:3;min-width:480px}
 .crs-frota-patentes{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--linha)}
-.crs-patente-mini{padding:8px 4px;text-align:center;border-left:1px solid var(--linha)}
+.crs-patente-mini{padding:9px 8px;text-align:center;border-left:1px solid var(--linha)}
 .crs-patente-mini:first-child{border-left:none}
 .crs-patente-mini .n{font-family:var(--font-sans);font-weight:600;font-size:19px;color:var(--tinta)}
 .crs-patente-mini.crs-pat-corsario .n{color:#8A6A12}
 .crs-patente-mini .l{font-family:'DM Sans';font-weight:500;font-size:9px;color:var(--grafite);margin-top:2px;
   text-transform:uppercase;letter-spacing:.04em}
+.crs-patente-faixa{font-family:'IBM Plex Mono';font-size:9.5px;color:var(--grafite);margin-top:4px}
+.crs-patente-desc{font-family:var(--font-sans);font-size:10px;line-height:1.25;color:var(--ink-2);margin-top:2px}
 .crs-frota-nota{font-size:11px;color:var(--grafite);font-style:italic;margin-top:6px}
-.crs-frota-data{font-size:12px;color:var(--grafite);text-align:right}
-.crs-frota-data b{display:block;color:var(--tinta);font-weight:600;margin-top:2px}
-@media (max-width:640px){ .crs-frota{flex-direction:column;align-items:stretch} .crs-frota-data{text-align:left} }
+@media (max-width:640px){ .crs-frota{flex-direction:column;align-items:stretch} }
+@media (max-width:900px){ .crs-frota-patentes{grid-template-columns:repeat(3,1fr)} .crs-patente-mini:nth-child(3n+1){border-left:none} }
+
+/* item 1 (ajustes v0.20.x) — "Status e pesos" + regra de ouro viram uma faixa compacta
+   logo acima dos controles/tabela (antes ficavam na Legenda no rodapé da página, agora
+   removida — ver #crs-legenda excluída). Reaproveita as classes .crs-leg-status/
+   .crs-leg-peso/.crs-regra-ouro que a Legenda antiga já tinha (mesmo chip/peso/itálico),
+   só a moldura ao redor é nova. */
+.crs-status-pesos{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;background:var(--branco);
+  border:1px solid var(--linha);padding:10px 16px;margin-bottom:16px}
+.crs-status-pesos-titulo{font-family:'DM Sans';font-weight:700;font-size:10.5px;color:var(--grafite);
+  text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+.crs-status-pesos .crs-regra-ouro{flex-basis:100%;border-top:1px solid var(--border-soft);
+  padding-top:8px;margin-top:2px;font-size:12.5px}
 
 /* controles: alternador de visão, chips de núcleo, busca, ordenação */
 .crs-controles{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:20px 0 14px}
@@ -126,15 +159,11 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
 .crs-matriz tbody tr td.crs-mz-vazia{text-align:center;color:var(--grafite);padding:16px;position:static}
 @media (max-width:960px){ .crs-matriz-wrap{max-height:60vh} }
 
-/* legenda — sempre visível, independente do Supabase responder */
-.crs-leg-bloco{margin-bottom:16px}
-.crs-leg-bloco:last-of-type{margin-bottom:12px}
-.crs-leg-titulo{display:block;font-family:'DM Sans';font-weight:700;font-size:11px;color:var(--grafite);
-  text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
-.crs-leg-patentes{display:flex;flex-direction:column;gap:7px}
-.crs-leg-item{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
-.crs-leg-faixa{font-family:'IBM Plex Mono';font-size:11.5px;color:var(--grafite);min-width:60px}
-.crs-leg-desc{font-family:var(--font-sans);font-size:13px;color:var(--tinta)}
+/* legenda — item 1 (ajustes v0.20.x): a seção #crs-legenda de baixo foi removida (info
+   movida pro topo — patentes nos cards da frota, status/pesos na faixa compacta acima
+   dos controles). .crs-leg-status/.crs-leg-peso/.crs-regra-ouro continuam em uso ali;
+   as classes só do bloco "Patentes" da legenda antiga (crs-leg-bloco/titulo/patentes/
+   item/faixa/desc) saíram junto com o HTML que as usava. */
 .crs-leg-status{display:flex;flex-wrap:wrap;gap:6px 4px;align-items:center}
 .crs-leg-peso{font-family:'IBM Plex Mono';font-size:11px;color:var(--grafite);margin-right:10px}
 .crs-regra-ouro{font-family:var(--font-sans);font-style:italic;font-size:13.5px;color:var(--tinta);
@@ -151,6 +180,22 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     <div id="crs-estado"></div>
 
     <section class="card" id="crs-frota-wrap" aria-label="Painel da frota"></section>
+
+    <!-- item 1 (ajustes v0.20.x) — antes vivia na Legenda no rodapé da página; agora é
+         uma faixa fixa (não depende do Supabase responder, por isso é HTML estático, não
+         gerado em JS) logo acima dos controles/tabela, pra quem chega já entender a régua
+         antes de ver os dados. -->
+    <div class="crs-status-pesos" aria-label="Legenda de status e pesos">
+      <b class="crs-status-pesos-titulo">Status e pesos</b>
+      <span class="crs-leg-status">
+        <span class="crs-chip-crit crs-st-ok">ok</span><span class="crs-leg-peso">100%</span>
+        <span class="crs-chip-crit crs-st-andamento">ajuste em andamento</span><span class="crs-leg-peso">70%</span>
+        <span class="crs-chip-crit crs-st-iniciar">a iniciar</span><span class="crs-leg-peso">40%</span>
+        <span class="crs-chip-crit crs-st-entendimento">em entendimento</span><span class="crs-leg-peso">20%</span>
+        <span class="crs-chip-crit crs-crit-na">não se aplica</span><span class="crs-leg-peso">fora da régua</span>
+      </span>
+      <p class="crs-regra-ouro">A regra de ouro: não se aplica não conta contra ninguém — 100% significa ok em tudo que se aplica à iniciativa.</p>
+    </div>
 
     <div class="crs-controles" id="crs-controles">
       <div class="crs-segmento" id="crs-segmento" role="group" aria-label="Visualização">
@@ -190,33 +235,6 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
       <table class="crs-matriz" id="crs-matriz"></table>
     </div>
     <p class="crs-contagem" id="crs-contagem"></p>
-
-    <section class="secao" id="crs-legenda">
-      <h2>Legenda</h2>
-      <div class="card">
-        <div class="crs-leg-bloco">
-          <b class="crs-leg-titulo">Patentes</b>
-          <div class="crs-leg-patentes">
-            <div class="crs-leg-item"><span class="crs-patente-badge">Grumete</span><span class="crs-leg-faixa">0–24%</span><span class="crs-leg-desc">embarcou; ainda mapeando o próprio navio</span></div>
-            <div class="crs-leg-item"><span class="crs-patente-badge">Marujo</span><span class="crs-leg-faixa">25–49%</span><span class="crs-leg-desc">primeiras entregas dentro do ecossistema</span></div>
-            <div class="crs-leg-item"><span class="crs-patente-badge">Timoneiro</span><span class="crs-leg-faixa">50–74%</span><span class="crs-leg-desc">mais da metade da rota navegada</span></div>
-            <div class="crs-leg-item"><span class="crs-patente-badge">Capitão</span><span class="crs-leg-faixa">75–99%</span><span class="crs-leg-desc">reta final; faltam poucos itens</span></div>
-            <div class="crs-leg-item"><span class="crs-patente-badge crs-pat-corsario">Corsário</span><span class="crs-leg-faixa">100%</span><span class="crs-leg-desc">carta de corso emitida: iniciativa integralmente no ecossistema oficial</span></div>
-          </div>
-        </div>
-        <div class="crs-leg-bloco">
-          <b class="crs-leg-titulo">Status e pesos</b>
-          <div class="crs-leg-status">
-            <span class="crs-chip-crit crs-st-ok">ok</span><span class="crs-leg-peso">100%</span>
-            <span class="crs-chip-crit crs-st-andamento">ajuste em andamento</span><span class="crs-leg-peso">70%</span>
-            <span class="crs-chip-crit crs-st-iniciar">a iniciar</span><span class="crs-leg-peso">40%</span>
-            <span class="crs-chip-crit crs-st-entendimento">em entendimento</span><span class="crs-leg-peso">20%</span>
-            <span class="crs-chip-crit crs-crit-na">não se aplica</span><span class="crs-leg-peso">fora da régua</span>
-          </div>
-        </div>
-        <p class="crs-regra-ouro">A regra de ouro: não se aplica não conta contra ninguém — 100% significa ok em tudo que se aplica à iniciativa.</p>
-      </div>
-    </section>
   </main>
 </div>
 
@@ -288,6 +306,16 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
   }
 
   const ORDEM_PATENTES = ["Grumete", "Marujo", "Timoneiro", "Capitão", "Corsário"];
+  // item 1 (ajustes v0.20.x) — faixa/descrição de cada patente, antes só na Legenda (fixa,
+  // no rodapé); agora alimenta os cards de patente no painel da frota (topo), que é
+  // JS-gerado (frotaHtml()) — por isso virou dado aqui, não só texto solto no HTML.
+  const INFO_PATENTES = {
+    "Grumete": { faixa: "0–24%", desc: "embarcou; ainda mapeando o próprio navio" },
+    "Marujo": { faixa: "25–49%", desc: "primeiras entregas dentro do ecossistema" },
+    "Timoneiro": { faixa: "50–74%", desc: "mais da metade da rota navegada" },
+    "Capitão": { faixa: "75–99%", desc: "reta final; faltam poucos itens" },
+    "Corsário": { faixa: "100%", desc: "carta de corso emitida: iniciativa integralmente no ecossistema oficial" },
+  };
   const CLASSE_STATUS = {
     "ok": "crs-st-ok",
     "ajuste em andamento": "crs-st-andamento",
@@ -426,20 +454,25 @@ thead .crs-mz-col-nucleo,thead .crs-mz-col-iniciativa{z-index:3;background:var(-
     const comRegua = TODAS.filter((x) => x.calc.pct !== null);
     const media = comRegua.length ? comRegua.reduce((s, x) => s + x.calc.pct, 0) / comRegua.length : null;
     const foraDaRegua = TODAS.length - comRegua.length;
-    let ultimaData = null;
-    TODAS.forEach((x) => { if (x.ultimaAtualizacao && (!ultimaData || x.ultimaAtualizacao > ultimaData)) ultimaData = x.ultimaAtualizacao; });
+    // "Última atualização" saiu da exibição (item 2, ajustes v0.20.x) — o dado de origem
+    // por iniciativa (x.ultimaAtualizacao, de r.atualizado_em) continua computado em
+    // processar(), intocado, só não sobe mais até um agregado pra mostrar aqui.
 
     const patentesHtml = ORDEM_PATENTES.map((p) => {
       const n = TODAS.filter((x) => x.calc.patente === p).length;
-      return '<div class="crs-patente-mini' + (p === "Corsário" ? " crs-pat-corsario" : "") + '"><div class="n">' + n + '</div><div class="l">' + esc(p) + '</div></div>';
+      const info = INFO_PATENTES[p];
+      return '<div class="crs-patente-mini' + (p === "Corsário" ? " crs-pat-corsario" : "") + '">' +
+        '<div class="n">' + n + '</div><div class="l">' + esc(p) + '</div>' +
+        '<div class="crs-patente-faixa">' + esc(info.faixa) + '</div>' +
+        '<div class="crs-patente-desc">' + esc(info.desc) + '</div>' +
+      '</div>';
     }).join("");
 
     return '<div class="crs-frota">' +
-      '<div class="crs-frota-bloco crs-frota-media"><div class="n">' + fmtPct(media) + '</div><div class="l">Adequação média da frota</div></div>' +
-      '<div class="crs-frota-bloco"><div class="crs-frota-patentes">' + patentesHtml + '</div>' +
+      '<div class="crs-frota-media"><div class="n">' + fmtPct(media) + '</div><div class="l">Adequação média da frota</div></div>' +
+      '<div class="crs-frota-patentes-bloco"><div class="crs-frota-patentes">' + patentesHtml + '</div>' +
         (foraDaRegua ? '<div class="crs-frota-nota">' + foraDaRegua + (foraDaRegua === 1 ? " iniciativa fora" : " iniciativas fora") + ' da régua (nenhum critério aplicável).</div>' : "") +
       '</div>' +
-      '<div class="crs-frota-bloco crs-frota-data">Última atualização registrada<b>' + (ultimaData ? esc(fmtDataHora(ultimaData)) : "—") + '</b></div>' +
     '</div>';
   }
 
