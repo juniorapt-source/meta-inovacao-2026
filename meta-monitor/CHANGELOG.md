@@ -1,5 +1,90 @@
 # Changelog
 
+## v0.20.0 — 2026-08-13
+"Correções v0.18.x" — typos/enums/capitalização + migração dos conjuntos restantes do
+Modo edição pro Supabase. (O prompt original citava "v0.19.0" pro bump — já usado pelo
+commit anterior, P13/histórico e auditoria — sequência real seguiu daqui, v0.20.0.)
+SQL gerado, **não executado** (mesma regra de sempre: só tenho a anon key, sem DDL).
+
+- **"Supapase" (item 1):** busca (`grep -rli`) não achou NENHUMA ocorrência no repositório
+  inteiro — o texto já estava "Supabase" em todo lugar. Nada corrigido aqui.
+- **Enums crus na Agenda (item 2):** `STATUS_ENC`/`ESTADOS_CEL`/`ROTULO_CEL` em
+  `editor.html` eram cópias soltas que ficaram pra trás da migração pra chaves canônicas
+  (P10/P6) — o `<select>` de status da Agenda mostrava a própria chave interna cortada
+  ("encontro_agen…"), e o mesmo padrão existia dormente no da Matriz (2 dos 9 estados
+  reais de `celula_matriz` faltando, sem uso nos dados de hoje). Corrigido derivando os
+  dois de `window.CC_STATUS` (fonte única) em vez de manter cópia própria — não pode
+  ficar defasado de novo. Efeito colateral bom: o *write path* do status da Agenda
+  também estava quebrado (salvava valores sem o prefixo `encontro_`, fora da taxonomia).
+- **"Agosto De 2026" (item 3):** causa raiz era `text-transform:capitalize` em
+  `.cal-titulo` (agenda.html), não a formatação em si — CSS maiúsculiza toda palavra,
+  inclusive "de". Corrigido como pedido: capitalização movida pra `js/calendario.js`
+  (só a inicial do mês), CSS removido.
+- **Migração do resto do Modo edição pro Supabase (item 4)** — `tools/sql/2026-08_migracao_modo_edicao.sql`
+  (novo) cria `meta_inovacao_pessoas`, `meta_inovacao_projetos`,
+  `meta_inovacao_urc_lideranca` e `meta_inovacao_urc_canais_responsaveis` (achatada — 1
+  linha por canal+responsável; os 8 canais continuam uma lista fixa no client,
+  `DB_URC.CANAIS_FIXOS`, não uma tabela). IDs: `bigint GENERATED ALWAYS AS IDENTITY`
+  (nenhuma das 4 listas de origem tinha id antes). RLS no padrão de
+  `tools/sql/PADRAO_TABELA.md`; triggers `cc_audit()` (P13) já inclusos nas 4 — não
+  pedido no prompt original, mas as 4 se qualificam pelo próprio critério documentado
+  ali, e deixar de fora criaria um período de tabela editável sem rastro de autor.
+  **Matriz de demandas continua a única exceção**: a edição de verdade já é Supabase
+  desde a v0.3.0, só que em `demandas.html` — o botão dela em `editor.html` virou
+  explicitamente um export/snapshot ("Exportar snapshot para data/matriz.js
+  (fallback)"), não mais rotulado como se fosse o fluxo de edição.
+  - `js/db-pessoas.js`, `js/db-projetos.js`, `js/db-urc.js` (novos) — mesmo padrão de
+    `js/db-plano.js`: `carregar()`/`salvar()`/`criar()`/`removerSoft()`, fallback pra
+    `window.DB.*`, trava de escrita em modo de teste. `js/db-urc.js` cobre liderança E
+    canais juntos (um depende do outro pro guardrail — ver item 4.4 abaixo) e expõe
+    `CANAIS_FIXOS` como fonte única da lista de 8 canais (antes duplicada em
+    `editor.html` e `participantes.html`).
+  - `editor.html` — pessoas/projetos/urc_lideranca/urc_canais viram CRUD ao vivo
+    (debounce/indicador salvando-salvo-falhou, mesmo padrão de plano/agenda);
+    "+ Adicionar responsável" (urc_canais, já existia) passa a gravar de verdade.
+    Subtítulo da página fixo agora ("tudo aqui é editado ao vivo…").
+  - **`participantes.html`/`projetos.html` (item 4.4)** — passam a ler via
+    `DB_PESSOAS`/`DB_PROJETOS`/`DB_URC` com fallback pros mesmos `data/*.js` de sempre;
+    zero mudança visual, só a fonte. **Guardrail de liderança-fora-de-canal**
+    (`tools/validar_dados.py`, até aqui só contra o arquivo local) agora tem DOIS
+    reforços contra a fonte Supabase: bloqueio no client (`DB_URC.salvarResponsavel`/
+    `criarResponsavel` recusam salvar um responsável cujo nome bate com algum da
+    liderança) e um teste de auditoria (`tools/testar_guardrail_urc_supabase.js`, novo)
+    que consulta a produção e falha (exit 1) se a violação aparecer lá.
+  - **`tools/testar_participantes_headless.js`, `tools/testar_projetos_headless.js`**
+    (novos, item 6 — não fazia parte do pedido original de "4", adicionado explicitamente
+    depois) — cobertura zero até aqui pras duas páginas; testam o caminho de fallback
+    (`?semrede=1`) determinístico.
+- **`tools/testar_iniciativas_cruzado.js`** (novo, item 4.5) — detecta, sem corrigir, a
+  divergência de contagem de iniciativas: 27 em `data/projetos.js` × 28 em
+  `corsario_status` (Supabase, fonte real do Corsário), com **"Salas do Empreendedor"**
+  como a única iniciativa a mais. Precisa de rede real (consulta o Supabase de
+  produção) — avisa e sai 0 se a rede falhar, não trava a suíte. Hipótese registrada por
+  quem pediu o teste — "Salas do Empreendedor" (plural) seria a mesma iniciativa que uma
+  "Sala do Empreendedor" (singular) já existente, nome divergente — **checada e NÃO
+  confirmada por este repositório**: busca por "sala.*empreendedor" (case-insensitive)
+  em `data/projetos.js`/`data/iniciativas.js`/`data/matriz.js` não achou nenhuma
+  ocorrência, singular ou plural, além da própria "Salas do Empreendedor" no Supabase.
+  Pode ser uma iniciativa nova/não rastreada localmente, não necessariamente um typo de
+  uma já existente — decisão de merge/criação fica pra quem for corrigir. Quando
+  corrigido, o teste deve ser promovido pra exit 1 (comentário no próprio arquivo).
+
+**Como ativar** (⚠️ decisão/execução do JR., não deste commit):
+  1. No SQL Editor do Supabase, rodar `tools/sql/2026-08_migracao_modo_edicao.sql`
+     (depois de plano/agenda/proteção de escrita/auditoria — assume que
+     `meta_inovacao_audit_log`/`cc_audit()` já existem, já que as 4 tabelas novas
+     ganham o trigger de auditoria nesta mesma leva).
+  2. O script já vem com o token de escrita ATUAL preenchido nas policies — não precisa
+     trocar nada antes de rodar.
+  3. Conferir as linhas de verificação no fim do script: 20 pessoas, 27 projetos, 3
+     liderança, 11 responsáveis de canal — e a query do guardrail (deve devolver 0
+     linhas; se devolver alguma, resolver ANTES de liberar a edição ao vivo).
+  4. Recarregar `editor.html`/`participantes.html`/`projetos.html` — sem nenhum passo de
+     código depois disso, os três já passam a ler/gravar no Supabase.
+  5. Rodar `node tools/testar_guardrail_urc_supabase.js` depois do passo 1 pra confirmar
+     que o guardrail está valendo contra a tabela de verdade (antes disso ele só avisa
+     que a tabela não existe e sai 0).
+
 ## v0.19.0 — 2026-08-13
 Prompt 13 do plano de melhorias (item 3.4, último da fila): histórico e auditoria —
 log de alterações no Supabase + identificação de quem edita + aba "Histórico" em

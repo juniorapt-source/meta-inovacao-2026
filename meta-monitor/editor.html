@@ -79,7 +79,7 @@
         <div class="ed-topo">
           <label for="ed-conjunto" style="font:600 13px 'DM Sans',sans-serif">Conjunto:</label>
           <select id="ed-conjunto" aria-label="Escolher conjunto de dados"></select>
-          <button id="ed-baixar" class="ed-btn">Gerar e baixar arquivo atualizado</button>
+          <button id="ed-baixar" class="ed-btn">Exportar snapshot para data/matriz.js (fallback)</button>
         </div>
         <div id="ed-area"></div>
         <textarea id="ed-saida" class="ed-saida" spellcheck="false" placeholder="O conteúdo do arquivo gerado aparece aqui para conferência."></textarea>
@@ -115,6 +115,9 @@
 <script src="js/supabase.js"></script>
 <script src="js/db-plano.js"></script>
 <script src="js/db-agenda.js"></script>
+<script src="js/db-pessoas.js"></script>
+<script src="js/db-projetos.js"></script>
+<script src="js/db-urc.js"></script>
 <script src="js/responsaveis.js"></script>
 <script src="js/editor_atual.js"></script>
 <script src="data/plano.js"></script>
@@ -138,33 +141,41 @@
 const DB = window.DB, IO = window.EDITOR_IO;
 montarShell("editor.html");
 
-// item 3.1 do plano de melhorias — plano e agenda saíram do modelo "editar cópia local +
-// baixar + trocar arquivo em data/" e viraram CRUD ao vivo no Supabase (mesmo padrão de
-// plano-acao.html/demandas.html): `vivo:true` marca os dois conjuntos que não passam mais
-// pelo botão "Gerar e baixar" nem pelo textarea de conferência — a gravação acontece linha
-// a linha, com indicador de salvando/salvo/falhou. Editor único: hoje só o JR. usa o Modo
-// edição, então não há rede de segurança de revisão pra esses dois conjuntos — igual já é
-// o caso de demandas.html desde a v0.3.0.
+// "Correções v0.18.x" — plano/agenda já eram vivo desde o P10; pessoas/projetos/
+// urc_lideranca/urc_canais entram agora na mesma leva. matriz continua a ÚNICA exceção
+// de propósito: a edição de verdade dela já é Supabase desde a v0.3.0, só que em
+// demandas.html, não aqui — o botão dela vira `snapshot:true` (exporta data/matriz.js
+// pra servir de fallback), não um flag de "ainda falta migrar".
 const CONJUNTOS = {
   plano:        { rotulo:"Plano de ação — status e prazos (editado ao vivo)", vivo:true },
-  matriz:       { rotulo:"Matriz de demandas — 27 iniciativas × 10 canais", arquivo:"matriz.js" },
+  matriz:       { rotulo:"Matriz de demandas — 27 iniciativas × 10 canais (edite em demandas.html)", snapshot:true, arquivo:"matriz.js" },
   agenda:       { rotulo:"Agenda — encontros dos ciclos (editada ao vivo)", vivo:true },
-  pessoas:      { rotulo:"Pessoas — representantes e papéis", arquivo:"pessoas.js" },
-  projetos:     { rotulo:"Projetos & Representantes — núcleos e portfólio UI", arquivo:"projetos.js" },
-  urc_lideranca:{ rotulo:"URC — Liderança", arquivo:"urc.js" },
-  urc_canais:   { rotulo:"URC — Responsáveis por canal", arquivo:"urc.js" }
+  pessoas:      { rotulo:"Pessoas — representantes e papéis (editado ao vivo)", vivo:true },
+  projetos:     { rotulo:"Projetos & Representantes — núcleos e portfólio UI (editado ao vivo)", vivo:true },
+  urc_lideranca:{ rotulo:"URC — Liderança (editado ao vivo)", vivo:true },
+  urc_canais:   { rotulo:"URC — Responsáveis por canal (editado ao vivo)", vivo:true }
 };
-const CANAIS_URC = ["CNR","Assessoria de Negócios","Portal","Loja","Marketing Cloud","Foco+","Rede própria e parceira","DXP"];
 const STATUS_ACAO = ["Não iniciado","Em andamento","Concluído"];
-const STATUS_ENC  = ["a agendar","agendado","confirmado","realizado","cancelado"];
-const ESTADOS_CEL = ["","previsto","oficina","formulario","justificado","priorizado","encaminhado"];
-const ROTULO_CEL  = {"":"—","previsto":"previsto","oficina":"oficina feita","formulario":"formulário ok","justificado":"justificado","priorizado":"priorizado","encaminhado":"encaminhado"};
 
-/* cópia de trabalho isolada dos dados carregados — plano e agenda NÃO entram aqui mais
-   (item 3.1): são CRUD ao vivo, cada linha grava direto no Supabase assim que muda, sem
-   cópia local intermediária pra depois baixar. */
-const W = JSON.parse(JSON.stringify({ matriz:DB.matriz, pessoas:DB.pessoas, projetos:DB.projetos,
-  urc_lideranca:DB.urc_lideranca, urc_canais:DB.urc_canais }));
+// correção — os valores abaixo eram vocabulário de antes da taxonomia única (P6/item
+// 2.4): STATUS_ENC tinha os rótulos crus de antes da migração de meta_inovacao_agenda_
+// encontros pras chaves canônicas "encontro_*" (P10) — o <select> da Agenda mostrava a
+// própria chave interna cortada ("encontro_agen…") porque nem o valor bate mais com o
+// que está gravado, nem havia rótulo (dropdown sem 3º argumento em opts()). Já
+// ESTADOS_CEL/ROTULO_CEL da Matriz tinham o mesmo tipo de defasagem, só que dormente
+// (nenhuma célula usa "oficina_confirmada"/"nao_aplica" nos dados de hoje — mas se
+// usasse, vazava cru do mesmo jeito). Corrigido derivando os dois de window.CC_STATUS
+// (fonte única), não mais uma cópia própria que pode ficar pra trás de novo.
+const STATUS_ENC  = Object.keys(CC_STATUS.ESTADOS).filter((k)=>CC_STATUS.ESTADOS[k].contexto==="encontro");
+const ROTULO_ENC  = Object.fromEntries(STATUS_ENC.map((k)=>[k, CC_STATUS.rotulo(k)]));
+const ESTADOS_CEL = ["", "previsto", "oficina_confirmada", "oficina", "formulario", "justificado", "nao_aplica", "priorizado", "encaminhado"]; // mesma lista de demandas.html (ORDEM)
+const ROTULO_CEL  = Object.fromEntries(ESTADOS_CEL.map((v)=>[v, CC_STATUS.rotulo(CC_STATUS.chaveDeEntrada("celula_matriz", v))]));
+
+/* cópia de trabalho isolada dos dados carregados — só sobra a matriz aqui ("Correções
+   v0.18.x": pessoas/projetos/urc_lideranca/urc_canais saem da cópia local + download,
+   plano/agenda já tinham saído no P10). Matriz é CRUD ao vivo em demandas.html; a cópia
+   aqui é só pra gerar o snapshot data/matriz.js (fallback), nunca pra editar de verdade. */
+const W = JSON.parse(JSON.stringify({ matriz:DB.matriz }));
 
 // item 3.4 do plano de melhorias — identificação de quem edita agora é o módulo
 // compartilhado window.EDITOR_ATUAL (js/editor_atual.js), com rodapé "Editando
@@ -175,6 +186,13 @@ const W = JSON.parse(JSON.stringify({ matriz:DB.matriz, pessoas:DB.pessoas, proj
 // seed local se o Supabase estiver fora do ar — mesma UI de aviso do resto do site).
 let planoAtual = null, planoFallback = false, planoCarregando = false;
 let agendaAtual = null, agendaFallback = false, agendaCarregando = false;
+let pessoasAtual = null, pessoasFallback = false, pessoasCarregando = false;
+let projetosAtual = null, projetosFallback = false, projetosCarregando = false;
+// URC: liderança e canais compartilham uma única carga (DB_URC.carregar() busca as duas
+// tabelas juntas) porque o guardrail de "responsável de canal não pode ter nome de
+// liderança" (item 4.4) precisa da lista de liderança carregada mesmo quando se está
+// editando só os canais.
+let urcAtual = null, urcFallback = false, urcCarregando = false;
 
 const sel = document.getElementById("ed-conjunto");
 Object.keys(CONJUNTOS).forEach(k=>{
@@ -412,7 +430,7 @@ async function renderAgenda(){
       '<td><input type="text" data-f="data" value="'+esc(en.data||"")+'" placeholder="AAAA-MM-DD"'+dis+'></td>'+
       '<td><input type="text" data-f="turno" value="'+esc(en.turno||"")+'" placeholder="manhã, tarde · 14h..."'+dis+'></td>'+
       '<td><input type="text" data-f="localModo" value="'+esc(en.localModo||"")+'" placeholder="ex.: Sede Sebrae · presencial"'+dis+'></td>'+
-      '<td><select data-f="status"'+dis+'>'+opts(STATUS_ENC,en.status)+'</select></td>'+
+      '<td><select data-f="status"'+dis+'>'+opts(STATUS_ENC,en.status,ROTULO_ENC)+'</select></td>'+
       '<td><input type="text" data-f="confirmacoes" value="'+esc(en.confirmacoes||"")+'" placeholder="3/5"'+dis+'></td>'+
       '<td><input type="text" data-f="nota" value="'+esc(en.nota||"")+'"'+dis+'></td>'+
       '<td><span class="ed-row-status" aria-live="polite"></span></td></tr>';
@@ -437,118 +455,251 @@ async function renderAgenda(){
   }));
 }
 
-function renderPessoas(){
-  let h='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Nome</th><th>Papel</th><th style="width:110px">Grupo</th><th style="width:90px">Pendente</th></tr></thead><tbody>';
-  W.pessoas.forEach((p,i)=>{
-    h+='<tr><td><input type="text" data-i="'+i+'" data-f="nome" value="'+esc(p.nome)+'"></td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="papel" value="'+esc(p.papel||"")+'"></td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="grupo" value="'+esc(p.grupo||"")+'"></td>'+
-      '<td style="text-align:center"><input type="checkbox" data-i="'+i+'" data-f="pendente"'+(p.pendente?" checked":"")+'></td></tr>';
+// aviso de fallback padrão (mesmo texto/estrutura de renderPlano/renderAgenda) — só
+// muda o nome do arquivo de seed citado.
+function avisoFallback(nomeArquivo){
+  return '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não consegui falar com o Supabase agora; isto é a última cópia local ('+nomeArquivo+'). '+
+    'Edições aqui não vão ser salvas até a rede voltar — recarregue a página depois.</div>';
+}
+
+async function renderPessoas(){
+  if(!pessoasAtual && !pessoasCarregando){
+    pessoasCarregando = true;
+    area.innerHTML = '<div class="ed-carregando">Carregando pessoas do Supabase…</div>';
+    try {
+      const { lista, usandoFallback } = await DB_PESSOAS.carregar();
+      pessoasAtual = lista; pessoasFallback = usandoFallback;
+    } catch(err){
+      console.error("editor: falha ao carregar pessoas", err);
+      pessoasCarregando = false;
+      area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar pessoas do Supabase — '+esc((err&&err.message)||String(err))+'.</div>';
+      return;
+    }
+    pessoasCarregando = false;
+  }
+  if(sel.value!=="pessoas") return;
+  const lista = pessoasAtual || [];
+  const dis = pessoasFallback ? " disabled" : "";
+  let h = pessoasFallback ? avisoFallback("data/pessoas.js") : "";
+  h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Nome</th><th>Papel</th><th style="width:110px">Grupo</th><th style="width:150px">Núcleo</th><th style="width:90px">Pendente</th><th style="width:70px"></th></tr></thead><tbody>';
+  lista.forEach((p)=>{
+    h+='<tr data-id="'+esc(String(p.db_id))+'">'+
+      '<td><input type="text" data-f="nome" value="'+esc(p.nome)+'"'+dis+'></td>'+
+      '<td><input type="text" data-f="papel" value="'+esc(p.papel||"")+'"'+dis+'></td>'+
+      '<td><input type="text" data-f="grupo" value="'+esc(p.grupo||"")+'"'+dis+'></td>'+
+      '<td><input type="text" data-f="nucleo" value="'+esc(p.nucleo||"")+'"'+dis+'></td>'+
+      '<td style="text-align:center"><input type="checkbox" data-f="pendente"'+(p.pendente?" checked":"")+dis+'></td>'+
+      '<td><span class="ed-row-status" aria-live="polite"></span></td></tr>';
   });
   area.innerHTML=h+'</tbody></table></div>';
-  area.querySelectorAll("input").forEach(el=>el.addEventListener("change",e=>{
-    const t=e.target, p=W.pessoas[+t.dataset.i], f=t.dataset.f;
-    if(f==="pendente"){ if(t.checked) p.pendente=true; else delete p.pendente; }
-    else p[f]=t.value;
+
+  area.querySelectorAll("tbody input[data-f]").forEach(el=>el.addEventListener("change",async e=>{
+    const t=e.target, tr=t.closest("tr"), id=tr.dataset.id, campo=t.dataset.f;
+    const valor = campo==="pendente" ? t.checked : t.value;
+    const p = lista.find(x=>String(x.db_id)===id);
+    if(p) p[campo]=valor;
+    marcarLinhaStatus(tr,"salvando");
+    try {
+      await DB_PESSOAS.salvar(p.db_id, { [campo]: valor }, EDITOR_ATUAL.nomeAtual());
+      marcarLinhaStatus(tr,"salvo");
+    } catch(err){
+      console.error("editor: falha ao salvar pessoa",err);
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+    }
   }));
 }
 
-function renderProjetos(){
-  let h='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Núcleo</th><th>Iniciativa</th><th>Representantes (vírgula)</th></tr></thead><tbody>';
-  W.projetos.forEach((p,i)=>{
-    h+='<tr><td><select data-i="'+i+'" data-f="nucleo">'+opts(NUCLEOS_VALIDOS,p.nucleo)+'</select></td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="iniciativa" value="'+esc(p.iniciativa)+'"></td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="representantes" value="'+esc(p.representantes.join(", "))+'" placeholder="ex.: Carol, Matheus"></td></tr>';
+async function renderProjetos(){
+  if(!projetosAtual && !projetosCarregando){
+    projetosCarregando = true;
+    area.innerHTML = '<div class="ed-carregando">Carregando projetos do Supabase…</div>';
+    try {
+      const { lista, usandoFallback } = await DB_PROJETOS.carregar();
+      projetosAtual = lista; projetosFallback = usandoFallback;
+    } catch(err){
+      console.error("editor: falha ao carregar projetos", err);
+      projetosCarregando = false;
+      area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar projetos do Supabase — '+esc((err&&err.message)||String(err))+'.</div>';
+      return;
+    }
+    projetosCarregando = false;
+  }
+  if(sel.value!=="projetos") return;
+  const lista = projetosAtual || [];
+  const dis = projetosFallback ? " disabled" : "";
+  let h = projetosFallback ? avisoFallback("data/projetos.js") : "";
+  h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Núcleo</th><th>Iniciativa</th><th>Representantes (vírgula)</th><th style="width:70px"></th></tr></thead><tbody>';
+  lista.forEach((p)=>{
+    h+='<tr data-id="'+esc(String(p.db_id))+'">'+
+      '<td><select data-f="nucleo"'+dis+'>'+opts(NUCLEOS_VALIDOS,p.nucleo)+'</select></td>'+
+      '<td><input type="text" data-f="iniciativa" value="'+esc(p.iniciativa)+'"'+dis+'></td>'+
+      '<td><input type="text" data-f="representantes" value="'+esc(p.representantes.join(", "))+'" placeholder="ex.: Carol, Matheus"'+dis+'></td>'+
+      '<td><span class="ed-row-status" aria-live="polite"></span></td></tr>';
   });
   area.innerHTML=h+'</tbody></table></div>';
-  area.querySelectorAll("select,input").forEach(el=>el.addEventListener("change",e=>{
-    const t=e.target, p=W.projetos[+t.dataset.i], f=t.dataset.f;
-    if(f==="representantes") p.representantes = t.value.split(",").map(s=>s.trim()).filter(Boolean);
-    else p[f]=t.value;
+
+  area.querySelectorAll("tbody select[data-f],tbody input[data-f]").forEach(el=>el.addEventListener("change",async e=>{
+    const t=e.target, tr=t.closest("tr"), id=tr.dataset.id, campo=t.dataset.f;
+    const valor = campo==="representantes" ? t.value.split(",").map(s=>s.trim()).filter(Boolean) : t.value;
+    const p = lista.find(x=>String(x.db_id)===id);
+    if(p) p[campo]=valor;
+    marcarLinhaStatus(tr,"salvando");
+    try {
+      await DB_PROJETOS.salvar(p.db_id, { [campo]: valor }, EDITOR_ATUAL.nomeAtual());
+      marcarLinhaStatus(tr,"salvo");
+    } catch(err){
+      console.error("editor: falha ao salvar projeto",err);
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+    }
   }));
 }
 
-function renderUrcLideranca(){
-  let h='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Nome</th><th>Papel</th><th style="width:220px">Email (opcional)</th></tr></thead><tbody>';
-  W.urc_lideranca.forEach((p,i)=>{
-    h+='<tr><td><input type="text" data-i="'+i+'" data-f="nome" value="'+esc(p.nome)+'"></td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="papel" value="'+esc(p.papel||"")+'"></td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="email" value="'+esc(p.email||"")+'" placeholder="nome@sebrae.com.br"></td></tr>';
+// URC — liderança e canais compartilham uma carga (DB_URC.carregar()); ver comentário
+// na declaração de urcAtual, mais acima.
+async function garantirUrcCarregada(){
+  if(urcAtual || urcCarregando) return true;
+  urcCarregando = true;
+  try {
+    const r = await DB_URC.carregar();
+    urcAtual = r; urcFallback = r.usandoFallback;
+    return true;
+  } catch(err){
+    console.error("editor: falha ao carregar URC", err);
+    return false;
+  } finally {
+    urcCarregando = false;
+  }
+}
+
+async function renderUrcLideranca(){
+  if(!urcAtual && !urcCarregando){
+    area.innerHTML = '<div class="ed-carregando">Carregando URC do Supabase…</div>';
+    const ok = await garantirUrcCarregada();
+    if(!ok){ area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar a URC do Supabase.</div>'; return; }
+  }
+  if(sel.value!=="urc_lideranca") return;
+  const lista = urcAtual.lideranca;
+  const dis = urcFallback ? " disabled" : "";
+  let h = urcFallback ? avisoFallback("data/urc.js") : "";
+  h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Nome</th><th>Papel</th><th style="width:220px">Email (opcional)</th><th style="width:70px"></th></tr></thead><tbody>';
+  lista.forEach((p)=>{
+    h+='<tr data-id="'+esc(String(p.db_id))+'">'+
+      '<td><input type="text" data-f="nome" value="'+esc(p.nome)+'"'+dis+'></td>'+
+      '<td><input type="text" data-f="papel" value="'+esc(p.papel||"")+'"'+dis+'></td>'+
+      '<td><input type="text" data-f="email" value="'+esc(p.email||"")+'" placeholder="nome@sebrae.com.br"'+dis+'></td>'+
+      '<td><span class="ed-row-status" aria-live="polite"></span></td></tr>';
   });
   area.innerHTML=h+'</tbody></table></div>';
-  area.querySelectorAll("input").forEach(el=>el.addEventListener("change",e=>{
-    const t=e.target, p=W.urc_lideranca[+t.dataset.i], f=t.dataset.f;
-    p[f] = (f==="email" && t.value.trim()==="") ? null : t.value;
+
+  area.querySelectorAll("tbody input[data-f]").forEach(el=>el.addEventListener("change",async e=>{
+    const t=e.target, tr=t.closest("tr"), id=tr.dataset.id, campo=t.dataset.f;
+    const valor = campo==="email" && t.value.trim()==="" ? null : t.value;
+    const p = lista.find(x=>String(x.db_id)===id);
+    if(p) p[campo]=valor;
+    marcarLinhaStatus(tr,"salvando");
+    try {
+      await DB_URC.salvarLideranca(p.db_id, { [campo]: valor }, EDITOR_ATUAL.nomeAtual());
+      marcarLinhaStatus(tr,"salvo");
+    } catch(err){
+      console.error("editor: falha ao salvar liderança da URC",err);
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+    }
   }));
 }
 
-/* urc_canais é editado como lista achatada de responsáveis (1 linha por pessoa, com um
-   dropdown de canal), depois regravada de volta na forma canônica agrupada por canal. */
-let urcCanaisLinhas = null;
-function achatarUrcCanais(){
-  const linhas = [];
-  CANAIS_URC.forEach(canal=>{
-    const bloco = W.urc_canais.find(c=>c.canal===canal) || { canal, responsaveis:[] };
-    (bloco.responsaveis||[]).forEach(r=> linhas.push({ canal, nome:r.nome, email:r.email||null }));
-  });
-  return linhas;
-}
-function regravarUrcCanais(linhas){
-  W.urc_canais = CANAIS_URC.map(canal=>({
-    canal,
-    responsaveis: linhas.filter(l=>l.canal===canal).map(l=>({ nome:l.nome, email:l.email||null }))
-  }));
-}
-
-function renderUrcCanais(){
-  if(!urcCanaisLinhas) urcCanaisLinhas = achatarUrcCanais();
-  let h='<div class="ed-topo" style="margin-bottom:12px"><button type="button" id="ed-add-resp" class="ed-btn">+ Adicionar responsável</button></div>';
-  h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:200px">Canal</th><th>Nome *</th><th style="width:220px">Email (opcional)</th><th style="width:36px"></th></tr></thead><tbody>';
-  urcCanaisLinhas.forEach((l,i)=>{
-    h+='<tr><td><select data-i="'+i+'" data-f="canal">'+opts(CANAIS_URC,l.canal)+'</select></td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="nome" value="'+esc(l.nome)+'"></td>'+
-      '<td><input type="text" data-i="'+i+'" data-f="email" value="'+esc(l.email||"")+'" placeholder="nome@sebrae.com.br"></td>'+
-      '<td><button type="button" class="ed-btn sec" data-del="'+i+'" style="padding:4px 8px" title="Remover">×</button></td></tr>';
+async function renderUrcCanais(){
+  if(!urcAtual && !urcCarregando){
+    area.innerHTML = '<div class="ed-carregando">Carregando URC do Supabase…</div>';
+    const ok = await garantirUrcCarregada();
+    if(!ok){ area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar a URC do Supabase.</div>'; return; }
+  }
+  if(sel.value!=="urc_canais") return;
+  const linhas = urcAtual.canaisFlat;
+  const dis = urcFallback ? " disabled" : "";
+  let h = urcFallback ? avisoFallback("data/urc.js") : "";
+  h+='<div class="ed-topo" style="margin-bottom:12px"><button type="button" id="ed-add-resp" class="ed-btn"'+dis+'>+ Adicionar responsável</button></div>';
+  h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:200px">Canal</th><th>Nome *</th><th style="width:220px">Email (opcional)</th><th style="width:70px"></th><th style="width:36px"></th></tr></thead><tbody>';
+  linhas.forEach((l)=>{
+    h+='<tr data-id="'+esc(String(l.db_id))+'">'+
+      '<td><select data-f="canal"'+dis+'>'+opts(DB_URC.CANAIS_FIXOS,l.canal)+'</select></td>'+
+      '<td><input type="text" data-f="nome" value="'+esc(l.nome)+'"'+dis+'></td>'+
+      '<td><input type="text" data-f="email" value="'+esc(l.email||"")+'" placeholder="nome@sebrae.com.br"'+dis+'></td>'+
+      '<td><span class="ed-row-status" aria-live="polite"></span></td>'+
+      '<td><button type="button" class="ed-btn sec" data-del="'+esc(String(l.db_id))+'" style="padding:4px 8px"'+dis+' title="Remover">×</button></td></tr>';
   });
   area.innerHTML=h+'</tbody></table></div>';
-  area.querySelectorAll("select,input").forEach(el=>el.addEventListener("change",e=>{
-    const t=e.target, l=urcCanaisLinhas[+t.dataset.i], f=t.dataset.f;
-    l[f] = (f==="email" && t.value.trim()==="") ? null : t.value;
-    regravarUrcCanais(urcCanaisLinhas);
+
+  // guardrail (item 4.4, tools/validar_dados.py replicado aqui): DB_URC.salvarResponsavel/
+  // criarResponsavel recebem a lista de liderança e recusam (throw) se o nome bater com
+  // algum líder — a mensagem de erro do próprio módulo já é amigável o bastante pra
+  // mostrar direto no indicador da linha, sem precisar traduzir aqui.
+  area.querySelectorAll("tbody select[data-f],tbody input[data-f]").forEach(el=>el.addEventListener("change",async e=>{
+    const t=e.target, tr=t.closest("tr"), id=tr.dataset.id, campo=t.dataset.f;
+    const valor = campo==="email" && t.value.trim()==="" ? null : t.value;
+    const linha = linhas.find(x=>String(x.db_id)===id);
+    if(linha) linha[campo]=valor;
+    marcarLinhaStatus(tr,"salvando");
+    try {
+      await DB_URC.salvarResponsavel(linha.db_id, { [campo]: valor }, EDITOR_ATUAL.nomeAtual(), urcAtual.lideranca);
+      marcarLinhaStatus(tr,"salvo");
+    } catch(err){
+      console.error("editor: falha ao salvar responsável de canal",err);
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || (err&&err.message) || "falhou");
+    }
   }));
-  area.querySelectorAll("[data-del]").forEach(btn=>btn.addEventListener("click",e=>{
-    urcCanaisLinhas.splice(+e.target.dataset.del,1);
-    regravarUrcCanais(urcCanaisLinhas);
-    renderUrcCanais();
+  area.querySelectorAll("[data-del]").forEach(btn=>btn.addEventListener("click",async e=>{
+    const id = e.target.dataset.del;
+    if(!window.confirm("Remover este responsável?")) return;
+    try {
+      await DB_URC.removerResponsavelSoft(id, EDITOR_ATUAL.nomeAtual());
+      urcAtual.canaisFlat = urcAtual.canaisFlat.filter(x=>String(x.db_id)!==id);
+      renderUrcCanais();
+    } catch(err){
+      console.error("editor: falha ao remover responsável",err);
+      window.alert((window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || (err&&err.message) || "Não consegui remover.");
+    }
   }));
-  document.getElementById("ed-add-resp").addEventListener("click",()=>{
-    urcCanaisLinhas.push({ canal:CANAIS_URC[0], nome:"", email:null });
-    regravarUrcCanais(urcCanaisLinhas);
-    renderUrcCanais();
+  const btnAdd = document.getElementById("ed-add-resp");
+  if(btnAdd) btnAdd.addEventListener("click",async ()=>{
+    const nome = (window.prompt("Nome do novo responsável:") || "").trim();
+    if(!nome) return;
+    try {
+      const nova = await DB_URC.criarResponsavel({ canal: DB_URC.CANAIS_FIXOS[0], nome: nome, email: null, ordem: 1 }, EDITOR_ATUAL.nomeAtual(), urcAtual.lideranca);
+      urcAtual.canaisFlat.push(nova);
+      renderUrcCanais();
+    } catch(err){
+      console.error("editor: falha ao criar responsável",err);
+      window.alert((window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || (err&&err.message) || "Não consegui criar.");
+    }
   });
 }
 
 const btnBaixar = document.getElementById("ed-baixar");
 const passosEl = document.getElementById("ed-passos");
 const subEl = document.getElementById("ed-sub");
-const PASSOS_DOWNLOAD = '<strong>Como publicar a mudança</strong><br>'+
-  '1. Baixe o arquivo gerado e substitua o de mesmo nome em <code>data/</code>.<br>'+
-  '2. Valide: <code>python3 tools/validar_dados.py</code>.<br>'+
-  '3. Publique: <code>git add data/ &amp;&amp; git commit -m "atualiza dados" &amp;&amp; git push</code> — o Vercel redistribui sozinho.';
 const PASSOS_VIVO = '<strong>Este conjunto é editado ao vivo</strong><br>'+
   'Cada campo grava direto no Supabase assim que você sai dele (igual a demandas.html) — não '+
   'precisa baixar nem publicar nada. O indicador ao lado de cada linha mostra "salvando…", '+
-  '"salvo" ou o motivo se falhar. <code>data/plano.js</code>/<code>data/agenda.js</code> continuam '+
+  '"salvo" ou o motivo se falhar. Os arquivos <code>data/*.js</code> correspondentes continuam '+
   'no repositório só como seed/fallback pra quando o Supabase estiver fora do ar.';
+// "Correções v0.18.x" — matriz é a ÚNICA exceção: o botão aqui não é "como editar", é
+// um export/snapshot (a edição de verdade é em demandas.html, já Supabase desde a v0.3.0).
+const PASSOS_SNAPSHOT = '<strong>Isto é um snapshot, não o fluxo de edição</strong><br>'+
+  'A Matriz de demandas é editada ao vivo em <code>demandas.html</code> — o que este botão gera é só uma '+
+  'cópia pra atualizar <code>data/matriz.js</code>, o arquivo de fallback usado quando o Supabase está fora '+
+  'do ar. Pra editar a matriz de verdade, use <a href="demandas.html">demandas.html</a>.<br>'+
+  '1. Baixe o arquivo e substitua <code>data/matriz.js</code>.<br>'+
+  '2. Valide: <code>python3 tools/validar_dados.py</code>.<br>'+
+  '3. Publique: <code>git add data/matriz.js &amp;&amp; git commit -m "atualiza snapshot da matriz" &amp;&amp; git push</code>.';
+const SUBTITULO_FIXO = "Modo edição: tudo aqui é editado ao vivo no Supabase — muda na hora que você sai do campo, sem baixar arquivo nem publicar nada. A Matriz de demandas é a única exceção de fluxo: a edição de verdade acontece em demandas.html, aqui só dá pra gerar um snapshot de fallback.";
+subEl.textContent = SUBTITULO_FIXO;
 
 function atualizarChromeVivo(){
-  const vivo = !!(CONJUNTOS[sel.value] && CONJUNTOS[sel.value].vivo);
+  const conj = CONJUNTOS[sel.value];
+  const vivo = !!(conj && conj.vivo);
   btnBaixar.style.display = vivo ? "none" : "";
   saida.style.display = vivo ? "none" : "";
-  passosEl.innerHTML = vivo ? PASSOS_VIVO : PASSOS_DOWNLOAD;
-  subEl.textContent = vivo
-    ? "Plano de ação e Agenda são editados ao vivo (Supabase) — o resto ainda é editar, baixar e substituir o arquivo em data/."
-    : "Edite abaixo, gere o arquivo atualizado e substitua o correspondente na pasta data/ do repositório. Nada é salvo automaticamente nesta página.";
+  passosEl.innerHTML = vivo ? PASSOS_VIVO : PASSOS_SNAPSHOT;
 }
 
 function render(){
@@ -562,28 +713,10 @@ render();
 
 btnBaixar.addEventListener("click", function(){
   const k = sel.value;
-  if (CONJUNTOS[k].vivo) return; // plano/agenda não passam por aqui — botão fica escondido, isto é só rede de segurança
-  let conteudo, nomeArquivo;
-
-  if (k === "urc_lideranca" || k === "urc_canais") {
-    // os dois conjuntos moram no mesmo arquivo — validar e regravar urc.js inteiro,
-    // pra não perder o bloco que não está selecionado no momento
-    for (const p of W.urc_lideranca) {
-      if (!p.nome || !p.nome.trim()) { alert("Toda liderança precisa de nome."); return; }
-      if (p.email && !p.email.includes("@")) { alert("Email inválido em " + p.nome + "."); return; }
-    }
-    for (const c of W.urc_canais) {
-      for (const r of c.responsaveis) {
-        if (!r.nome || !r.nome.trim()) { alert("Todo responsável precisa de nome (canal " + c.canal + ")."); return; }
-        if (r.email && !r.email.includes("@")) { alert("Email inválido em " + r.nome + " (canal " + c.canal + ")."); return; }
-      }
-    }
-    conteudo = IO.serializarMulti([["urc_lideranca", W.urc_lideranca], ["urc_canais", W.urc_canais]]);
-    nomeArquivo = "urc.js";
-  } else {
-    conteudo = IO.serializar(k, W[k]);
-    nomeArquivo = CONJUNTOS[k].arquivo;
-  }
+  if (CONJUNTOS[k].vivo) return; // conjuntos vivos não passam por aqui — botão fica escondido, isto é só rede de segurança
+  // só "matriz" chega aqui agora — snapshot/export, não fluxo de edição (ver PASSOS_SNAPSHOT acima)
+  const conteudo = IO.serializar(k, W[k]);
+  const nomeArquivo = CONJUNTOS[k].arquivo;
 
   saida.value = conteudo;
   const blob = new Blob([conteudo], {type:"text/javascript;charset=utf-8"});

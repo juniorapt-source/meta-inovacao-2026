@@ -28,6 +28,7 @@
   <main class="conteudo">
     <h1 class="pagina-titulo">Projetos & Representantes</h1>
     <p class="pagina-sub">27 iniciativas do portfólio da UI, organizadas por núcleo, com os representantes indicados.</p>
+    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não consegui falar com o Supabase agora; mostrando a última cópia local (<span class="mono">data/projetos.js</span>).</p>
 
     <div class="filtros">
       <select id="f-nucleo" aria-label="Filtrar por núcleo"></select>
@@ -43,6 +44,7 @@
 <script src="js/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
+<script src="js/db-projetos.js"></script>
 <script src="data/projetos.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
@@ -55,13 +57,19 @@
 <script src="js/busca.js"></script>
 <script src="js/drawer.js"></script>
 <script>
-(function(){
+(async function(){
+  "use strict";
   montarShell("projetos.html");
+
+  // "Correções v0.18.x" — projetos agora vem do Supabase (meta_inovacao_projetos), com
+  // data/projetos.js como seed/fallback se a rede falhar (mesmo padrão do P10).
+  const { lista: projetos, usandoFallback } = await DB_PROJETOS.carregar();
+  if (usandoFallback) document.getElementById("aviso-fallback").hidden = false;
 
   const selN = document.getElementById("f-nucleo"), busca = document.getElementById("f-busca"),
         secoes = document.getElementById("secoes");
 
-  const nucleos = [...new Set(DB.projetos.map(p => p.nucleo))];
+  const nucleos = [...new Set(projetos.map(p => p.nucleo))];
   selN.innerHTML = '<option value="">Todos os núcleos</option>' + nucleos.map(n => "<option>" + esc(n) + "</option>").join("");
 
   // pessoas distintas por núcleo, considerando TODAS as iniciativas do núcleo (não só as que
@@ -70,7 +78,7 @@
   const PLACEHOLDER_RE = /^núcleo de/i;
   const pessoasPorNucleo = new Map(nucleos.map(n => {
     const distintos = new Set();
-    DB.projetos.filter(p => p.nucleo === n).forEach(p => p.representantes.forEach(r => {
+    projetos.filter(p => p.nucleo === n).forEach(p => p.representantes.forEach(r => {
       const nome = r.trim();
       if (nome && !PLACEHOLDER_RE.test(nome)) distintos.add(nome);
     }));
@@ -89,7 +97,7 @@
 
     for (const nucleo of nucleos) {
       if (nv && nucleo !== nv) continue;
-      const itens = DB.projetos.filter(p => p.nucleo === nucleo).filter(p =>
+      const itens = projetos.filter(p => p.nucleo === nucleo).filter(p =>
         !q || (p.iniciativa + " " + p.representantes.join(" ")).toLowerCase().includes(q)
       );
       if (!itens.length) continue;
@@ -109,7 +117,7 @@
     }
 
     secoes.innerHTML = html || '<div class="card" style="color:var(--grafite)">Nenhum projeto com esses filtros.</div>';
-    document.getElementById("contagem").textContent = visTotal + " de " + DB.projetos.length + " iniciativas exibidas.";
+    document.getElementById("contagem").textContent = visTotal + " de " + projetos.length + " iniciativas exibidas.";
   }
 
   selN.addEventListener("change", render);

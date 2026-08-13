@@ -16,6 +16,7 @@
   <main class="conteudo">
     <h1 class="pagina-titulo">Participantes</h1>
     <p class="pagina-sub">Quem sustenta o plano: guardiões, Comitê, URC e representantes dos núcleos. Compromisso do e-mail: todos os coordenadores em pelo menos uma apresentação por canal; representantes do Comitê em todas.</p>
+    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não consegui falar com o Supabase agora; mostrando a última cópia local (<span class="mono">data/pessoas.js</span>/<span class="mono">data/urc.js</span>).</p>
 
     <div id="pendencias"></div>
     <div class="grid" style="grid-template-columns:1fr 1fr" id="pessoas"></div>
@@ -26,6 +27,8 @@
 <script src="js/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
+<script src="js/db-pessoas.js"></script>
+<script src="js/db-urc.js"></script>
 <script src="data/pessoas.js"></script>
 <script src="data/urc.js"></script>
 <script src="data/plano.js"></script>
@@ -39,9 +42,23 @@
 <script src="js/busca.js"></script>
 <script src="js/drawer.js"></script>
 <script>
-(function(){
+(async function(){
+  "use strict";
   montarShell("participantes.html");
-  const pend = DB.pessoas.filter(p => p.pendente);
+
+  // "Correções v0.18.x" — pessoas e URC (liderança/canais) agora vêm do Supabase
+  // (meta_inovacao_pessoas/meta_inovacao_urc_lideranca/meta_inovacao_urc_canais_responsaveis),
+  // com data/pessoas.js e data/urc.js como seed/fallback se a rede falhar (mesmo padrão
+  // de DB_PLANO/DB_AGENDA do P10). DB_URC.carregar() já devolve `canais` na forma
+  // canônica agrupada de sempre (mesmo formato de window.DB.urc_canais) — nada muda na
+  // renderização abaixo além de onde os dados vêm.
+  const [{ lista: pessoas, usandoFallback: fbPessoas }, urc] = await Promise.all([
+    DB_PESSOAS.carregar(),
+    DB_URC.carregar(),
+  ]);
+  if (fbPessoas || urc.usandoFallback) document.getElementById("aviso-fallback").hidden = false;
+
+  const pend = pessoas.filter(p => p.pendente);
   document.getElementById("pendencias").innerHTML = pend.length
     ? '<div class="aviso" style="margin-bottom:14px"><b>' + pend.length + ' indicação(ões) pendente(s) — CAN-05.</b> ' +
       'Fallback do Nó 2 já aprovado: sem indicação do núcleo, o gestor da iniciativa é o representante. Atualize no Modo edição quando os nomes saírem.</div>'
@@ -53,18 +70,18 @@
      inline ao lado do nome agora, não mais como linha separada) */
   const SEM_DESCRICAO = new Set(["Comitê", "UI", "Núcleos"]);
 
-  // núcleo por pessoa, puxado da mesma fonte que já popula os participantes (data/pessoas.js,
+  // núcleo por pessoa, puxado da mesma fonte que já popula os participantes (pessoas,
   // grupo "Núcleos") — casamento por nome exato; sem match não escreve nada (o painel não inventa dado)
-  const nucleoPorNome = new Map(DB.pessoas.filter(p => p.grupo === "Núcleos").map(p => [p.nome, p.nucleo]));
+  const nucleoPorNome = new Map(pessoas.filter(p => p.grupo === "Núcleos").map(p => [p.nome, p.nucleo]));
   function sufixoNucleo(nome) {
     const n = nucleoPorNome.get(nome);
     return n ? " — " + esc(n) : "";
   }
 
-  const grupos = [...new Set(DB.pessoas.map(p => p.grupo))];
+  const grupos = [...new Set(pessoas.map(p => p.grupo))];
   const blocos = grupos.map(g =>
     '<section class="card"><h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin-bottom:8px">' + esc(TITULO_GRUPO[g] || g) + "</h3>" +
-    DB.pessoas.filter(p => p.grupo === g).map(p => {
+    pessoas.filter(p => p.grupo === g).map(p => {
       const desc = SEM_DESCRICAO.has(g) ? "" : (p.papel || "");
       return '<div style="padding:7px 0;border-bottom:1px solid var(--linha)">' +
         "<b>" + DRAWER.spanPessoa(p.nome) + "</b>" + sufixoNucleo(p.nome) + (p.pendente ? ' <span class="chip st-atrasada">pendente</span>' : "") +
@@ -72,10 +89,10 @@
     }).join("") +
     "</section>");
 
-  // card da URC — liderança (transversal) + responsáveis por canal, ambos vindos de data/urc.js
+  // card da URC — liderança (transversal) + responsáveis por canal
   function renderUrc() {
-    const lid = DB.urc_lideranca || [];
-    const canais = DB.urc_canais || [];
+    const lid = urc.lideranca || [];
+    const canais = urc.canais || [];
 
     let h = '<section class="card"><h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin-bottom:8px">URC</h3>';
     h += lid.map(p =>

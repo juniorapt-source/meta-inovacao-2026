@@ -1,9 +1,12 @@
-/* Gera os blocos de INSERT (seed) pros scripts SQL de tools/sql/2026-08_plano.sql e
- * tools/sql/2026-08_agenda.sql, a partir dos dados atuais de data/plano.js e
- * data/agenda.js (+ data/canais.js pra pauta_resumo). Não escreve nada sozinho — só
- * imprime os dois blocos no stdout, pra colar dentro dos arquivos .sql (mantém o SQL
- * revisável por humano em vez de 100% gerado às cegas). Reroda quando os dados de
- * origem mudarem antes da migração de verdade acontecer.
+/* Gera os blocos de INSERT (seed) pros scripts SQL de migração, a partir dos dados
+ * atuais de data/*.js. Não escreve nada sozinho — só imprime os blocos no stdout, pra
+ * colar dentro dos arquivos .sql (mantém o SQL revisável por humano em vez de 100%
+ * gerado às cegas). Reroda quando os dados de origem mudarem antes da migração de
+ * verdade acontecer.
+ *
+ * Cobre: meta_inovacao_plano_acoes/agenda_encontros (P10, tools/sql/2026-08_plano.sql/
+ * 2026-08_agenda.sql) e, a partir da rodada "Correções v0.18.x", meta_inovacao_pessoas/
+ * projetos/urc_lideranca/urc_canais_responsaveis (tools/sql/2026-08_migracao_modo_edicao.sql).
  *
  * Uso: node tools/gerar_seed_supabase.js
  */
@@ -12,6 +15,9 @@ global.window = global;
 require("../data/plano.js");
 require("../data/agenda.js");
 require("../data/canais.js");
+require("../data/pessoas.js");
+require("../data/projetos.js");
+require("../data/urc.js");
 const CC_STATUS = require("../js/status.js");
 
 function sqlStr(v) {
@@ -27,6 +33,9 @@ function sqlInt(v) {
 }
 function sqlDate(v) {
   return v == null ? "NULL" : sqlStr(v);
+}
+function sqlBool(v) {
+  return v ? "true" : "false";
 }
 
 // ---- PLANO ----
@@ -86,3 +95,57 @@ console.log("INSERT INTO public.meta_inovacao_agenda_encontros");
 console.log("  (ciclo, canal, sessao, pauta_resumo, data_iso, turno, local_modo, confirmacoes, status, observacao)");
 console.log("VALUES");
 console.log(agendaRows.join(",\n") + ";");
+
+// ---- PESSOAS ----
+const pessoasRows = window.DB.pessoas.map((p, i) => {
+  return "  (" + [
+    sqlStr(p.nome), sqlStr(p.papel), sqlStr(p.grupo), sqlStr(p.nucleo),
+    sqlBool(p.pendente), sqlInt(i + 1),
+  ].join(", ") + ")";
+});
+console.log("-- ===== SEED: meta_inovacao_pessoas (" + pessoasRows.length + " linhas) =====");
+console.log("INSERT INTO public.meta_inovacao_pessoas");
+console.log("  (nome, papel, grupo, nucleo, pendente, ordem)");
+console.log("VALUES");
+console.log(pessoasRows.join(",\n") + ";");
+console.log();
+
+// ---- PROJETOS ----
+const projetosRows = window.DB.projetos.map((p, i) => {
+  return "  (" + [
+    sqlStr(p.nucleo), sqlStr(p.iniciativa), sqlArr(p.representantes), sqlInt(i + 1),
+  ].join(", ") + ")";
+});
+console.log("-- ===== SEED: meta_inovacao_projetos (" + projetosRows.length + " linhas) =====");
+console.log("INSERT INTO public.meta_inovacao_projetos");
+console.log("  (nucleo, iniciativa, representantes, ordem)");
+console.log("VALUES");
+console.log(projetosRows.join(",\n") + ";");
+console.log();
+
+// ---- URC LIDERANÇA ----
+const urcLiderancaRows = window.DB.urc_lideranca.map((p, i) => {
+  return "  (" + [sqlStr(p.nome), sqlStr(p.papel), sqlStr(p.email), sqlInt(i + 1)].join(", ") + ")";
+});
+console.log("-- ===== SEED: meta_inovacao_urc_lideranca (" + urcLiderancaRows.length + " linhas) =====");
+console.log("INSERT INTO public.meta_inovacao_urc_lideranca");
+console.log("  (nome, papel, email, ordem)");
+console.log("VALUES");
+console.log(urcLiderancaRows.join(",\n") + ";");
+console.log();
+
+// ---- URC CANAIS (achatado — 1 linha por canal+responsável, ordem reinicia a cada canal) ----
+const urcCanaisRows = [];
+window.DB.urc_canais.forEach((c) => {
+  (c.responsaveis || []).forEach((r, i) => {
+    urcCanaisRows.push("  (" + [sqlStr(c.canal), sqlStr(r.nome), sqlStr(r.email), sqlInt(i + 1)].join(", ") + ")");
+  });
+});
+console.log("-- ===== SEED: meta_inovacao_urc_canais_responsaveis (" + urcCanaisRows.length + " linhas) =====");
+console.log("-- canais sem responsável hoje (Assessoria de Negócios, Marketing Cloud, Foco+,");
+console.log("-- Rede própria e parceira, DXP) não geram linha nenhuma — a lista de 8 canais em");
+console.log("-- si continua fixa no client (CANAIS_URC), não é uma tabela.");
+console.log("INSERT INTO public.meta_inovacao_urc_canais_responsaveis");
+console.log("  (canal, nome, email, ordem)");
+console.log("VALUES");
+console.log(urcCanaisRows.join(",\n") + ";");

@@ -80,8 +80,12 @@
         celulas.push({ isoStr: iso(d.getFullYear(), d.getMonth(), d.getDate()), noMes: d.getMonth() === mes, dia: d.getDate() });
       }
 
+      // só a inicial do mês maiúscula ("Agosto de 2026") — feito aqui, não via CSS
+      // text-transform:capitalize, que capitalizava toda palavra do título, inclusive a
+      // preposição ("Agosto De 2026").
+      const mesCapitalizado = MESES[mes].charAt(0).toUpperCase() + MESES[mes].slice(1);
       let html = '<div class="cal-topo">' +
-        '<div class="cal-titulo">' + MESES[mes] + " de " + ano + "</div>" +
+        '<div class="cal-titulo">' + mesCapitalizado + " de " + ano + "</div>" +
         '<div class="cal-nav">' +
           '<button type="button" class="btn sec" data-cal-nav="-1" aria-label="Mês anterior">‹</button>' +
           '<button type="button" class="btn sec" data-cal-hoje>Hoje</button>' +
