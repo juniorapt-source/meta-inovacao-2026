@@ -152,6 +152,17 @@
     return DIAS_SEMANA_ABREV[new Date(y, m - 1, d).getDay()];
   }
 
+  // coluna "Período" — deriva M/T do texto livre de e.turno (campo digitado no Modo
+  // edição, ex.: "manhã", "tarde · 14h"); texto que não bate com nenhum dos dois vira
+  // a sigla em maiúsculo mesmo (fallback honesto em vez de esconder o dado).
+  function periodoAbrev(turno) {
+    if (!turno) return { sigla: "—", titulo: "" };
+    const t = turno.toLowerCase();
+    if (t.indexOf("manh") >= 0) return { sigla: "M", titulo: turno };
+    if (t.indexOf("tard") >= 0) return { sigla: "T", titulo: turno };
+    return { sigla: turno.slice(0, 1).toUpperCase(), titulo: turno };
+  }
+
   // taxonomia única (item 2.4): vocabulário do ENCONTRO vive em window.CC_STATUS
   // (js/status.js), contexto "encontro" — 4 estados reais (agendado/confirmado/a
   // agendar/realizado; "agendado" e "confirmado" com a mesma cor, mesma decisão de
@@ -173,7 +184,8 @@
       "<td><b>" + esc(c.nome) + '</b><div style="color:var(--grafite);font-size:11.5px">' + esc(c.formato) + "</div></td>" +
       '<td style="font-size:12.5px;color:var(--grafite);max-width:340px">' + c.pauta.slice(0, 2).map(esc).join(" · ") +
         (c.pauta.length > 2 ? " · +" + (c.pauta.length - 2) : "") + "</td>" +
-      '<td class="mono" data-label="Data" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + " (" + diaSemanaAbrev(e.data) + ")" + (e.turno ? " · " + esc(e.turno) : "") : "—") + "</td>" +
+      '<td class="mono" data-label="Data" style="font-size:12.5px">' + (e.data ? CALC.fmtBR(e.data) + " (" + diaSemanaAbrev(e.data) + ")" : "—") + "</td>" +
+      '<td class="mono" data-label="Período" style="font-size:12.5px" title="' + esc(periodoAbrev(e.turno).titulo) + '">' + esc(periodoAbrev(e.turno).sigla) + "</td>" +
       '<td data-label="Local">' + (e.localModo ? esc(e.localModo) : "—") + "</td>" +
       '<td class="mono" data-label="Confirmações" style="font-size:12.5px">' + (e.confirmacoes ? esc(e.confirmacoes) : "—") + "</td>" +
       '<td>' + CC_STATUS.badge(chaveStatus) + (e.nota ? '<div style="font-size:11px;color:var(--grafite)">' + esc(e.nota) + "</div>" : "") + "</td></tr>";
@@ -185,8 +197,8 @@
     const linhas = encontros.filter((e) => e.ciclo === c.id);
     return '<h3 style="font-size:15px;margin:18px 0 8px">' + esc(c.nome) + "</h3>" +
       '<div class="card" style="padding:0;overflow:auto">' +
-        '<table class="tabela-cards"><thead><tr><th>Canal</th><th>Pauta (resumo)</th><th>Data</th><th>Local · modo</th><th>Confirmações</th><th>Status</th></tr></thead>' +
-        "<tbody>" + (linhas.length ? linhas.map(linhaEncontro).join("") : '<tr><td colspan="6" style="color:var(--grafite)">Nenhum encontro cadastrado.</td></tr>') + "</tbody></table>" +
+        '<table class="tabela-cards"><thead><tr><th>Canal</th><th>Pauta (resumo)</th><th>Data</th><th>Período</th><th>Local · modo</th><th>Confirmações</th><th>Status</th></tr></thead>' +
+        "<tbody>" + (linhas.length ? linhas.map(linhaEncontro).join("") : '<tr><td colspan="7" style="color:var(--grafite)">Nenhum encontro cadastrado.</td></tr>') + "</tbody></table>" +
       "</div>";
   }).join("");
 

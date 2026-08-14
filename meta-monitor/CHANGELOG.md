@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.23.0 — 2026-08-14
+"Agenda dos ciclos" — a visão Lista (Encontros) separa a coluna "Data" em duas: uma
+mantém só data + dia da semana, a outra vira uma coluna "Período" própria, com o M/T
+que já existe no Modo edição (campo "Turno" de `editor.html`, texto livre). Antes, data
+e turno vinham espremidos na mesma célula ("18/08 (ter) · tarde"); agora o período tem
+coluna dedicada, mais fácil de escanear numa lista de vários encontros.
+
+- **`agenda.html`** — nova função `periodoAbrev(turno)`: lê o texto livre do campo
+  turno e deriva a sigla (`manh...` → "M", `tard...` → "T"; qualquer outro texto vira a
+  1ª letra maiúscula do que foi digitado — fallback honesto em vez de esconder o dado;
+  sem turno cadastrado → "—"). O texto completo do turno some no `title=` da célula pra
+  quem passar o mouse. Cabeçalho da tabela e `colspan` da linha "Nenhum encontro
+  cadastrado" ajustados de 6 para 7 colunas. Visões Calendário e Timeline não mudam —
+  o pedido era só a tabela Lista, onde data e dia da semana já vinham numa coluna só.
+- **`data/config.js`** — `versao` 0.22.1 → 0.23.0.
+
 ## v0.22.1 — 2026-08-13
 Correção pós-deploy da v0.22.0 — a edição do Corsário salvava aparentemente sem erro na
 hora, mas nada persistia: o JR. rodou `2026-08_corsario_edicao.sql` em produção e, ao
