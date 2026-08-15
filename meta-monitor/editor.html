@@ -8,6 +8,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 <style>
+/* mesmo override de corsario.html — .conteudo vem com max-width:1180px em css/base.css,
+   mas as grades iniciativa × critério/canal daqui têm colunas demais pra caber em 1180px:
+   sobrava margem à direita enquanto as colunas ficavam espremidas. min-width:0 evita que o
+   min-content da tabela vaze pro grid .shell e empurre a página inteira (scroll no body);
+   o scroll horizontal fica contido em .ed-wrap{overflow:auto}. */
+.conteudo{max-width:none;min-width:0}
+
 .ed-topo{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .ed-topo select{font:600 13px 'DM Sans',sans-serif;color:var(--tinta);padding:8px 10px;border:1px solid var(--linha);border-radius:0;background:var(--branco)}
 .ed-btn{font:700 12px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--branco);background:var(--azul);border:0;border-radius:0;padding:9px 16px;cursor:pointer}

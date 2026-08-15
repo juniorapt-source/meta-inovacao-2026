@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.23.1 — 2026-08-15
+Modo edição e Matriz de demandas passam a ocupar a largura da janela, como a página do
+Corsário já fazia. `css/base.css` limita `.conteudo` a `max-width:1180px` (bom padrão
+pras páginas de tabela estreita), mas nas duas páginas de grade larga sobrava margem à
+direita enquanto as colunas rolavam espremidas por dentro do wrapper. Aplicado o mesmo
+override local que `corsario.html` usa desde a v0.20.x, sem tocar no arquivo
+compartilhado:
+
+- **`editor.html`** — `.conteudo{max-width:none;min-width:0}` no `<style>` da página.
+  Vale pra todos os conjuntos do Modo edição (a grade do Corsário e a da Matriz são as
+  que passam de 1180px; as demais têm `width:100%` e só ganham respiro). O `min-width:0`
+  não é cosmético: sem ele o min-content da tabela larga vaza pro grid `.shell` e empurra
+  a página inteira (scroll horizontal no body, menu incluído) em vez de o scroll ficar
+  contido em `.ed-wrap{overflow:auto}`.
+- **`demandas.html`** — mesmo override; o scroll segue contido em
+  `.matriz-wrap{overflow:auto}`.
+- As outras páginas com tabela (plano, agenda, projetos, participantes) foram medidas e
+  cabem nos 1180px — ficam como estão.
+- **`data/config.js`** — `versao` 0.23.0 → 0.23.1.
+
 ## v0.23.0 — 2026-08-14
 "Agenda dos ciclos" — a visão Lista (Encontros) separa a coluna "Data" em duas: uma
 mantém só data + dia da semana, a outra vira uma coluna "Período" própria, com o M/T

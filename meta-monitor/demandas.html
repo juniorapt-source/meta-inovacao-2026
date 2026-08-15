@@ -12,6 +12,13 @@
 <script src="js/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* mesmo override de corsario.html/editor.html — .conteudo vem com max-width:1180px em
+   css/base.css, mas a matriz (27 iniciativas × 10 canais + colunas extras) passa de
+   1180px: sobrava margem à direita enquanto a tabela rolava por dentro de .matriz-wrap.
+   min-width:0 evita que o min-content da tabela vaze pro grid .shell e empurre a página
+   inteira; o scroll horizontal segue contido em .matriz-wrap{overflow:auto}. */
+.conteudo{max-width:none;min-width:0}
+
 .mz-topo{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}
 .mz-status{font-size:12.5px;color:var(--grafite)}
 .mz-acoes{display:flex;gap:8px;flex-wrap:wrap}
