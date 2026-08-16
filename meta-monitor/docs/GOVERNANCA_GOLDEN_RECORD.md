@@ -94,9 +94,10 @@ uma iniciativa a mais.
 - Camada 1: ✅ feita e verificada.
 - Camada 2: ✅ feita e verificada.
 - Camada 3: ✅ feita e verificada (tool `publicar_seed_projetos.js`, `--check` verde).
-- Camada 4: ✅ resolvida (código/repo) —
-  - Salas do Empreendedor: fora do repo; migração SQL escrita, **falta só rodar no Supabase**
-    (`tools/sql/2026-08_remover_salas_empreendedor.sql` — write que só o usuário faz).
+- Camada 4: ✅ concluída —
+  - Salas do Empreendedor: migração `tools/sql/2026-08_remover_salas_empreendedor.sql`
+    **rodada em produção** (Aug/2026) — `corsario_status` agora tem 27, batendo com o golden.
+    O teste `tools/testar_iniciativas_cruzado.js` virou **guard ativo** (exit 1 se divergir).
   - Núcleo fantasma: **mantido** (tem 2 pessoas reais).
   - `gerar_dados.py`: **deletado**.
   - Representantes órfãos: nada a fazer (só o placeholder intencional não resolve).

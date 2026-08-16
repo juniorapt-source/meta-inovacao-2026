@@ -10,22 +10,17 @@
  * Se a rede/Supabase estiver fora do ar, o teste AVISA e sai 0 (não trava a suíte por
  * um problema de conectividade que não é dele).
  *
- * Semântica de saída combinada com o pedido explícito de quem mandou este teste:
- *   - Sem divergência (28 virou 27, ou vice-versa e os nomes batem 1:1): sai 0, silencioso.
- *   - COM divergência: sai 0 (warning, não falha a suíte) e imprime destacado a
- *     iniciativa sobrando e a fonte. NÃO corrigir o dado agora — quando alguém corrigir
- *     manualmente (rename/merge no Supabase ou adicionar no portfólio local), promover
- *     este teste pra exit 1 (mudar a linha `process.exit(0)` pra `process.exit(1)` no
- *     bloco de divergência), virando um guard real contra a divergência VOLTAR.
+ * Semântica de saída (GUARD ATIVO desde a reconciliação de Aug/2026):
+ *   - Sem divergência (27=27, mesmos nomes): sai 0, silencioso.
+ *   - COM divergência: sai 1 e FALHA a suíte — a divergência já foi resolvida, então voltar
+ *     a divergir é regressão.
+ *   - Rede/Supabase fora do ar: sai 0 (aviso) — conectividade não é problema deste teste.
  *
  * DECISÃO (Aug/2026, governança do golden record — docs/GOVERNANCA_GOLDEN_RECORD.md):
- * a divergência foi resolvida em favor do golden record (meta_inovacao_projetos, 27).
- * "Salas do Empreendedor" SAI do projeto — nunca esteve no portfólio canônico. A remoção
- * das linhas em corsario_status está em tools/sql/2026-08_remover_salas_empreendedor.sql
- * (rodar no SQL editor do Supabase; é write, feito à mão). Enquanto esse SQL não roda,
- * corsario_status ainda tem 28 e este teste AVISA (exit 0). DEPOIS que rodar (28→27),
- * promover o guard pra exit 1 (trocar `process.exit(0)` pra `process.exit(1)` no bloco de
- * divergência) pra travar a suíte se a divergência VOLTAR.
+ * a divergência 27×28 foi resolvida em favor do golden record (meta_inovacao_projetos, 27).
+ * "Salas do Empreendedor" saiu do projeto — nunca esteve no portfólio canônico; as linhas
+ * dela em corsario_status foram removidas via tools/sql/2026-08_remover_salas_empreendedor.sql
+ * (rodado em produção). A partir daqui este teste é um guard de regressão (exit 1).
  */
 "use strict";
 const fs = require("node:fs");
@@ -83,22 +78,22 @@ async function principal() {
     return;
   }
 
-  console.warn("");
-  console.warn("⚠ DIVERGÊNCIA DETECTADA entre fontes de iniciativas (não corrigida — teste em modo aviso, exit 0)");
-  console.warn("  data/projetos.js (portfólio local): " + locais.length + " iniciativas");
-  console.warn("  Supabase corsario_status (fonte do Corsário): " + remotas.length + " iniciativas");
+  // GUARD ATIVO (desde a reconciliação de Aug/2026, v0.24.x): golden record e corsario_status
+  // já batem 27=27; qualquer divergência agora é REGRESSÃO e FALHA a suíte (exit 1). Rede fora
+  // do ar não cai aqui — é tratada antes, com exit 0 (só divergência real de dado falha).
+  console.error("");
+  console.error("✖ DIVERGÊNCIA entre fontes de iniciativas — golden record (data/projetos.js) vs corsario_status");
+  console.error("  data/projetos.js (portfólio canônico): " + locais.length + " iniciativas");
+  console.error("  Supabase corsario_status (fonte do Corsário): " + remotas.length + " iniciativas");
   if (soNoRemoto.length) {
-    console.warn("  Só no Supabase (corsario_status), ausente do portfólio local: " + soNoRemoto.map((n) => '"' + n + '"').join(", "));
+    console.error("  Só no Supabase (corsario_status), ausente do golden: " + soNoRemoto.map((n) => '"' + n + '"').join(", "));
   }
   if (soNoLocal.length) {
-    console.warn("  Só no portfólio local, ausente do Supabase: " + soNoLocal.map((n) => '"' + n + '"').join(", "));
+    console.error("  Só no golden, ausente do Supabase: " + soNoLocal.map((n) => '"' + n + '"').join(", "));
   }
-  console.warn("  Hipótese registrada: é iniciativa real do portfólio da UI (consta no diagnóstico),");
-  console.warn("  ausente dos dados locais — não é rename/merge, o Corsário está mais completo aqui.");
-  console.warn("  Correção futura provável: incluir no portfólio local (27→28) — decisão pendente com o JR.");
-  console.warn("  Quando corrigido, promover este teste pra exit 1 (ver comentário no topo do arquivo).");
-  console.warn("");
-  process.exit(0);
+  console.error("  Reconcilie no editor.html (golden) ou no corsario_status (Supabase) até baterem de novo.");
+  console.error("");
+  process.exit(1);
 }
 
 principal().catch((err) => {

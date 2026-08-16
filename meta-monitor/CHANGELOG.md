@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.24.1 — 2026-08-16
+Fecha a reconciliação do Corsário (camada 4 da governança do golden record): a migração
+`tools/sql/2026-08_remover_salas_empreendedor.sql` foi rodada em produção — `corsario_status`
+agora tem 27 iniciativas, batendo com o golden record. Confirmado ao vivo: `27 = 27`.
+
+- **`tools/testar_iniciativas_cruzado.js`** — vira **guard ativo**: divergência entre o golden
+  (`data/projetos.js`) e o `corsario_status` agora **falha a suíte** (exit 1) em vez de só
+  avisar. Rede fora do ar segue tolerada (exit 0) — só divergência real de dado falha.
+- **`docs/GOVERNANCA_GOLDEN_RECORD.md`** — camada 4 marcada como concluída.
+- **`data/config.js`** — `versao` 0.24.0 → 0.24.1.
+
 ## v0.24.0 — 2026-08-16
 Governança do portfólio: **`meta_inovacao_projetos` vira o golden record único** de
 projetos/iniciativas, editado no conjunto "Projetos & Representantes" da `editor.html`, e
