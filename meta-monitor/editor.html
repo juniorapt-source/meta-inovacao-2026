@@ -610,7 +610,7 @@ async function renderProjetos(){
       '<td><select data-f="nucleo"'+dis+'>'+opts(NUCLEOS_VALIDOS,p.nucleo)+'</select></td>'+
       '<td><input type="text" data-f="iniciativa" value="'+esc(p.iniciativa)+'"'+dis+'></td>'+
       '<td><input type="text" data-f="representantes" value="'+esc(p.representantes.join(", "))+'" placeholder="ex.: Carol, Matheus"'+dis+'></td>'+
-      '<td><span class="ed-row-status" aria-live="polite"></span></td></tr>';
+      '<td><span class="ed-row-status" aria-live="polite"></span> <button type="button" class="ed-btn sec" data-del="'+esc(String(p.db_id))+'" style="padding:4px 8px"'+dis+' title="Remover projeto">×</button></td></tr>';
   });
   area.innerHTML=h+'</tbody></table></div>';
 
@@ -626,6 +626,23 @@ async function renderProjetos(){
     } catch(err){
       console.error("editor: falha ao salvar projeto",err);
       marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+    }
+  }));
+
+  area.querySelectorAll("[data-del]").forEach(btn=>btn.addEventListener("click",async e=>{
+    const id = e.target.dataset.del;
+    const p = (projetosAtual||[]).find(x=>String(x.db_id)===id);
+    const nomeProj = p ? p.iniciativa : "este projeto";
+    // soft-delete (deleted_at) — some do golden record e, via camada 2, de todas as telas;
+    // a linha continua no banco pra auditoria, só filtrada por deleted_at is null.
+    if(!window.confirm('Remover o projeto "'+nomeProj+'"? Ele sai do portfólio (golden record) e de todas as telas.')) return;
+    try {
+      await DB_PROJETOS.removerSoft(id, EDITOR_ATUAL.nomeAtual());
+      projetosAtual = (projetosAtual||[]).filter(x=>String(x.db_id)!==id);
+      renderProjetos();
+    } catch(err){
+      console.error("editor: falha ao remover projeto",err);
+      window.alert((window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || (err&&err.message) || "Não consegui remover o projeto.");
     }
   }));
 

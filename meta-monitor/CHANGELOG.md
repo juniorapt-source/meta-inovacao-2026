@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.26.0 — 2026-08-16
+Completa o CRUD do golden record: **`editor.html` ganha exclusão de projeto**. Cada linha
+do conjunto "Projetos & Representantes" recebe um botão **×** que faz soft-delete
+(`DB_PROJETOS.removerSoft`) — a iniciativa sai do golden record e, via camada 2, some de
+todas as telas; a linha continua no banco (com `deleted_at`) para auditoria.
+
+- **`editor.html`** — botão × por linha (mesmo padrão do conjunto URC), com `window.confirm`
+  citando o nome do projeto antes de remover. Some no modo fallback (sem rede).
+- Testado ponta a ponta: criar → excluir pelo × → volta a 27, confirmado que não aparece
+  mais no golden (soft-delete); sem erros de console.
+- **`data/config.js`** — `versao` 0.25.0 → 0.26.0.
+
 ## v0.25.0 — 2026-08-16
 Fecha o CRUD do golden record: **`editor.html` ganha "+ Novo projeto"** no conjunto
 "Projetos & Representantes". Até aqui esse conjunto só deixava *editar* iniciativas
