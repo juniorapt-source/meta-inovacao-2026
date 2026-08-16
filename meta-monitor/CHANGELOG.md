@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.24.0 — 2026-08-16
+Governança do portfólio: **`meta_inovacao_projetos` vira o golden record único** de
+projetos/iniciativas, editado no conjunto "Projetos & Representantes" da `editor.html`, e
+todas as demais telas passam a se ajustar a ele. Antes havia 4 listas divergentes (o
+arquivo estático, a tabela viva, `data/iniciativas.js` só-nomes e `corsario_status` com uma
+iniciativa a mais). Documentado em `docs/GOVERNANCA_GOLDEN_RECORD.md`.
+
+- **Camada 1 — Matriz de demandas obedece ao golden.** `demandas.html` deriva o eixo de
+  iniciativas de `DB_PROJETOS` (não mais de `data/iniciativas.js`), une as células da matriz
+  por nome e marca como "fora do portfólio" qualquer iniciativa que exista na matriz mas não
+  no golden (nada some em silêncio). Sai a criação/remoção de iniciativa daqui — isso é só no
+  editor. **`data/iniciativas.js` aposentado** (removido também o `<script>` morto na
+  `editor.html`, que já derivava iniciativas de `corsario_status`).
+- **Camada 2 — leitura ao vivo em todas as telas.** Novo **`js/portfolio.js`**
+  (`window.PORTFOLIO`) hidrata `window.DB.projetos` no lugar a partir do golden e dispara
+  `portfolio:pronto`. `js/drawer.js` não muda (já lia na abertura). `index.html` e
+  `plano-acao.html` esperam `PORTFOLIO.pronto` antes de renderizar; `plano`, `agenda`,
+  `participantes`, `minhas-acoes`, `caminho`, `corsario` e `demandas` ganham os includes. O
+  seed `data/projetos.js` passa a ser só fallback offline.
+- **Camada 3 — fallback auto-regenerado.** Novo **`tools/publicar_seed_projetos.js`** reescreve
+  `data/projetos.js` a partir do golden (`--check` sai 1 se defasar). Ao rodar, corrigiu drift
+  real que estava dormente no seed: **ALI Rural** `Júnior`→`Jr.` e **Consult** `Matheus`→`Carol`.
+  `tools/validar_dados.py` corrigido para derivar a lista canônica de `data/projetos.js` (lia o
+  extinto `data/iniciativas.js`).
+- **Camada 4 — reconciliação do Corsário + limpezas.** "Salas do Empreendedor" (28ª iniciativa,
+  fora do portfólio) sai do projeto — migração `tools/sql/2026-08_remover_salas_empreendedor.sql`
+  (**rodar no SQL editor do Supabase**: hard delete em `corsario_status`). Núcleo "Gestão do
+  Conhecimento e Processos" **mantido** (0 projetos, mas 2 pessoas reais). Gerador legado
+  **`tools/gerar_dados.py` deletado** (recriava o `data/iniciativas.js` aposentado e reintroduzia
+  dados defasados).
+- **`data/config.js`** — `versao` 0.23.1 → 0.24.0.
+
 ## v0.23.1 — 2026-08-15
 Modo edição e Matriz de demandas passam a ocupar a largura da janela, como a página do
 Corsário já fazia. `css/base.css` limita `.conteudo` a `max-width:1180px` (bom padrão

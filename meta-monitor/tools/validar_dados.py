@@ -49,7 +49,9 @@ def check(cond, msg):
     if not cond: erros.append(msg)
 
 check(len(db.get("plano", [])) == 47, f"plano: esperado 47, veio {len(db.get('plano', []))}")
-check(len(db.get("iniciativas", [])) == 27, "iniciativas != 27")
+# data/iniciativas.js foi aposentado (governança do golden record, camada 1): a lista
+# canônica de iniciativas agora é data/projetos.js. A contagem == 27 é conferida abaixo
+# via db["projetos"].
 check(len(db.get("canais", [])) == 10, "canais != 10")
 check(len(db.get("nos", {}).get("nos", [])) == 7, "nós != 7")
 check(len(db.get("nos", {}).get("slas", [])) == 2, "SLAs != 2")
@@ -66,7 +68,8 @@ for a in db.get("plano", []):
         check(re.fullmatch(r"2026-\d2-\d2".replace("\\d2", r"\d{2}"), a["prazo_iso"]), f"{a['id']}: prazo_iso malformado")
 
 canal_ids = {c["id"] for c in db.get("canais", [])}
-inic = {i["nome"] for i in db.get("iniciativas", [])}
+# iniciativas canônicas = as de data/projetos.js (golden record / fonte única)
+inic = {p["iniciativa"] for p in db.get("projetos", [])}
 for nome, linha in db.get("matriz", {}).items():
     check(nome in inic, f"matriz: iniciativa desconhecida {nome}")
     for cid in linha: check(cid in canal_ids, f"matriz[{nome}]: canal desconhecido {cid}")
@@ -103,8 +106,6 @@ for p in db.get("pessoas", []):
 # projetos.js é a fonte canônica de autoria por iniciativa — qualquer outro dataset que
 # cite uma iniciativa precisa apontar pra um nome que exista aqui.
 inic_proj = set(inic_projetos)
-for nome in inic:
-    check(nome in inic_proj, f"iniciativas.js: iniciativa {nome!r} não cadastrada em data/projetos.js")
 for nome in db.get("matriz", {}).keys():
     check(nome in inic_proj, f"matriz.js: iniciativa {nome!r} não cadastrada em data/projetos.js")
 
@@ -171,7 +172,7 @@ for c in urc_canais:
 
 if erros:
     print("FALHOU:"); [print(" -", e) for e in erros]; sys.exit(1)
-print(f"F1 OK — {len(db['plano'])} ações · {len(db['iniciativas'])} iniciativas · {len(db['canais'])} canais · 7 nós · 2 SLAs · {len(db['agenda']['encontros'])} encontros")
+print(f"F1 OK — {len(db['plano'])} ações · {len(db.get('projetos', []))} iniciativas · {len(db['canais'])} canais · 7 nós · 2 SLAs · {len(db['agenda']['encontros'])} encontros")
 
 reps_distintos = {r for p in projetos for r in p.get("representantes", [])}
 por_nucleo = {n: sum(1 for p in projetos if p.get("nucleo") == n) for n in NUCLEOS_VALIDOS}

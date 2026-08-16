@@ -1,8 +1,8 @@
 /* Teste F13: iniciativas_cruzado — detecta (SEM corrigir, de propósito) a divergência de
  * contagem de iniciativas entre o portfólio local (data/projetos.js, 27) e a tabela
- * Supabase corsario_status (fonte real do Corsário, corsario.html) — hoje 28, com
- * "Salas do Empreendedor" a mais (iniciativa real, ausente só dos dados locais — ver
- * hipótese abaixo, não é nome inventado nem duplicata).
+ * Supabase corsario_status (fonte real do Corsário, corsario.html) — 28 até a remoção do
+ * Salas rodar, com "Salas do Empreendedor" a mais (fora do portfólio canônico — ver a
+ * DECISÃO abaixo).
  *
  * DIFERENTE de todos os outros testes deste repo: este PRECISA de rede real (consulta
  * o Supabase de produção, leitura pública, mesma anon key já embutida em js/config.js —
@@ -18,18 +18,14 @@
  *     este teste pra exit 1 (mudar a linha `process.exit(0)` pra `process.exit(1)` no
  *     bloco de divergência), virando um guard real contra a divergência VOLTAR.
  *
- * Hipótese registrada (atualizada após checagem com o JR.): a iniciativa que aparece
- * como "Salas do Empreendedor" em corsario_status (nome exato confirmado por consulta
- * ao vivo — ver saída do teste) é REAL do portfólio da UI, consta no diagnóstico — não é
- * um nome inventado nem um typo/duplicata de outra iniciativa já rastreada (o JR. se
- * refere a ela como "Sala do Empreendedor", singular; pode valer conferir esse detalhe
- * de plural/singular junto da decisão abaixo). A busca por "sala.*empreendedor"
- * (case-insensitive) em data/projetos.js/data/iniciativas.js/data/matriz.js não achou
- * nenhuma ocorrência porque ela está genuinamente AUSENTE dos três — não é uma
- * divergência de NOME (rename/merge), é uma lacuna de COBERTURA: o Supabase
- * (corsario_status) está mais completo que o portfólio local nesse ponto. Cenário
- * provável de correção futura: incluir a iniciativa no portfólio local (27→28), decisão
- * pendente com o JR. — NÃO decidido/corrigido aqui.
+ * DECISÃO (Aug/2026, governança do golden record — docs/GOVERNANCA_GOLDEN_RECORD.md):
+ * a divergência foi resolvida em favor do golden record (meta_inovacao_projetos, 27).
+ * "Salas do Empreendedor" SAI do projeto — nunca esteve no portfólio canônico. A remoção
+ * das linhas em corsario_status está em tools/sql/2026-08_remover_salas_empreendedor.sql
+ * (rodar no SQL editor do Supabase; é write, feito à mão). Enquanto esse SQL não roda,
+ * corsario_status ainda tem 28 e este teste AVISA (exit 0). DEPOIS que rodar (28→27),
+ * promover o guard pra exit 1 (trocar `process.exit(0)` pra `process.exit(1)` no bloco de
+ * divergência) pra travar a suíte se a divergência VOLTAR.
  */
 "use strict";
 const fs = require("node:fs");

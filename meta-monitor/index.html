@@ -85,6 +85,8 @@
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/projetos.js"></script>
+<script src="js/db-projetos.js"></script>
+<script src="js/portfolio.js"></script>
 <script src="data/canais.js"></script>
 <script src="data/agenda.js"></script>
 <script src="data/pessoas.js"></script>
@@ -218,7 +220,11 @@
     '</a>';
   }).join("");
 
-  // cards de portfólio de projetos (calculados a partir de DB.projetos, nada hardcodado)
+  // cards de portfólio de projetos (calculados a partir de DB.projetos, nada hardcodado).
+  // GOVERNANÇA (camada 2): DB.projetos é hidratado do golden record (meta_inovacao_projetos)
+  // por js/portfolio.js — espera a hidratação pra renderizar já com o dado vivo (o seed
+  // data/projetos.js é só o fallback offline). Ver docs/GOVERNANCA_GOLDEN_RECORD.md.
+  if (window.PORTFOLIO) { try { await window.PORTFOLIO.pronto; } catch (e) { /* mantém seed */ } }
   const projetos = DB.projetos || [];
   const nucleosProj = [...new Set(projetos.map(p => p.nucleo))];
   const PLACEHOLDER_RE = /^núcleo de/i; // representante que não é pessoa física (pendência de indicação)

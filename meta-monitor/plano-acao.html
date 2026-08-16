@@ -59,6 +59,8 @@
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
 <script src="data/projetos.js"></script>
+<script src="js/db-projetos.js"></script>
+<script src="js/portfolio.js"></script>
 <script src="data/pessoas.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
@@ -301,6 +303,9 @@
     if (btn) selecionar(btn.dataset.iniciativa);
   });
 
+  // GOVERNANÇA (camada 2): hidrata DB.projetos do golden record antes de montar o nav de
+  // iniciativas (o seed data/projetos.js é só o fallback). Ver docs/GOVERNANCA_GOLDEN_RECORD.md.
+  if (window.PORTFOLIO) { try { await window.PORTFOLIO.pronto; } catch (e) { /* mantém seed */ } }
   renderNav();
   try {
     supa = await CC_SUPABASE.obterClienteEsm();
