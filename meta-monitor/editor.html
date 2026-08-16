@@ -216,6 +216,7 @@ let projetosAtual = null, projetosFallback = false, projetosCarregando = false;
 let urcAtual = null, urcFallback = false, urcCarregando = false;
 let corsarioAtual = null, corsarioFallback = false, corsarioCarregando = false;
 let formNovaIniciativaAberto = false;
+let formNovoProjetoAberto = false;
 
 const sel = document.getElementById("ed-conjunto");
 Object.keys(CONJUNTOS).forEach(k=>{
@@ -587,6 +588,22 @@ async function renderProjetos(){
   const lista = projetosAtual || [];
   const dis = projetosFallback ? " disabled" : "";
   let h = projetosFallback ? avisoFallback("data/projetos.js") : "";
+  // "+ Novo projeto" — cria uma iniciativa nova direto no golden record (meta_inovacao_projetos
+  // via DB_PROJETOS.criar). É a ÚNICA porta de entrada de projeto novo no site (demandas.html
+  // deixou de criar iniciativa na camada 1 da governança). Some no modo fallback (sem rede).
+  h += '<div class="ed-topo" style="margin-bottom:12px"><button type="button" id="ed-abrir-novo-proj" class="ed-btn"'+dis+'>+ Novo projeto</button></div>';
+  h += '<div id="ed-form-novo-proj" class="ed-nova" style="display:'+(formNovoProjetoAberto?"block":"none")+'">'+
+    '<h3>Novo projeto</h3>'+
+    '<div class="ed-nova-grid">'+
+      '<div data-campo="nucleo"><label>Núcleo *</label><select id="nvp-nucleo">'+opts(NUCLEOS_VALIDOS,NUCLEOS_VALIDOS[0])+'</select></div>'+
+      '<div class="full" data-campo="iniciativa"><label>Iniciativa *</label><input type="text" id="nvp-iniciativa" placeholder="ex.: Nova iniciativa X">'+
+        '<span class="ed-erro-msg">Obrigatório.</span></div>'+
+      '<div class="full" data-campo="representantes"><label>Representantes (vírgula) *</label><input type="text" id="nvp-representantes" placeholder="ex.: Carol, Matheus">'+
+        '<span class="ed-erro-msg">Pelo menos um — use "Núcleo de X" se ainda aguarda indicação nominal.</span></div>'+
+    '</div>'+
+    '<div class="ed-nova-acoes"><button type="button" id="ed-confirmar-novo-proj" class="ed-btn">Adicionar</button>'+
+      '<button type="button" id="ed-cancelar-novo-proj" class="ed-btn sec">Cancelar</button></div>'+
+  '</div>';
   h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Núcleo</th><th>Iniciativa</th><th>Representantes (vírgula)</th><th style="width:70px"></th></tr></thead><tbody>';
   lista.forEach((p)=>{
     h+='<tr data-id="'+esc(String(p.db_id))+'">'+
@@ -611,6 +628,51 @@ async function renderProjetos(){
       marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
     }
   }));
+
+  const btnAbrirNovoProj = document.getElementById("ed-abrir-novo-proj");
+  if(btnAbrirNovoProj) btnAbrirNovoProj.addEventListener("click",()=>{ formNovoProjetoAberto=true; renderProjetos(); });
+  if(formNovoProjetoAberto){
+    document.getElementById("ed-cancelar-novo-proj").addEventListener("click",()=>{ formNovoProjetoAberto=false; renderProjetos(); });
+    document.getElementById("ed-confirmar-novo-proj").addEventListener("click", criarProjeto);
+    const iniEl = document.getElementById("nvp-iniciativa");
+    if(iniEl) iniEl.focus();
+  }
+}
+
+async function criarProjeto(){
+  const campo = id => document.getElementById(id);
+  const iniciativa = campo("nvp-iniciativa").value.trim();
+  const representantes = campo("nvp-representantes").value.split(",").map(s=>s.trim()).filter(Boolean);
+  document.querySelectorAll("#ed-form-novo-proj .ed-campo-erro").forEach(el=>el.classList.remove("ed-campo-erro"));
+  let erro = false;
+  if(!iniciativa){ document.querySelector('#ed-form-novo-proj [data-campo="iniciativa"]').classList.add("ed-campo-erro"); erro = true; }
+  // representantes >= 1: mesmo requisito do validar_dados.py (o seed regenerado pela camada 3
+  // precisa passar); se a indicação nominal ainda não veio, usar o placeholder "Núcleo de X".
+  if(!representantes.length){ document.querySelector('#ed-form-novo-proj [data-campo="representantes"]').classList.add("ed-campo-erro"); erro = true; }
+  if(erro) return;
+  const jaExiste = (projetosAtual||[]).some(p=>p.iniciativa.toLowerCase()===iniciativa.toLowerCase());
+  if(jaExiste){
+    window.alert('Já existe um projeto chamado "'+iniciativa+'" — edite a linha dele na tabela em vez de criar de novo.');
+    return;
+  }
+  const nova = {
+    nucleo: campo("nvp-nucleo").value,
+    iniciativa: iniciativa,
+    representantes: representantes,
+    ordem: (projetosAtual||[]).length + 1
+  };
+  const btn = document.getElementById("ed-confirmar-novo-proj");
+  btn.disabled = true;
+  try {
+    const criado = await DB_PROJETOS.criar(nova, EDITOR_ATUAL.nomeAtual());
+    projetosAtual.push(criado);
+    formNovoProjetoAberto = false;
+    renderProjetos();
+  } catch(err){
+    console.error("editor: falha ao criar projeto",err);
+    btn.disabled = false;
+    window.alert((window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "Não consegui criar o projeto: "+((err&&err.message)||err));
+  }
 }
 
 // URC — liderança e canais compartilham uma carga (DB_URC.carregar()); ver comentário

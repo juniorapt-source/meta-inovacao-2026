@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.25.0 — 2026-08-16
+Fecha o CRUD do golden record: **`editor.html` ganha "+ Novo projeto"** no conjunto
+"Projetos & Representantes". Até aqui esse conjunto só deixava *editar* iniciativas
+existentes — não havia nenhuma tela para *criar* um projeto novo pela interface (a criação
+de iniciativa saiu da `demandas.html` na camada 1 da governança). Agora nasce no lugar
+certo, direto no golden record (`meta_inovacao_projetos`), e se propaga sozinho para todas
+as telas (camada 2).
+
+- **`editor.html`** — botão "+ Novo projeto" + mini-formulário (Núcleo, Iniciativa,
+  Representantes), no mesmo padrão do "+ Nova iniciativa" do Corsário. Grava via
+  `DB_PROJETOS.criar()` (já existia na camada de dados, só não estava ligado a nenhum botão).
+  Validação: **iniciativa e ao menos 1 representante são obrigatórios** — mesmo requisito do
+  `validar_dados.py`, para o seed regenerado pela camada 3 continuar válido; se a indicação
+  nominal ainda não veio, o próprio campo sugere o placeholder "Núcleo de X". Rejeita nome
+  duplicado. Some no modo fallback (sem rede).
+- Testado de ponta a ponta: criação insere no Supabase (db_id atribuído) e re-renderiza; a
+  validação e a rejeição de duplicado funcionam; sem erros de console.
+- **`data/config.js`** — `versao` 0.24.1 → 0.25.0.
+
 ## v0.24.1 — 2026-08-16
 Fecha a reconciliação do Corsário (camada 4 da governança do golden record): a migração
 `tools/sql/2026-08_remover_salas_empreendedor.sql` foi rodada em produção — `corsario_status`
