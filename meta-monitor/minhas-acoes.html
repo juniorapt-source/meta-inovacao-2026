@@ -29,7 +29,7 @@
   <main class="conteudo">
     <h1 class="pagina-titulo">Minhas ações</h1>
     <p class="pagina-sub">O que está sob a guarda de cada pessoa, reunido de três fontes: nós do caminho crítico, ações do plano e atividades por iniciativa. Escolha "Ver como" ou abra um link direto (<span class="mono">?pessoa=id</span>) compartilhado no WhatsApp.</p>
-    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não consegui falar com o Supabase agora; mostrando a última cópia local (<span class="mono">data/plano.js</span>).</p>
+    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não foi possível atualizar os dados agora; mostrando a última versão salva.</p>
 
     <div class="ma-selecao">
       <label for="ver-como">Ver como</label>
@@ -52,7 +52,7 @@
       </section>
 
       <section class="secao" id="bloco-atividades" hidden>
-        <h2>Atividades por iniciativa <span class="hint">Supabase · plano-acao.html</span></h2>
+        <h2>Atividades por iniciativa</h2>
         <div class="card" id="secao-atividades"></div>
       </section>
     </div>
@@ -216,7 +216,7 @@
       secaoAtividades.innerHTML = atividades.length ? atividades.map(linhaAtividade).join("") : "";
     } catch (err) {
       console.error("minhas-acoes: falha ao carregar atividades por iniciativa", err);
-      secaoAtividades.innerHTML = '<div class="ma-erro">Não consegui carregar do Supabase — ' + esc((err && err.message) || String(err)) + ".</div>";
+      secaoAtividades.innerHTML = '<div class="ma-erro">Não foi possível atualizar os dados agora.</div>';
     }
     const atrasadosAtividades = atividades.filter((a) => a.status === "atrasado").length;
 

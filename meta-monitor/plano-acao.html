@@ -135,7 +135,7 @@
           html += '<button type="button" data-iniciativa="' + esc(p.iniciativa) + '">' + esc(p.iniciativa) + "</button>";
         });
     });
-    navEl.innerHTML = html || '<div class="pa-carregando">Nenhuma iniciativa cadastrada em data/projetos.js.</div>';
+    navEl.innerHTML = html || '<div class="pa-carregando">Nenhuma iniciativa cadastrada.</div>';
   }
 
   function destacarBotaoAtivo(nome) {
@@ -205,8 +205,7 @@
       console.error("plano-acao: falha ao carregar", err);
       painel.innerHTML =
         tituloPainel(nome) +
-        '<div class="pa-erro">Não consegui carregar do Supabase — ' + esc((err && err.message) || String(err)) +
-        '.<br>Confira se <span class="mono">supabase/plano_acao_atividades.sql</span> já foi rodado no SQL Editor (GRANT/RLS da tabela). ' +
+        '<div class="pa-erro">Não foi possível carregar os dados agora. ' +
         '<button type="button" class="btn sec" id="pa-retry">Tentar de novo</button></div>';
     }
   }
@@ -311,8 +310,7 @@
     supa = await CC_SUPABASE.obterClienteEsm();
   } catch (err) {
     console.error("plano-acao: falha ao iniciar o cliente Supabase", err);
-    painel.innerHTML = '<div class="pa-erro">Não consegui carregar a biblioteca do Supabase via CDN — ' +
-      esc((err && err.message) || String(err)) + ".</div>";
+    painel.innerHTML = '<div class="pa-erro">Não foi possível carregar os dados agora.</div>";
     return;
   }
   const projetos = (window.DB && window.DB.projetos) || [];

@@ -93,19 +93,17 @@
     </div>
 
     <div id="aba-dados">
-      <p class="pagina-sub" id="ed-sub">Edite abaixo, gere o arquivo atualizado e substitua o correspondente na pasta <span class="ed-mono">data/</span> do repositório. Nada é salvo automaticamente nesta página.</p>
+      <p class="pagina-sub" id="ed-sub">Edite abaixo, gere o arquivo atualizado e substitua o arquivo correspondente na pasta de dados. Nada é salvo automaticamente nesta página.</p>
       <section class="cartao">
         <div class="ed-topo">
           <label for="ed-conjunto" style="font:600 13px 'DM Sans',sans-serif">Conjunto:</label>
           <select id="ed-conjunto" aria-label="Escolher conjunto de dados"></select>
-          <button id="ed-baixar" class="ed-btn">Exportar snapshot para data/matriz.js (fallback)</button>
+          <button id="ed-baixar" class="ed-btn">Exportar cópia de segurança dos dados</button>
         </div>
         <div id="ed-area"></div>
         <textarea id="ed-saida" class="ed-saida" spellcheck="false" placeholder="O conteúdo do arquivo gerado aparece aqui para conferência."></textarea>
         <div class="ed-passos" id="ed-passos"><strong>Como publicar a mudança</strong><br>
-        1. Baixe o arquivo gerado e substitua o de mesmo nome em <code>data/</code>.<br>
-        2. Valide: <code>python3 tools/validar_dados.py</code>.<br>
-        3. Publique: <code>git add data/ &amp;&amp; git commit -m "atualiza dados" &amp;&amp; git push</code> — o Vercel redistribui sozinho.</div>
+        Baixe o arquivo gerado e publique-o conforme o procedimento interno. O ambiente é atualizado automaticamente após a publicação.</div>
       </section>
     </div>
 
@@ -301,14 +299,14 @@ function marcarCelulaStatus(td, estado){
 async function renderPlano(){
   if(!planoAtual && !planoCarregando){
     planoCarregando = true;
-    area.innerHTML = '<div class="ed-carregando">Carregando plano do Supabase…</div>';
+    area.innerHTML = '<div class="ed-carregando">Carregando plano…</div>';
     try {
       const { lista, usandoFallback } = await DB_PLANO.carregar();
       planoAtual = lista; planoFallback = usandoFallback;
     } catch(err){
       console.error("editor: falha ao carregar plano", err);
       planoCarregando = false;
-      area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar o plano do Supabase — '+esc((err&&err.message)||String(err))+'.</div>';
+      area.innerHTML = '<div class="ed-erro-carregar">Não foi possível carregar o plano  agora.</div>';
       return;
     }
     planoCarregando = false;
@@ -316,7 +314,7 @@ async function renderPlano(){
   if(sel.value!=="plano") return; // usuário trocou de conjunto enquanto isso carregava
   const lista = planoAtual || [];
   const frentes = [...new Set(lista.map(a=>a.frente))];
-  let h = planoFallback ? '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não consegui falar com o Supabase agora; isto é a última cópia local (data/plano.js). Edições aqui não vão ser salvas até a rede voltar — recarregue a página depois.</div>' : "";
+  let h = planoFallback ? '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não foi possível atualizar os dados agora; estas são as informações da última versão salva. As alterações não serão salvas enquanto isso; recarregue a página mais tarde.</div>' : "";
   h += '<div class="ed-topo" style="margin-bottom:12px"><button type="button" id="ed-abrir-nova" class="ed-btn"'+(planoFallback?" disabled":"")+'>+ Nova atividade</button></div>';
   h += '<div id="ed-form-nova" class="ed-nova" style="display:'+(formNovaAberto?"block":"none")+'">'+
     '<h3>Nova atividade <span class="ed-nova-id" id="ed-id-preview">'+esc(proximoId(frentes[0]))+'</span></h3>'+
@@ -441,9 +439,9 @@ async function adicionarAtividade(){
 
 function renderMatriz(){
   const canais = DB.canais.map(c=>c.id);
-  let h='<div class="aviso" style="margin-bottom:12px"><b>Desde a v0.3.0, a matriz ao vivo mora no Supabase</b> — edite em '+
-    '<a href="demandas.html">demandas.html</a> (Modo edição da própria página). O que você mexer aqui atualiza só o '+
-    '<span class="ed-mono">data/matriz.js</span> baixado, que é a cópia de leitura usada quando o Supabase está fora do ar.</div>';
+  let h='<div class="aviso" style="margin-bottom:12px"><b>A Matriz de demandas é editada ao vivo na própria página</b> — edite em '+
+    '<a href="demandas.html">demandas.html</a> (Modo edição). O que você mexer aqui atualiza só a '+
+    'cópia de segurança usada como reserva.</div>';
   h+='<div class="ed-wrap"><table class="ed-tab ed-matriz"><thead><tr><th class="col-ini">Iniciativa</th>';
   DB.canais.forEach(c=>h+='<th>'+esc(c.sigla||c.nome)+'</th>');
   h+='</tr></thead><tbody>';
@@ -468,21 +466,21 @@ function renderMatriz(){
 async function renderAgenda(){
   if(!agendaAtual && !agendaCarregando){
     agendaCarregando = true;
-    area.innerHTML = '<div class="ed-carregando">Carregando agenda do Supabase…</div>';
+    area.innerHTML = '<div class="ed-carregando">Carregando agenda…</div>';
     try {
       const { lista, usandoFallback } = await DB_AGENDA.carregar();
       agendaAtual = lista; agendaFallback = usandoFallback;
     } catch(err){
       console.error("editor: falha ao carregar agenda", err);
       agendaCarregando = false;
-      area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar a agenda do Supabase — '+esc((err&&err.message)||String(err))+'.</div>';
+      area.innerHTML = '<div class="ed-erro-carregar">Não foi possível carregar a agenda  agora.</div>';
       return;
     }
     agendaCarregando = false;
   }
   if(sel.value!=="agenda") return;
   const lista = agendaAtual || [];
-  let h = agendaFallback ? '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não consegui falar com o Supabase agora; isto é a última cópia local (data/agenda.js). Edições aqui não vão ser salvas até a rede voltar — recarregue a página depois.</div>' : "";
+  let h = agendaFallback ? '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não foi possível atualizar os dados agora; estas são as informações da última versão salva. As alterações não serão salvas enquanto isso; recarregue a página mais tarde.</div>' : "";
   h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th>Encontro</th><th style="width:120px">Data</th><th style="width:110px">Turno</th><th style="width:170px">Local · modo</th><th style="width:150px">Status</th><th style="width:90px">Confirmações</th><th>Nota</th><th style="width:70px"></th></tr></thead><tbody>';
   lista.forEach(en=>{
     const dis = agendaFallback ? " disabled" : "";
@@ -518,21 +516,21 @@ async function renderAgenda(){
 // aviso de fallback padrão (mesmo texto/estrutura de renderPlano/renderAgenda) — só
 // muda o nome do arquivo de seed citado.
 function avisoFallback(nomeArquivo){
-  return '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não consegui falar com o Supabase agora; isto é a última cópia local ('+nomeArquivo+'). '+
-    'Edições aqui não vão ser salvas até a rede voltar — recarregue a página depois.</div>';
+  return '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não foi possível atualizar os dados agora; estas são as informações da última versão salva. '+
+    'As alterações não serão salvas enquanto isso; recarregue a página mais tarde.</div>';
 }
 
 async function renderPessoas(){
   if(!pessoasAtual && !pessoasCarregando){
     pessoasCarregando = true;
-    area.innerHTML = '<div class="ed-carregando">Carregando pessoas do Supabase…</div>';
+    area.innerHTML = '<div class="ed-carregando">Carregando pessoas…</div>';
     try {
       const { lista, usandoFallback } = await DB_PESSOAS.carregar();
       pessoasAtual = lista; pessoasFallback = usandoFallback;
     } catch(err){
       console.error("editor: falha ao carregar pessoas", err);
       pessoasCarregando = false;
-      area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar pessoas do Supabase — '+esc((err&&err.message)||String(err))+'.</div>';
+      area.innerHTML = '<div class="ed-erro-carregar">Não foi possível carregar pessoas  agora.</div>';
       return;
     }
     pessoasCarregando = false;
@@ -572,14 +570,14 @@ async function renderPessoas(){
 async function renderProjetos(){
   if(!projetosAtual && !projetosCarregando){
     projetosCarregando = true;
-    area.innerHTML = '<div class="ed-carregando">Carregando projetos do Supabase…</div>';
+    area.innerHTML = '<div class="ed-carregando">Carregando projetos…</div>';
     try {
       const { lista, usandoFallback } = await DB_PROJETOS.carregar();
       projetosAtual = lista; projetosFallback = usandoFallback;
     } catch(err){
       console.error("editor: falha ao carregar projetos", err);
       projetosCarregando = false;
-      area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar projetos do Supabase — '+esc((err&&err.message)||String(err))+'.</div>';
+      area.innerHTML = '<div class="ed-erro-carregar">Não foi possível carregar projetos  agora.</div>';
       return;
     }
     projetosCarregando = false;
@@ -711,9 +709,9 @@ async function garantirUrcCarregada(){
 
 async function renderUrcLideranca(){
   if(!urcAtual && !urcCarregando){
-    area.innerHTML = '<div class="ed-carregando">Carregando URC do Supabase…</div>';
+    area.innerHTML = '<div class="ed-carregando">Carregando URC…</div>';
     const ok = await garantirUrcCarregada();
-    if(!ok){ area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar a URC do Supabase.</div>'; return; }
+    if(!ok){ area.innerHTML = '<div class="ed-erro-carregar">Não foi possível carregar a URC  agora.</div>'; return; }
   }
   if(sel.value!=="urc_lideranca") return;
   const lista = urcAtual.lideranca;
@@ -747,9 +745,9 @@ async function renderUrcLideranca(){
 
 async function renderUrcCanais(){
   if(!urcAtual && !urcCarregando){
-    area.innerHTML = '<div class="ed-carregando">Carregando URC do Supabase…</div>';
+    area.innerHTML = '<div class="ed-carregando">Carregando URC…</div>';
     const ok = await garantirUrcCarregada();
-    if(!ok){ area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar a URC do Supabase.</div>'; return; }
+    if(!ok){ area.innerHTML = '<div class="ed-erro-carregar">Não foi possível carregar a URC  agora.</div>'; return; }
   }
   if(sel.value!=="urc_canais") return;
   const linhas = urcAtual.canaisFlat;
@@ -822,14 +820,14 @@ async function renderUrcCanais(){
 async function renderCorsario(){
   if(!corsarioAtual && !corsarioCarregando){
     corsarioCarregando = true;
-    area.innerHTML = '<div class="ed-carregando">Carregando o Caminho do Corsário do Supabase…</div>';
+    area.innerHTML = '<div class="ed-carregando">Carregando o Caminho do Corsário…</div>';
     try {
       const r = await DB_CORSARIO.carregar();
       corsarioAtual = r; corsarioFallback = r.usandoFallback;
     } catch(err){
       console.error("editor: falha ao carregar corsário", err);
       corsarioCarregando = false;
-      area.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar o Caminho do Corsário do Supabase — '+esc((err&&err.message)||String(err))+'.</div>';
+      area.innerHTML = '<div class="ed-erro-carregar">Não foi possível carregar o Caminho do Corsário  agora.</div>';
       return;
     }
     corsarioCarregando = false;
@@ -839,7 +837,7 @@ async function renderCorsario(){
   const statusRows = corsarioAtual.statusRows || [];
   const dis = corsarioFallback ? " disabled" : "";
   if(corsarioFallback && !criterios.length){
-    area.innerHTML = '<div class="aviso">Sem rede pro Supabase agora — este conjunto não tem cópia local de fallback (corsario_status sempre foi só-Supabase, nunca teve seed em <span class="ed-mono">data/</span>). Recarregue a página quando a rede voltar.</div>';
+    area.innerHTML = '<div class="aviso">Não foi possível carregar os dados agora e este conjunto não tem uma versão salva localmente. Recarregue a página mais tarde.</div>';
     return;
   }
 
@@ -854,7 +852,7 @@ async function renderCorsario(){
   });
   const iniciativas = Array.from(porIniciativa.values()).sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
 
-  let h = corsarioFallback ? avisoFallback("(sem fallback local — Supabase indisponível)") : "";
+  let h = corsarioFallback ? avisoFallback("(sem cópia local disponível)") : "";
   h += '<div class="ed-topo" style="margin-bottom:12px"><button type="button" id="ed-abrir-nova-ini" class="ed-btn"'+dis+'>+ Nova iniciativa</button>'+
     '<span style="font-size:12px;color:var(--grafite)">Clique no botão pequeno ao lado de cada status pra ver/editar a observação.</span></div>';
   h += '<div id="ed-form-nova-ini" class="ed-nova" style="display:'+(formNovaIniciativaAberto?"block":"none")+'">'+
@@ -967,7 +965,7 @@ async function criarIniciativaCorsario(){
   } catch(err){
     console.error("editor: falha ao criar iniciativa do corsário",err);
     btn.disabled = false;
-    window.alert((window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "Não consegui criar a iniciativa: "+((err&&err.message)||err));
+    window.alert((window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "Não foi possível criar a iniciativa.");
   }
 }
 
@@ -975,20 +973,16 @@ const btnBaixar = document.getElementById("ed-baixar");
 const passosEl = document.getElementById("ed-passos");
 const subEl = document.getElementById("ed-sub");
 const PASSOS_VIVO = '<strong>Este conjunto é editado ao vivo</strong><br>'+
-  'Cada campo grava direto no Supabase assim que você sai dele (igual a demandas.html) — não '+
+  'Cada campo é salvo automaticamente assim que você sai dele — não '+
   'precisa baixar nem publicar nada. O indicador ao lado de cada linha mostra "salvando…", '+
-  '"salvo" ou o motivo se falhar. Os arquivos <code>data/*.js</code> correspondentes continuam '+
-  'no repositório só como seed/fallback pra quando o Supabase estiver fora do ar.';
+  '"salvo" ou o motivo se falhar.';
 // "Correções v0.18.x" — matriz é a ÚNICA exceção: o botão aqui não é "como editar", é
 // um export/snapshot (a edição de verdade é em demandas.html, já Supabase desde a v0.3.0).
-const PASSOS_SNAPSHOT = '<strong>Isto é um snapshot, não o fluxo de edição</strong><br>'+
-  'A Matriz de demandas é editada ao vivo em <code>demandas.html</code> — o que este botão gera é só uma '+
-  'cópia pra atualizar <code>data/matriz.js</code>, o arquivo de fallback usado quando o Supabase está fora '+
-  'do ar. Pra editar a matriz de verdade, use <a href="demandas.html">demandas.html</a>.<br>'+
-  '1. Baixe o arquivo e substitua <code>data/matriz.js</code>.<br>'+
-  '2. Valide: <code>python3 tools/validar_dados.py</code>.<br>'+
-  '3. Publique: <code>git add data/matriz.js &amp;&amp; git commit -m "atualiza snapshot da matriz" &amp;&amp; git push</code>.';
-const SUBTITULO_FIXO = "Modo edição: tudo aqui é editado ao vivo no Supabase — muda na hora que você sai do campo, sem baixar arquivo nem publicar nada. A Matriz de demandas é a única exceção de fluxo: a edição de verdade acontece em demandas.html, aqui só dá pra gerar um snapshot de fallback.";
+const PASSOS_SNAPSHOT = '<strong>Isto gera uma cópia de segurança, não o fluxo de edição</strong><br>'+
+  'A Matriz de demandas é editada ao vivo em <a href="demandas.html">demandas.html</a> — este botão só gera uma '+
+  'cópia de reserva dos dados. Pra editar a matriz de verdade, use <a href="demandas.html">demandas.html</a>.<br>'+
+  'Baixe o arquivo gerado e publique-o conforme o procedimento interno.';
+const SUBTITULO_FIXO = "Modo edição: tudo aqui é salvo automaticamente — muda na hora que você sai do campo, sem baixar arquivo nem publicar nada. A Matriz de demandas é a única exceção: a edição de verdade acontece em demandas.html, aqui só dá pra gerar uma cópia de segurança.";
 subEl.textContent = SUBTITULO_FIXO;
 
 function atualizarChromeVivo(){
@@ -1174,7 +1168,7 @@ async function carregarHistorico(){
     renderHistoricoFiltrado();
   } catch(err){
     console.error("editor: falha ao carregar histórico", err);
-    painel.innerHTML = '<div class="ed-erro-carregar">Não consegui carregar o histórico — '+esc((err&&err.message)||String(err))+
+    painel.innerHTML = '<div class="ed-erro-carregar">Não foi possível carregar o histórico — '+esc((err&&err.message)||String(err))+
       '.<br>Confira se <span class="mono">tools/sql/2026-08_auditoria.sql</span> já foi rodado no SQL Editor.</div>';
   }
 }

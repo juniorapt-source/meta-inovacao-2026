@@ -79,7 +79,7 @@
       <div class="mz-status" id="mz-status">Carregando…</div>
       <div class="mz-acoes">
         <button type="button" class="btn sec" id="mz-atualizar">Atualizar</button>
-        <button type="button" class="btn sec" id="mz-exportar">Exportar matriz (JSON)</button>
+        <button type="button" class="btn sec" id="mz-exportar">Exportar matriz</button>
         <button type="button" class="btn" id="mz-editar">Ativar edição</button>
       </div>
     </div>
@@ -199,9 +199,8 @@
   }
 
   function mostrarErro(err) {
-    elEstado.innerHTML = '<div class="mz-erro"><span><b>Não consegui carregar do Supabase.</b> ' +
-      esc((err && err.message) || String(err)) + '</span><button type="button" class="btn sec" id="mz-retry">Tentar de novo</button></div>' +
-      '<div class="mz-aviso">Mostrando a última cópia local (<span class="mono">data/matriz.js</span>), somente leitura, até a tabela do Supabase responder.</div>';
+    elEstado.innerHTML = '<div class="mz-erro"><span><b>Não foi possível atualizar os dados agora.</b></span><button type="button" class="btn sec" id="mz-retry">Tentar de novo</button></div>' +
+      '<div class="mz-aviso">Mostrando a última versão salva, somente leitura, até a conexão voltar.</div>';
     document.getElementById("mz-retry").addEventListener("click", () => carregar(true));
     elWrap.style.display = "";
   }
@@ -219,7 +218,7 @@
       linhas = unir(proj.lista || [], matrizRows);
       usandoFallback = false;
       elEstado.innerHTML = proj.usandoFallback
-        ? '<div class="mz-aviso">Eixo de iniciativas veio do seed local <span class="mono">data/projetos.js</span> (o Supabase de projetos não respondeu); as células da matriz estão ao vivo.</div>'
+        ? '<div class="mz-aviso">Parte das iniciativas está sendo exibida a partir da última versão salva; os dados da matriz estão atualizados.</div>'
         : "";
     } catch (err) {
       console.error("carregar (matriz + golden record) falhou:", err);
@@ -248,7 +247,7 @@
 
   function renderStatus() {
     if (usandoFallback) {
-      elStatus.textContent = "Fonte: data/matriz.js local (Supabase indisponível) · somente leitura.";
+      elStatus.textContent = "Exibindo a última versão salva · somente leitura.";
       return;
     }
     const comData = linhas.filter(l => l.atualizado_em).sort((a,b) => b.atualizado_em.localeCompare(a.atualizado_em));
@@ -365,7 +364,7 @@
   document.getElementById("mz-atualizar").addEventListener("click", () => carregar(true));
   document.getElementById("mz-exportar").addEventListener("click", exportarJSON);
   document.getElementById("mz-editar").addEventListener("click", (e) => {
-    if (usandoFallback) { window.alert("Edição desativada: sem conexão com o Supabase, a matriz está em modo somente leitura."); return; }
+    if (usandoFallback) { window.alert("Edição desativada: sem conexão no momento, a matriz está em modo somente leitura."); return; }
     editando = !editando;
     e.target.textContent = editando ? "Sair da edição" : "Ativar edição";
     renderTudo();

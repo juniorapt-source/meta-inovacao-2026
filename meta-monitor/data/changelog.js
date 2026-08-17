@@ -13,12 +13,12 @@ window.DB.changelog = [
  {
   "data": "2026-08-12",
   "versao": "0.3.0",
-  "nota": "Editor ganha \"+ Nova atividade\" com ID automático por frente. Participantes: card do Comitê com nome completo, UI e Comitê sem descrição repetida, card Núcleos com os 8 representantes. Matriz de demandas migrada para Supabase (edição colaborativa em tempo real, com fallback somente-leitura). Agenda ganha visão calendário (mês corrente, navegação livre, faixas dos ciclos, marcos dos nós)."
+  "nota": "Editor ganha \"+ Nova atividade\" com ID automático por frente. Participantes: card do Comitê com nome completo, UI e Comitê sem descrição repetida, card Núcleos com os 8 representantes. Matriz de demandas passa a ter edição colaborativa em tempo real, com modo somente-leitura de reserva. Agenda ganha visão calendário (mês corrente, navegação livre, faixas dos ciclos, marcos dos nós)."
  },
  {
   "data": "2026-08-12",
   "versao": "0.3.1",
-  "nota": "Corrige supabase/setup.sql — adiciona GRANTs de tabela para anon e authenticated, sem os quais o RLS não chega a ser avaliado e o cliente recebe permission denied."
+  "nota": "Correção técnica nas permissões de acesso aos dados."
  },
  {
   "data": "2026-08-12",

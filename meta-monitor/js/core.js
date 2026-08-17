@@ -97,7 +97,6 @@
         html += '<a href="' + href + '"' + ativo + ">" + rotulo + "</a>";
       }
     }
-    html += '<div class="rodape">v' + esc(cfg.versao) + " · atualizado em " + esc(CALC.fmtBR(cfg.atualizado_em)) + "/2026<br>Repositório Git · deploy Vercel</div>";
     nav.innerHTML = html;
     if (!nav.id) nav.id = "menu-principal";
 
