@@ -1,5 +1,23 @@
 # Changelog
 
+## Correção — "Sem permissão de escrita" ao criar projeto — 2026-08-18
+Criar projeto em `editor.html` (conjunto "Projetos & Representantes" → "+ Novo projeto")
+falhava em produção com **"Sem permissão de escrita — fale com o JR."**. A leitura ao vivo
+de `meta_inovacao_projetos` funciona (a tela carrega os projetos do Supabase, não do
+fallback) e usa o **mesmo** client, com o **mesmo** header `x-cc-token`, que a escrita —
+logo o token certo (`data/config.js.tokenEscrita`) chega ao banco. O que estava fora era só
+a barreira de **escrita** da tabela: `GRANT INSERT`/policy `cc_token_insert` ausentes ou
+defasados em produção (o estado de RLS/GRANT divergiu do script original
+`2026-08_migracao_modo_edicao.sql`). Como `PADRAO_TABELA.md` (item 3) registra, sem o
+`GRANT` o Postgres nega a operação **antes** de avaliar a policy — o erro aparece como
+permissão negada mesmo com a policy criada.
+
+- **`tools/sql/2026-08_corrige_escrita_projetos.sql`** (novo) — **rodar no SQL editor do
+  Supabase**. Reaplica de forma idempotente `GRANT SELECT, INSERT, UPDATE` + policies
+  `cc_select_publico`/`cc_token_insert`/`cc_token_update` de `meta_inovacao_projetos`, com o
+  token de `data/config.js`, e emite `NOTIFY pgrst, 'reload schema'`. Não toca na tabela, no
+  seed nem nos triggers; segue soft delete (sem `GRANT`/policy de `DELETE`).
+
 ## v0.26.0 — 2026-08-16
 Completa o CRUD do golden record: **`editor.html` ganha exclusão de projeto**. Cada linha
 do conjunto "Projetos & Representantes" recebe um botão **×** que faz soft-delete
