@@ -69,6 +69,12 @@
   }
 
   /* ---- erro de escrita amigável (item 2.4) ---- */
+  // código de erro do PostgREST/Postgres, buscado sem depender de um único campo (o
+  // client às vezes embrulha o erro original).
+  function codigoErro(err) {
+    return String((err && (err.code || (err.originalError && err.originalError.code))) || "");
+  }
+
   // reconhece o formato de erro de RLS/permissão do PostgREST (RLS bloqueando por
   // token errado/ausente é o único jeito de escrita falhar por permissão hoje — não
   // tem usuário/senha por linha, só o token compartilhado) sem depender de um único
@@ -79,17 +85,53 @@
     if (!err) return false;
     const status = err.status || err.statusCode || (err.originalError && err.originalError.status);
     if (status === 401 || status === 403) return true;
-    if (String(err.code || "") === "42501") return true;
+    if (codigoErro(err) === "42501") return true;
     const msg = String(err.message || "").toLowerCase();
     return msg.indexOf("row-level security") !== -1 || msg.indexOf("permission denied") !== -1 || msg.indexOf("jwt") !== -1;
   }
 
+  // UPDATE/DELETE que não afetou NENHUMA linha. Sob a RLS deste projeto a policy de
+  // escrita filtra pela USING (x-cc-token certo) EM SILÊNCIO — em vez de devolver
+  // "permission denied", ela simplesmente não enxerga a linha, o UPDATE afeta 0 registros
+  // e o `.select().single()` estoura PGRST116 ("Results contain 0 rows"). Numa edição de
+  // uma linha que ACABOU de ser carregada da própria tela (existe, não é id inventado),
+  // 0 linhas afetadas é, na prática, bloqueio de escrita por token errado/ausente — não
+  // "o registro sumiu". Sem reconhecer isso, esse caso caía no "falhou" cru do editor,
+  // exatamente o sintoma que mandava abrir o console pra descobrir a causa.
+  function ehZeroLinhasEmEscrita(err) {
+    return codigoErro(err) === "PGRST116";
+  }
+
+  // cache de schema do PostgREST desatualizado depois de um ALTER TABLE (coluna nova que
+  // a API ainda não enxerga) — PGRST204 "Could not find the '<coluna>' column ... in the
+  // schema cache" (PGRST205 = tabela). Foi a causa raiz do incidente da v0.22.1 (edição
+  // do Corsário); reconhecido aqui pra virar mensagem acionável em vez de "falhou".
+  function ehErroDeCacheSchema(err) {
+    const c = codigoErro(err);
+    if (c === "PGRST204" || c === "PGRST205") return true;
+    return String((err && err.message) || "").toLowerCase().indexOf("schema cache") !== -1;
+  }
+
   const MENSAGEM_SEM_PERMISSAO = "Sem permissão de escrita — fale com o JR.";
-  // mensagem pronta pra tela quando é erro de permissão; null quando não é (quem chama
+  const MENSAGEM_SCHEMA = "Não foi possível salvar — o ambiente precisa de um ajuste. Fale com o JR.";
+  // mensagem pronta pra tela quando a causa é reconhecível; null quando não é (quem chama
   // decide o que fazer com outros tipos de erro — rede fora do ar, etc. — que continuam
   // mostrando o err.message de sempre, informação operacional útil, não um stacktrace).
   function mensagemEscritaAmigavel(err) {
-    return ehErroDePermissao(err) ? MENSAGEM_SEM_PERMISSAO : null;
+    if (ehErroDePermissao(err) || ehZeroLinhasEmEscrita(err)) return MENSAGEM_SEM_PERMISSAO;
+    if (ehErroDeCacheSchema(err)) return MENSAGEM_SCHEMA;
+    return null;
+  }
+
+  // detalhe técnico compacto pra `title`/tooltip e diagnóstico — "PGRST116: mensagem".
+  // Nunca vai pro corpo visível da tela (linguagem de negócio, v0.27.0), só pro hover de
+  // quem for investigar, pra não obrigar a abrir o console do navegador como no incidente
+  // do Corsário.
+  function detalheErro(err) {
+    if (!err) return "";
+    const cod = codigoErro(err);
+    const msg = (err && err.message) || String(err);
+    return (cod ? cod + ": " : "") + msg;
   }
 
   // item 3.4 (P13) — os dois clients ficam em cache (acima) com os headers já "assados"
@@ -109,8 +151,12 @@
     headersComToken: headersComToken,
     resetarClientes: resetarClientes,
     ehErroDePermissao: ehErroDePermissao,
+    ehZeroLinhasEmEscrita: ehZeroLinhasEmEscrita,
+    ehErroDeCacheSchema: ehErroDeCacheSchema,
     mensagemEscritaAmigavel: mensagemEscritaAmigavel,
+    detalheErro: detalheErro,
     MENSAGEM_SEM_PERMISSAO: MENSAGEM_SEM_PERMISSAO,
+    MENSAGEM_SCHEMA: MENSAGEM_SCHEMA,
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = CC_SUPABASE;

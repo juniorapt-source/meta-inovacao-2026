@@ -272,28 +272,40 @@ let formNovaAberto = false;
 // indicador por linha (mesma ideia de plano-acao.html's marcarRowStatus, adaptada pra uma
 // <tr> de tabela em vez de uma .pa-row flex) — "salvando…" some sozinho ao virar "salvo"
 // (1.5s), "falhou" fica até a próxima tentativa.
-function marcarLinhaStatus(tr, texto){
+// `detalhe` (opcional) vira o title/tooltip da linha quando dá erro — o motivo técnico
+// (ex.: "PGRST116: Results contain 0 rows") fica no hover pra quem for investigar, sem
+// poluir o texto visível de negócio nem obrigar a abrir o console do navegador.
+function marcarLinhaStatus(tr, texto, detalhe){
   if(!tr) return;
   const el = tr.querySelector(".ed-row-status");
   if(!el) return;
+  el.removeAttribute("title");
   if(texto==="salvando"){ el.textContent="salvando…"; el.style.color="var(--grafite)"; }
   else if(texto==="salvo"){
     el.textContent="salvo"; el.style.color="var(--verde)";
     setTimeout(()=>{ if(el.textContent==="salvo") el.textContent=""; },1500);
-  } else if(texto){ el.textContent=texto; el.style.color="var(--critico)"; }
+  } else if(texto){ el.textContent=texto; el.style.color="var(--critico)"; if(detalhe) el.title=detalhe; }
   else el.textContent="";
 }
 
 // variante de marcarLinhaStatus() pra grid densa (conjunto "corsario"): a célula é
 // estreita demais pra caber um texto "salvando…" do lado do select sem quebrar layout,
 // então o feedback é visual no fundo da própria célula (ver .ed-cel-salvando/.ed-cel-erro).
-function marcarCelulaStatus(td, estado){
+function marcarCelulaStatus(td, estado, detalhe){
   if(!td) return;
   td.classList.remove("ed-cel-salvando","ed-cel-erro");
   td.removeAttribute("data-erro");
+  td.removeAttribute("title");
   if(estado==="salvando" || estado==="salvo") td.classList.add("ed-cel-salvando");
   if(estado==="salvo") setTimeout(()=>td.classList.remove("ed-cel-salvando"),500);
-  else if(estado && estado!=="salvando"){ td.classList.remove("ed-cel-salvando"); td.classList.add("ed-cel-erro"); td.title=estado; td.setAttribute("data-erro",""); }
+  else if(estado && estado!=="salvando"){ td.classList.remove("ed-cel-salvando"); td.classList.add("ed-cel-erro"); td.title = detalhe ? (estado+" — "+detalhe) : estado; td.setAttribute("data-erro",""); }
+}
+
+// motivo técnico de um erro de escrita, pro title/tooltip dos indicadores (hover), sem
+// jamais ir pro texto visível — evita o beco sem saída do "falhou" cru, que obrigava a
+// abrir o console do navegador pra descobrir a causa (foi assim no incidente do Corsário).
+function detErro(err){
+  return (window.CC_SUPABASE && CC_SUPABASE.detalheErro) ? CC_SUPABASE.detalheErro(err) : ((err&&err.message)||String(err));
 }
 
 async function renderPlano(){
@@ -368,7 +380,7 @@ async function renderPlano(){
         marcarLinhaStatus(tr,"salvo");
       } catch(err){
         console.error("editor: falha ao salvar ação do plano",err);
-        marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+        marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
       }
     });
   });
@@ -508,7 +520,7 @@ async function renderAgenda(){
       marcarLinhaStatus(tr,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar encontro da agenda",err);
-      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
     }
   }));
 }
@@ -562,7 +574,7 @@ async function renderPessoas(){
       marcarLinhaStatus(tr,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar pessoa",err);
-      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
     }
   }));
 }
@@ -623,7 +635,7 @@ async function renderProjetos(){
       marcarLinhaStatus(tr,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar projeto",err);
-      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
     }
   }));
 
@@ -738,7 +750,7 @@ async function renderUrcLideranca(){
       marcarLinhaStatus(tr,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar liderança da URC",err);
-      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
     }
   }));
 }
@@ -780,7 +792,7 @@ async function renderUrcCanais(){
       marcarLinhaStatus(tr,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar responsável de canal",err);
-      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || (err&&err.message) || "falhou");
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || (err&&err.message) || "falhou", detErro(err));
     }
   }));
   area.querySelectorAll("[data-del]").forEach(btn=>btn.addEventListener("click",async e=>{
@@ -902,7 +914,7 @@ async function renderCorsario(){
       marcarCelulaStatus(td,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar status do corsário",err);
-      marcarCelulaStatus(td, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+      marcarCelulaStatus(td, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
     }
   }));
 
@@ -929,7 +941,7 @@ async function renderCorsario(){
       marcarCelulaStatus(td,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar observação do corsário",err);
-      marcarCelulaStatus(td, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou");
+      marcarCelulaStatus(td, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
     }
   }));
 

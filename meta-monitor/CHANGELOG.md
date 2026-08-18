@@ -1,5 +1,36 @@
 # Changelog
 
+## v0.28.0 — 2026-08-18
+Correção da edição no **Modo edição** (`editor.html`): ao salvar uma atividade do Plano de
+ação (e nas demais grades vivas), a falha aparecia como um **"falhou" cru**, sem nenhuma
+pista da causa — um beco sem saída que obrigava a abrir o console do navegador pra
+descobrir o que aconteceu (foi assim no incidente do Corsário, v0.22.1). A raiz do "falhou"
+opaco eram dois sintomas de escrita que o classificador de erros **não reconhecia**, então
+não viravam mensagem acionável:
+
+- **`js/supabase.js`** — `mensagemEscritaAmigavel()` passa a reconhecer mais duas classes
+  de erro de escrita, além da permissão clássica (401/403/42501/"row-level security"):
+  - **`PGRST116` (UPDATE/DELETE que não afetou nenhuma linha)** — sob a RLS deste projeto,
+    a policy de escrita filtra pela `USING` (token certo) **em silêncio**: em vez de
+    "permission denied", ela não enxerga a linha, o UPDATE afeta 0 registros e o
+    `.select().single()` estoura `PGRST116`. Numa edição de uma linha recém-carregada da
+    própria tela, isso é, na prática, bloqueio por token errado/ausente — agora vira a
+    mensagem "Sem permissão de escrita — fale com o JR." em vez de "falhou".
+  - **`PGRST204`/`PGRST205` (cache de schema do PostgREST desatualizado)** — a mesma causa
+    raiz da v0.22.1; vira uma mensagem acionável ("o ambiente precisa de um ajuste").
+  Novos helpers expostos: `ehZeroLinhasEmEscrita`, `ehErroDeCacheSchema`, `detalheErro`.
+- **`editor.html`** — os indicadores de salvamento por linha (`marcarLinhaStatus`) e por
+  célula (`marcarCelulaStatus`) agora recebem o **motivo técnico** e o colocam no
+  `title`/tooltip (hover), como `demandas.html` já fazia — o texto visível continua em
+  linguagem de negócio, mas passar o mouse sobre um "falhou" mostra o erro real
+  (ex.: `PGRST116: Results contain 0 rows`), sem precisar do console.
+- **`tools/testar_supabase_erros.js`** (novo) — cobre a classificação: PGRST116 → sem
+  permissão, PGRST204/205 → cache de schema, permissão clássica preservada, erro de rede
+  segue sem mensagem pronta, e `detalheErro` monta "código: mensagem".
+- Testado: `node --check` (editor.html + js/supabase.js), `tools/testar_supabase_erros.js`,
+  `tools/testar_editor.js`, `tools/validar_site.py` — todos OK.
+- **`data/config.js`** — `versao` 0.27.0 → 0.28.0.
+
 ## v0.26.0 — 2026-08-16
 Completa o CRUD do golden record: **`editor.html` ganha exclusão de projeto**. Cada linha
 do conjunto "Projetos & Representantes" recebe um botão **×** que faz soft-delete
