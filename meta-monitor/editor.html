@@ -681,6 +681,28 @@ async function criarProjeto(){
   try {
     const criado = await DB_PROJETOS.criar(nova, EDITOR_ATUAL.nomeAtual());
     projetosAtual.push(criado);
+    // Propaga pro "Caminho do Corsário". O golden record (meta_inovacao_projetos) é a fonte
+    // única, mas a tela do Corsário monta a lista de iniciativas a partir de corsario_status
+    // (tabela à parte, status por iniciativa×critério) — sem semear essa tabela, o projeto
+    // novo ficaria invisível lá. Cria 1 linha por critério, todas "não se aplica" (nasce
+    // "não avaliada", fora da régua, não "reprovada em tudo"), exatamente como o botão
+    // "+ Nova iniciativa" do conjunto Corsário. Falha aqui NÃO desfaz o projeto (ele já está
+    // no golden) — só avisa, pra reconciliar depois pelo conjunto "O Caminho para o Corsário".
+    try {
+      const corsario = await DB_CORSARIO.carregar();
+      if(corsario.usandoFallback || !(corsario.criterios||[]).length){
+        window.alert('Projeto criado. Mas não consegui carregar o Caminho do Corsário agora para incluí-lo lá — abra o conjunto "O Caminho para o Corsário" mais tarde e crie a iniciativa "'+criado.iniciativa+'" por lá.');
+      } else {
+        const jaNoCorsario = (corsario.statusRows||[]).some(r=>String(r.iniciativa).toLowerCase()===criado.iniciativa.toLowerCase());
+        if(!jaNoCorsario){
+          const criadas = await DB_CORSARIO.criarIniciativa(criado.iniciativa, criado.nucleo, corsario.criterios, EDITOR_ATUAL.nomeAtual());
+          corsario.statusRows.push(...criadas); // mantém o cache do DB_CORSARIO em dia, pra o próximo render do conjunto já mostrar a iniciativa nova
+        }
+      }
+    } catch(errCorsario){
+      console.error("editor: projeto criado no golden, mas falhou ao semear o Corsário",errCorsario);
+      window.alert('Projeto criado. Mas não consegui incluí-lo automaticamente no Caminho do Corsário — crie a iniciativa "'+criado.iniciativa+'" no conjunto "O Caminho para o Corsário".');
+    }
     formNovoProjetoAberto = false;
     renderProjetos();
   } catch(err){
