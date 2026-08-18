@@ -1,6 +1,12 @@
 # Changelog
 
-## Correção — erro 406 ao editar o "Caminho para o Corsário" — 2026-08-18
+## v0.28.0 — 2026-08-18
+Dois problemas de escrita do **Modo edição** (`editor.html`) fechados de uma vez: o **erro
+406 ao editar o "Caminho para o Corsário"** (correção de banco) e a **generalização do
+diagnóstico** de falhas de escrita em todas as grades vivas — fim do "falhou" cru que
+obrigava a abrir o console do navegador.
+
+### Corsário — erro 406 ao editar (correção de banco)
 Editar o status (ou a observação) de uma célula no conjunto **"O Caminho para o Corsário"**
 do `editor.html` falhava em produção. No console: `Failed to load resource: ... status of
 406` em `corsario_status?id=eq.<n>&select=*` e `editor: falha ao salvar status do corsário`.
@@ -25,6 +31,33 @@ viram **406 / PGRST116** ("Cannot coerce the result to a single JSON object"). O
   permissão negada. Esse é o único jeito de uma **escrita** falhar por 0 linhas via RLS, e a
   função só é consultada em `catch` de escrita — então a tela passa a mostrar a mensagem certa
   ("Sem permissão de escrita — fale com o JR.") em vez do "falhou" opaco que escondia a causa.
+
+### Diagnóstico de erros de escrita — fim do "falhou" cru
+Ao salvar em qualquer grade viva do Modo edição, uma falha que não fosse permissão clássica
+virava um **"falhou" cru**, sem pista da causa — o mesmo beco sem saída que obrigava a abrir
+o console (foi assim no incidente do Corsário, v0.22.1). A raiz eram sintomas de escrita que
+o classificador de erros **não reconhecia**, então não viravam mensagem acionável:
+
+- **`js/supabase.js`** — `mensagemEscritaAmigavel()` passa a reconhecer mais duas classes de
+  erro de escrita, além da permissão clássica (401/403/42501/"row-level security"):
+  - **`PGRST116` / 406 (UPDATE/DELETE que não afetou nenhuma linha)** — sob a RLS deste
+    projeto, a policy de escrita filtra pela `USING` (token certo) **em silêncio**: o UPDATE
+    afeta 0 registros e o `.select().single()` estoura `PGRST116` (406). Numa edição de uma
+    linha recém-carregada da própria tela, isso é, na prática, bloqueio por token
+    errado/ausente — agora vira "Sem permissão de escrita — fale com o JR." em vez de
+    "falhou". É a mesma raiz do erro 406 do Corsário acima, agora tratada pra todas as grades.
+  - **`PGRST204`/`PGRST205` (cache de schema do PostgREST desatualizado)** — a mesma causa
+    raiz da v0.22.1; vira uma mensagem acionável ("o ambiente precisa de um ajuste").
+  Novos helpers expostos: `ehZeroLinhasEmEscrita`, `ehErroDeCacheSchema`, `detalheErro`.
+- **`editor.html`** — os indicadores de salvamento por linha (`marcarLinhaStatus`) e por
+  célula (`marcarCelulaStatus`) agora recebem o **motivo técnico** e o colocam no
+  `title`/tooltip (hover), como `demandas.html` já fazia — o texto visível continua em
+  linguagem de negócio, mas passar o mouse sobre um "falhou" mostra o erro real
+  (ex.: `PGRST116: Results contain 0 rows`), sem precisar do console.
+- **`tools/testar_supabase_erros.js`** (novo) — cobre a classificação: PGRST116 → sem
+  permissão, PGRST204/205 → cache de schema, permissão clássica preservada, erro de rede
+  segue sem mensagem pronta, e `detalheErro` monta "código: mensagem".
+- **`data/config.js`** — `versao` 0.27.0 → 0.28.0.
 
 ## Correção — projeto novo não aparecia no "Caminho do Corsário" — 2026-08-18
 Ao criar um projeto no `editor.html` ("+ Novo projeto"), ele nascia no golden record
