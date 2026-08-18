@@ -1,5 +1,31 @@
 # Changelog
 
+## Correção — erro 406 ao editar o "Caminho para o Corsário" — 2026-08-18
+Editar o status (ou a observação) de uma célula no conjunto **"O Caminho para o Corsário"**
+do `editor.html` falhava em produção. No console: `Failed to load resource: ... status of
+406` em `corsario_status?id=eq.<n>&select=*` e `editor: falha ao salvar status do corsário`.
+Mesma classe de problema da correção de escrita de `meta_inovacao_projetos`, só que
+**disfarçada de 406** em vez de "Sem permissão de escrita": a leitura de `corsario_status`
+funciona ao vivo e usa o **mesmo** client, com o **mesmo** header `x-cc-token`, que a escrita
+— logo o token certo chega ao banco (a mesma credencial edita as outras tabelas). O que
+estava fora era a **policy de UPDATE** (`cc_token_update`) de `corsario_status`, ausente ou
+defasada em produção (o estado de RLS divergiu de `2026-08_corsario_edicao.sql`). Com RLS
+ligada e sem policy de UPDATE que case, o Postgres **não recusa** — apenas filtra a linha, e
+o UPDATE afeta **0 linhas**. Como o editor pede `.update(...).select().single()`, 0 linhas
+viram **406 / PGRST116** ("Cannot coerce the result to a single JSON object"). Ou seja: o 406
+é o disfarce silencioso de "a policy de escrita não deixou passar".
+
+- **`tools/sql/2026-08_corrige_escrita_corsario.sql`** (novo) — **rodar no SQL editor do
+  Supabase**. Reaplica de forma idempotente `GRANT SELECT, INSERT, UPDATE` + policies
+  `cc_select_publico`/`cc_token_insert`/`cc_token_update` de `corsario_status`, com o token de
+  `data/config.js`, e emite `NOTIFY pgrst, 'reload schema'`. Não toca na tabela, nas colunas,
+  no seed nem no trigger de auditoria (`cc_audit_corsario_status`); segue sem `DELETE` (o
+  client não exclui linha de `corsario_status`). Espelha `2026-08_corrige_escrita_projetos.sql`.
+- **`js/supabase.js`** — `ehErroDePermissao()` agora reconhece também `406` / `PGRST116` como
+  permissão negada. Esse é o único jeito de uma **escrita** falhar por 0 linhas via RLS, e a
+  função só é consultada em `catch` de escrita — então a tela passa a mostrar a mensagem certa
+  ("Sem permissão de escrita — fale com o JR.") em vez do "falhou" opaco que escondia a causa.
+
 ## Correção — projeto novo não aparecia no "Caminho do Corsário" — 2026-08-18
 Ao criar um projeto no `editor.html` ("+ Novo projeto"), ele nascia no golden record
 (`meta_inovacao_projetos`) e se propagava para as telas que leem o golden — mas **não**

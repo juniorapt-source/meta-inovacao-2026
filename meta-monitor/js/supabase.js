@@ -80,6 +80,15 @@
     const status = err.status || err.statusCode || (err.originalError && err.originalError.status);
     if (status === 401 || status === 403) return true;
     if (String(err.code || "") === "42501") return true;
+    // RLS pode NEGAR escrita sem dar 403: quando a policy de UPDATE não casa (token
+    // errado/ausente, ou policy ausente/defasada), o UPDATE afeta 0 linhas em vez de
+    // recusar. Nas escritas o client pede `.select().single()`, e 0 linhas viram
+    // 406 / PGRST116 ("Cannot coerce the result to a single JSON object"). Como
+    // mensagemEscritaAmigavel() só é chamada em catch de ESCRITA (nunca em leitura),
+    // tratar esse caso como permissão negada troca um "falhou" opaco pela mensagem
+    // certa. Foi o disfarce do bug 406 ao editar o Corsário
+    // (tools/sql/2026-08_corrige_escrita_corsario.sql).
+    if (status === 406 || String(err.code || "") === "PGRST116") return true;
     const msg = String(err.message || "").toLowerCase();
     return msg.indexOf("row-level security") !== -1 || msg.indexOf("permission denied") !== -1 || msg.indexOf("jwt") !== -1;
   }
