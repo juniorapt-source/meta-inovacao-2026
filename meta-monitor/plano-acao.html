@@ -310,7 +310,7 @@
     supa = await CC_SUPABASE.obterClienteEsm();
   } catch (err) {
     console.error("plano-acao: falha ao iniciar o cliente Supabase", err);
-    painel.innerHTML = '<div class="pa-erro">Não foi possível carregar os dados agora.</div>";
+    painel.innerHTML = '<div class="pa-erro">Não foi possível carregar os dados agora.</div>';
     return;
   }
   const projetos = (window.DB && window.DB.projetos) || [];
