@@ -1,5 +1,26 @@
 # Changelog
 
+## Correção — projeto novo não aparecia no "Caminho do Corsário" — 2026-08-18
+Ao criar um projeto no `editor.html` ("+ Novo projeto"), ele nascia no golden record
+(`meta_inovacao_projetos`) e se propagava para as telas que leem o golden — mas **não**
+para a aba **"O Caminho para o Corsário"**. Motivo: essa tela monta a lista de iniciativas
+a partir de `corsario_status` (tabela à parte, status por iniciativa×critério), e o
+"+ Novo projeto" só gravava no golden, sem semear `corsario_status`. Além de deixar o
+projeto invisível no Corsário, isso quebrava a reconciliação "27 = 27" da Camada 4 da
+governança (o golden ficava com uma iniciativa a mais que `corsario_status`).
+
+- **`editor.html`** — `criarProjeto()` agora, após gravar no golden, semeia
+  `corsario_status` via `DB_CORSARIO.criarIniciativa()`: 1 linha por critério, todas
+  "não se aplica" (a iniciativa nasce **"não avaliada"**, fora da régua — não "reprovada"),
+  igual ao "+ Nova iniciativa" do conjunto Corsário. A falha ao semear o Corsário **não**
+  desfaz o projeto (ele já está no golden) — apenas avisa para reconciliar pelo conjunto
+  "O Caminho para o Corsário". Sem rede/fallback, avisa também.
+- **Pendência conhecida (exclusão):** remover um projeto (× / soft-delete no golden) ainda
+  **não** remove as linhas de `corsario_status` — a tabela não concede `DELETE` ao client
+  (`2026-08_corsario_edicao.sql` só libera SELECT/INSERT/UPDATE). Sincronizar a exclusão
+  exigirá uma migração à parte (liberar DELETE com token, ou dar soft-delete a
+  `corsario_status`). Fora do escopo desta correção.
+
 ## Correção — "Sem permissão de escrita" ao criar projeto — 2026-08-18
 Criar projeto em `editor.html` (conjunto "Projetos & Representantes" → "+ Novo projeto")
 falhava em produção com **"Sem permissão de escrita — fale com o JR."**. A leitura ao vivo
