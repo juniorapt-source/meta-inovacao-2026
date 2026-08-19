@@ -43,7 +43,7 @@
   <nav class="nav" aria-label="Navegação do painel"></nav>
   <main class="conteudo">
     <h1 class="pagina-titulo">Matriz de demandas</h1>
-    <p class="pagina-sub">27 iniciativas × 10 canais. É aqui que o micro vira visível: oficina feita → formulário em 5 dias úteis (ou justificativa) → priorização do Comitê → encaminhado à URC. C1 até 01/09 · C2 até 30/09.</p>
+    <p class="pagina-sub">27 iniciativas × 10 canais, editados direto aqui — oficina feita → formulário em 5 dias úteis (ou justificativa) → priorização do Comitê → encaminhado à URC. Sem login: todo mundo que abre o site vê e edita a mesma matriz. C1 até 01/09 · C2 até 30/09.</p>
 
     <!-- item 2.4 do plano de melhorias — Matriz é desktop-only abaixo de 768px: a tabela
          não cabe em card nenhum sem virar sopa de letrinhas (27 iniciativas × 10 canais),
@@ -80,7 +80,6 @@
       <div class="mz-acoes">
         <button type="button" class="btn sec" id="mz-atualizar">Atualizar</button>
         <button type="button" class="btn sec" id="mz-exportar">Exportar matriz</button>
-        <button type="button" class="btn" id="mz-editar">Ativar edição</button>
       </div>
     </div>
 
@@ -137,7 +136,9 @@
 
   let linhas = null;          // registros carregados (do Supabase, ou do fallback local)
   let usandoFallback = false; // true quando o Supabase não respondeu e caímos pro data/matriz.js
-  let editando = false;
+  // Edição viva: como Plano de ação e Projetos, a Matriz não tem mais toggle "Ativar edição"
+  // — as células já vêm editáveis. Só cai pra somente-leitura quando usandoFallback (offline),
+  // porque escrever no Supabase não funciona sem conexão.
   let realtimeCanal = null;
   let badgeTimer = null;
 
@@ -293,13 +294,14 @@
   }
 
   function renderTabela() {
+    const editavel = !usandoFallback;
     elMatriz.innerHTML = linhas.map(l =>
       "<tr><td>" + DRAWER.spanIniciativa(l.iniciativa) + marcadorOrfa(l) + "</td>" +
-      CANAL_IDS.map(c => (editando && !usandoFallback) ? celulaEditavel(l, c) : celulaEstatica(l[c])).join("") +
+      CANAL_IDS.map(c => editavel ? celulaEditavel(l, c) : celulaEstatica(l[c])).join("") +
       "</tr>"
     ).join("");
 
-    if (editando && !usandoFallback) {
+    if (editavel) {
       elMatriz.querySelectorAll("select.cel-editar").forEach(sel => {
         sel.addEventListener("change", onSalvarCelula);
       });
@@ -336,9 +338,11 @@
 
   // GOVERNANÇA: iniciativa (linha) não nasce nem morre aqui — só no golden record. O rodapé
   // deixou de ter "+ Adicionar linha" (que criava iniciativa solta, fora do portfólio) e
-  // aponta para o editor. Aqui edita-se apenas o status por canal.
+  // aponta para o editor. Aqui edita-se apenas o status por canal. Sem o toggle "Ativar
+  // edição", o rodapé aparece sempre que a edição está ativa (i.e., online — em fallback a
+  // matriz vira somente leitura e o aviso de origem já explica o motivo).
   function renderRodape() {
-    if (!editando || usandoFallback) { elRodape.innerHTML = ""; return; }
+    if (usandoFallback) { elRodape.innerHTML = ""; return; }
     elRodape.innerHTML = '<p style="font-size:12px;color:var(--grafite);margin:4px 0 0">As iniciativas (linhas) são geridas no <b>golden record</b> — cadastre ou remova em <a href="editor.html">editor.html › Projetos &amp; Representantes</a>. Aqui você edita só o status por canal.</p>';
   }
 
@@ -363,12 +367,6 @@
 
   document.getElementById("mz-atualizar").addEventListener("click", () => carregar(true));
   document.getElementById("mz-exportar").addEventListener("click", exportarJSON);
-  document.getElementById("mz-editar").addEventListener("click", (e) => {
-    if (usandoFallback) { window.alert("Edição desativada: sem conexão no momento, a matriz está em modo somente leitura."); return; }
-    editando = !editando;
-    e.target.textContent = editando ? "Sair da edição" : "Ativar edição";
-    renderTudo();
-  });
 
   carregar(false);
   EDITOR_ATUAL.montar(document.getElementById("cc-editor-rodape-wrap"));
