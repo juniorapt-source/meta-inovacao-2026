@@ -35,7 +35,10 @@ const PAGINAS = [
   { pagina: "caminho.html?semrede=1", seletor: "#lista-nos .chip", esperado: 18 },
   { pagina: "agenda.html?semrede=1", seletor: "#encontros .chip", esperado: 20 },
   { pagina: "demandas.html", seletor: "#matriz .cel", esperado: 270 },
-  { pagina: "minhas-acoes.html?pessoa=sandra&semrede=1", seletor: "#secao-nos .chip, #secao-acoes .chip, #secao-atividades .chip", esperado: 17 },
+  // esperado caiu de 17→3: em minhas-acoes.html, o status de AÇÃO e de ATIVIDADE virou
+  // controle editável inline (<select>) — o badge visual só permanece nos nós do caminho
+  // crítico (estado calculado, não editável, sem select). Sandra é guardiã de 3 nós.
+  { pagina: "minhas-acoes.html?pessoa=sandra&semrede=1", seletor: "#secao-nos .chip, #secao-acoes .chip, #secao-atividades .chip", esperado: 3 },
 ];
 
 function acharChrome() {

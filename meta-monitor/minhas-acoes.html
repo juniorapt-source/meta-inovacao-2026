@@ -13,14 +13,32 @@
 .ma-selecao{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .ma-selecao label{font-family:'DM Sans';font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--grafite)}
 .ma-vazio{color:var(--grafite);font-size:13.5px}
-.ma-linha{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--linha)}
+.ma-linha{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--linha)}
 .ma-linha:last-child{border-bottom:0}
-.ma-linha .ma-id{font-size:12px;color:var(--grafite);min-width:58px;flex-shrink:0}
+.ma-linha .ma-id{font-size:12px;color:var(--grafite);min-width:58px;flex-shrink:0;align-self:flex-start;padding-top:6px}
 .ma-linha .ma-titulo{flex:1;min-width:0}
 .ma-linha .ma-meta{font-size:12px;color:var(--grafite)}
 .ma-no-resumo{font-size:12.5px;color:var(--ink-2);margin-top:4px}
 .ma-no-resumo b{color:var(--ink)}
 .ma-erro{color:var(--critico);font-size:13px}
+
+/* item Minhas ações — status/prazos editáveis inline. Mesmo padrão de salvar/salvando/
+   erro de plano-acao.html (indicador por linha, .aria-live=polite), reaproveitando
+   DB_PLANO.salvar (ações) e supa.from("plano_acao_atividades").update (atividades). */
+.ma-controles{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.ma-controles select,.ma-controles input{font:400 12.5px 'DM Sans',sans-serif;color:var(--tinta);border:1px solid var(--linha);border-radius:0;padding:5px 6px;background:var(--branco)}
+.ma-controles input[type=date]{width:138px;font-family:'IBM Plex Mono',monospace;font-size:12px}
+.ma-controles input[type=text]{width:88px}
+.ma-abrir{font-size:12px;color:var(--grafite);text-decoration:none;padding:4px 6px;border:1px solid transparent;flex-shrink:0}
+.ma-abrir:hover{color:var(--accent);border-color:var(--linha)}
+.ma-salvo{font-size:10.5px;min-width:50px;flex-shrink:0;font-family:'DM Sans',sans-serif}
+.ma-titulo-link{color:var(--tinta);text-decoration:none}
+.ma-titulo-link:hover{text-decoration:underline}
+@media (max-width:767px){
+  .ma-linha{flex-wrap:wrap}
+  .ma-controles{width:100%;justify-content:flex-start;margin-left:68px}
+  .ma-controles input[type=date]{width:120px}
+}
 </style>
 </head>
 <body>
@@ -60,6 +78,11 @@
          não tem nenhum campo ligando um encontro a uma pessoa específica — inventar esse
          vínculo aqui seria inventar dado que não existe na fonte. Se um dia a agenda ganhar
          esse campo, a seção entra aqui do mesmo jeito que as outras três. -->
+
+    <!-- Edição de status/prazos acontece direto nas linhas acima; o rodapé de "editando
+         como" identifica quem está gravando (mesmo módulo EDITOR_ATUAL das outras 4 telas
+         de escrita — editor.html, demandas.html, plano-acao.html, plano.html/Kanban). -->
+    <div id="cc-editor-rodape-wrap"></div>
   </main>
 </div>
 
@@ -81,6 +104,7 @@
 <script src="js/core.js"></script>
 <script src="js/busca.js"></script>
 <script src="js/responsaveis.js"></script>
+<script src="js/editor_atual.js"></script>
 <script>
 (async function () {
   "use strict";
@@ -161,65 +185,70 @@
       CC_STATUS.badge(CHAVE_NO[st]) + "</div>";
   }
 
+  // status editável — <option value> guarda a CHAVE canônica ("nao_iniciado" etc.), que é
+  // o que o Supabase espera; o rótulo ("Não iniciado") aparece só na tela. Ordem dos
+  // options segue a ordem de inserção de CHAVE_POR_ROTULO (Não iniciado → Em andamento →
+  // Concluído), mesma ordem dos <option> hardcoded em editor.html/plano.html.
+  function opcoesStatusAcao(statusAtualRotulo) {
+    const chaveAtual = DB_PLANO.CHAVE_POR_ROTULO[statusAtualRotulo] || "nao_iniciado";
+    return Object.keys(DB_PLANO.CHAVE_POR_ROTULO).map((rot) => {
+      const ch = DB_PLANO.CHAVE_POR_ROTULO[rot];
+      return '<option value="' + ch + '"' + (ch === chaveAtual ? " selected" : "") + ">" + esc(rot) + "</option>";
+    }).join("");
+  }
+
   function linhaAcao(a) {
-    const [cls, rot] = stClass(a, hoje);
-    return '<a class="ma-linha" data-id="' + esc(a.id) + '" href="plano.html?q=' + encodeURIComponent(a.id) + "#" + esc(a.id) + '">' +
+    // .ma-linha vira <div> (não <a>) — não dá pra colocar <select>/<input> dentro de <a>
+    // sem cliques acidentais no controle navegarem embora. O drill-down pra plano.html
+    // continua acessível pelo próprio título (a.ma-titulo-link) e por um "↗" ao lado dos
+    // controles — dois alvos, um pra quem lê a linha e um pra quem já está com o mouse à
+    // direita mexendo no status.
+    return '<div class="ma-linha" data-id="' + esc(a.id) + '" data-db-id="' + esc(a.db_id || a.id) + '">' +
       '<span class="ma-id mono">' + esc(a.id) + "</span>" +
-      '<span class="ma-titulo">' + esc(a.atividade) + "</span>" +
-      '<span class="ma-meta mono">' + esc(a.prazo || "—") + "</span>" +
-      '<span class="chip ' + cls + '">' + rot + "</span></a>";
+      '<span class="ma-titulo"><a class="ma-titulo-link" href="plano.html?q=' + encodeURIComponent(a.id) + "#" + esc(a.id) + '">' + esc(a.atividade) + "</a></span>" +
+      '<span class="ma-controles">' +
+        '<input type="text" data-campo="prazo" value="' + esc(a.prazo || "") + '" placeholder="ex.: 14/08" aria-label="Prazo (texto)">' +
+        '<input type="date" data-campo="prazo_iso" value="' + esc(a.prazo_iso || "") + '" aria-label="Prazo (data ISO)">' +
+        '<select data-campo="status" aria-label="Status">' + opcoesStatusAcao(a.status) + "</select>" +
+        '<span class="ma-salvo" aria-live="polite"></span>' +
+      "</span>" +
+      '<a class="ma-abrir mono" href="plano.html?q=' + encodeURIComponent(a.id) + "#" + esc(a.id) + '" title="Abrir no Plano de ação" aria-label="Abrir no Plano de ação">↗</a>' +
+      "</div>";
   }
 
   // mesma chave canônica "atividade_*" de plano-acao.html (window.CC_STATUS, contexto
   // "atividade") — os dois lugares que mostram status de plano_acao_atividades agora
-  // compartilham a mesma fonte de rótulo/cor.
-  function linhaAtividade(at) {
-    const chave = CC_STATUS.chaveDeEntrada("atividade", at.status);
-    return '<div class="ma-linha" data-atividade-id="' + esc(at.id) + '">' +
-      '<span class="ma-titulo">' + esc(at.descricao || "(sem descrição)") + '<div class="ma-no-resumo">' + esc(at.iniciativa || "") + "</div></span>" +
-      CC_STATUS.badge(chave) + "</div>";
+  // compartilham a mesma fonte de rótulo/cor. Editável inline, mesmos 3 valores fixos
+  // do banco (nao_iniciado/em_execucao/atrasado) do STATUS_VALORES de plano-acao.html.
+  const STATUS_ATIVIDADE = ["nao_iniciado", "em_execucao", "atrasado"];
+  function opcoesStatusAtividade(valorAtual) {
+    return STATUS_ATIVIDADE.map((v) => {
+      const rot = CC_STATUS.rotulo(CC_STATUS.chaveDeEntrada("atividade", v));
+      return '<option value="' + v + '"' + (v === valorAtual ? " selected" : "") + ">" + esc(rot) + "</option>";
+    }).join("");
   }
 
-  async function render(id) {
-    // reflete a pessoa atual na URL (link compartilhável), sem empilhar histórico
-    const url = new URL(location.href);
-    if (id) url.searchParams.set("pessoa", id); else url.searchParams.delete("pessoa");
-    history.replaceState(null, "", url.pathname + url.search);
+  function linhaAtividade(at) {
+    return '<div class="ma-linha" data-atividade-id="' + esc(at.id) + '">' +
+      '<span class="ma-titulo">' + esc(at.descricao || "(sem descrição)") + '<div class="ma-no-resumo">' + esc(at.iniciativa || "") + "</div></span>" +
+      '<span class="ma-controles">' +
+        '<select data-campo="status" aria-label="Status">' + opcoesStatusAtividade(at.status || "nao_iniciado") + "</select>" +
+        '<span class="ma-salvo" aria-live="polite"></span>' +
+      "</span>" +
+      "</div>";
+  }
 
-    if (!id) {
-      resumoEl.hidden = true;
-      vazioEl.hidden = false;
-      blocoNos.hidden = blocoAcoes.hidden = blocoAtividades.hidden = true;
-      return;
-    }
-    vazioEl.hidden = true;
+  // estado da pessoa atualmente exibida — mantido em escopo do módulo pra que os
+  // handlers de save saibam onde atualizar o objeto local (sem re-fetch) e onde
+  // recalcular o resumo do cabeçalho depois de uma edição bem-sucedida.
+  let contextoAtual = { id: null, nos: [], acoes: [], atividades: [] };
 
-    const nos = nosDaPessoa(id);
-    const acoes = acoesDaPessoa(id);
-
-    blocoNos.hidden = !nos.length;
-    secaoNos.innerHTML = nos.length ? nos.map(linhaNo).join("") : "";
-
-    blocoAcoes.hidden = !acoes.length;
-    secaoAcoes.innerHTML = acoes.length ? acoes.map(linhaAcao).join("") : "";
-
+  function atualizarResumo() {
+    const { nos, acoes, atividades } = contextoAtual;
     const atrasadosNos = nos.filter((n) => CALC.estadoNo(n, plano, hoje) === "risco").length;
     const atrasadosAcoes = acoes.filter((a) => CALC.ehAtrasada(a, hoje)).length;
     const vence7Acoes = acoes.filter((a) => a.prazo_iso && a.status !== "Concluído" && a.prazo_iso >= hoje && a.prazo_iso <= LIM7).length;
-
-    let atividades = [];
-    blocoAtividades.hidden = false;
-    secaoAtividades.innerHTML = '<div class="ma-vazio">Carregando…</div>';
-    try {
-      atividades = await atividadesDaPessoa(id);
-      blocoAtividades.hidden = !atividades.length;
-      secaoAtividades.innerHTML = atividades.length ? atividades.map(linhaAtividade).join("") : "";
-    } catch (err) {
-      console.error("minhas-acoes: falha ao carregar atividades por iniciativa", err);
-      secaoAtividades.innerHTML = '<div class="ma-erro">Não foi possível atualizar os dados agora.</div>';
-    }
     const atrasadosAtividades = atividades.filter((a) => a.status === "atrasado").length;
-
     const totalItens = nos.length + acoes.length + atividades.length;
     const totalAtrasados = atrasadosNos + atrasadosAcoes + atrasadosAtividades;
     resumoEl.hidden = false;
@@ -231,6 +260,141 @@
         vence7Acoes + (vence7Acoes === 1 ? " vence" : " vencem") + " em 7 dias";
   }
 
+  async function render(id) {
+    // reflete a pessoa atual na URL (link compartilhável), sem empilhar histórico
+    const url = new URL(location.href);
+    if (id) url.searchParams.set("pessoa", id); else url.searchParams.delete("pessoa");
+    history.replaceState(null, "", url.pathname + url.search);
+
+    if (!id) {
+      contextoAtual = { id: null, nos: [], acoes: [], atividades: [] };
+      resumoEl.hidden = true;
+      vazioEl.hidden = false;
+      blocoNos.hidden = blocoAcoes.hidden = blocoAtividades.hidden = true;
+      return;
+    }
+    vazioEl.hidden = true;
+
+    const nos = nosDaPessoa(id);
+    const acoes = acoesDaPessoa(id);
+    contextoAtual = { id: id, nos: nos, acoes: acoes, atividades: [] };
+
+    blocoNos.hidden = !nos.length;
+    secaoNos.innerHTML = nos.length ? nos.map(linhaNo).join("") : "";
+
+    blocoAcoes.hidden = !acoes.length;
+    secaoAcoes.innerHTML = acoes.length ? acoes.map(linhaAcao).join("") : "";
+
+    blocoAtividades.hidden = false;
+    secaoAtividades.innerHTML = '<div class="ma-vazio">Carregando…</div>';
+    try {
+      const atividades = await atividadesDaPessoa(id);
+      // corrida: se o usuário trocou de pessoa no meio da chamada, descarta o resultado
+      // (a próxima render pra outra pessoa já reescreveu contextoAtual.id).
+      if (contextoAtual.id !== id) return;
+      contextoAtual.atividades = atividades;
+      blocoAtividades.hidden = !atividades.length;
+      secaoAtividades.innerHTML = atividades.length ? atividades.map(linhaAtividade).join("") : "";
+    } catch (err) {
+      console.error("minhas-acoes: falha ao carregar atividades por iniciativa", err);
+      if (contextoAtual.id === id) secaoAtividades.innerHTML = '<div class="ma-erro">Não foi possível atualizar os dados agora.</div>';
+    }
+    atualizarResumo();
+  }
+
+  // ---- edição inline (status + prazos) — mesmo padrão de plano-acao.html: debounce por
+  // "tipo:id:campo" (600ms) pra campos texto, salvamento imediato pra select/date. Cada
+  // linha ganha um <span class="ma-salvo"> aria-live="polite" onde aparece "salvando…/
+  // salvo/erro" sem quebrar a leitura por leitor de tela. ----
+  const CAMPO_COLUNA_ACAO = { status: "status", prazo: "prazo_texto", prazo_iso: "prazo_iso" };
+  const timers = new Map();
+
+  function marcarSalvo(row, texto) {
+    const el = row && row.querySelector(".ma-salvo");
+    if (!el) return;
+    if (texto === "salvando") { el.textContent = "salvando…"; el.style.color = "var(--grafite)"; }
+    else if (texto === "salvo") {
+      el.textContent = "salvo"; el.style.color = "var(--verde)";
+      setTimeout(() => { if (el.textContent === "salvo") el.textContent = ""; }, 1500);
+    } else if (texto) { el.textContent = texto; el.style.color = "var(--critico)"; }
+    else { el.textContent = ""; }
+  }
+
+  function acaoLocal(id) { return contextoAtual.acoes.find((a) => a.id === id) || plano.find((a) => a.id === id); }
+
+  async function salvarAcao(row, id, dbId, campo, valorBruto) {
+    const coluna = CAMPO_COLUNA_ACAO[campo];
+    if (!coluna) return;
+    let valorColuna = valorBruto;
+    if (campo === "prazo_iso") valorColuna = String(valorBruto || "").trim() === "" ? null : valorBruto;
+    // status: <option value> já é a chave canônica ("nao_iniciado" etc.), não o rótulo.
+    marcarSalvo(row, "salvando");
+    try {
+      const atualizada = await DB_PLANO.salvar(dbId, { [coluna]: valorColuna }, EDITOR_ATUAL.nomeAtual());
+      // reflete no objeto em memória: DB_PLANO.salvar devolve a linha já traduzida pro
+      // formato "ação" (rótulo em a.status, prazo_iso em ISO), então dá pra copiar direto.
+      const a = acaoLocal(id);
+      if (a) Object.assign(a, atualizada);
+      marcarSalvo(row, "salvo");
+      atualizarResumo(); // contador de atrasados/vence7 depende do prazo e do status
+    } catch (err) {
+      console.error("minhas-acoes: falha ao salvar ação", err);
+      marcarSalvo(row, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "erro ao salvar");
+    }
+  }
+
+  function agendarSalvarAcao(row, id, dbId, campo, valor) {
+    const chave = "acao:" + dbId + ":" + campo;
+    clearTimeout(timers.get(chave));
+    marcarSalvo(row, "");
+    const t = setTimeout(() => {
+      timers.delete(chave);
+      salvarAcao(row, id, dbId, campo, valor);
+    }, 600);
+    timers.set(chave, t);
+  }
+
+  async function salvarAtividade(row, id, campo, valor) {
+    marcarSalvo(row, "salvando");
+    try {
+      const supa = await CC_SUPABASE.obterClienteEsm();
+      const { error } = await supa
+        .from(TABELA)
+        .update({ [campo]: valor, updated_at: new Date().toISOString(), updated_by: EDITOR_ATUAL.nomeAtual() })
+        .eq("id", id);
+      if (error) throw error;
+      const at = contextoAtual.atividades.find((x) => x.id === id);
+      if (at) at[campo] = valor;
+      marcarSalvo(row, "salvo");
+      atualizarResumo(); // contador de atrasados de atividades muda com o status
+    } catch (err) {
+      console.error("minhas-acoes: falha ao salvar atividade", err);
+      marcarSalvo(row, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "erro ao salvar");
+    }
+  }
+
+  // delegação de eventos no contêiner de cada seção — o innerHTML é reescrito a cada
+  // render()/troca de pessoa, então os listeners precisam ficar num ancestral fixo.
+  secaoAcoes.addEventListener("input", (e) => {
+    const inp = e.target.closest('input[data-campo="prazo"]');
+    if (!inp) return;
+    const row = inp.closest(".ma-linha");
+    agendarSalvarAcao(row, row.dataset.id, row.dataset.dbId, "prazo", inp.value);
+  });
+  secaoAcoes.addEventListener("change", (e) => {
+    const ctl = e.target.closest("[data-campo]");
+    if (!ctl) return;
+    const row = ctl.closest(".ma-linha");
+    if (ctl.dataset.campo === "prazo") return; // já tratado no input com debounce
+    salvarAcao(row, row.dataset.id, row.dataset.dbId, ctl.dataset.campo, ctl.value);
+  });
+  secaoAtividades.addEventListener("change", (e) => {
+    const sel = e.target.closest("select[data-campo]");
+    if (!sel) return;
+    const row = sel.closest(".ma-linha");
+    salvarAtividade(row, row.dataset.atividadeId, sel.dataset.campo, sel.value);
+  });
+
   montarSelect();
   const inicial = pessoaDaQuerystring() || localStorage.getItem("cc_ver_como") || "";
   if (inicial) selVerComo.value = inicial;
@@ -239,6 +403,7 @@
     render(selVerComo.value);
   });
   render(inicial);
+  EDITOR_ATUAL.montar(document.getElementById("cc-editor-rodape-wrap"));
 })();
 </script>
 </body>
