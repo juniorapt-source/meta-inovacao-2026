@@ -78,7 +78,6 @@
     <div class="mz-topo largura-desktop">
       <div class="mz-status" id="mz-status">Carregando…</div>
       <div class="mz-acoes">
-        <button type="button" class="btn sec" id="mz-atualizar">Atualizar</button>
         <button type="button" class="btn sec" id="mz-exportar">Exportar matriz</button>
       </div>
     </div>
@@ -365,7 +364,9 @@
     renderRodape();
   }
 
-  document.getElementById("mz-atualizar").addEventListener("click", () => carregar(true));
+  // Sem botão "Atualizar" — o realtime do Supabase (iniciarRealtime) já refaz a carga
+  // sozinho quando outra pessoa mexe numa célula. Se o Supabase cair, o aviso de fallback
+  // aparece no #mz-estado com um "Tentar de novo" próprio (mostrarErro).
   document.getElementById("mz-exportar").addEventListener("click", exportarJSON);
 
   carregar(false);
