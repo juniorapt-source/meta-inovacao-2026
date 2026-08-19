@@ -197,7 +197,16 @@ async function principal() {
       acoesCount: document.querySelectorAll('#secao-acoes > .ma-linha').length,
       resumoTexto: document.getElementById('resumo-cabecalho').textContent,
       resumoVisivel: !document.getElementById('resumo-cabecalho').hidden,
-      url: location.pathname + location.search
+      url: location.pathname + location.search,
+      // edição inline (status + prazos) — toda linha de ação precisa ter os 3 controles
+      // (select status, input prazo texto, input prazo ISO) + link "↗" pra plano.html,
+      // e o rodapé "Editando como" (EDITOR_ATUAL) precisa aparecer.
+      acoesComSelectStatus: document.querySelectorAll('#secao-acoes .ma-linha select[data-campo="status"]').length,
+      acoesComPrazoTexto: document.querySelectorAll('#secao-acoes .ma-linha input[data-campo="prazo"]').length,
+      acoesComPrazoIso: document.querySelectorAll('#secao-acoes .ma-linha input[data-campo="prazo_iso"]').length,
+      acoesComAbrir: document.querySelectorAll('#secao-acoes .ma-linha a.ma-abrir').length,
+      rodapeEditor: !!document.querySelector('#cc-editor-rodape-wrap [data-cc-editor-nome]'),
+      primeiraLinhaDbId: (document.querySelector('#secao-acoes .ma-linha') || {}).dataset ? document.querySelector('#secao-acoes .ma-linha').dataset.dbId : null
     })`));
 
     if (estado.selecionado !== PESSOA) erros.push(`select "ver-como" não ficou em "${PESSOA}": veio "${estado.selecionado}"`);
@@ -218,6 +227,15 @@ async function principal() {
     if (!estado.resumoTexto.includes(esperado.vence7 + (esperado.vence7 === 1 ? " vence em 7 dias" : " vencem em 7 dias"))) {
       erros.push(`resumo "${estado.resumoTexto}" não cita "${esperado.vence7} vencem em 7 dias" como esperado`);
     }
+
+    // edição inline: cada linha de ação tem que ter os 3 controles + o link ↗, e o
+    // rodapé "Editando como" tem que estar montado (mesmo padrão de plano-acao.html)
+    if (estado.acoesComSelectStatus !== esperado.acoes) erros.push(`select de status: esperava ${esperado.acoes} (uma por ação), veio ${estado.acoesComSelectStatus}`);
+    if (estado.acoesComPrazoTexto !== esperado.acoes) erros.push(`input de prazo (texto): esperava ${esperado.acoes}, veio ${estado.acoesComPrazoTexto}`);
+    if (estado.acoesComPrazoIso !== esperado.acoes) erros.push(`input de prazo (ISO): esperava ${esperado.acoes}, veio ${estado.acoesComPrazoIso}`);
+    if (estado.acoesComAbrir !== esperado.acoes) erros.push(`link "↗" pra plano.html: esperava ${esperado.acoes}, veio ${estado.acoesComAbrir}`);
+    if (!estado.rodapeEditor) erros.push("rodapé \"Editando como\" (EDITOR_ATUAL) não foi montado");
+    if (!estado.primeiraLinhaDbId) erros.push("primeira linha de ação sem data-db-id (necessário pra DB_PLANO.salvar)");
 
     if (erros.length) {
       console.error("FALHOU minhas_acoes_lista_contagem_correta:");
