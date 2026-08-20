@@ -1,5 +1,52 @@
 # Changelog
 
+## v0.29.0 — 2026-08-19
+**Escrita autenticada (Supabase Auth) vai ao ar de verdade** — Fase 2 da migração
+planejada em `docs/SEGURANCA_ESCRITA_AUTH.md`, que tinha ficado só no banco (Fase 1,
+`tools/sql/2026-08_auth_escrita.sql`) sem o front correspondente. O sintoma reportado:
+editor cadastrado, logado, mudando o Status de uma linha do Plano de ação (ex.: CMT-01)
+via `editor.html` — via "Sem permissão de escrita — fale com o JR.", mesmo sendo editor
+de verdade.
+
+- **Causa raiz (confirmada nas policies, não é chute):** a Fase 1 já tinha rodado em
+  produção há um tempo, mas (a) a allowlist `meta_inovacao_editores` estava **vazia** —
+  `cc_eh_editor()` dava `false` pra qualquer um, sempre — e (b) o front publicado
+  (`editor.html`/`plano-acao.html`/`demandas.html`) **nunca ganhou login** — continuava
+  mandando `x-cc-token` como `anon`, e as tabelas migradas (`meta_inovacao_plano_acoes`,
+  `_agenda_encontros`, `_pessoas`, `_urc_lideranca`, `_urc_canais_responsaveis`) não
+  tinham mais nenhuma policy de escrita pra `anon`. Ou seja: a escrita nessas 5 tabelas
+  estava quebrada **pra qualquer pessoa** usando o site normal, não só pra este relato —
+  incluindo "Minhas ações" com edição inline (v0.28.0 anterior, `#8`) e o Kanban de
+  `plano.html`, que escrevem na mesma `meta_inovacao_plano_acoes`.
+- **`tools/sql/2026-08_auth_escrita_cadastro_editor.sql`** (novo, já rodado em produção) —
+  cadastra o primeiro editor (JR.) na allowlist.
+- **`tools/sql/2026-08_auth_escrita_completa.sql`** (novo, já rodado em produção) —
+  fecha as 4 tabelas que a Fase 1 tinha deixado pra trás (`corsario_status`,
+  `meta_inovacao_projetos` — reversão acidental de fixes de token anteriores —,
+  `meta_inovacao_matriz_demandas` e `plano_acao_atividades`) pro mesmo modelo
+  `authenticated + cc_eh_editor()`, necessário porque o front novo já não manda mais
+  `x-cc-token` — sem essa migração, essas 4 tabelas (que hoje funcionam) quebrariam
+  assim que o login fosse ao ar. De passagem, fecha um gap de segurança encontrado em
+  `plano_acao_atividades`: as policies de escrita estavam com role `public`, sem token
+  nem login nenhum — qualquer um com a anon key conseguia gravar ali.
+- **`js/auth.js`** (novo) — sessão do Supabase Auth (login/logout, e-mail+senha), barra
+  de status fixa (topo direito) e `gatearRegiao()`: bloqueia visualmente (fail-closed,
+  com banner "Entrar para editar") a região de edição de cada tela até confirmar sessão
+  de editor cadastrado.
+- **`js/supabase.js`** — clients (clássico e ESM) passam a persistir a sessão do
+  Supabase Auth (`persistSession`/`autoRefreshToken`); novo `clientePrincipal()` (um
+  client de auth por página); `headersComToken()` para de mandar `x-cc-token` (só
+  `x-cc-editor`, informativo, pro trigger de auditoria).
+- **`editor.html`, `plano-acao.html`, `demandas.html`, `minhas-acoes.html`, `plano.html`**
+  — incluem `js/auth.js`; as 4 primeiras gateiam a região de edição
+  (`gatearRegiao`); `plano.html` (Kanban, visão alternativa por toggle) fica só com a
+  barra de login — gatear o container de lá vazaria um banner na visão Lista, que não
+  edita nada.
+- **`data/config.js`** — remove `tokenEscrita` (não é mais usado); `versao` 0.28.0 →
+  0.29.0.
+- Testado: `node --check` em todo `js/*.js`, `tools/validar_site.py` (11 páginas + JS
+  inline OK).
+
 ## v0.28.0 — 2026-08-18
 Dois problemas de escrita do **Modo edição** (`editor.html`) fechados de uma vez: o **erro
 406 ao editar o "Caminho para o Corsário"** (correção de banco) e a **generalização do

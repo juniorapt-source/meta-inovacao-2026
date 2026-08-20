@@ -5,29 +5,28 @@
  * window.supabase.createClient), plano-acao.html e minhas-acoes.html (SDK via import()
  * dinâmico do pacote ESM, cada uma com sua cópia de iniciarCliente()). As duas formas de
  * carregar a lib continuam existindo (trocar isso tocaria em mais coisa do que o
- * necessário), mas agora passam por AQUI — um lugar só decide como o client é montado e
- * garante que toda escrita carregue o header x-cc-token (RLS por token compartilhado,
- * ver tools/sql/2026-08_protecao_escrita.sql).
+ * necessário), mas agora passam por AQUI — um lugar só decide como o client é montado.
  *
- * window.CC_TOKEN é definido por js/gate.js (sempre que a página carrega, com ou sem
- * senha ativa — ver comentário lá) ANTES deste módulo ser usado de verdade (a leitura
- * do token só acontece dentro de obterClienteClassico/obterClienteEsm, chamadas de
- * dentro do script de cada página, que roda depois de gate.js na ordem de <script>).
+ * v0.28.0/v0.29.0 — escrita autenticada (Supabase Auth, tools/sql/2026-08_auth_escrita.sql
+ * + 2026-08_auth_escrita_completa.sql): o token compartilhado (x-cc-token) saiu. Quem PODE
+ * escrever agora é decidido pela SESSÃO do Supabase Auth (login de verdade, js/auth.js) +
+ * allowlist meta_inovacao_editores no banco — os clients abaixo persistem a sessão
+ * (auth.persistSession/autoRefreshToken) pra valer nas 5 telas de escrita sem precisar
+ * logar de novo em cada uma. x-cc-editor (QUEM escreveu, abaixo) continua só um bônus
+ * informativo pro trigger de auditoria — não é mais o que decide permissão.
  */
 (function (root) {
   "use strict";
 
-  // item 3.4 (P13) — além do x-cc-token (P3, quem PODE escrever), toda escrita agora
-  // também manda x-cc-editor (QUEM escreveu) — lido de window.EDITOR_ATUAL
-  // (js/editor_atual.js), se essa página carregar o módulo; páginas só-leitura não
-  // precisam dele, e a função continua funcionando normalmente sem o header extra
-  // (não é uma dependência obrigatória, só um bônus quando disponível). O nome da
-  // função ficou o mesmo (headersComToken) pra não quebrar corsario.html/js/drawer.js,
-  // que já chamam ela pros fetches crus de leitura — mandar x-cc-editor ali também é
-  // inofensivo (SELECT não olha esse header).
+  // manda x-cc-editor (QUEM escreveu) — lido de window.EDITOR_ATUAL (js/editor_atual.js),
+  // se essa página carregar o módulo; páginas só-leitura não precisam dele, e a função
+  // continua funcionando normalmente sem o header extra (não é uma dependência
+  // obrigatória, só um bônus quando disponível, usado pelo trigger de auditoria como
+  // autor de último recurso — ver tools/sql/2026-08_auditoria.sql). O nome da função
+  // ficou o mesmo (headersComToken, de quando também mandava x-cc-token) pra não quebrar
+  // corsario.html/js/drawer.js, que já chamam ela pros fetches crus de leitura.
   function headersComToken() {
     const h = {};
-    if (root.CC_TOKEN) h["x-cc-token"] = root.CC_TOKEN;
     const nomeEditor = root.EDITOR_ATUAL && root.EDITOR_ATUAL.nomeAtual ? root.EDITOR_ATUAL.nomeAtual() : null;
     if (nomeEditor) h["x-cc-editor"] = nomeEditor;
     return h;
@@ -38,6 +37,13 @@
     return root.APP_CONFIG;
   }
 
+  // opções de auth iguais nos dois clients — persiste a sessão do Supabase Auth em
+  // localStorage (login vale nas 5 telas de escrita, sem pedir de novo por página) e
+  // renova o token sozinho antes de expirar. detectSessionInUrl:false porque este site
+  // não usa magic link/OAuth redirect (D2 do runbook, docs/SEGURANCA_ESCRITA_AUTH.md) —
+  // só e-mail+senha via js/auth.js.
+  const OPCOES_AUTH = { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } };
+
   let clienteClassico = null;
   // client via SDK clássica (CDN <script src=".../supabase-js@2">, window.supabase.createClient)
   // — usado por páginas que já carregam o CDN global (demandas.html, via js/matriz-store.js).
@@ -45,9 +51,8 @@
     if (clienteClassico) return clienteClassico;
     if (!root.supabase || !root.supabase.createClient) throw new Error("supabase-js (CDN clássico) não carregado — confira o <script> do CDN.");
     const cfg = exigirConfig();
-    clienteClassico = root.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
-      global: { headers: headersComToken() },
-    });
+    clienteClassico = root.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, Object.assign(
+      { global: { headers: headersComToken() } }, OPCOES_AUTH));
     return clienteClassico;
   }
 
@@ -61,11 +66,21 @@
     promessaClienteEsm = (async () => {
       const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
       const cfg = exigirConfig();
-      return createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
-        global: { headers: headersComToken() },
-      });
+      return createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, Object.assign(
+        { global: { headers: headersComToken() } }, OPCOES_AUTH));
     })();
     return promessaClienteEsm;
+  }
+
+  // Client "principal" da página para sessão (login/logout) e escrita autenticada: usa
+  // o SDK clássico se a página carregou o CDN <script> (demandas.html), senão o ESM
+  // (editor.html, plano-acao.html, minhas-acoes.html, plano.html) — assim há UM único
+  // client de auth por página, sempre o mesmo que faz a escrita (js/auth.js usa este
+  // pra login/logout/estado; as camadas DB_* usam obterClienteEsm/obterClienteClassico
+  // diretamente pra escrita — é o MESMO client em cache, então a sessão é a mesma).
+  function clientePrincipal() {
+    if (root.supabase && root.supabase.createClient) return Promise.resolve(obterClienteClassico());
+    return obterClienteEsm();
   }
 
   /* ---- erro de escrita amigável (item 2.4) ---- */
@@ -91,13 +106,15 @@
   }
 
   // UPDATE/DELETE que não afetou NENHUMA linha. Sob a RLS deste projeto a policy de
-  // escrita filtra pela USING (x-cc-token certo) EM SILÊNCIO — em vez de devolver
-  // "permission denied", ela simplesmente não enxerga a linha, o UPDATE afeta 0 registros
-  // e o `.select().single()` estoura PGRST116 ("Results contain 0 rows"). Numa edição de
-  // uma linha que ACABOU de ser carregada da própria tela (existe, não é id inventado),
-  // 0 linhas afetadas é, na prática, bloqueio de escrita por token errado/ausente — não
-  // "o registro sumiu". Sem reconhecer isso, esse caso caía no "falhou" cru do editor,
-  // exatamente o sintoma que mandava abrir o console pra descobrir a causa.
+  // escrita filtra EM SILÊNCIO (token errado no modelo antigo; sessão sem login ou sem
+  // constar em meta_inovacao_editores no modelo atual, cc_eh_editor() — ver
+  // tools/sql/2026-08_auth_escrita.sql) — em vez de devolver "permission denied", ela
+  // simplesmente não enxerga a linha, o UPDATE afeta 0 registros e o `.select().single()`
+  // estoura PGRST116 ("Results contain 0 rows"). Numa edição de uma linha que ACABOU de
+  // ser carregada da própria tela (existe, não é id inventado), 0 linhas afetadas é, na
+  // prática, bloqueio de escrita por sessão sem permissão — não "o registro sumiu". Sem
+  // reconhecer isso, esse caso caía no "falhou" cru do editor, exatamente o sintoma que
+  // mandava abrir o console pra descobrir a causa.
   function ehZeroLinhasEmEscrita(err) {
     if (codigoErro(err) === "PGRST116") return true;
     // fallback: alguns embrulhos de erro trazem só o status HTTP (406, o que o
@@ -153,6 +170,7 @@
   const CC_SUPABASE = {
     obterClienteClassico: obterClienteClassico,
     obterClienteEsm: obterClienteEsm,
+    clientePrincipal: clientePrincipal,
     headersComToken: headersComToken,
     resetarClientes: resetarClientes,
     ehErroDePermissao: ehErroDePermissao,
