@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.30.0 — 2026-08-20
+**Reverte escrita autenticada pro token compartilhado** — risco assumido, projeto
+pequeno/temporário, senha esquecida custava mais caro que a exposição do token. Volta pro
+comportamento de v0.27.x: qualquer um com o link do site edita, sem logar (mesmo modelo
+de `tools/sql/2026-08_protecao_escrita.sql`). Não apagou dado — só trocou a barreira de
+escrita.
+
+- **Banco:** rodado no SQL Editor de produção — as policies `escrita_editor_insert/update/delete`
+  (modelo `authenticated + cc_eh_editor()`, v0.28.0/v0.29.0) foram trocadas de volta por
+  `cc_token_insert/update/delete` (role `anon`, header `x-cc-token`) nas 9 tabelas do
+  esquema. `cc_select_publico` (leitura pública) segue inalterada.
+- **Front:** `data/config.js` volta a expor `tokenEscrita` (novo UUID gerado —
+  o anterior `90bb649c-…` ficou tempo demais em capturas de tela e no histórico do Git).
+  `js/supabase.js:headersComToken()` volta a mandar `x-cc-token`. Removido `<script src="js/auth.js">`
+  (e o `gatearRegiao` associado, quando havia) de `editor.html`, `plano-acao.html`,
+  `demandas.html`, `minhas-acoes.html` e `plano.html`. O subtítulo da `demandas.html` volta
+  à redação anterior ("Sem login: todo mundo que abre o site vê e edita a mesma matriz.").
+- **Não removido:** `js/auth.js` continua no repositório (nenhuma tela mais carrega ele);
+  `OPCOES_AUTH`/`clientePrincipal()` em `js/supabase.js` seguem — inofensivos sem login
+  ativo. `meta_inovacao_editores` fica vazia mas presente. Facilita reativar login um dia
+  se decidido (histórico completo em `docs/SEGURANCA_ESCRITA_AUTH.md`).
+
 ## v0.29.0 — 2026-08-19
 **Escrita autenticada (Supabase Auth) vai ao ar de verdade** — Fase 2 da migração
 planejada em `docs/SEGURANCA_ESCRITA_AUTH.md`, que tinha ficado só no banco (Fase 1,

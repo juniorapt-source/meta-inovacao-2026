@@ -27,6 +27,7 @@
   // corsario.html/js/drawer.js, que já chamam ela pros fetches crus de leitura.
   function headersComToken() {
     const h = {};
+    if (root.CC_TOKEN) h["x-cc-token"] = root.CC_TOKEN;
     const nomeEditor = root.EDITOR_ATUAL && root.EDITOR_ATUAL.nomeAtual ? root.EDITOR_ATUAL.nomeAtual() : null;
     if (nomeEditor) h["x-cc-editor"] = nomeEditor;
     return h;
