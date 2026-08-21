@@ -15,6 +15,7 @@
       ["minhas-acoes.html", "Minhas ações"],
       ["agenda.html", "Agenda dos ciclos"],
       ["demandas.html", "Matriz de demandas"],
+      ["canva-consolidado.html", "Consolidação do canvas"],
       ["plano-acao.html", "Atividades por iniciativa"],
     ] },
     { titulo: "Pessoas", paginas: [

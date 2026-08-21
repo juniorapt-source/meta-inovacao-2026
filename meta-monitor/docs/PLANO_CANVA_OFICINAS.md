@@ -1,8 +1,9 @@
 # Plano: canvas das oficinas preenchido direto no site
 
-**Status:** itens 1, 2 e 3 prontos e na `main` (SQL do item 1 rodado em produção, `js/db-canva.js`
-e `canva.html` no site). Item 4 é o próximo. O SQL do item 4 já está escrito e testado num
-Postgres local, **e ainda não rodou em produção**.
+**Status:** itens 1, 2, 3 e 4 prontos. SQL dos itens 1 e 4 rodado em produção (o do item 4 em
+21/08/2026, `tools/sql/2026-08_canva_leitura_aberta.sql`); `js/db-canva.js`, `canva.html`,
+`js/db-canva-consolidado.js` e `canva-consolidado.html` no site. Item 5 (promoção pra
+`meta_inovacao_matriz_demandas`) é o próximo.
 **Versão:** v8, 21/08/2026
 (v1 tratava o canal como eixo principal, corrigido na v2, ver §2. v3 acertou a leitura para o mundo
 pós-v0.30.0, ver §6.5. v4 travou a regra de que este site não tem senha, ver §6.6. v5 corrigiu duas
@@ -514,25 +515,26 @@ Cada item é um commit pequeno e testável.
    `GRANT SELECT` pro `anon` + `cc_select_publico`, e cria `cc_canva_moderar`, §6.5 e §8) e
    `canva-consolidado.html` + linha no `GRUPOS` de `js/core.js`, incluindo a fila de projetos
    novos. **Sem credencial de espécie alguma: nada de `js/auth.js`, nada de OTP, nada de chave**.
-   O script já existe e passou num Postgres 16 local com o estado de produção reproduzido
-   (tabela do item 1, auditoria, golden record): leitura como `anon` devolvendo linha, `UPDATE`
-   direto como `anon` barrado, as seis ações da `cc_canva_moderar` e os oito casos de erro
-   devolvendo `{ok:false}` em vez de exceção. Falta rodar em produção e fazer a tela.
+   **Pronto.** O SQL rodou em produção em 21/08/2026; a tela lê por `SELECT` direto
+   (`js/db-canva-consolidado.js`) e escreve só pela `cc_canva_moderar` — validar, descartar,
+   reabrir, editar, vincular_projeto e validar_lote, todas sem credencial. Contadores (por
+   status, por canal, quem preencheu × quem não preencheu), fila de projetos novos separada no
+   topo (casar com o golden record ou linkar pra `editor.html` cadastrar) e distinção entre "erro
+   na consulta" e "ninguém preencheu ainda" (§8) — tudo coberto.
 
-   **Três coisas que o item 3 deixou prontas pro item 4, e que se perdem se ninguém olhar:**
+   **As três coisas que o item 3 deixou prontas — como ficaram:**
 
-   - **O exportador de `.csv` já existe**, dentro do `canva.html` ("baixar minha cópia"): BOM
-     UTF-8, aspas escapadas, nome completo do canal, tradução de estado. O item 6 pede o mesmo na
-     consolidação. Extraia essa função pra um helper compartilhado ao fazer esta tela, em vez de
-     escrever a segunda versão — duas implementações do mesmo CSV divergem na primeira coluna nova
-   - **A regra do `render()` por diff vale aqui, e mais ainda.** O `canva.html` descobriu que
-     reescrever o `value` de um `<input>` que já existe rouba o cursor de quem está digitando, e
-     resolveu sincronizando por `chave_local`: cria o elemento uma vez, depois só atualiza selo e
-     mensagem de erro. A consolidação vai editar linha na tela, com texto mais longo e você
-     digitando — repetir o padrão não é opcional
-   - **Esta tela entra no menu, ao contrário do `canva.html`.** Precisa de `montarShell()` e da
-     linha no `GRUPOS` de `js/core.js`. É o tipo de detalhe que se copia por engano da página
-     anterior, que dispensa os dois de propósito por ser destino de QR
+   - **O exportador de `.csv`** saiu de dentro do `canva.html` pro helper compartilhado
+     `js/csv-export.js` (escapar campo, montar CSV com BOM, disparar o download). `canva.html`
+     passou a chamar esse helper em vez da cópia local; `canva-consolidado.html` usa o mesmo
+     helper pros seus próprios exports (lista filtrada e por projeto) — cabeçalhos diferentes,
+     mecânica única, do jeito que o item 6 pediu
+   - **A regra do `render()` por diff** foi repetida: cada linha da consolidação nasce uma vez
+     (`criarLinhaEl`), e os renders seguintes só tocam selo de status, texto de leitura e botões
+     de ação (`patchLinhaEl`) — nunca reescreve o `<input>`/`<textarea>` do formulário de edição
+     que já existe, então corrigir um typo sobrevive a "Atualizar" ou a outra linha sendo validada
+   - **A tela entra no menu**: `montarShell("canva-consolidado.html")` e a linha em `GRUPOS`
+     (`js/core.js`, grupo Execução, abaixo de "Matriz de demandas")
 5. Promoção pra `meta_inovacao_matriz_demandas` com a regra da §9, e ajustes em `demandas.html`
 6. Exportadores `.csv` e `.docx` — o `.csv` reaproveitando o helper do item 4, não reescrevendo
 7. QR codes por canal, gerados uma vez e colados no último slide de cada apresentação
