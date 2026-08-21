@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>br.com.cartacorso.sync</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/josejunior/Documents/Claude/Projects/ambiente de monitoramento meta inovação/sync-carta-corso.sh</string>
+  </array>
+
+  <!-- a cada 20 minutos, enquanto você estiver logado no Mac -->
+  <key>StartInterval</key>
+  <integer>1200</integer>
+
+  <!-- e uma vez ao ligar/logar, que é quando o atraso costuma estar maior -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/josejunior/Library/Logs/cartacorso-sync.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/josejunior/Library/Logs/cartacorso-sync.log</string>
+</dict>
+</plist>

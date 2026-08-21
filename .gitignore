@@ -2,3 +2,22 @@
 Thumbs.db
 node_modules/
 *.zip
+
+# Material de trabalho interno — este repositório é público.
+# Nada de documento de escritório ou planilha aqui dentro.
+*.docx
+*.xlsx
+*.xlsm
+*.pptx
+*.pdf
+*.csv
+
+# Log da sincronização automática (ver INSTALAR_SYNC.md)
+*.log
+
+# Configuração local das sessões do Claude — não faz parte do projeto
+.claude/
+
+# Prompts de trabalho internos. O repositório é público.
+# Apague esta linha se decidir versionar este arquivo.
+prompts_code_melhorias_carta_corso.md
