@@ -12,10 +12,15 @@
 -- policies, soft delete via deleted_at, updated_at, NOTIFY pgrst) com DUAS EXCEÇÕES
 -- deliberadas, ambas por causa do link aberto:
 --
---   EXCEÇÃO 1 — leitura NÃO é pública. O canvas guarda "por que não funcionaria", com
---   nome de responsável e prazo. Não pode ficar legível pra internet inteira. Mesmo
---   caminho de meta_inovacao_audit_log (P13): policy cc_token_select em vez de
---   cc_select_publico. Ver seção 4.
+--   EXCEÇÃO 1 — leitura NÃO é pública, e NÃO é protegida por token. O canvas guarda
+--   "por que não funcionaria", com nome de responsável e prazo. A única policy de SELECT
+--   é authenticated + cc_eh_editor() (§6.5 do plano). Ver seção 4.
+--
+--   Por que NÃO cc_token_select, que é o precedente de meta_inovacao_audit_log (P13):
+--   o token vive em texto puro em data/config.js, num repositório público — quem abre o
+--   repo tem o token. Pra uma tabela de leitura pública-de-fato como as outras isso não
+--   muda nada, mas aqui seria obscuridade vendida como proteção. Login de verdade é o
+--   único jeito de a frase "não fica legível pra internet inteira" ser verdadeira.
 --
 --   EXCEÇÃO 2 — anon NÃO recebe GRANT de INSERT nem de UPDATE nesta tabela. Nenhum.
 --   Com link aberto, dar INSERT direto pro anon é dar INSERT pra internet. A única porta
@@ -23,30 +28,69 @@
 --   (seções 5 e 6), que validam antes de gravar e forçam status='rascunho'. Nada
 --   preenchido pelo público toca a matriz antes de um editor promover (quarentena).
 --
--- DESVIO REGISTRADO em relação ao §6.5 do plano: o plano pede SELECT só pra
--- `authenticated` que passe em cc_eh_editor(). Isso valia quando foi escrito, mas a
--- v0.30.0 (CHANGELOG, 20/08) REVERTEU o site inteiro pro token compartilhado — nenhuma
--- tela carrega js/auth.js hoje, meta_inovacao_editores está vazia e cc_eh_editor()
--- devolve false pra todo mundo. Criar SELECT só pra editor autenticado deixaria
--- canva-consolidado.html (item 4) sem conseguir ler NADA no modelo vivo. Então:
---   - cc_token_select (role anon, header x-cc-token) é a policy que vale HOJE — mesma
---     barreira das telas de escrita do site, e o que a consolidação vai usar;
---   - cc_select_editor_autenticado (authenticated + cc_eh_editor()) é criada JUNTO,
---     condicionalmente, só se a função cc_eh_editor() existir no banco. Assim, se o
---     login voltar um dia (docs/SEGURANCA_ESCRITA_AUTH.md), a leitura do §6.5 já está
---     no lugar e basta dropar cc_token_select.
+-- RELAÇÃO COM A v0.30.0 (o ponto que confunde quem ler este script depois): a v0.30.0
+-- reverteu o SITE INTEIRO pro token compartilhado, e este script NÃO desfaz nada disso.
+-- As 9 tabelas do esquema seguem no modelo de token, as 5 telas de escrita seguem sem
+-- login, js/auth.js segue não sendo carregado por nenhuma delas. O que muda é só o
+-- alcance da tabela NOVA: ela nasce fora daquele modelo, e canva-consolidado.html
+-- (item 4) nasce sendo a ÚNICA tela do site que carrega js/auth.js e exige login.
+-- Escolha deliberada, não inconsistência: o canvas é o primeiro conteúdo do site que
+-- não pode ser lido por quem só tem o link.
+--
+-- CONTRATO PRO ITEM 4 (canva-consolidado.html), pra não se descobrir isso na hora de
+-- fazer a tela: ela precisa de <script src="js/auth.js"> e de gate por
+-- CC_AUTH.podeEditar(); sem sessão logada o SELECT devolve 0 linhas em SILÊNCIO (é RLS
+-- filtrando, não erro), então a tela tem que mostrar "faça login", nunca "nenhuma
+-- demanda ainda" — são coisas diferentes e parecem iguais na tela.
+--
 -- Atenção ao precedente de tools/sql/2026-08_corrige_escrita_select_autenticado.sql: já
 -- aconteceu neste projeto de a policy de SELECT faltar e a tela quebrar em produção.
 -- Por isso leitura e escrita saem no MESMO script, aqui.
 --
 -- ORDEM DE EXECUÇÃO: depois de 2026-08_auditoria.sql (usa cc_audit()) e de
--- 2026-08_protecao_escrita.sql (o token de cc_token_select é o mesmo de
--- data/config.js.tokenEscrita, não é um token novo). meta_inovacao_projetos precisa
--- existir (FK opcional de projeto_id).
+-- 2026-08_auth_escrita.sql (usa cc_eh_editor() e meta_inovacao_editores — a seção 0
+-- confere e ABORTA se faltarem). meta_inovacao_projetos precisa existir (FK opcional
+-- de projeto_id).
+--
+-- ⚠️ PRÉ-REQUISITO OPERACIONAL, fora do SQL: a seção 0 cadastra o JR. na allowlist, mas
+-- allowlist não é senha. A v0.30.0 aconteceu porque a senha do Supabase Auth tinha sido
+-- esquecida — se ainda estiver, o login de canva-consolidado.html não vai entrar mesmo
+-- com a linha na allowlist. Confira ANTES da oficina em Authentication > Users do painel
+-- do Supabase (juniorapt@gmail.com), usando "Reset password" se precisar.
 --
 -- IDEMPOTENTE: pode rodar de novo — CREATE TABLE IF NOT EXISTS, CREATE OR REPLACE
 -- FUNCTION, DROP POLICY/TRIGGER antes de recriar.
 -- ============================================================================
+
+
+-- ---------------------------------------------------------------------------
+-- 0) Pré-requisitos do modelo de leitura — FALHA CEDO, de propósito
+-- ---------------------------------------------------------------------------
+-- A única policy de SELECT desta tabela é authenticated + cc_eh_editor(). Se a função
+-- ou a allowlist não existirem, o script criaria uma tabela que ninguém consegue ler,
+-- e o sintoma só apareceria na tela da consolidação, sem erro nenhum (RLS filtra em
+-- silêncio — 0 linhas, não "permission denied"). Melhor abortar aqui: o SQL Editor do
+-- Supabase roda o script numa transação, então nada fica pela metade.
+DO $$
+BEGIN
+  IF to_regclass('public.meta_inovacao_editores') IS NULL THEN
+    RAISE EXCEPTION 'meta_inovacao_editores não existe — rode tools/sql/2026-08_auth_escrita.sql antes deste script.';
+  END IF;
+  IF to_regprocedure('public.cc_eh_editor()') IS NULL THEN
+    RAISE EXCEPTION 'cc_eh_editor() não existe — rode tools/sql/2026-08_auth_escrita.sql antes deste script.';
+  END IF;
+END $$;
+
+-- Allowlist: a v0.30.0 esvaziou meta_inovacao_editores (o login tinha saído de cena),
+-- e com ela vazia cc_eh_editor() devolve false pra todo mundo, inclusive pro JR. — a
+-- consolidação abriria sem ler nada. Mesmo INSERT idempotente de
+-- 2026-08_auth_escrita_cadastro_editor.sql: rodar de novo só atualiza o nome.
+-- O user_id é o do usuário já criado em Authentication > Users (juniorapt@gmail.com);
+-- se ele tiver sido apagado desde então, recrie o usuário no painel e troque o UUID
+-- aqui antes de rodar.
+INSERT INTO public.meta_inovacao_editores (user_id, nome)
+VALUES ('5afe68ad-4fa5-4959-b62f-3fb1bbf65a2b', 'JR.')
+ON CONFLICT (user_id) DO UPDATE SET nome = EXCLUDED.nome;
 
 
 -- ---------------------------------------------------------------------------
@@ -56,7 +100,14 @@ CREATE TABLE IF NOT EXISTS public.meta_inovacao_canva_demandas (
   id                 bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
   -- quem preencheu, por qual projeto
-  projeto            text NOT NULL,                      -- nome como o gestor digitou/escolheu (PROJETO no .docx)
+  projeto            text NOT NULL,                      -- nome CANÔNICO: o do golden record quando casou, senão o cru
+  -- O texto CRU, exatamente como saiu do dropdown ou do campo livre, sem normalizar e
+  -- sem canonizar. Existe pra que o casamento normalizado da seção 5.8 seja AUDITÁVEL:
+  -- no dia em que ele casar com o projeto errado (dois projetos de nome parecido, um
+  -- apelido que colide), sem o cru não há como descobrir — a evidência do que a pessoa
+  -- realmente escolheu teria sido sobrescrita pelo palpite da função. Nunca é lido pra
+  -- decidir nada; é registro.
+  projeto_digitado   text NOT NULL,
   projeto_id         bigint REFERENCES public.meta_inovacao_projetos(id),  -- nulo enquanto o projeto for novo
   projeto_novo       boolean NOT NULL DEFAULT false,     -- veio pelo escape "não encontrei meu projeto" — fila de normalização
   nucleo             text,                               -- preenchido pela função quando o projeto é conhecido
@@ -160,30 +211,23 @@ END $$;
 ALTER TABLE public.meta_inovacao_canva_demandas ENABLE ROW LEVEL SECURITY;
 
 -- GRANT vem ANTES das policies (PADRAO_TABELA.md item 3 — sem ele, RLS nem é avaliado).
--- Só SELECT: nada de INSERT/UPDATE/DELETE pra anon nem pra authenticated. A escrita do
--- público entra pelas funções SECURITY DEFINER das seções 5 e 6; a escrita do EDITOR
--- (validar/descartar, na consolidação) também vai por função dedicada — item 4 do plano,
--- não este script.
-GRANT SELECT ON public.meta_inovacao_canva_demandas TO anon, authenticated;
+--
+-- anon fica FORA do GRANT inteiro, inclusive de SELECT — diferente de todas as outras
+-- tabelas do esquema. Não é rigor decorativo: anon é o role de quem só tem o link, e o
+-- link desta feature é público de propósito. A única coisa que anon pode fazer nesta
+-- feature é EXECUTE nas duas funções (seção 7).
+--
+-- authenticated leva só SELECT: nem INSERT, nem UPDATE, nem DELETE. A escrita do público
+-- entra pelas funções SECURITY DEFINER das seções 5 e 6; a escrita do EDITOR
+-- (validar/descartar/promover, na consolidação) também vai por função dedicada — item 4
+-- do plano, não este script.
+GRANT SELECT ON public.meta_inovacao_canva_demandas TO authenticated;
 
--- leitura fechada pelo token compartilhado — mesmo modelo (e mesmo token) das telas de
--- escrita do site hoje, e mesmo precedente de meta_inovacao_audit_log.
-CREATE POLICY "cc_token_select" ON public.meta_inovacao_canva_demandas
-  FOR SELECT TO anon
-  USING (current_setting('request.headers', true)::json->>'x-cc-token' = 'a7c11b08-5a62-453c-ba8d-6bd0680e2f90');
-
--- §6.5 do plano, pra quando o login voltar: só criada se cc_eh_editor() existir no banco
--- (hoje existe, mas a allowlist está vazia — então esta policy não libera ninguém agora;
--- é inofensiva e evita ter que lembrar deste script no dia da volta do login).
-DO $$
-BEGIN
-  IF to_regprocedure('public.cc_eh_editor()') IS NOT NULL THEN
-    EXECUTE 'CREATE POLICY "cc_select_editor_autenticado" ON public.meta_inovacao_canva_demandas
-               FOR SELECT TO authenticated USING (public.cc_eh_editor())';
-  ELSE
-    RAISE NOTICE 'cc_eh_editor() não existe neste banco — policy de SELECT por editor autenticado não criada (só cc_token_select). Esperado se o login nunca foi ligado aqui.';
-  END IF;
-END $$;
+-- ÚNICA policy de leitura: sessão logada de verdade E presente na allowlist
+-- meta_inovacao_editores (seção 0). Sem token, sem exceção pra anon.
+CREATE POLICY "cc_select_editor_autenticado" ON public.meta_inovacao_canva_demandas
+  FOR SELECT TO authenticated
+  USING (public.cc_eh_editor());
 
 
 -- ---------------------------------------------------------------------------
@@ -261,6 +305,7 @@ DECLARE
   v_projeto_id   bigint;
   v_nucleo       text;
   v_canonico     text;   -- nome do projeto como está no golden record (§5.8)
+  v_digitado     text;   -- texto cru do gestor, antes de qualquer canonização
   v_novo         boolean := false;
   v_qtd          int;
   v_id           bigint;
@@ -289,6 +334,11 @@ BEGIN
 
   -- 5.4 campos de texto obrigatórios
   v_projeto     := btrim(coalesce(p->>'projeto', ''));
+  -- cru de verdade: sem btrim, guardado ANTES da 5.8 poder trocar v_projeto pelo nome
+  -- canônico. Se um dia o casamento errar, é aqui que está a evidência do que a pessoa
+  -- realmente escolheu, byte a byte — inclusive o espaço sobrando que denunciou um
+  -- copiar-e-colar de outra planilha.
+  v_digitado    := coalesce(p->>'projeto', '');
   v_servico     := btrim(coalesce(p->>'servico', ''));
   v_problema    := btrim(coalesce(p->>'problema', ''));
   v_responsavel := btrim(coalesce(p->>'responsavel', ''));
@@ -307,7 +357,7 @@ BEGIN
   v_encontro    := NULLIF(btrim(coalesce(p->>'encontro_id', '')), '');
 
   -- 5.5 teto de tamanho por campo (§6.3)
-  IF length(v_projeto) > v_max_campo OR length(v_servico) > v_max_campo
+  IF length(v_digitado) > v_max_campo OR length(v_servico) > v_max_campo
      OR length(v_problema) > v_max_campo OR length(coalesce(v_bloqueio, '')) > v_max_campo
      OR length(v_responsavel) > v_max_campo OR length(v_autor) > v_max_campo
      OR length(coalesce(p->>'canal_proprio_qual', '')) > v_max_campo THEN
@@ -378,12 +428,12 @@ BEGIN
   -- payload — é a quarentena do §4: nada preenchido pelo público toca a matriz antes
   -- de um editor promover.
   INSERT INTO public.meta_inovacao_canva_demandas (
-    projeto, projeto_id, projeto_novo, nucleo,
+    projeto, projeto_digitado, projeto_id, projeto_novo, nucleo,
     canal, facilitador, ciclo, encontro_id,
     servico, problema, bloqueio, canal_proprio, canal_proprio_qual,
     responsavel, prazo, status, autor_nome, sessao_id, updated_by
   ) VALUES (
-    v_projeto, v_projeto_id, v_novo, v_nucleo,
+    v_projeto, v_digitado, v_projeto_id, v_novo, v_nucleo,
     v_canal, v_facilitador, v_ciclo, v_encontro,
     v_servico, v_problema, v_bloqueio, v_cproprio, v_cproprio_q,
     v_responsavel, v_prazo, 'rascunho', v_autor, v_sessao, v_autor
@@ -553,19 +603,24 @@ NOTIFY pgrst, 'reload schema';
 -- ============================================================================
 -- Verificação — rode e confira à mão
 -- ============================================================================
--- (a) anon NÃO pode ter INSERT/UPDATE/DELETE nesta tabela — deve vir só "SELECT":
+-- (a) GRANTs: a resposta CERTA é UMA linha só — authenticated | SELECT. Qualquer linha
+--     com grantee 'anon' aqui é bug: anon não tem nada nesta tabela, nem leitura.
 SELECT grantee, privilege_type
 FROM information_schema.role_table_grants
 WHERE table_schema = 'public' AND table_name = 'meta_inovacao_canva_demandas'
   AND grantee IN ('anon', 'authenticated')
 ORDER BY grantee, privilege_type;
 
--- (b) policies: cc_token_select (+ cc_select_editor_autenticado se cc_eh_editor existir),
---     e NENHUMA policy de INSERT/UPDATE/DELETE:
+-- (b) policies: UMA só — cc_select_editor_autenticado | SELECT | {authenticated}.
+--     Nenhuma de INSERT/UPDATE/DELETE, nenhuma citando x-cc-token.
 SELECT policyname, cmd, roles
 FROM pg_policies
 WHERE schemaname = 'public' AND tablename = 'meta_inovacao_canva_demandas'
 ORDER BY cmd, policyname;
+
+-- (b2) a allowlist tem que ter o JR., senão cc_eh_editor() devolve false e a
+--      consolidação abre vazia mesmo com login (deve trazer 1 linha):
+SELECT user_id, nome FROM public.meta_inovacao_editores;
 
 -- (c) normalização casa as três grafias no mesmo lugar (deve vir 't'):
 SELECT public.cc_canva_normalizar('EMBRAPII ') = public.cc_canva_normalizar('Embrapii')
@@ -600,8 +655,12 @@ SELECT public.cc_canva_gravar(jsonb_build_object(
   'canal_proprio','nao','responsavel','Bot','prazo', (current_date + 30)::text,
   'autor_nome','Bot','sessao_id', gen_random_uuid()::text,'empresa_site','http://spam'));
 
--- (h) as linhas de teste de (e) e (f) — LIMPE depois de conferir:
-SELECT id, projeto, projeto_novo, nucleo, canal, status FROM public.meta_inovacao_canva_demandas
+-- (h) as linhas de teste de (e) e (f) — LIMPE depois de conferir. Repare na linha da
+--     Embrapii: projeto='Embrapii' (canônico, o que a consolidação agrupa) e
+--     projeto_digitado='embrapii  ' (cru, o que a pessoa escolheu). É esse par que
+--     torna o casamento normalizado auditável depois.
+SELECT id, projeto, projeto_digitado, projeto_novo, nucleo, canal, status
+FROM public.meta_inovacao_canva_demandas
 WHERE autor_nome = 'Teste' ORDER BY id;
 -- DELETE FROM public.meta_inovacao_canva_demandas WHERE autor_nome IN ('Teste','Bot');
 -- (DELETE físico aqui é ok e é o certo: são linhas de fumaça do próprio script, não
@@ -619,4 +678,7 @@ WHERE autor_nome = 'Teste' ORDER BY id;
 --   DROP TABLE IF EXISTS public.meta_inovacao_canva_demandas;
 --   DROP FUNCTION IF EXISTS public.cc_canva_normalizar(text);
 --   NOTIFY pgrst, 'reload schema';
+-- A linha do JR. em meta_inovacao_editores (seção 0) NÃO entra na reversão: ela não é
+-- desta feature, é o cadastro de editor do site — apagar reabriria o buraco que a
+-- v0.30.0 deixou. Se for pra remover mesmo, é decisão separada.
 -- ============================================================================
