@@ -1,6 +1,31 @@
 -- ============================================================================
 -- Escrita autenticada (Supabase Auth) — substitui o token compartilhado
 -- ============================================================================
+--
+-- ⚠️ ESTADO EM 21/08/2026 — LEIA ANTES DE RODAR ESTE ARQUIVO INTEIRO
+-- Este script está PARCIALMENTE REVERTIDO em produção. A v0.30.0 (20/08) devolveu o
+-- site ao token compartilhado: as policies de escrita por editor logado que a seção 3
+-- cria NÃO valem mais — foram substituídas pelas cc_token_* de
+-- tools/sql/2026-08_reverte_para_token_compartilhado.sql.
+--
+-- O que deste arquivo CONTINUA de pé e em uso hoje:
+--   • a tabela  public.meta_inovacao_editores  (seção 1)
+--   • a função  public.cc_eh_editor()          (seção 2)
+--
+-- As duas sustentam a leitura de meta_inovacao_canva_demandas
+-- (tools/sql/2026-08_canva_demandas.sql, cuja seção 0 ABORTA se elas não existirem),
+-- que é a única tabela do esquema fora do modelo de token. Foi por isso que este
+-- arquivo foi resgatado do branch feature/escrita-auth para a main em 21/08: ele é a
+-- ÚNICA fonte versionada desses dois objetos, e nove arquivos da main o citam.
+--
+-- Rodar este arquivo INTEIRO hoje REINTRODUZ o modelo que já foi revertido. Se o
+-- objetivo é só recriar a allowlist e a função, rode apenas as seções 1 e 2.
+--
+-- E se um dia o login voltar, NÃO volta por senha. Regra do projeto em
+-- docs/PLANO_CANVA_OFICINAS.md §6.6: identidade é código de 6 dígitos por e-mail
+-- (OTP do Supabase Auth), nunca senha. A v0.30.0 aconteceu porque uma senha se perdeu
+-- dezenove minutos depois de ter sido criada.
+--
 -- CONTEXTO
 -- Hoje a escrita nas tabelas do site é liberada por um header compartilhado
 -- (x-cc-token = UUID), validado pela RLS — ver tools/sql/2026-08_protecao_escrita.sql.

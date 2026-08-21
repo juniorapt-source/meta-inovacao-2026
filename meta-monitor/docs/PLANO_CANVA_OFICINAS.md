@@ -1,9 +1,10 @@
 # Plano: canvas das oficinas preenchido direto no site
 
 **Status:** especificação aprovada, implementação pendente
-**Versão:** v4, 21/08/2026
+**Versão:** v5, 21/08/2026
 (v1 tratava o canal como eixo principal, corrigido na v2, ver §2. v3 acertou a leitura para o mundo
-pós-v0.30.0, ver §6.5. v4 travou a regra de que este site não tem senha, ver §6.6)
+pós-v0.30.0, ver §6.5. v4 travou a regra de que este site não tem senha, ver §6.6. v5 corrigiu duas
+linhas que a v4 deixou contradizendo a própria regra, na §6.5 e na §8)
 **Origem:** hoje o canvas "Agente na sua empresa" circula como `.docx` (exemplo: Embrapii ×
 Sebrae na sua empresa, facilitador Cristiano). Cada oficina gera um arquivo solto, que ninguém
 consolida.
@@ -191,6 +192,14 @@ existe, e as 5 telas atuais seguem no token, como estão hoje. `cc_eh_editor()` 
 `meta_inovacao_editores` continuam no banco: falta só o INSERT do editor na allowlist, que entra no
 script do item 1.
 
+Atenção ao precedente de `tools/sql/2026-08_corrige_escrita_select_autenticado.sql`: já aconteceu
+neste projeto de a policy de SELECT pro `authenticated` faltar e a tela quebrar em produção. Criar
+SELECT e escrita no mesmo script.
+
+O gestor não lê a tabela: a página guarda o que ele mandou no `localStorage`, sob a chave
+`cc_canva_<projeto_slug>_<sessao_id>`, e mostra a partir dali. Consequência pra quem implementar:
+**não encadear `.select()`** nas chamadas, o retorno da RPC já traz o `id` gerado.
+
 **Mas essa identidade não é senha.** Ver §6.6, que é regra do projeto e não detalhe desta tela.
 
 ---
@@ -225,14 +234,6 @@ Supabase tem cota baixa. Para um punhado de logins por semana, sobra.
 
 **Fallback que torna o desenho seguro:** mesmo que o e-mail falhe no pior momento, o dono do
 projeto no Supabase passa por cima de RLS no SQL Editor. Perde-se a tela, nunca o dado.
-
-Atenção ao precedente de `tools/sql/2026-08_corrige_escrita_select_autenticado.sql`: já aconteceu
-neste projeto de a policy de SELECT pro `authenticated` faltar e a tela quebrar em produção. Criar
-SELECT e escrita no mesmo script.
-
-O gestor não lê a tabela: a página guarda o que ele mandou no `localStorage`, sob a chave
-`cc_canva_<projeto_slug>_<sessao_id>`, e mostra a partir dali. Consequência pra quem implementar:
-**não encadear `.select()`** nas chamadas, o retorno da RPC já traz o `id` gerado.
 
 **6.7. Honeypot.** Campo escondido por CSS (`empresa_site`). Bot preenche, humano não. Se vier
 preenchido, a função responde "ok" e não grava nada.
@@ -331,8 +332,9 @@ Desktop: cartão em 2 colunas. Mobile: um campo por linha, ponto de virada em 90
 
 ## 8. Tela de consolidação: `canva-consolidado.html`
 
-Entra no menu, grupo **Execução**, abaixo de "Matriz de demandas". Exige login (`js/auth.js`,
-allowlist `meta_inovacao_editores`).
+Entra no menu, grupo **Execução**, abaixo de "Matriz de demandas". É a **única tela do site que
+exige identidade**, por código de 6 dígitos no e-mail (`js/auth-otp.js`, §6.6). Nunca senha, e sem
+tocar no `js/auth.js`. Quem pode ler continua sendo decidido pela allowlist `meta_inovacao_editores`.
 
 **Contrato herdado do item 1, obrigatório:** sob esta RLS, sessão ausente ou fora da allowlist
 devolve **0 linhas sem erro nenhum**. Na tela, "faça login" e "ninguém preencheu ainda" são a mesma
