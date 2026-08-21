@@ -1,10 +1,12 @@
 # Plano: canvas das oficinas preenchido direto no site
 
 **Status:** especificação aprovada, implementação pendente
-**Versão:** v5, 21/08/2026
+**Versão:** v7, 21/08/2026
 (v1 tratava o canal como eixo principal, corrigido na v2, ver §2. v3 acertou a leitura para o mundo
 pós-v0.30.0, ver §6.5. v4 travou a regra de que este site não tem senha, ver §6.6. v5 corrigiu duas
-linhas que a v4 deixou contradizendo a própria regra, na §6.5 e na §8)
+linhas que a v4 deixou contradizendo a própria regra, na §6.5 e na §8. v6 registrou a decisão de
+SMTP em aberto. v7 fechou essa decisão: sem senha, sem conta e sem e-mail — a consolidação usa
+chave de leitura, ver §6.6)
 **Origem:** hoje o canvas "Agente na sua empresa" circula como `.docx` (exemplo: Embrapii ×
 Sebrae na sua empresa, facilitador Cristiano). Cada oficina gera um arquivo solto, que ninguém
 consolida.
@@ -82,7 +84,7 @@ Isso separa duas coisas que hoje se confundem: **status da relação** (`previst
 |---|---|---|
 | Eixo da tela | **projeto**, com os 10 canais dentro | é assim que o gestor pensa: "o que eu preciso de cada canal" |
 | Acesso | **link aberto, sem código e sem login** | fricção zero na sala. Ninguém instala nada, ninguém cria conta |
-| Identidade, onde for necessária | **código de 6 dígitos por e-mail (OTP). Nunca senha** | regra do projeto, ver §6.6. Senha foi a causa raiz da v0.30.0 |
+| Credencial, onde for necessária | **chave de leitura digitada uma vez. Sem senha, sem conta, sem e-mail** | regra do projeto, ver §6.6. Senha causou a v0.30.0, e o e-mail do Supabase não entrega sem SMTP próprio |
 | Proteção | **quarentena**: tudo nasce como `rascunho` | link aberto sem quarentena é convite. Nada preenchido pelo público toca a matriz antes de um editor promover |
 | Escrita no banco | via **RPC `SECURITY DEFINER`**, não INSERT direto | com link aberto, o `anon` não deve ter GRANT nenhum na tabela. A função valida e grava |
 | Leitura | **não pública** | o canvas tem "por que não funcionaria" com nome e prazo. Não vai ficar legível pra internet inteira |
@@ -186,11 +188,11 @@ puro no `data/config.js`, versionado em repositório público e servido a qualqu
 público como barreira de leitura é obscuridade, não proteção, e o conteúdo aqui é o gestor
 escrevendo por que o canal não funcionaria, com nome e prazo.
 
-A saída não é religar o login do site. É o contrário: **`canva-consolidado.html` nasce sendo a
-única tela do site que exige identidade.** Nenhuma regressão possível numa página que ainda não
-existe, e as 5 telas atuais seguem no token, como estão hoje. `cc_eh_editor()` e
-`meta_inovacao_editores` continuam no banco: falta só o INSERT do editor na allowlist, que entra no
-script do item 1.
+A saída também não é religar o login do site. É o contrário: **`canva-consolidado.html` nasce
+sendo a única tela que exige uma credencial, e essa credencial é uma chave de leitura, não uma
+conta.** Ver §6.6. As 5 telas atuais seguem no token, como estão hoje. `cc_eh_editor()` e
+`meta_inovacao_editores` continuam no banco, e o INSERT do editor entrou no script do item 1: ficam
+prontas, sem uso, caso um dia o login volte a fazer sentido.
 
 Atenção ao precedente de `tools/sql/2026-08_corrige_escrita_select_autenticado.sql`: já aconteceu
 neste projeto de a policy de SELECT pro `authenticated` faltar e a tela quebrar em produção. Criar
@@ -200,40 +202,58 @@ O gestor não lê a tabela: a página guarda o que ele mandou no `localStorage`,
 `cc_canva_<projeto_slug>_<sessao_id>`, e mostra a partir dali. Consequência pra quem implementar:
 **não encadear `.select()`** nas chamadas, o retorno da RPC já traz o `id` gerado.
 
-**Mas essa identidade não é senha.** Ver §6.6, que é regra do projeto e não detalhe desta tela.
+**Mas essa credencial não é senha nem conta.** Ver §6.6, que é regra do projeto e não detalhe desta tela.
 
 ---
 
-## 6.6. Regra do projeto: este site não tem senha
+## 6.6. Regra do projeto: sem senha, sem conta, sem e-mail
 
-**Nenhuma tela deste projeto pede senha, em momento nenhum.** Não é preferência de UX, é a lição
-mais cara que este repositório já pagou: a v0.29.0 subiu login por e-mail e senha em 20/08 às
-01:41, e a v0.30.0 reverteu o site inteiro às 02:00, dezenove minutos depois, porque a senha se
-perdeu. Reintroduzir senha aqui é agendar a mesma reversão.
+**Nenhuma tela deste projeto pede senha, cria conta ou depende de e-mail chegar.** Três motivos,
+nessa ordem de peso:
 
-Onde for preciso saber quem é a pessoa, o mecanismo é **código de 6 dígitos por e-mail**, o OTP do
-próprio Supabase Auth. Sem senha pra esquecer, sem cofre pra manter, sem reset pra pedir. Quem tem
-acesso ao e-mail entra, e a allowlist `meta_inovacao_editores` continua decidindo quem pode ler.
+1. **A lição mais cara do repositório.** A v0.29.0 subiu login por e-mail e senha em 20/08 às
+   01:41, e a v0.30.0 reverteu o site inteiro às 02:00, dezenove minutos depois, porque a senha se
+   perdeu. Reintroduzir senha aqui é agendar a mesma reversão
+2. **O Supabase fecha a porta do e-mail.** Não dá pra editar template sem SMTP próprio, e o serviço
+   embutido faz 2 mensagens por hora e só entrega a membros da equipe do projeto. Isso descarta
+   tanto o código de 6 dígitos quanto o link mágico, a menos que se contrate e configure um
+   provedor de e-mail
+3. **Proporção.** O painel tem no máximo 6 usuários, todos da mesma equipe, vindos de controle em
+   Excel. Máquina de autenticação aqui custa mais do que protege
 
-Como fica, na prática:
+### O mecanismo: chave de leitura
 
-1. `js/auth-otp.js`, arquivo novo. **Não mexer no `js/auth.js`**, que hoje não é carregado por
-   nenhuma tela: deixá-lo parado é mais barato que reescrevê-lo
-2. Pedir o código: `supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })`.
-   `shouldCreateUser: false` é obrigatório, senão qualquer e-mail digitado vira usuário novo
-3. Conferir o código: `supabase.auth.verifyOtp({ email, token, type: 'email' })`. Sessão criada,
-   persistida em `localStorage`, renovada sozinha pelas opções que `js/supabase.js` já usa
-4. **Passo de configuração no painel, uma vez:** em Authentication → Email Templates, o modelo
-   "Magic Link" precisa conter `{{ .Token }}`. Sem isso o Supabase manda um link em vez de código,
-   e o `verifyOtp` fica sem número pra receber
-5. `detectSessionInUrl` continua `false`. Código digitado não usa redirect, então o modelo atual de
-   `js/supabase.js` fica intacto
+Uma chave aleatória, digitada uma vez e lembrada pelo navegador em `localStorage`
+(`cc_canva_chave`). Sem conta, sem e-mail, sem nada pra decorar.
 
-Limites que valem saber: um código por minuto por usuário, validade de 1 hora, e o SMTP embutido do
-Supabase tem cota baixa. Para um punhado de logins por semana, sobra.
+- **Tabela `meta_inovacao_canva_chaves`**: `rotulo` (o nome da pessoa), `chave`, `criado_em`,
+  `revogado_em`, `ultimo_acesso_em`. O `anon` não recebe GRANT nenhum nela, igual à tabela de
+  demandas: quem lê é só a função
+- **Funções `cc_canva_listar(p jsonb)` e `cc_canva_moderar(p jsonb)`**, `SECURITY DEFINER`, com
+  `EXECUTE` pro `anon`. Conferem a chave, recusam se estiver revogada, carimbam `ultimo_acesso_em`
+  e só então devolvem ou alteram
+- **Criar acesso** é um INSERT com o nome da pessoa. **Revogar** é preencher `revogado_em`.
+  **Perdeu a chave** é uma consulta no SQL Editor, não um reset
 
-**Fallback que torna o desenho seguro:** mesmo que o e-mail falhe no pior momento, o dono do
-projeto no Supabase passa por cima de RLS no SQL Editor. Perde-se a tela, nunca o dado.
+### Por que isso não é o que já foi recusado
+
+**Não é o `tokenEscrita`.** Aquele vive em texto puro no `data/config.js`, versionado em
+repositório público e servido a todo visitante. Esta chave não entra no repositório e não é
+servida em JavaScript nenhum: existe no banco e no navegador de quem recebeu.
+
+**Não é a senha que causou a v0.30.0.** O modo de falha é outro. Senha perdida exigia reset por
+e-mail, que era justamente o que não funcionava. Chave perdida se resolve com um INSERT no SQL
+Editor e um "colar" na tela, sem depender de ninguém.
+
+### O que se aceita ao escolher isso
+
+Segredo portador: quem tem a chave lê, então um print de tela mal tirado vaza. E a granularidade
+é a chave, não a pessoa: o `rotulo` mais o `ultimo_acesso_em` dizem qual chave foi usada e quando,
+o que é auditoria grosseira, não identidade. Para seis pessoas da mesma equipe, basta.
+
+**Ganho colateral, e não é pequeno:** com chave, "credencial ausente" e "nenhuma demanda ainda"
+deixam de ser a mesma resposta. A função devolve erro explícito para chave inválida ou revogada,
+em vez do silêncio de 0 linhas da RLS. Some a armadilha descrita na §8.
 
 **6.7. Honeypot.** Campo escondido por CSS (`empresa_site`). Bot preenche, humano não. Se vier
 preenchido, a função responde "ok" e não grava nada.
@@ -333,13 +353,13 @@ Desktop: cartão em 2 colunas. Mobile: um campo por linha, ponto de virada em 90
 ## 8. Tela de consolidação: `canva-consolidado.html`
 
 Entra no menu, grupo **Execução**, abaixo de "Matriz de demandas". É a **única tela do site que
-exige identidade**, por código de 6 dígitos no e-mail (`js/auth-otp.js`, §6.6). Nunca senha, e sem
-tocar no `js/auth.js`. Quem pode ler continua sendo decidido pela allowlist `meta_inovacao_editores`.
+pede credencial**, e essa credencial é a chave de leitura da §6.6. Sem senha, sem conta, sem
+e-mail. Lê e modera pelas funções `cc_canva_listar` e `cc_canva_moderar`, nunca por SELECT direto.
 
-**Contrato herdado do item 1, obrigatório:** sob esta RLS, sessão ausente ou fora da allowlist
-devolve **0 linhas sem erro nenhum**. Na tela, "faça login" e "ninguém preencheu ainda" são a mesma
-resposta do banco. A página tem que checar a sessão antes de interpretar a lista vazia, senão vai
-anunciar "nenhuma demanda" para um usuário deslogado no dia seguinte à oficina.
+**Distinção obrigatória na tela:** "sem chave" e "ninguém preencheu ainda" são situações
+diferentes e a tela precisa mostrar mensagens diferentes. Com a chave isso é fácil, porque a função
+devolve erro explícito em vez do silêncio de 0 linhas que a RLS produziria. Não desperdice essa
+diferença exibindo "nenhuma demanda" para quem só esqueceu de colar a chave.
 
 - lista as demandas agrupadas por projeto e canal, com filtro por status, ciclo e canal
 - por linha: **validar** (`validada`), **descartar** (`descartada`, soft delete), **editar**
@@ -415,7 +435,9 @@ Cada item é um commit pequeno e testável.
 2. `js/db-canva.js`: camada de acesso no padrão dos outros `js/db-*.js`. Chama as RPC, cuida da
    fila offline e do `localStorage`
 3. `canva.html`: identificação, mini-matriz do gestor, cartão de demanda
-4. `canva-consolidado.html` + linha no `GRUPOS` de `js/core.js`, incluindo a fila de projetos novos
+4. `tools/sql/2026-08_canva_chaves.sql` (tabela de chaves + `cc_canva_listar` e
+   `cc_canva_moderar`, §6.6) e `canva-consolidado.html` + linha no `GRUPOS` de `js/core.js`,
+   incluindo a fila de projetos novos. **Sem Supabase Auth: nada de `js/auth.js` nem de OTP**
 5. Promoção pra `meta_inovacao_matriz_demandas` com a regra da §9, e ajustes em `demandas.html`
 6. Exportadores `.csv` e `.docx`
 7. QR codes por canal, gerados uma vez e colados no último slide de cada apresentação
@@ -445,8 +467,9 @@ quarto lugar onde os canais aparecem, junto de `data/canais.js`, `data/matriz.js
 ## 13. O que fica de fora, de propósito
 
 - **Login pros gestores.** Decisão consciente. Fricção de cadastro mata preenchimento em oficina
-- **Senha, em qualquer tela.** Regra do projeto, §6.6. Onde precisar de identidade, é código por
-  e-mail. Um pedido futuro de "coloca uma senha aqui" deve ser recusado com esta linha
+- **Senha, conta e e-mail, em qualquer tela.** Regra do projeto, §6.6. Onde precisar de
+  credencial, é chave de leitura. Um pedido futuro de "coloca um login aqui" deve ser recusado com
+  esta linha, e um pedido de "manda por e-mail" esbarra no SMTP que este projeto não tem
 - **Cadastro automático de projeto novo no golden record.** O escape grava a intenção, não cria o
   projeto. Golden record com cadastro automático deixa de ser golden record
 - **Edição colaborativa em tempo real.** Duas pessoas no mesmo canvas é problema que ainda não
