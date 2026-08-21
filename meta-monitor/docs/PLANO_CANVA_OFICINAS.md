@@ -1,8 +1,8 @@
 # Plano: canvas das oficinas preenchido direto no site
 
-**Status:** itens 1 e 2 prontos (SQL rodado em produção, `js/db-canva.js` na `main`). Item 3
-(`canva.html`) está pronto, testado localmente, aguardando revisão/merge. Item 4 é o próximo depois
-disso. O SQL do item 4 já está escrito e testado localmente, **e ainda não rodou em produção**.
+**Status:** itens 1, 2 e 3 prontos e na `main` (SQL do item 1 rodado em produção, `js/db-canva.js`
+e `canva.html` no site). Item 4 é o próximo. O SQL do item 4 já está escrito e testado num
+Postgres local, **e ainda não rodou em produção**.
 **Versão:** v8, 21/08/2026
 (v1 tratava o canal como eixo principal, corrigido na v2, ver §2. v3 acertou a leitura para o mundo
 pós-v0.30.0, ver §6.5. v4 travou a regra de que este site não tem senha, ver §6.6. v5 corrigiu duas
@@ -119,7 +119,7 @@ funções (exceção 2, mantida, §6.1).
 | `nucleo` | text | | preenchido pela função quando o projeto é conhecido |
 | `canal` | text | CANAL (URC) | **sim**, id de `data/canais.js` |
 | `facilitador` | text | FACILITADOR URC | não |
-| `ciclo` / `encontro_id` | text | | não |
+| `ciclo` / `encontro_id` | text | | não, mas na prática sempre vêm: o `canva.html` deriva os dois de `data/agenda.js` cruzando o canal do QR com a data de hoje. São contexto da **oficina**, não da demanda — valem igual pras demandas que o gestor abrir pros outros 9 canais na mesma sessão |
 | `servico` | text | Serviço apresentado | **sim** |
 | `problema` | text | Problema do projeto que ele resolve | **sim** |
 | `bloqueio` | text | Por que não funcionaria? | não |
@@ -241,6 +241,13 @@ o `id` gerado.
 **Nenhuma tela deste projeto pede senha, cria conta, depende de e-mail chegar ou pede código
 colado.** A primeira metade da regra vem da v4 e continua valendo pelos três motivos abaixo. A
 segunda metade é da v8: nem mesmo uma chave de leitura, que era a saída desenhada na v7.
+
+**O detalhe que quase escapou:** `js/gate.js` existe, é carregado por todas as páginas e tem um
+overlay de senha dormindo atrás de `DB.config.exigirSenha` (hoje `false`, com o hash ainda no
+placeholder). A regra desta seção proíbe usar essa flag, mas regra escrita não desliga código: se
+alguém ligar a flag um dia pensando no resto do site, o sintoma seria a oficina inteira parada
+numa caixa de senha que ninguém na sala tem — com o QR já impresso no slide. Por isso o
+`canva.html` ganhou exceção explícita dentro do próprio `gate.js`, e não só no papel.
 
 Três motivos, nessa ordem de peso:
 
@@ -418,7 +425,9 @@ diferentes e vão parecer iguais se a tela tratar as duas como lista vazia. Com 
 zero linhas significa mesmo zero linhas — o que torna o erro de rede a única confusão possível, e
 ela é fácil de evitar: mostre a mensagem do erro, não o estado vazio.
 
-- lista as demandas agrupadas por projeto e canal, com filtro por status, ciclo e canal
+- lista as demandas agrupadas por projeto e canal, com filtro por status, ciclo e canal. O filtro
+  por ciclo só é possível porque o `canva.html` carimba `ciclo` e `encontro_id` a partir da agenda
+  (§5) — se um dia essas colunas voltarem a nascer nulas, é este filtro que morre primeiro
 - por linha: **validar** (`validada`), **descartar** (`descartada`, soft delete), **editar** — as
   três pela `cc_canva_moderar`
 - em lote: validar todas as demandas de um projeto de uma vez, depois da oficina
@@ -493,7 +502,14 @@ Cada item é um commit pequeno e testável.
    auditoria, `NOTIFY pgrst`
 2. `js/db-canva.js`: camada de acesso no padrão dos outros `js/db-*.js`. Chama as RPC, cuida da
    fila offline e do `localStorage`
-3. `canva.html`: identificação, mini-matriz do gestor, cartão de demanda
+3. `canva.html`: identificação, mini-matriz do gestor, cartão de demanda. **Pronto.** Três coisas
+   que a implementação acrescentou e que o resto do plano passa a depender: `ciclo` e
+   `encontro_id` saem de `data/agenda.js` (canal do QR × data de hoje) em vez de virem na URL,
+   porque o QR é impresso e um encontro remarcado gravaria o ciclo errado pra sempre — coberto por
+   `tools/testar_canva_oficina.js`; a página entrou em `tools/validar_site.py`, que é o que passa
+   `node --check` nas ~450 linhas de JS embutido antes de elas chegarem numa sala de oficina; e
+   `js/gate.js` ganhou exceção permanente pra `canva.html`, pra que ligar `exigirSenha` um dia não
+   ponha uma caixa de senha na frente do QR (§6.6)
 4. `tools/sql/2026-08_canva_leitura_aberta.sql` (troca a policy `cc_select_editor_autenticado` por
    `GRANT SELECT` pro `anon` + `cc_select_publico`, e cria `cc_canva_moderar`, §6.5 e §8) e
    `canva-consolidado.html` + linha no `GRUPOS` de `js/core.js`, incluindo a fila de projetos
@@ -501,9 +517,24 @@ Cada item é um commit pequeno e testável.
    O script já existe e passou num Postgres 16 local com o estado de produção reproduzido
    (tabela do item 1, auditoria, golden record): leitura como `anon` devolvendo linha, `UPDATE`
    direto como `anon` barrado, as seis ações da `cc_canva_moderar` e os oito casos de erro
-   devolvendo `{ok:false}` em vez de exceção. Falta rodar em produção e fazer a tela
+   devolvendo `{ok:false}` em vez de exceção. Falta rodar em produção e fazer a tela.
+
+   **Três coisas que o item 3 deixou prontas pro item 4, e que se perdem se ninguém olhar:**
+
+   - **O exportador de `.csv` já existe**, dentro do `canva.html` ("baixar minha cópia"): BOM
+     UTF-8, aspas escapadas, nome completo do canal, tradução de estado. O item 6 pede o mesmo na
+     consolidação. Extraia essa função pra um helper compartilhado ao fazer esta tela, em vez de
+     escrever a segunda versão — duas implementações do mesmo CSV divergem na primeira coluna nova
+   - **A regra do `render()` por diff vale aqui, e mais ainda.** O `canva.html` descobriu que
+     reescrever o `value` de um `<input>` que já existe rouba o cursor de quem está digitando, e
+     resolveu sincronizando por `chave_local`: cria o elemento uma vez, depois só atualiza selo e
+     mensagem de erro. A consolidação vai editar linha na tela, com texto mais longo e você
+     digitando — repetir o padrão não é opcional
+   - **Esta tela entra no menu, ao contrário do `canva.html`.** Precisa de `montarShell()` e da
+     linha no `GRUPOS` de `js/core.js`. É o tipo de detalhe que se copia por engano da página
+     anterior, que dispensa os dois de propósito por ser destino de QR
 5. Promoção pra `meta_inovacao_matriz_demandas` com a regra da §9, e ajustes em `demandas.html`
-6. Exportadores `.csv` e `.docx`
+6. Exportadores `.csv` e `.docx` — o `.csv` reaproveitando o helper do item 4, não reescrevendo
 7. QR codes por canal, gerados uma vez e colados no último slide de cada apresentação
 
 **Checkpoint entre o item 1 e o item 3.** O item 1 não está pronto quando o script existe, e sim

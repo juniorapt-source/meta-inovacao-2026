@@ -19,6 +19,10 @@ OBRIG = {
     # dropdowns Núcleos/Patentes + ordenação); os demais ids não mudaram.
     "corsario.html": ["crs-frota-wrap", "crs-toolbar", "crs-segmento", "crs-grid", "crs-matriz-wrap", "crs-matriz"],
     "editor.html": ["ed-conjunto", "ed-area", "ed-baixar"],
+    # canva.html não tem menu lateral (é destino de QR), mas entra aqui como qualquer outra:
+    # são ~450 linhas de JS embutido, e é o `node --check` de _checar_inline abaixo que
+    # impede um erro de sintaxe de chegar na sala de oficina.
+    "canva.html": ["cv-passo1", "cv-projeto", "cv-nome", "cv-passo2", "cv-mini-matriz", "cv-paineis", "cv-resumo"],
 }
 
 class P(HTMLParser):
@@ -72,4 +76,4 @@ def _checar_inline(paginas):
 
 if __name__ == "__main__":
     import sys as _sys
-    _checar_inline(_sys.argv[1:] or ["index.html","plano.html","minhas-acoes.html","caminho.html","agenda.html","demandas.html","participantes.html","projetos.html","plano-acao.html","corsario.html","editor.html"])
+    _checar_inline(_sys.argv[1:] or ["index.html","plano.html","minhas-acoes.html","caminho.html","agenda.html","demandas.html","participantes.html","projetos.html","plano-acao.html","corsario.html","editor.html","canva.html"])

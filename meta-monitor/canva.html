@@ -146,6 +146,7 @@
 <script src="js/supabase.js"></script>
 <script src="js/db-canva.js"></script>
 <script src="data/canais.js"></script>
+<script src="data/agenda.js"></script>
 <script src="data/projetos.js"></script>
 <script src="js/db-projetos.js"></script>
 <script src="js/core.js"></script>
@@ -170,6 +171,36 @@
     return String(s == null ? "" : s).toLowerCase().normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
   }
+
+  /* --------------------------------------------------------- contexto da oficina */
+  // ciclo e encontro_id são contexto da OFICINA, não da demanda: dizem em que sessão
+  // aquilo foi preenchido, e valem igual pras demandas que o gestor abrir pros outros 9
+  // canais durante a mesma oficina (§2 do plano — o canal não trava nada).
+  //
+  // Derivado de data/agenda.js em vez de vir na URL, de propósito: o QR do item 7 é
+  // impresso uma vez e colado no slide, e não dá pra corrigir depois. Se o ciclo viesse
+  // no QR, um encontro remarcado gravaria o ciclo errado pra sempre. ?ciclo= existe como
+  // escape manual pro dia em que a agenda estiver desatualizada.
+  //
+  // Sem isso, a coluna ciclo nasce nula em toda linha e o "filtro por ciclo" da tela de
+  // consolidação (§8) não teria o que filtrar.
+  const OFICINA = (function () {
+    const ag = DB.agenda || {};
+    const hoje = hojeISO();
+    const cicloParam = (params.get("ciclo") || "").trim();
+    const cicloDeHoje = (ag.ciclos || []).find((c) => c.ini && c.fim && hoje >= c.ini && hoje <= c.fim);
+    let enc = null;
+    if (canalDestaque) {
+      const doCanal = (ag.encontros || []).filter((e) => e.canal === canalDestaque);
+      enc = doCanal.find((e) => e.data === hoje) ||
+            (cicloDeHoje ? doCanal.find((e) => e.ciclo === cicloDeHoje.id) : null) || null;
+    }
+    return {
+      ciclo: cicloParam || (enc && enc.ciclo) || (cicloDeHoje && cicloDeHoje.id) || null,
+      encontro_id: enc ? enc.id : null,
+      facilitador: (params.get("facilitador") || "").trim() || null,
+    };
+  })();
 
   /* ------------------------------------------------------------------ datas */
   // janela sã do prazo (§6.3): hoje-30 dias até hoje+2 anos — espelha o CHECK da função SQL,
@@ -435,9 +466,12 @@
     return wrap.firstElementChild;
   }
 
-  // atualiza só o que PODE mudar sem o gestor ter mexido no campo: o selo de estado, a frase
-  // de erro e a visibilidade do "qual" — nunca o value de um input, nunca reordena/recria um
-  // cartão que já existia. É essa a peça que deixa digitar com o banco respondendo ao fundo.
+  // atualiza só o que PODE mudar sem o gestor ter mexido no campo: o selo de estado e a
+  // frase de erro — nunca o value de um input, nunca reordena/recria um cartão que já
+  // existia. É essa a peça que deixa digitar com o banco respondendo ao fundo.
+  // (a visibilidade do "qual" NÃO entra aqui: ela só muda quando o próprio gestor troca o
+  // radio, e quem cuida disso é o ouvinte de change — mexer nela a cada render seria
+  // reintroduzir pela porta dos fundos o problema que esta função existe pra evitar.)
   function patchCartaoEl(el, d) {
     const [classeBadge, rotulo] = badgeDe(d);
     const badge = el.querySelector("[data-badge]");
@@ -491,7 +525,9 @@
       canal_proprio_qual: $(".cv-f-qual").value,
       responsavel: $(".cv-f-responsavel").value,
       prazo: $(".cv-f-prazo").value,
-      facilitador: null, ciclo: null, encontro_id: null,
+      facilitador: OFICINA.facilitador,
+      ciclo: OFICINA.ciclo,
+      encontro_id: OFICINA.encontro_id,
       empresa_site: $(".cv-f-honeypot").value,
     };
   }

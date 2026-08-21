@@ -31,7 +31,22 @@
 
   const cfg = (window.DB && window.DB.config) || {};
 
-  if (cfg.exigirSenha !== true) {
+  // EXCEÇÃO PERMANENTE: canva.html nunca ganha overlay, nem com exigirSenha ligada.
+  // Ela é destino de QR numa sala de oficina — o gestor aponta a câmera e tem que cair
+  // direto no formulário (§4 e §6.6 de docs/PLANO_CANVA_OFICINAS.md: "link aberto, sem
+  // código e sem login", "nenhuma tela deste projeto pede senha"). Se um dia alguém ligar
+  // a flag pro resto do site sem lembrar desta página, o sintoma seria a oficina inteira
+  // parada numa caixa de senha que ninguém na sala tem — e a essa altura o slide com o QR
+  // já está impresso.
+  //
+  // Efeito colateral aceito: com exigirSenha ligada, esta página cai no ramo de baixo e
+  // fica com o token que houver em cfg.tokenEscrita — possivelmente vazio, que é o ponto
+  // de guardar o token atrás da senha. Não quebra nada: o canvas grava pelas RPCs
+  // cc_canva_gravar/cc_canva_editar, que são SECURITY DEFINER e não olham o x-cc-token
+  // (js/supabase.js só manda o header quando o token existe).
+  const SEM_GATE = /(^|\/)canva\.html$/.test(location.pathname);
+
+  if (cfg.exigirSenha !== true || SEM_GATE) {
     // flag desligada — comportamento de hoje, sem overlay; token vem direto do config
     window.CC_TOKEN = cfg.tokenEscrita || "";
     return;
