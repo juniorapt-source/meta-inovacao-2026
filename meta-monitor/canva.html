@@ -144,6 +144,7 @@
 <script src="js/config.js"></script>
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
+<script src="js/csv-export.js"></script>
 <script src="js/db-canva.js"></script>
 <script src="data/canais.js"></script>
 <script src="data/agenda.js"></script>
@@ -592,7 +593,9 @@
   }
 
   /* ------------------------------------------------------------------- csv */
-  function csvCampo(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
+  // mecânica de escapar/montar/baixar vem de js/csv-export.js (item 4 do plano do canvas
+  // das oficinas extraiu pra canva-consolidado.html reaproveitar, em vez de duplicar) —
+  // aqui fica só o que é específico desta tela: as colunas e o nome do arquivo.
   const ROTULO_ESTADO = {
     incompleta: "incompleta", pendente: "aguardando envio", salvando: "enviando",
     salva: "enviada", erro: "erro ao enviar",
@@ -607,17 +610,9 @@
         caderno.projeto, canalNome(d.canal), d.servico, d.problema, d.bloqueio || "",
         d.canal_proprio || "", d.canal_proprio_qual || "", d.responsavel, d.prazo,
         ROTULO_ESTADO[d.estado] || d.estado,
-      ].map(csvCampo).join(","));
-    const csv = "﻿" + cabecalho.map(csvCampo).join(",") + "\n" + linhas.join("\n") + "\n";
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "canvas-" + DB_CANVA.slug(caderno.projeto) + "-" + hojeISO() + ".csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
+      ]);
+    CSV_EXPORT.baixar("canvas-" + DB_CANVA.slug(caderno.projeto) + "-" + hojeISO() + ".csv",
+      CSV_EXPORT.montar(cabecalho, linhas));
   });
 
   montarSelectProjetos();

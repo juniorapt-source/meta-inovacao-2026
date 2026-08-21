@@ -23,6 +23,9 @@ OBRIG = {
     # são ~450 linhas de JS embutido, e é o `node --check` de _checar_inline abaixo que
     # impede um erro de sintaxe de chegar na sala de oficina.
     "canva.html": ["cv-passo1", "cv-projeto", "cv-nome", "cv-passo2", "cv-mini-matriz", "cv-paineis", "cv-resumo"],
+    # canva-consolidado.html (item 4 do plano do canvas das oficinas) ENTRA no menu — ao
+    # contrário de canva.html, que dispensa isso de propósito (§12 item 4 do plano).
+    "canva-consolidado.html": ["cvc-contadores", "cvc-fila-novos", "cvc-filtros", "cvc-estado", "cvc-lista"],
 }
 
 class P(HTMLParser):
@@ -76,4 +79,4 @@ def _checar_inline(paginas):
 
 if __name__ == "__main__":
     import sys as _sys
-    _checar_inline(_sys.argv[1:] or ["index.html","plano.html","minhas-acoes.html","caminho.html","agenda.html","demandas.html","participantes.html","projetos.html","plano-acao.html","corsario.html","editor.html","canva.html"])
+    _checar_inline(_sys.argv[1:] or ["index.html","plano.html","minhas-acoes.html","caminho.html","agenda.html","demandas.html","participantes.html","projetos.html","plano-acao.html","corsario.html","editor.html","canva.html","canva-consolidado.html"])

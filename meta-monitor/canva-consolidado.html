@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Consolidação do canvas · Carta de Corso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<style>
+/* canva-consolidado.html — item 4 do plano do canvas das oficinas (docs/PLANO_CANVA_OFICINAS.md
+   §8). Ao contrário de canva.html (destino de QR, §7 do plano), esta tela ENTRA no menu —
+   usa .shell/.nav/montarShell() como qualquer outra página do site (§12 item 4: "é o tipo
+   de detalhe que se copia por engano da página anterior"). */
+
+.cvc-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 14px}
+.cvc-nota-fallback{font-size:12px;color:var(--grafite);font-style:italic;margin-top:8px}
+.cvc-nao-preencheram{margin-top:10px;font-size:12.5px;color:var(--grafite)}
+.cvc-nao-preencheram summary{cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--azul)}
+.cvc-nao-preencheram p{margin-top:6px;line-height:1.7}
+.cvc-contador-canais{margin-top:12px;font-size:12.5px;color:var(--grafite)}
+
+.cvc-fila{margin-bottom:24px}
+.cvc-fila-item{margin-bottom:10px}
+.cvc-fila-topo{font-family:var(--font-sans);font-size:14.5px;margin-bottom:8px}
+.cvc-fila-acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cvc-fila-acoes select{border:1px solid var(--linha);padding:7px 9px;font-family:'DM Sans',sans-serif;
+  font-size:12.5px;background:var(--branco);color:var(--tinta)}
+.cvc-link{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--azul);text-decoration:underline}
+
+.cvc-erro{background:var(--critico-w);border:1px solid rgba(43,38,32,.2);border-radius:0;padding:10px 14px;
+  font-family:var(--font-sans);font-size:13.5px;color:var(--critico);display:flex;gap:12px;
+  align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.cvc-skel{display:grid;gap:6px;margin-bottom:14px}
+.cvc-skel div{height:30px;border-radius:0;background:linear-gradient(90deg,var(--neutro-w) 25%,var(--branco) 37%,var(--neutro-w) 63%);
+  background-size:400% 100%;animation:cvc-shimmer 1.4s ease infinite}
+@keyframes cvc-shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
+
+.cvc-projeto{margin-bottom:28px}
+.cvc-projeto-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;
+  margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--linha)}
+.cvc-projeto-titulo{font-family:var(--font-sans);font-weight:400;font-size:18px;color:var(--tinta)}
+.cvc-projeto-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.cvc-canal-grupo{margin-bottom:16px}
+.cvc-canal-grupo h3{font-family:'DM Sans',sans-serif;font-weight:700;font-size:11px;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--grafite);margin-bottom:8px}
+
+.cvc-linha{border:1px solid var(--linha);background:var(--branco);padding:12px 14px;margin-bottom:10px}
+.cvc-linha-topo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.cvc-linha-meta{font-family:'DM Sans',sans-serif;font-size:11px;color:var(--grafite);flex:1;min-width:150px}
+.cvc-linha-acoes{display:flex;gap:6px;flex-wrap:wrap}
+.cvc-linha-acoes .btn.sec{padding:5px 10px;font-size:10.5px}
+.cvc-linha-campo{font-size:13.5px;color:var(--tinta);margin-bottom:4px;line-height:1.5}
+.cvc-linha-campo b{font-family:'DM Sans',sans-serif;font-weight:600;font-size:11px;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--grafite);margin-right:4px}
+.cvc-linha-erro{color:var(--critico);font-size:12.5px;margin-top:6px}
+.cvc-badge-descartada{text-decoration:line-through}
+
+.cvc-editar{margin-top:10px}
+.cvc-editar summary{cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;
+  color:var(--azul);text-transform:uppercase;letter-spacing:.04em;list-style:none}
+.cvc-editar summary::-webkit-details-marker{display:none}
+.cvc-editar summary::before{content:"▸ ";display:inline-block}
+.cvc-editar[open] summary::before{content:"▾ "}
+.cvc-form-editar{margin-top:10px;padding-top:10px;border-top:1px dashed var(--linha);
+  display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.cvc-campo{margin-bottom:0}
+.cvc-campo label{display:block;font-family:'DM Sans',sans-serif;font-weight:600;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin-bottom:4px}
+.cvc-campo label i{text-transform:none;font-weight:400;letter-spacing:0}
+.cvc-campo input[type=text],.cvc-campo input[type=date],.cvc-campo textarea{width:100%;border:1px solid var(--linha);
+  border-radius:0;padding:7px 9px;font-size:13.5px;font-family:var(--font-sans);color:var(--tinta);background:var(--branco)}
+.cvc-campo textarea{resize:vertical;min-height:44px}
+.cvc-radios{grid-column:1/-1;border:0;padding:0;margin:0}
+.cvc-radios legend{font-family:'DM Sans',sans-serif;font-weight:600;font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--grafite);margin-bottom:6px;padding:0}
+.cvc-radios label{display:inline-flex;align-items:center;gap:5px;margin-right:16px;font-size:13px;
+  font-weight:400;text-transform:none;letter-spacing:0;color:var(--tinta)}
+.cvc-radios input{width:auto;margin:0}
+.cvc-form-erro{grid-column:1/-1;color:var(--critico);font-size:12.5px}
+.cvc-form-botoes{grid-column:1/-1}
+
+@media (max-width:700px){
+  .cvc-form-editar{grid-template-columns:1fr}
+  .cvc-linha-topo{flex-direction:column;align-items:stretch}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Consolidação do canvas</h1>
+    <p class="pagina-sub">O que as oficinas registraram em <a href="canva.html">canva.html</a>, tudo num
+      lugar: valide, descarte, corrija o que veio com typo e ligue projeto novo ao golden record. Tudo
+      nasce <b>rascunho</b> — nada vira dado oficial do painel até passar por aqui.</p>
+
+    <div id="cvc-contadores"></div>
+
+    <section id="cvc-fila-novos" class="cvc-fila" hidden></section>
+
+    <div class="filtros" id="cvc-filtros">
+      <select id="cvc-f-status" aria-label="Filtrar por status">
+        <option value="rascunho" selected>Pendentes de validação</option>
+        <option value="validada">Validadas</option>
+        <option value="descartada">Descartadas</option>
+        <option value="todas">Todas</option>
+      </select>
+      <select id="cvc-f-canal" aria-label="Filtrar por canal"><option value="">Todos os canais</option></select>
+      <select id="cvc-f-ciclo" aria-label="Filtrar por ciclo"><option value="">Todos os ciclos</option></select>
+      <input type="text" id="cvc-f-busca" placeholder="Buscar por projeto, serviço, responsável…">
+      <div class="cvc-toolbar-acoes" style="display:flex;gap:8px">
+        <button type="button" class="btn sec" id="cvc-atualizar">Atualizar</button>
+        <button type="button" class="btn sec" id="cvc-exportar">Exportar .csv</button>
+      </div>
+    </div>
+
+    <div id="cvc-estado"></div>
+    <div id="cvc-lista"></div>
+
+    <div id="cc-editor-rodape-wrap"></div>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="js/config.js"></script>
+<script src="js/gate.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/csv-export.js"></script>
+<script src="js/db-canva-consolidado.js"></script>
+<script src="data/canais.js"></script>
+<script src="data/agenda.js"></script>
+<script src="data/projetos.js"></script>
+<script src="data/plano.js"></script>
+<script src="data/nos.js"></script>
+<script src="data/pessoas.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script src="js/db-projetos.js"></script>
+<script src="js/responsaveis.js"></script>
+<script src="js/busca.js"></script>
+<script src="js/drawer.js"></script>
+<script src="js/editor_atual.js"></script>
+<script>
+(function () {
+  "use strict";
+  montarShell("canva-consolidado.html");
+
+  const DB = window.DB || {};
+  const CANAIS = DB.canais || [];
+  const CICLOS = (DB.agenda && DB.agenda.ciclos) || [];
+
+  // mesma normalização de js/db-canva.js (slug()) e canva.html (normalizarLeve) e de
+  // cc_canva_normalizar() no banco — minúsculas, sem acento, espaços colapsados. Usada
+  // aqui só pra AGRUPAR na tela (fila de projetos novos, busca livre, contador "quem
+  // preencheu"); quem decide de verdade se um projeto casa com o golden record continua
+  // sendo a RPC cc_canva_vincular_projeto, no clique de "vincular" abaixo.
+  function normalizarLeve(s) {
+    return String(s == null ? "" : s).toLowerCase().normalize("NFD")
+      .replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+  }
+
+  // mesma ideia de js/db-canva.js: slug pro nome do arquivo exportado — minúsculas, sem
+  // acento, só [a-z0-9-]. Local (não depende de js/db-canva.js, que esta tela não carrega
+  // — o lado de escrita do canva.html não tem nada a ver com a consolidação).
+  function slug(nome) {
+    return String(nome == null ? "" : nome).trim().toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "sem-projeto";
+  }
+
+  function fmtData(iso) {
+    if (!iso) return "—";
+    const partes = String(iso).split("-");
+    if (partes.length !== 3) return iso;
+    return partes[2].slice(0, 2) + "/" + partes[1] + "/" + partes[0];
+  }
+  function fmtDataHora(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return isNaN(d) ? iso : d.toLocaleString("pt-BR");
+  }
+
+  // janela de prazo pro formulário de correção — mais frouxa que a do preenchimento
+  // original (canva.html): a consolidação acontece semanas depois da oficina, e um prazo
+  // legítimo daquele dia já pode ter vencido. Espelha o CHECK de cc_canva_moderar
+  // (tools/sql/2026-08_canva_leitura_aberta.sql) só pra guiar o date picker.
+  const HOJE_BASE = new Date(hojeISO() + "T12:00:00");
+  function isoMaisAnos(anos) { const d = new Date(HOJE_BASE); d.setFullYear(d.getFullYear() + anos); return d.toISOString().slice(0, 10); }
+  const PRAZO_MIN = isoMaisAnos(-2);
+  const PRAZO_MAX = isoMaisAnos(5);
+
+  const ROTULO_ACAO = { validar: "Validar", descartar: "Descartar", reabrir: "Reabrir" };
+  const STATUS_BADGE = {
+    rascunho: ["st-janela", "rascunho"],
+    validada: ["st-concluido", "validada"],
+    descartada: ["st-nao cvc-badge-descartada", "descartada"],
+  };
+  const ROTULO_STATUS_CSV = { rascunho: "rascunho", validada: "validada", descartada: "descartada" };
+
+  function acoesDisponiveis(status) {
+    if (status === "rascunho") return ["validar", "descartar"];
+    if (status === "validada") return ["descartar", "reabrir"];
+    return ["reabrir"]; // descartada
+  }
+
+  function rotuloCanalProprio(d) {
+    if (d.canal_proprio === "sim") return "Sim" + (d.canal_proprio_qual ? " — " + d.canal_proprio_qual : "");
+    if (d.canal_proprio === "nao") return "Não";
+    if (d.canal_proprio === "nao_sei") return "Não sei";
+    return "—";
+  }
+
+  function metaTexto(d) {
+    const partes = [];
+    if (d.ciclo) partes.push("ciclo " + d.ciclo);
+    partes.push("preenchido por " + (d.autor_nome || "—"));
+    if (d.criado_em) partes.push(fmtDataHora(d.criado_em));
+    if (d.updated_by) partes.push("última alteração por " + d.updated_by);
+    return partes.join(" · ");
+  }
+
+  /* ------------------------------------------------------------------ refs */
+  const contadoresEl = document.getElementById("cvc-contadores");
+  const filaEl = document.getElementById("cvc-fila-novos");
+  const estadoEl = document.getElementById("cvc-estado");
+  const listaEl = document.getElementById("cvc-lista");
+  const selStatus = document.getElementById("cvc-f-status");
+  const selCanal = document.getElementById("cvc-f-canal");
+  const selCiclo = document.getElementById("cvc-f-ciclo");
+  const inputBusca = document.getElementById("cvc-f-busca");
+  const btnAtualizar = document.getElementById("cvc-atualizar");
+  const btnExportar = document.getElementById("cvc-exportar");
+
+  selCanal.innerHTML += CANAIS.map((c) => '<option value="' + esc(c.id) + '">' + esc(c.nome) + "</option>").join("");
+  selCiclo.innerHTML += CICLOS.map((c) => '<option value="' + esc(c.id) + '">' + esc(c.nome) + "</option>").join("");
+
+  /* ------------------------------------------------------------------- estado */
+  let demandas = [];         // linhas cruas do Supabase (todos os status, deleted_at incluso — §6.5)
+  let projetosGolden = [];   // DB_PROJETOS.carregar().lista
+  let usandoFallbackProj = false;
+  let carregando = true;
+  let erroCarregar = null;
+  let ultimaFiltrada = [];   // última lista pós-filtro, pro export por projeto achar as linhas certas
+  let filaGrupos = [];       // último agrupamento da fila de projetos novos
+
+  const filtros = { status: "rascunho", canal: "", ciclo: "", busca: "" };
+
+  const linhaEls = new Map(); // id (number) -> elemento .cvc-linha, reaproveitado entre renders
+
+  /* -------------------------------------------------------------- carregar */
+  async function carregarDados() {
+    carregando = true;
+    erroCarregar = null;
+    render();
+    try {
+      const [linhas, proj] = await Promise.all([
+        DB_CANVA_CONSOLIDADO.carregar(),
+        DB_PROJETOS.carregar(),
+      ]);
+      demandas = linhas;
+      projetosGolden = proj.lista || [];
+      usandoFallbackProj = !!proj.usandoFallback;
+      carregando = false;
+    } catch (err) {
+      console.error("canva-consolidado: falha ao carregar", err);
+      carregando = false;
+      erroCarregar = err;
+    }
+    render();
+  }
+
+  function mensagemErro(err) {
+    return (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || (err && err.message) || String(err);
+  }
+
+  /* --------------------------------------------------------------- filtros */
+  function aplicarFiltros(lista) {
+    const buscaNorm = normalizarLeve(filtros.busca);
+    return lista.filter((d) => {
+      if (filtros.status !== "todas" && d.status !== filtros.status) return false;
+      if (filtros.canal && d.canal !== filtros.canal) return false;
+      if (filtros.ciclo && (d.ciclo || "") !== filtros.ciclo) return false;
+      if (buscaNorm) {
+        const alvo = normalizarLeve([d.projeto, d.servico, d.problema, d.responsavel].join(" "));
+        if (alvo.indexOf(buscaNorm) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  [selStatus, selCanal, selCiclo].forEach((el) => el.addEventListener("change", () => {
+    filtros.status = selStatus.value; filtros.canal = selCanal.value; filtros.ciclo = selCiclo.value;
+    renderLista();
+  }));
+  inputBusca.addEventListener("input", () => { filtros.busca = inputBusca.value; renderLista(); });
+  btnAtualizar.addEventListener("click", () => carregarDados());
+
+  /* ----------------------------------------------------------------- render */
+  function render() {
+    renderEstado();
+    if (carregando || erroCarregar) {
+      contadoresEl.innerHTML = "";
+      filaEl.hidden = true;
+      listaEl.innerHTML = "";
+      return;
+    }
+    renderContadores();
+    renderFilaNovos();
+    renderLista();
+  }
+
+  function renderEstado() {
+    if (carregando) {
+      estadoEl.innerHTML = '<div class="cvc-skel">' + Array.from({ length: 4 }).map(() => "<div></div>").join("") + "</div>";
+      return;
+    }
+    if (erroCarregar) {
+      estadoEl.innerHTML =
+        '<div class="cvc-erro"><span><b>Não foi possível carregar as demandas agora.</b> ' +
+        esc(mensagemErro(erroCarregar)) + "</span>" +
+        '<button type="button" class="btn sec" id="cvc-retry">Tentar de novo</button></div>';
+      document.getElementById("cvc-retry").addEventListener("click", () => carregarDados());
+      return;
+    }
+    estadoEl.innerHTML = "";
+  }
+
+  /* -------------------------------------------------------------- contadores */
+  function kpiHtml(n, rotulo, alerta) {
+    return '<div class="card kpi' + (alerta && n ? " alerta" : "") + '"><div class="n">' + n + '</div><div class="l">' + esc(rotulo) + "</div></div>";
+  }
+
+  function renderContadores() {
+    const porStatus = { rascunho: 0, validada: 0, descartada: 0 };
+    demandas.forEach((d) => { porStatus[d.status] = (porStatus[d.status] || 0) + 1; });
+
+    const porCanal = {};
+    CANAIS.forEach((c) => { porCanal[c.id] = 0; });
+    demandas.forEach((d) => { if (d.status !== "descartada" && porCanal[d.canal] != null) porCanal[d.canal] += 1; });
+
+    // "quem preencheu": identidade normalizada do projeto — nome canônico quando já casou
+    // com o golden record, texto digitado cru quando ainda é projeto_novo. Descartada não
+    // conta como preenchimento (§6.5: a demanda existe, mas foi descartada de propósito).
+    const preencheram = new Set();
+    demandas.forEach((d) => {
+      if (d.status === "descartada") return;
+      preencheram.add(normalizarLeve(d.projeto_novo ? (d.projeto_digitado || d.projeto) : d.projeto));
+    });
+    const naoPreencheram = projetosGolden.filter((p) => !preencheram.has(normalizarLeve(p.iniciativa)));
+
+    contadoresEl.innerHTML =
+      '<div class="grid kpis">' +
+        kpiHtml(porStatus.rascunho, "Rascunho") +
+        kpiHtml(porStatus.validada, "Validadas") +
+        kpiHtml(porStatus.descartada, "Descartadas") +
+        kpiHtml(preencheram.size, "Projetos que preencheram") +
+        kpiHtml(naoPreencheram.length, "Projetos que não preencheram", true) +
+      "</div>" +
+      (naoPreencheram.length
+        ? '<details class="cvc-nao-preencheram"><summary>Ver quem falta (' + naoPreencheram.length + ")</summary><p>" +
+          naoPreencheram.map((p) => esc(p.iniciativa)).join(" · ") + "</p></details>"
+        : "") +
+      '<p class="cvc-contador-canais">Por canal (rascunho + validada): ' +
+        CANAIS.map((c) => esc(c.nome) + " " + porCanal[c.id]).join(" · ") + "</p>" +
+      (usandoFallbackProj
+        ? '<p class="cvc-nota-fallback">A lista de projetos do golden record está desatualizada (sem conexão) — "quem preencheu" pode não refletir cadastros recentes.</p>'
+        : "");
+  }
+
+  /* --------------------------------------------------------- fila de novos */
+  function opcoesProjetosGolden() {
+    const nucleos = [...new Set(projetosGolden.map((p) => p.nucleo))];
+    let html = '<option value="">— escolha o projeto —</option>';
+    nucleos.forEach((nu) => {
+      html += '<optgroup label="' + esc(nu) + '">';
+      html += projetosGolden.filter((p) => p.nucleo === nu)
+        .map((p) => '<option value="' + esc(p.iniciativa) + '">' + esc(p.iniciativa) + "</option>").join("");
+      html += "</optgroup>";
+    });
+    return html;
+  }
+
+  function agruparFilaNovos() {
+    // descartada some daqui de propósito: nada a normalizar numa demanda que a equipe já
+    // decidiu não aproveitar. Se for reaberta depois, volta a aparecer na próxima carga.
+    const novos = demandas.filter((d) => d.projeto_novo && d.status !== "descartada");
+    const mapa = new Map();
+    novos.forEach((d) => {
+      const chave = normalizarLeve(d.projeto_digitado || d.projeto);
+      if (!mapa.has(chave)) mapa.set(chave, { rotulo: d.projeto_digitado || d.projeto, ids: [] });
+      mapa.get(chave).ids.push(d.id);
+    });
+    return [...mapa.values()].sort((a, b) => b.ids.length - a.ids.length);
+  }
+
+  function renderFilaNovos() {
+    filaGrupos = agruparFilaNovos();
+    if (!filaGrupos.length) { filaEl.hidden = true; filaEl.innerHTML = ""; return; }
+    filaEl.hidden = false;
+    filaEl.innerHTML =
+      '<h2 class="pagina-titulo" style="font-size:19px;margin-bottom:4px">Projetos novos aguardando normalização</h2>' +
+      '<p class="pagina-sub" style="margin:0 0 14px">Vieram pelo escape "não encontrei meu projeto" — o preenchimento já ' +
+      "está guardado, só falta ligar ao golden record. Enquanto isso, essas demandas não entram nos grupos abaixo nem na matriz.</p>" +
+      filaGrupos.map((g, i) =>
+        '<div class="card cvc-fila-item" data-fila="' + i + '">' +
+          '<div class="cvc-fila-topo"><b>' + esc(g.rotulo) + "</b> · " + g.ids.length +
+            (g.ids.length === 1 ? " demanda" : " demandas") + "</div>" +
+          '<div class="cvc-fila-acoes">' +
+            '<select data-fila-select aria-label="Escolher projeto do golden record para vincular">' + opcoesProjetosGolden() + "</select>" +
+            '<button type="button" class="btn sec" data-fila-vincular>Vincular</button>' +
+            '<a class="cvc-link" href="editor.html" target="_blank" rel="noopener">Cadastrar no golden record →</a>' +
+          "</div>" +
+          '<p class="cvc-linha-erro" data-fila-erro hidden></p>' +
+        "</div>"
+      ).join("");
+  }
+
+  filaEl.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-fila-vincular]");
+    if (!btn) return;
+    const item = btn.closest(".cvc-fila-item");
+    const grupo = filaGrupos[Number(item.dataset.fila)];
+    const select = item.querySelector("[data-fila-select]");
+    const erroEl = item.querySelector("[data-fila-erro]");
+    erroEl.hidden = true;
+    const projeto = projetosGolden.find((p) => p.iniciativa === select.value);
+    if (!projeto) { erroEl.hidden = false; erroEl.textContent = "Escolha um projeto da lista."; return; }
+    btn.disabled = true; btn.textContent = "Vinculando…";
+    try {
+      // vincular_projeto opera UMA linha por vez (contrato da RPC) — o grupo inteiro (todas
+      // as demandas que a pessoa digitou com esse nome) é ligado em sequência, não em paralelo,
+      // pelo mesmo motivo de js/db-canva.js: gravação em lote na mesma sessão é serial.
+      for (const id of grupo.ids) {
+        const resp = await DB_CANVA_CONSOLIDADO.moderar({ id: id, acao: "vincular_projeto", projeto_id: projeto.db_id, autor_nome: EDITOR_ATUAL.nomeAtual() });
+        if (!resp.ok) throw new Error(resp.erro || ("Falha ao vincular a demanda #" + id));
+      }
+      await carregarDados();
+    } catch (err) {
+      erroEl.hidden = false;
+      erroEl.textContent = mensagemErro(err);
+      btn.disabled = false; btn.textContent = "Vincular";
+    }
+  });
+
+  /* ------------------------------------------------------------------ lista */
+  function agruparPorProjeto(lista) {
+    const mapa = new Map();
+    lista.forEach((d) => {
+      if (!mapa.has(d.projeto)) mapa.set(d.projeto, []);
+      mapa.get(d.projeto).push(d);
+    });
+    return [...mapa.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
+  }
+
+  function podarLinhaEls(idsVisiveis) {
+    for (const id of [...linhaEls.keys()]) {
+      if (!idsVisiveis.has(id)) linhaEls.delete(id);
+    }
+  }
+
+  function renderLista() {
+    // projeto_novo fica de fora daqui — mora só na fila (§8: "aparecem separadas no topo").
+    ultimaFiltrada = aplicarFiltros(demandas.filter((d) => !d.projeto_novo));
+
+    if (!ultimaFiltrada.length) {
+      listaEl.innerHTML = '<p class="aviso">' +
+        (demandas.length === 0
+          ? "Nenhuma demanda registrada ainda — nenhuma oficina preencheu o canvas até agora."
+          : "Nenhuma demanda bate com os filtros atuais.") +
+        "</p>";
+      podarLinhaEls(new Set());
+      return;
+    }
+
+    const grupos = agruparPorProjeto(ultimaFiltrada);
+    const idsVisiveis = new Set(ultimaFiltrada.map((d) => d.id));
+    listaEl.innerHTML = "";
+    grupos.forEach(([projeto, linhas]) => {
+      const secao = document.createElement("section");
+      secao.className = "cvc-projeto";
+      const temRascunho = linhas.some((d) => d.status === "rascunho");
+      secao.innerHTML =
+        '<div class="cvc-projeto-topo">' +
+          '<span class="cvc-projeto-titulo">' + (window.DRAWER ? DRAWER.spanIniciativa(projeto) : esc(projeto)) +
+            " · " + linhas.length + (linhas.length === 1 ? " demanda" : " demandas") + "</span>" +
+          '<span class="cvc-projeto-acoes">' +
+            (temRascunho ? '<button type="button" class="btn sec" data-lote="' + esc(projeto) + '">Validar pendentes deste projeto</button>' : "") +
+            '<button type="button" class="btn sec" data-exportar-projeto="' + esc(projeto) + '">Exportar .csv</button>' +
+          "</span>" +
+        "</div>";
+      const canaisPresentes = new Set(linhas.map((d) => d.canal));
+      CANAIS.filter((c) => canaisPresentes.has(c.id)).forEach((c) => {
+        const grupo = document.createElement("div");
+        grupo.className = "cvc-canal-grupo";
+        const h3 = document.createElement("h3");
+        h3.textContent = c.completo;
+        grupo.appendChild(h3);
+        linhas.filter((d) => d.canal === c.id).forEach((d) => grupo.appendChild(garantirLinhaEl(d)));
+        secao.appendChild(grupo);
+      });
+      listaEl.appendChild(secao);
+    });
+    podarLinhaEls(idsVisiveis);
+  }
+
+  /* -------------------------------------------------- linha (render por diff) */
+  // Mesmo padrão do canva.html (§12 do plano): cria o cartão da demanda UMA vez, com os
+  // valores do formulário de edição escritos no <input>/<textarea> só na criação. Renders
+  // seguintes (troca de filtro, "Atualizar", outra linha sendo validada) NUNCA voltam a
+  // escrever num campo que já existe — só o selo de status, o texto de leitura e os botões
+  // de ação são recalculados. É o que deixa corrigir um typo com a lista mudando ao fundo
+  // sem perder o cursor no meio da frase.
+  function garantirLinhaEl(d) {
+    let el = linhaEls.get(d.id);
+    if (!el) { el = criarLinhaEl(d); linhaEls.set(d.id, el); }
+    else patchLinhaEl(el, d);
+    return el;
+  }
+
+  function formularioEdicaoHtml(d) {
+    const marcado = (v) => (d.canal_proprio === v ? " checked" : "");
+    return '<form class="cvc-form-editar" data-form>' +
+      '<div class="cvc-campo" style="grid-column:1/-1"><label>Serviço apresentado' +
+        '<input type="text" name="servico" maxlength="2000" value="' + esc(d.servico) + '" required></label></div>' +
+      '<div class="cvc-campo"><label>Que dor esse serviço endereça' +
+        '<textarea name="problema" maxlength="2000" rows="2" required>' + esc(d.problema) + "</textarea></label></div>" +
+      '<div class="cvc-campo"><label>Por que não funcionaria <i>(opcional)</i>' +
+        '<textarea name="bloqueio" maxlength="2000" rows="2">' + esc(d.bloqueio || "") + "</textarea></label></div>" +
+      '<fieldset class="cvc-radios"><legend>Já existe em canal próprio (pirata)?</legend>' +
+        '<label><input type="radio" name="canal_proprio" value="sim"' + marcado("sim") + "> Sim</label>" +
+        '<label><input type="radio" name="canal_proprio" value="nao"' + marcado("nao") + "> Não</label>" +
+        '<label><input type="radio" name="canal_proprio" value="nao_sei"' + marcado("nao_sei") + "> Não sei</label>" +
+      "</fieldset>" +
+      '<div class="cvc-campo" data-qual-wrap' + (d.canal_proprio === "sim" ? "" : " hidden") + '><label>Qual canal próprio?' +
+        '<input type="text" name="canal_proprio_qual" maxlength="2000" value="' + esc(d.canal_proprio_qual || "") + '"></label></div>' +
+      '<div class="cvc-campo"><label>Responsável' +
+        '<input type="text" name="responsavel" maxlength="2000" value="' + esc(d.responsavel) + '" required></label></div>' +
+      '<div class="cvc-campo"><label>Prazo' +
+        '<input type="date" name="prazo" min="' + PRAZO_MIN + '" max="' + PRAZO_MAX + '" value="' + esc(d.prazo || "") + '" required></label></div>' +
+      '<div class="cvc-campo"><label>Facilitador <i>(opcional)</i>' +
+        '<input type="text" name="facilitador" maxlength="200" value="' + esc(d.facilitador || "") + '"></label></div>' +
+      '<div class="cvc-campo"><label>Ciclo <i>(opcional)</i>' +
+        '<input type="text" name="ciclo" maxlength="50" value="' + esc(d.ciclo || "") + '"></label></div>' +
+      '<p class="cvc-form-erro" data-form-erro hidden></p>' +
+      '<div class="cvc-form-botoes"><button type="submit" class="btn">Salvar correção</button></div>' +
+    "</form>";
+  }
+
+  function criarLinhaEl(d) {
+    const wrap = document.createElement("div");
+    wrap.className = "cvc-linha";
+    wrap.dataset.id = d.id;
+    wrap.innerHTML =
+      '<div class="cvc-linha-topo">' +
+        '<span class="chip" data-badge></span>' +
+        '<span class="cvc-linha-meta" data-meta></span>' +
+        '<span class="cvc-linha-acoes" data-acoes></span>' +
+      "</div>" +
+      '<p class="cvc-linha-campo"><b>Serviço</b> <span data-servico></span></p>' +
+      '<p class="cvc-linha-campo"><b>Dor que endereça</b> <span data-problema></span></p>' +
+      '<p class="cvc-linha-campo" data-bloqueio-wrap><b>Por que não funcionaria</b> <span data-bloqueio></span></p>' +
+      '<p class="cvc-linha-campo"><b>Canal próprio</b> <span data-canalproprio></span></p>' +
+      '<p class="cvc-linha-campo"><b>Responsável</b> <span data-responsavel></span> · <b>Prazo</b> <span data-prazo></span></p>' +
+      '<p class="cvc-linha-erro" data-erro hidden></p>' +
+      '<details class="cvc-editar"><summary>Editar / corrigir</summary>' + formularioEdicaoHtml(d) + "</details>";
+    patchLinhaEl(wrap, d);
+    return wrap;
+  }
+
+  function patchLinhaEl(el, d) {
+    const [classe, rotulo] = STATUS_BADGE[d.status] || ["st-nao", d.status];
+    const badge = el.querySelector("[data-badge]");
+    badge.className = "chip " + classe;
+    badge.textContent = rotulo;
+    el.querySelector("[data-meta]").textContent = metaTexto(d);
+    el.querySelector("[data-servico]").textContent = d.servico;
+    el.querySelector("[data-problema]").textContent = d.problema;
+    const bloqueioWrap = el.querySelector("[data-bloqueio-wrap]");
+    bloqueioWrap.hidden = !d.bloqueio;
+    el.querySelector("[data-bloqueio]").textContent = d.bloqueio || "";
+    el.querySelector("[data-canalproprio]").textContent = rotuloCanalProprio(d);
+    el.querySelector("[data-responsavel]").textContent = d.responsavel;
+    el.querySelector("[data-prazo]").textContent = fmtData(d.prazo);
+    el.querySelector("[data-acoes]").innerHTML = acoesDisponiveis(d.status)
+      .map((a) => '<button type="button" class="btn sec" data-acao="' + a + '">' + ROTULO_ACAO[a] + "</button>").join("");
+  }
+
+  /* -------------------------------------------------------- ações de linha */
+  async function executarAcao(id, acao, botao) {
+    const d = demandas.find((x) => x.id === id);
+    const el = linhaEls.get(id);
+    if (!d || !el) return;
+    const erroEl = el.querySelector("[data-erro]");
+    erroEl.hidden = true;
+    el.querySelectorAll("[data-acoes] button").forEach((b) => { b.disabled = true; });
+    if (botao) botao.textContent = ROTULO_ACAO[acao] + "…";
+    try {
+      const resp = await DB_CANVA_CONSOLIDADO.moderar({ id: id, acao: acao, autor_nome: EDITOR_ATUAL.nomeAtual() });
+      if (resp.ok) {
+        if (acao === "validar") { d.status = "validada"; d.deleted_at = null; }
+        else if (acao === "descartar") { d.status = "descartada"; d.deleted_at = d.deleted_at || new Date().toISOString(); }
+        else if (acao === "reabrir") { d.status = "rascunho"; d.deleted_at = null; }
+        d.updated_by = EDITOR_ATUAL.nomeAtual();
+        renderContadores();
+        renderLista();
+      } else {
+        erroEl.hidden = false;
+        erroEl.textContent = resp.erro || "Não deu pra concluir essa ação.";
+        el.querySelectorAll("[data-acoes] button").forEach((b) => { b.disabled = false; });
+      }
+    } catch (err) {
+      erroEl.hidden = false;
+      erroEl.textContent = mensagemErro(err);
+      el.querySelectorAll("[data-acoes] button").forEach((b) => { b.disabled = false; });
+    }
+  }
+
+  async function salvarEdicao(form) {
+    const linhaEl = form.closest(".cvc-linha");
+    const id = Number(linhaEl.dataset.id);
+    const fd = new FormData(form);
+    const payload = {
+      id: id,
+      acao: "editar",
+      servico: fd.get("servico"),
+      problema: fd.get("problema"),
+      bloqueio: fd.get("bloqueio") || null,
+      canal_proprio: fd.get("canal_proprio"),
+      canal_proprio_qual: fd.get("canal_proprio_qual") || null,
+      responsavel: fd.get("responsavel"),
+      prazo: fd.get("prazo"),
+      facilitador: fd.get("facilitador") || null,
+      ciclo: fd.get("ciclo") || null,
+      autor_nome: EDITOR_ATUAL.nomeAtual(),
+    };
+    const erroEl = form.querySelector("[data-form-erro]");
+    erroEl.hidden = true;
+    const botao = form.querySelector("button[type=submit]");
+    botao.disabled = true; botao.textContent = "Salvando…";
+    try {
+      const resp = await DB_CANVA_CONSOLIDADO.moderar(payload);
+      if (resp.ok) {
+        const d = demandas.find((x) => x.id === id);
+        Object.assign(d, {
+          servico: payload.servico, problema: payload.problema, bloqueio: payload.bloqueio,
+          canal_proprio: payload.canal_proprio, canal_proprio_qual: payload.canal_proprio_qual,
+          responsavel: payload.responsavel, prazo: payload.prazo,
+          facilitador: payload.facilitador, ciclo: payload.ciclo, updated_by: payload.autor_nome,
+        });
+        linhaEl.querySelector(".cvc-editar").open = false;
+        patchLinhaEl(linhaEl, d);
+      } else {
+        erroEl.hidden = false;
+        erroEl.textContent = resp.erro || "Não deu pra salvar a correção.";
+      }
+    } catch (err) {
+      erroEl.hidden = false;
+      erroEl.textContent = mensagemErro(err);
+    } finally {
+      botao.disabled = false; botao.textContent = "Salvar correção";
+    }
+  }
+
+  async function validarLote(projeto, botao) {
+    botao.disabled = true;
+    botao.textContent = "Validando…";
+    try {
+      const resp = await DB_CANVA_CONSOLIDADO.moderar({
+        acao: "validar_lote", projeto: projeto, canal: filtros.canal || null, autor_nome: EDITOR_ATUAL.nomeAtual(),
+      });
+      if (resp.ok) await carregarDados();
+      else { alert(resp.erro || "Não deu pra validar em lote."); botao.disabled = false; botao.textContent = "Validar pendentes deste projeto"; }
+    } catch (err) {
+      alert(mensagemErro(err));
+      botao.disabled = false; botao.textContent = "Validar pendentes deste projeto";
+    }
+  }
+
+  /* --------------------------------------------------------------- delegação */
+  listaEl.addEventListener("click", (e) => {
+    const acaoBtn = e.target.closest("[data-acao]");
+    if (acaoBtn) { executarAcao(Number(acaoBtn.closest(".cvc-linha").dataset.id), acaoBtn.dataset.acao, acaoBtn); return; }
+    const loteBtn = e.target.closest("[data-lote]");
+    if (loteBtn) { validarLote(loteBtn.dataset.lote, loteBtn); return; }
+    const expBtn = e.target.closest("[data-exportar-projeto]");
+    if (expBtn) {
+      const nomeProjeto = expBtn.dataset.exportarProjeto;
+      exportarCsv(ultimaFiltrada.filter((d) => d.projeto === nomeProjeto),
+        "consolidado-canvas-" + slug(nomeProjeto) + "-" + hojeISO() + ".csv");
+    }
+  });
+  listaEl.addEventListener("submit", (e) => {
+    const form = e.target.closest(".cvc-form-editar");
+    if (form) { e.preventDefault(); salvarEdicao(form); }
+  });
+  listaEl.addEventListener("change", (e) => {
+    if (e.target.name === "canal_proprio") {
+      e.target.closest("form").querySelector("[data-qual-wrap]").hidden = e.target.value !== "sim";
+    }
+  });
+
+  /* -------------------------------------------------------------------- csv */
+  function exportarCsv(lista, nomeArquivo) {
+    if (!lista.length) { alert("Nenhuma demanda pra exportar com os filtros atuais."); return; }
+    const cabecalho = ["Projeto", "Canal", "Serviço apresentado", "Problema", "Por que não funcionaria",
+      "Canal próprio", "Qual", "Responsável", "Prazo", "Status", "Ciclo", "Autor", "Criado em"];
+    const canalNome = (id) => { const c = CANAIS.find((x) => x.id === id); return c ? c.completo : id; };
+    const linhas = lista.map((d) => [
+      d.projeto, canalNome(d.canal), d.servico, d.problema, d.bloqueio || "",
+      d.canal_proprio || "", d.canal_proprio_qual || "", d.responsavel, d.prazo,
+      ROTULO_STATUS_CSV[d.status] || d.status, d.ciclo || "", d.autor_nome || "", d.criado_em || "",
+    ]);
+    CSV_EXPORT.baixar(nomeArquivo, CSV_EXPORT.montar(cabecalho, linhas));
+  }
+  btnExportar.addEventListener("click", () => exportarCsv(ultimaFiltrada, "consolidado-canvas-" + hojeISO() + ".csv"));
+
+  carregarDados();
+  EDITOR_ATUAL.montar(document.getElementById("cc-editor-rodape-wrap"));
+})();
+</script>
+</body>
+</html>
