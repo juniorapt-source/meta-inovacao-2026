@@ -231,6 +231,16 @@ ALTER TABLE public.meta_inovacao_canva_demandas ENABLE ROW LEVEL SECURITY;
 -- entra pelas funções SECURITY DEFINER das seções 5 e 6; a escrita do EDITOR
 -- (validar/descartar/promover, na consolidação) também vai por função dedicada — item 4
 -- do plano, não este script.
+--
+-- O REVOKE abaixo não é redundante, e isso só aparece no Supabase: por padrão ele
+-- concede REFERENCES, TRIGGER e TRUNCATE a anon e authenticated em toda tabela nova, o
+-- que num Postgres cru não acontece. Sem o REVOKE, a verificação (a) devolve 7 linhas
+-- em vez de 1 e o script passa a prometer uma coisa e entregar outra. Não é buraco de
+-- segurança — o PostgREST não expõe nenhum dos três, e desde 30/05/2026 as tabelas
+-- novas já não recebem mais os GRANTs de DML — mas "anon não tem nada nesta tabela"
+-- precisa ser verdade literal, senão a verificação vira ruído que se aprende a ignorar.
+REVOKE ALL ON public.meta_inovacao_canva_demandas FROM anon, authenticated;
+
 GRANT SELECT ON public.meta_inovacao_canva_demandas TO authenticated;
 
 -- ÚNICA policy de leitura: sessão logada de verdade E presente na allowlist
@@ -613,8 +623,12 @@ NOTIFY pgrst, 'reload schema';
 -- ============================================================================
 -- Verificação — rode e confira à mão
 -- ============================================================================
--- (a) GRANTs: a resposta CERTA é UMA linha só — authenticated | SELECT. Qualquer linha
---     com grantee 'anon' aqui é bug: anon não tem nada nesta tabela, nem leitura.
+-- (a) GRANTs: a resposta CERTA é UMA linha só — authenticated | SELECT.
+--     Se vierem 7 linhas (REFERENCES/TRIGGER/TRUNCATE pros dois roles), o REVOKE da
+--     seção 4 não rodou: são os GRANTs que o Supabase dá sozinho em tabela nova, não
+--     algo que este script tenha concedido. Rode a seção 4 de novo.
+--     Qualquer linha com grantee 'anon' — em especial SELECT/INSERT/UPDATE/DELETE —
+--     é bug de verdade: anon não tem nada nesta tabela, nem leitura.
 SELECT grantee, privilege_type
 FROM information_schema.role_table_grants
 WHERE table_schema = 'public' AND table_name = 'meta_inovacao_canva_demandas'
