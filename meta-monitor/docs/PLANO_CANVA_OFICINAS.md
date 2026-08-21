@@ -1,7 +1,8 @@
 # Plano: canvas das oficinas preenchido direto no site
 
-**Status:** itens 1 e 2 prontos (SQL rodado em produção, `js/db-canva.js` na `main`). Item 3 é o
-próximo. O SQL do item 4 já está escrito e testado localmente, **e ainda não rodou em produção**.
+**Status:** itens 1 e 2 prontos (SQL rodado em produção, `js/db-canva.js` na `main`). Item 3
+(`canva.html`) está pronto, testado localmente, aguardando revisão/merge. Item 4 é o próximo depois
+disso. O SQL do item 4 já está escrito e testado localmente, **e ainda não rodou em produção**.
 **Versão:** v8, 21/08/2026
 (v1 tratava o canal como eixo principal, corrigido na v2, ver §2. v3 acertou a leitura para o mundo
 pós-v0.30.0, ver §6.5. v4 travou a regra de que este site não tem senha, ver §6.6. v5 corrigiu duas
