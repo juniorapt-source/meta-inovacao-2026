@@ -51,13 +51,20 @@
 -- ---------------------------------------------------------------------------
 -- ORDEM DE EXECUÇÃO: depois de 2026-08_canva_demandas.sql. A seção 0 aborta se ele não
 -- tiver rodado. Idempotente: pode rodar duas vezes.
+--
+-- COMO RODAR: cole o arquivo INTEIRO no SQL Editor do Supabase e rode de uma vez. O
+-- editor roda a seleção quando existe uma, então um trecho selecionado por acidente vira
+-- "unterminated dollar-quoted string at or near $$" — que parece erro de sintaxe do
+-- script e é só metade do corpo da função tendo chegado ao servidor. Por isso as marcas
+-- de dólar aqui são NOMEADAS ($do$ e $fn$) e não $$: com nome, o corte fica evidente na
+-- mensagem em vez de virar caça ao fantasma.
 -- ============================================================================
 
 
 -- ---------------------------------------------------------------------------
 -- 0) Pré-condição
 -- ---------------------------------------------------------------------------
-DO $$
+DO $do$
 BEGIN
   IF to_regclass('public.meta_inovacao_canva_demandas') IS NULL THEN
     RAISE EXCEPTION 'meta_inovacao_canva_demandas não existe — rode tools/sql/2026-08_canva_demandas.sql primeiro.';
@@ -65,7 +72,7 @@ BEGIN
   IF to_regprocedure('public.cc_canva_normalizar(text)') IS NULL THEN
     RAISE EXCEPTION 'cc_canva_normalizar(text) não existe — rode tools/sql/2026-08_canva_demandas.sql primeiro.';
   END IF;
-END $$;
+END $do$;
 
 
 -- ---------------------------------------------------------------------------
@@ -74,7 +81,7 @@ END $$;
 -- Remove QUALQUER policy de SELECT existente pelo pg_policies, não pelo nome adivinhado
 -- (PADRAO_TABELA.md item 4): na prática a que está lá é a cc_select_editor_autenticado,
 -- mas o nome real é o que o catálogo disser.
-DO $$
+DO $do$
 DECLARE
   pol RECORD;
 BEGIN
@@ -87,7 +94,7 @@ BEGIN
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.meta_inovacao_canva_demandas', pol.policyname);
     RAISE NOTICE 'policy de SELECT removida: %', pol.policyname;
   END LOOP;
-END $$;
+END $do$;
 
 -- GRANT ANTES da policy. É a armadilha nº 1 deste repositório: sem GRANT, o Postgres
 -- nega ANTES de avaliar RLS e a tela recebe 401 "permission denied for table" com a
@@ -138,7 +145,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
 DECLARE
   v_id          bigint;
   v_acao        text;
@@ -331,7 +338,7 @@ BEGIN
 
   RETURN jsonb_build_object('ok', true, 'id', v_id, 'status', v_linha.status);
 END;
-$$;
+$fn$;
 
 
 -- ---------------------------------------------------------------------------
