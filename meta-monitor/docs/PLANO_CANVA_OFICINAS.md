@@ -1,12 +1,15 @@
 # Plano: canvas das oficinas preenchido direto no site
 
-**Status:** especificação aprovada, implementação pendente
-**Versão:** v7, 21/08/2026
+**Status:** itens 1 e 2 prontos (SQL rodado em produção, `js/db-canva.js` na `main`). Item 3 é o
+próximo. O SQL do item 4 já está escrito e testado localmente, **e ainda não rodou em produção**.
+**Versão:** v8, 21/08/2026
 (v1 tratava o canal como eixo principal, corrigido na v2, ver §2. v3 acertou a leitura para o mundo
 pós-v0.30.0, ver §6.5. v4 travou a regra de que este site não tem senha, ver §6.6. v5 corrigiu duas
 linhas que a v4 deixou contradizendo a própria regra, na §6.5 e na §8. v6 registrou a decisão de
-SMTP em aberto. v7 fechou essa decisão: sem senha, sem conta e sem e-mail — a consolidação usa
-chave de leitura, ver §6.6)
+SMTP em aberto. v7 fechou essa decisão com uma chave de leitura na consolidação. **v8 derruba a
+chave**: nenhuma tela deste projeto pede credencial de espécie alguma, a leitura do canvas volta ao
+padrão das outras nove tabelas, e o controle de quem valida sai do banco e vai pra combinação entre
+seis pessoas da mesma equipe. Ver §6.5, §6.6 e §8)
 **Origem:** hoje o canvas "Agente na sua empresa" circula como `.docx` (exemplo: Embrapii ×
 Sebrae na sua empresa, facilitador Cristiano). Cada oficina gera um arquivo solto, que ninguém
 consolida.
@@ -84,10 +87,10 @@ Isso separa duas coisas que hoje se confundem: **status da relação** (`previst
 |---|---|---|
 | Eixo da tela | **projeto**, com os 10 canais dentro | é assim que o gestor pensa: "o que eu preciso de cada canal" |
 | Acesso | **link aberto, sem código e sem login** | fricção zero na sala. Ninguém instala nada, ninguém cria conta |
-| Credencial, onde for necessária | **chave de leitura digitada uma vez. Sem senha, sem conta, sem e-mail** | regra do projeto, ver §6.6. Senha causou a v0.30.0, e o e-mail do Supabase não entrega sem SMTP próprio |
-| Proteção | **quarentena**: tudo nasce como `rascunho` | link aberto sem quarentena é convite. Nada preenchido pelo público toca a matriz antes de um editor promover |
-| Escrita no banco | via **RPC `SECURITY DEFINER`**, não INSERT direto | com link aberto, o `anon` não deve ter GRANT nenhum na tabela. A função valida e grava |
-| Leitura | **não pública** | o canvas tem "por que não funcionaria" com nome e prazo. Não vai ficar legível pra internet inteira |
+| Credencial | **nenhuma, em tela nenhuma** | regra do projeto, ver §6.6. Não tem senha, não tem conta, não tem e-mail — e a partir da v8 também não tem chave. Nada pra digitar, nada pra perder |
+| Proteção | **quarentena**: tudo nasce como `rascunho` | é a única proteção que sobra, e é a que importa. Nada preenchido na oficina vira dado do painel antes de alguém da equipe validar |
+| Escrita no banco | via **RPC `SECURITY DEFINER`**, não INSERT direto | com link aberto, o `anon` não deve ter GRANT de escrita na tabela. A função valida, força `rascunho` e grava |
+| Leitura | **aberta, igual às outras nove tabelas** | o painel inteiro já é assim. Ver §6.5 |
 | Canal | whitelist fechada, validação dura | são fixos, e a matriz depende deles pra casar a célula |
 | Projeto | dropdown do golden record **+ escape "meu projeto não está na lista"** | projeto novo nasce a qualquer momento. Não pode ser barrado na porta |
 | Layout | mini-matriz do gestor, não formulário chapado | espelha `demandas.html`, que ele vai ver projetada na oficina |
@@ -98,8 +101,12 @@ Isso separa duas coisas que hoje se confundem: **status da relação** (`previst
 ## 5. Modelo de dados
 
 Tabela nova: `meta_inovacao_canva_demandas`. **Uma linha por demanda**, ou seja, uma linha por
-serviço apresentado. Segue `tools/sql/PADRAO_TABELA.md` (prefixo, RLS, soft delete, `updated_at`),
-com a exceção de leitura não pública documentada no topo do script.
+serviço apresentado. Segue `tools/sql/PADRAO_TABELA.md` (prefixo, RLS, soft delete, `updated_at`).
+
+O script que criou a tabela (`tools/sql/2026-08_canva_demandas.sql`, já em produção) abriu duas
+exceções ao padrão. **A v8 desfaz uma e mantém a outra:** a leitura volta a ser aberta (exceção 1,
+revogada em `2026-08_canva_leitura_aberta.sql`, §6.5), e a escrita continua passando só pelas
+funções (exceção 2, mantida, §6.1).
 
 | Coluna | Tipo | Origem no `.docx` | Obrigatório |
 |---|---|---|---|
@@ -178,38 +185,63 @@ em vez de gravar. `status` vem sempre forçado como `rascunho`, ignorando o que 
 atualiza se o `sessao_id` bater, a linha tiver menos de 24 horas e ainda estiver como `rascunho`.
 Permite corrigir typo sem abrir a porta pra editar o que outro escreveu.
 
-**6.5. Leitura.** `SELECT` na tabela só pra `authenticated` que passe em `cc_eh_editor()`
-(`tools/sql/2026-08_auth_escrita_completa.sql`).
+**6.5. Leitura: aberta, como no resto do site.** Esta é a mudança da v8, e ela reverte uma decisão
+que as versões v3 a v7 foram apertando cada vez mais.
 
-**Contexto que mudou depois da v1 deste plano:** a v0.30.0 (20/08) reverteu o site inteiro pro
-token compartilhado. `meta_inovacao_editores` ficou vazia e nenhuma tela carrega `js/auth.js`.
-Isso **não** rebaixa a leitura desta tabela pra `cc_token_select`: o `tokenEscrita` vive em texto
-puro no `data/config.js`, versionado em repositório público e servido a qualquer visitante. Token
-público como barreira de leitura é obscuridade, não proteção, e o conteúdo aqui é o gestor
-escrevendo por que o canal não funcionaria, com nome e prazo.
+O que aquelas versões diziam: o canvas guarda "por que não funcionaria" com nome de responsável e
+prazo, logo a leitura não podia ser pública, logo precisava de credencial, e como o projeto proíbe
+senha, conta e e-mail (§6.6), a credencial virou uma chave de leitura, e a chave virou uma tabela,
+duas funções e uma tela que pede pra colar algo antes de mostrar qualquer coisa.
 
-A saída também não é religar o login do site. É o contrário: **`canva-consolidado.html` nasce
-sendo a única tela que exige uma credencial, e essa credencial é uma chave de leitura, não uma
-conta.** Ver §6.6. As 5 telas atuais seguem no token, como estão hoje. `cc_eh_editor()` e
-`meta_inovacao_editores` continuam no banco, e o INSERT do editor entrou no script do item 1: ficam
-prontas, sem uso, caso um dia o login volte a fazer sentido.
+**A premissa não se sustenta na escala real.** O que está em jogo é uma equipe de seis pessoas
+saindo de um controle em Excel que circulava por e-mail e ficava em pasta compartilhada. O canvas
+no site é maior e melhor que aquilo em todas as dimensões, inclusive nesta: no Excel, quem tinha
+o arquivo tinha tudo, para sempre, sem registro. Exigir credencial aqui protegeria contra um
+adversário que a versão anterior desta feature não tinha — e cobraria o preço em quem vai usar,
+que é a pessoa da equipe que precisa conferir o que a oficina produziu e não deveria depender de
+ter recebido uma chave pra isso.
+
+**Decisão:** a leitura de `meta_inovacao_canva_demandas` volta ao padrão de `PADRAO_TABELA.md` —
+`GRANT SELECT` pro `anon` e uma policy `cc_select_publico` com `USING (true)`. Igual às outras nove
+tabelas do esquema. `canva-consolidado.html` lê por `SELECT` direto, com filtro e ordenação do
+PostgREST, sem função intermediária e sem nada digitado.
+
+`USING (true)` sem filtrar `deleted_at` é de propósito: a consolidação precisa **enxergar o
+descartado**, senão "descartar" vira caminho sem volta. Quem filtra é a tela.
+
+Isso se aplica **só à leitura**. A escrita continua fechada, e a razão é outra: não é sigilo, é
+integridade. O `anon` segue sem `GRANT` de INSERT e de UPDATE, porque o link desta feature vai
+impresso em QR code e distribuído numa sala — dar UPDATE direto a esse público é deixar qualquer
+um marcar a própria demanda como `validada` e pular a quarentena, que é a única proteção que
+sobrou. Escrita do público pela `cc_canva_gravar`, correção da própria linha pela
+`cc_canva_editar`, moderação pela `cc_canva_moderar` (§8). Nenhuma das três pede credencial.
+
+**O que sai do banco:** a policy `cc_select_editor_autenticado`, criada pelo script do item 1.
+`cc_eh_editor()` e `meta_inovacao_editores` continuam existindo, agora sem nenhum uso em lugar
+nenhum — ficam como está, prontas para uma V2, sem custo de manutenção.
 
 Atenção ao precedente de `tools/sql/2026-08_corrige_escrita_select_autenticado.sql`: já aconteceu
-neste projeto de a policy de SELECT pro `authenticated` faltar e a tela quebrar em produção. Criar
-SELECT e escrita no mesmo script.
+neste projeto de a policy de SELECT faltar e a tela quebrar em produção. Aqui vale o mesmo cuidado,
+com os papéis trocados: **`GRANT` sem policy, ou policy sem `GRANT`, dá `401 permission denied`**,
+e o `GRANT` tem que vir antes, senão o Postgres nega antes de sequer avaliar a RLS. Por isso o
+script do item 4 termina com bloco de verificação, e por isso um dos testes só vale contra o
+endpoint real, não no SQL Editor.
 
 O gestor não lê a tabela: a página guarda o que ele mandou no `localStorage`, sob a chave
-`cc_canva_<projeto_slug>_<sessao_id>`, e mostra a partir dali. Consequência pra quem implementar:
-**não encadear `.select()`** nas chamadas, o retorno da RPC já traz o `id` gerado.
-
-**Mas essa credencial não é senha nem conta.** Ver §6.6, que é regra do projeto e não detalhe desta tela.
+`cc_canva_<projeto_slug>_<sessao_id>`, e mostra a partir dali. Continua assim mesmo com a leitura
+aberta — em sala de oficina, ler do `localStorage` é mais rápido e funciona offline. Consequência
+pra quem implementar: **não encadear `.select()`** nas chamadas de RPC, o retorno da função já traz
+o `id` gerado.
 
 ---
 
-## 6.6. Regra do projeto: sem senha, sem conta, sem e-mail
+## 6.6. Regra do projeto: sem senha, sem conta, sem e-mail — e agora sem chave
 
-**Nenhuma tela deste projeto pede senha, cria conta ou depende de e-mail chegar.** Três motivos,
-nessa ordem de peso:
+**Nenhuma tela deste projeto pede senha, cria conta, depende de e-mail chegar ou pede código
+colado.** A primeira metade da regra vem da v4 e continua valendo pelos três motivos abaixo. A
+segunda metade é da v8: nem mesmo uma chave de leitura, que era a saída desenhada na v7.
+
+Três motivos, nessa ordem de peso:
 
 1. **A lição mais cara do repositório.** A v0.29.0 subiu login por e-mail e senha em 20/08 às
    01:41, e a v0.30.0 reverteu o site inteiro às 02:00, dezenove minutos depois, porque a senha se
@@ -221,39 +253,50 @@ nessa ordem de peso:
 3. **Proporção.** O painel tem no máximo 6 usuários, todos da mesma equipe, vindos de controle em
    Excel. Máquina de autenticação aqui custa mais do que protege
 
-### O mecanismo: chave de leitura
+### Um quarto motivo, que só ficou claro na v8
 
-Uma chave aleatória, digitada uma vez e lembrada pelo navegador em `localStorage`
-(`cc_canva_chave`). Sem conta, sem e-mail, sem nada pra decorar.
-
-- **Tabela `meta_inovacao_canva_chaves`**: `rotulo` (o nome da pessoa), `chave`, `criado_em`,
-  `revogado_em`, `ultimo_acesso_em`. O `anon` não recebe GRANT nenhum nela, igual à tabela de
-  demandas: quem lê é só a função
-- **Funções `cc_canva_listar(p jsonb)` e `cc_canva_moderar(p jsonb)`**, `SECURITY DEFINER`, com
-  `EXECUTE` pro `anon`. Conferem a chave, recusam se estiver revogada, carimbam `ultimo_acesso_em`
-  e só então devolvem ou alteram
-- **Criar acesso** é um INSERT com o nome da pessoa. **Revogar** é preencher `revogado_em`.
-  **Perdeu a chave** é uma consulta no SQL Editor, não um reset
-
-### Por que isso não é o que já foi recusado
-
-**Não é o `tokenEscrita`.** Aquele vive em texto puro no `data/config.js`, versionado em
-repositório público e servido a todo visitante. Esta chave não entra no repositório e não é
-servida em JavaScript nenhum: existe no banco e no navegador de quem recebeu.
-
-**Não é a senha que causou a v0.30.0.** O modo de falha é outro. Senha perdida exigia reset por
-e-mail, que era justamente o que não funcionava. Chave perdida se resolve com um INSERT no SQL
-Editor e um "colar" na tela, sem depender de ninguém.
+**Autenticação aqui resolveria o problema errado.** Nenhum dos incidentes reais deste projeto foi
+de acesso indevido. Foram: senha perdida em dezenove minutos (v0.29.0 → v0.30.0), e-mail que o
+Supabase não entrega sem SMTP, `git pull` que não acontecia, GRANT que faltava, policy com nome
+errado. Tudo custo de operação, nenhum caso de gente lendo o que não devia. Gastar o próximo item
+do plano construindo credencial é responder a uma ameaça que ainda não apareceu com um tipo de
+falha que já apareceu duas vezes.
 
 ### O que se aceita ao escolher isso
 
-Segredo portador: quem tem a chave lê, então um print de tela mal tirado vaza. E a granularidade
-é a chave, não a pessoa: o `rotulo` mais o `ultimo_acesso_em` dizem qual chave foi usada e quando,
-o que é auditoria grosseira, não identidade. Para seis pessoas da mesma equipe, basta.
+Sem rodeio, porque a decisão é consciente:
 
-**Ganho colateral, e não é pequeno:** com chave, "credencial ausente" e "nenhuma demanda ainda"
-deixam de ser a mesma resposta. A função devolve erro explícito para chave inválida ou revogada,
-em vez do silêncio de 0 linhas da RLS. Some a armadilha descrita na §8.
+- **Quem tem o link lê.** As demandas ficam legíveis pra quem abrir a tela, e o `anon key` do
+  Supabase está no `data/config.js` de um repositório público — na prática, pra quem quiser
+  procurar. `robots.txt` bloqueia indexação (`Disallow: /`), então não é conteúdo que aparece em
+  busca, mas também não é conteúdo protegido. Vale pro canvas o que já vale pra matriz, pro plano
+  de ação e pras outras nove tabelas
+- **Não existe "quem validou".** `updated_by` guarda o nome que a tela mandar, e a tela vai mandar
+  o que a pessoa digitar. É registro de boa-fé entre colegas, não identidade. A auditoria de
+  `cc_audit()` continua gravando o antes e o depois de cada linha, o que responde "o que mudou",
+  não "quem mudou"
+- **Qualquer um com o link pode validar uma demanda.** A quarentena separa `rascunho` de
+  `validada`, mas não impede que a promoção seja feita por quem não devia. O que impede é a
+  combinação da equipe, e o fato de a tela não estar linkada em lugar nenhum além do menu
+
+Nada disso é aceitável para sempre. É aceitável para seis pessoas da mesma equipe, saindo de uma
+planilha em Excel, no ciclo 2.
+
+### O gatilho da V2
+
+Vale escrever agora, enquanto a decisão está fresca, qual fato faria isso ser revisto — senão a
+revisão vira briga de opinião daqui a seis meses:
+
+1. **Alguém de fora da equipe passa a ter o link.** Facilitador externo, consultoria, outro Sebrae
+2. **O canvas passa a receber conteúdo que constrange por escrito.** "Por que não funcionaria" é o
+   campo de risco: no dia em que ele virar avaliação de pessoa e não de canal, o cálculo muda
+3. **Passa de ~15 pessoas com acesso de escrita**, quando "combinar entre a equipe" deixa de ser
+   um mecanismo real
+
+**E o custo de voltar atrás é baixo, de propósito.** A tabela não muda: fechar de novo é um script
+que troca a policy `cc_select_publico` por outra e adiciona o gate na tela. Nenhum dado precisa ser
+migrado, nenhuma coluna precisa nascer. Foi por isso que a leitura ficou no padrão do projeto em
+vez de ganhar mecanismo próprio — o padrão é o que se sabe reverter.
 
 **6.7. Honeypot.** Campo escondido por CSS (`empresa_site`). Bot preenche, humano não. Se vier
 preenchido, a função responde "ok" e não grava nada.
@@ -352,17 +395,31 @@ Desktop: cartão em 2 colunas. Mobile: um campo por linha, ponto de virada em 90
 
 ## 8. Tela de consolidação: `canva-consolidado.html`
 
-Entra no menu, grupo **Execução**, abaixo de "Matriz de demandas". É a **única tela do site que
-pede credencial**, e essa credencial é a chave de leitura da §6.6. Sem senha, sem conta, sem
-e-mail. Lê e modera pelas funções `cc_canva_listar` e `cc_canva_moderar`, nunca por SELECT direto.
+Entra no menu, grupo **Execução**, abaixo de "Matriz de demandas". **Abre direto, como qualquer
+outra tela do site** — nada pra digitar, nada pra colar (§6.6). Lê por `SELECT` direto na tabela,
+com filtro e ordenação do PostgREST, igual aos outros `js/db-*.js`.
 
-**Distinção obrigatória na tela:** "sem chave" e "ninguém preencheu ainda" são situações
-diferentes e a tela precisa mostrar mensagens diferentes. Com a chave isso é fácil, porque a função
-devolve erro explícito em vez do silêncio de 0 linhas que a RLS produziria. Não desperdice essa
-diferença exibindo "nenhuma demanda" para quem só esqueceu de colar a chave.
+**Escreve pela `cc_canva_moderar(p jsonb)`**, `SECURITY DEFINER`, `EXECUTE` pro `anon`, sem
+credencial. Ela não é barreira de identidade — é barreira de integridade, e faz três coisas que um
+UPDATE direto não faria:
+
+1. só aceita transição de status válida (`rascunho` → `validada` | `descartada`, e o caminho de
+   volta pra `rascunho`), em vez de deixar gravar qualquer string na coluna
+2. `descartar` é soft delete: carimba `deleted_at`, nunca apaga
+3. deixa a auditoria coerente, porque toda alteração passa pelo mesmo lugar
+
+O ganho real dela é o item 1 combinado com o §6.5: o link do canvas vai impresso em QR e circula
+numa sala, e a única coisa que separa "preenchido na oficina" de "dado oficial do painel" é o
+status. Essa coluna não deve estar ao alcance de um `PATCH` solto.
+
+**Distinção obrigatória na tela:** "deu erro na consulta" e "ninguém preencheu ainda" são coisas
+diferentes e vão parecer iguais se a tela tratar as duas como lista vazia. Com a leitura aberta,
+zero linhas significa mesmo zero linhas — o que torna o erro de rede a única confusão possível, e
+ela é fácil de evitar: mostre a mensagem do erro, não o estado vazio.
 
 - lista as demandas agrupadas por projeto e canal, com filtro por status, ciclo e canal
-- por linha: **validar** (`validada`), **descartar** (`descartada`, soft delete), **editar**
+- por linha: **validar** (`validada`), **descartar** (`descartada`, soft delete), **editar** — as
+  três pela `cc_canva_moderar`
 - em lote: validar todas as demandas de um projeto de uma vez, depois da oficina
 - **fila de projetos novos**: as linhas com `projeto_novo = true` aparecem separadas no topo. Duas
   ações: *casar* com um projeto existente (typo, apelido, "Embrapii" vs "EMBRAPII") ou *cadastrar*
@@ -417,7 +474,8 @@ Mais duas mudanças pequenas em `demandas.html`:
 | Risco | Mitigação |
 |---|---|
 | **Rede corporativa bloqueando o site.** Hoje parte dos colegas não abre `cartacorso.com.br`. Oficina presencial com todo mundo no WiFi do Sebrae e o canvas ao vivo morre na porta | testar com 2 ou 3 pessoas da sala antes do ciclo. Orientar a usar 4G, que é o caminho natural de quem entra por QR. Manter o `.docx` como plano B da sessão |
-| Link aberto usado indevidamente | quarentena de rascunho, tetos por sessão, honeypot, auditoria. Nada entra na matriz sem validação |
+| Link aberto usado indevidamente pra **escrever** | quarentena de rascunho, tetos por sessão e por projeto/dia, honeypot, auditoria, e `anon` sem GRANT de escrita. Nada entra na matriz sem validação |
+| Leitura aberta se mostra cedo demais (§6.5) | os três gatilhos da §6.6 dizem quando revisar, e a reversão é um script que troca uma policy. Enquanto isso, `robots.txt` já bloqueia indexação e a tela não é linkada fora do menu |
 | Projeto novo digitado de 5 jeitos diferentes | comparação normalizada no casamento, fila de projetos novos na consolidação, e a decisão final sempre humana |
 | Gestor preenche pelo projeto errado | dropdown com os nomes canônicos do golden record. O campo livre é escape, não o caminho padrão. Correção na consolidação |
 | Ninguém preenche | o painel de "quem não preencheu" projetado no fim da sessão resolve mais que e-mail depois |
@@ -435,9 +493,14 @@ Cada item é um commit pequeno e testável.
 2. `js/db-canva.js`: camada de acesso no padrão dos outros `js/db-*.js`. Chama as RPC, cuida da
    fila offline e do `localStorage`
 3. `canva.html`: identificação, mini-matriz do gestor, cartão de demanda
-4. `tools/sql/2026-08_canva_chaves.sql` (tabela de chaves + `cc_canva_listar` e
-   `cc_canva_moderar`, §6.6) e `canva-consolidado.html` + linha no `GRUPOS` de `js/core.js`,
-   incluindo a fila de projetos novos. **Sem Supabase Auth: nada de `js/auth.js` nem de OTP**
+4. `tools/sql/2026-08_canva_leitura_aberta.sql` (troca a policy `cc_select_editor_autenticado` por
+   `GRANT SELECT` pro `anon` + `cc_select_publico`, e cria `cc_canva_moderar`, §6.5 e §8) e
+   `canva-consolidado.html` + linha no `GRUPOS` de `js/core.js`, incluindo a fila de projetos
+   novos. **Sem credencial de espécie alguma: nada de `js/auth.js`, nada de OTP, nada de chave**.
+   O script já existe e passou num Postgres 16 local com o estado de produção reproduzido
+   (tabela do item 1, auditoria, golden record): leitura como `anon` devolvendo linha, `UPDATE`
+   direto como `anon` barrado, as seis ações da `cc_canva_moderar` e os oito casos de erro
+   devolvendo `{ok:false}` em vez de exceção. Falta rodar em produção e fazer a tela
 5. Promoção pra `meta_inovacao_matriz_demandas` com a regra da §9, e ajustes em `demandas.html`
 6. Exportadores `.csv` e `.docx`
 7. QR codes por canal, gerados uma vez e colados no último slide de cada apresentação
@@ -459,17 +522,21 @@ da reversão) sem que a cópia local acompanhasse. Sessão que começa de uma c�
 que já foi revertido.
 
 Antes de subir: rodar `tools/validar_dados.py`. A whitelist de canais dentro da função SQL é um
-quarto lugar onde os canais aparecem, junto de `data/canais.js`, `data/matriz.js` e o dropdown de
-`demandas.html`. Se um canal novo nascer algum dia, é preciso bater nos quatro.
+**quinto** lugar onde os canais aparecem, junto de `data/canais.js`, `data/matriz.js`, o dropdown
+de `demandas.html` e a lista de `js/db-canva.js` (que já existe, e que a v7 ainda não contava). Se
+um canal novo nascer algum dia, é preciso bater nos cinco.
 
 ---
 
 ## 13. O que fica de fora, de propósito
 
 - **Login pros gestores.** Decisão consciente. Fricção de cadastro mata preenchimento em oficina
-- **Senha, conta e e-mail, em qualquer tela.** Regra do projeto, §6.6. Onde precisar de
-  credencial, é chave de leitura. Um pedido futuro de "coloca um login aqui" deve ser recusado com
-  esta linha, e um pedido de "manda por e-mail" esbarra no SMTP que este projeto não tem
+- **Senha, conta, e-mail e chave, em qualquer tela.** Regra do projeto, §6.6. Nenhuma tela pede
+  credencial — nem a consolidação. Um pedido futuro de "coloca um login aqui" se responde com os
+  três gatilhos da §6.6: se nenhum deles aconteceu, a resposta é não; se algum aconteceu, é V2 e
+  tem escopo próprio, não puxadinho
+- **Controle de quem valida.** Consequência da linha acima, e a mais desconfortável delas: a tela
+  não sabe quem está mexendo. Aceito conscientemente na §6.6, e é o primeiro item a mudar numa V2
 - **Cadastro automático de projeto novo no golden record.** O escape grava a intenção, não cria o
   projeto. Golden record com cadastro automático deixa de ser golden record
 - **Edição colaborativa em tempo real.** Duas pessoas no mesmo canvas é problema que ainda não
