@@ -33,15 +33,17 @@
 -- As 9 tabelas do esquema seguem no modelo de token, as 5 telas de escrita seguem sem
 -- login, js/auth.js segue não sendo carregado por nenhuma delas. O que muda é só o
 -- alcance da tabela NOVA: ela nasce fora daquele modelo, e canva-consolidado.html
--- (item 4) nasce sendo a ÚNICA tela do site que carrega js/auth.js e exige login.
+-- (item 4) nasce sendo a ÚNICA tela do site que exige identidade — por código de 6
+-- dígitos no e-mail, não por senha (ver "COMO A SESSÃO NASCE", abaixo).
 -- Escolha deliberada, não inconsistência: o canvas é o primeiro conteúdo do site que
 -- não pode ser lido por quem só tem o link.
 --
 -- CONTRATO PRO ITEM 4 (canva-consolidado.html), pra não se descobrir isso na hora de
--- fazer a tela: ela precisa de <script src="js/auth.js"> e de gate por
--- CC_AUTH.podeEditar(); sem sessão logada o SELECT devolve 0 linhas em SILÊNCIO (é RLS
--- filtrando, não erro), então a tela tem que mostrar "faça login", nunca "nenhuma
--- demanda ainda" — são coisas diferentes e parecem iguais na tela.
+-- fazer a tela: ela é gateada pelo js/auth-otp.js (código de 6 dígitos por e-mail, ver
+-- acima); sem sessão o SELECT devolve 0 linhas em SILÊNCIO (é RLS filtrando, não erro),
+-- então a tela tem que mostrar "peça seu código", nunca "nenhuma demanda ainda" — são
+-- coisas diferentes e parecem iguais na tela. Vale pros dois motivos de 0 linhas: sem
+-- sessão, e com sessão de um e-mail fora da allowlist.
 --
 -- Atenção ao precedente de tools/sql/2026-08_corrige_escrita_select_autenticado.sql: já
 -- aconteceu neste projeto de a policy de SELECT faltar e a tela quebrar em produção.
@@ -52,11 +54,19 @@
 -- confere e ABORTA se faltarem). meta_inovacao_projetos precisa existir (FK opcional
 -- de projeto_id).
 --
--- ⚠️ PRÉ-REQUISITO OPERACIONAL, fora do SQL: a seção 0 cadastra o JR. na allowlist, mas
--- allowlist não é senha. A v0.30.0 aconteceu porque a senha do Supabase Auth tinha sido
--- esquecida — se ainda estiver, o login de canva-consolidado.html não vai entrar mesmo
--- com a linha na allowlist. Confira ANTES da oficina em Authentication > Users do painel
--- do Supabase (juniorapt@gmail.com), usando "Reset password" se precisar.
+-- ⚠️ COMO A SESSÃO NASCE — regra de projeto, não detalhe de implementação: este site
+-- NÃO tem senha em tela nenhuma. A identidade da canva-consolidado.html é código de 6
+-- dígitos por e-mail (§6.6 do plano): signInWithOtp com shouldCreateUser:false, depois
+-- verifyOtp, num js/auth-otp.js novo — sem tocar em js/auth.js, que fica onde está.
+-- shouldCreateUser:false é o que faz a allowlist da seção 0 valer de ponta a ponta: quem
+-- não tem usuário no projeto não ganha um só por digitar o e-mail.
+--
+-- Isto está escrito AQUI, num script SQL que não implementa nada disso, por um motivo:
+-- daqui a três meses alguém lê "authenticated + cc_eh_editor()" e recria login por
+-- senha, que é o caminho que a v0.30.0 já mostrou não servir pra este projeto (a
+-- reversão inteira aconteceu porque a senha tinha sido esquecida). O SQL é indiferente
+-- ao assunto — cc_eh_editor() olha auth.uid() e não sabe nem se importa como a sessão
+-- nasceu — e é exatamente por ser indiferente que ele não protege a decisão sozinho.
 --
 -- IDEMPOTENTE: pode rodar de novo — CREATE TABLE IF NOT EXISTS, CREATE OR REPLACE
 -- FUNCTION, DROP POLICY/TRIGGER antes de recriar.
