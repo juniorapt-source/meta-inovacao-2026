@@ -21,3 +21,6 @@ node_modules/
 # Prompts de trabalho internos. O repositório é público.
 # Apague esta linha se decidir versionar este arquivo.
 prompts_code_melhorias_carta_corso.md
+
+# Config local do Claude Code — não vai pro repositório
+.claude/
