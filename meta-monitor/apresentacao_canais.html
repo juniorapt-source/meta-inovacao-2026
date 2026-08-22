@@ -61,6 +61,10 @@ h2{font:700 clamp(26px,3.4vw,40px)/1.12 Archivo,sans-serif;letter-spacing:-.01em
 .legenda-mandala i{width:12px;height:12px;border-radius:4px;display:inline-block}
 mark{background:linear-gradient(transparent 62%,color-mix(in srgb,var(--ativo) 28%,#fff) 0);padding:0 2px}
 .assin{font:600 12px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--grafite);text-transform:uppercase}
+.qr-bloco{display:flex;gap:48px;align-items:center;flex:1;min-height:0}
+.qr-img{width:auto;height:auto;max-width:min(44vw,440px);max-height:60vh;object-fit:contain;background:#fff;border:1px solid var(--linha)}
+.qr-texto{max-width:44ch}
+.qr-url{font:600 21px/1.4 'IBM Plex Mono',monospace;color:var(--tinta);word-break:break-word;margin-top:6px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media print{
   body{overflow:visible}
@@ -71,6 +75,8 @@ mark{background:linear-gradient(transparent 62%,color-mix(in srgb,var(--ativo) 2
   .slide{padding:32px 24px 64px;overflow:auto}
   .duas,.capa-grid,.grade2{grid-template-columns:1fr;gap:22px}
   #mini{width:92px;height:92px;top:14px;right:14px}
+  .qr-bloco{flex-direction:column;align-items:flex-start}
+  .qr-img{max-width:min(70vw,360px)}
 }
 </style>
 </head>
@@ -84,6 +90,16 @@ mark{background:linear-gradient(transparent 62%,color-mix(in srgb,var(--ativo) 2
 <script>
 "use strict";
 /* ============ DADOS ============ */
+/* Esta apresentação é sobre os canais da URC (Central de Relacionamento), não sobre a lista
+ * inteira de data/canais.js. São 8 de propósito: os mesmos 8 de CANAIS_URC em
+ * tools/validar_dados.py / data/urc.js (CNR, Assessoria, Portal, Loja, Marketing Cloud, Foco+,
+ * Rede, DXP) — a contraparte URC de cada canal que esta sessão apresenta. "Sebrae na sua
+ * empresa" e "Contabilizações e instrumentos" são canais novos da grade v2 de data/canais.js
+ * (10 no total), mas não têm liderança/URC própria em data/urc.js e não têm conteúdo (fala, em
+ * rede, jogada) escrito para este deck — por isso ficam fora deste laço. Este arquivo não lê
+ * data/canais.js nem data/agenda.js: os dados abaixo são hardcoded, de propósito, pra manter a
+ * apresentação um HTML único e portátil (sem <script src>, além das fontes do Google).
+ * Se um dia a URC ganhar um 9º canal, adicione aqui e em data/urc.js — não em data/canais.js. */
 const CORES = {cnr:"--c-cnr",assessoria:"--c-assessoria",portal:"--c-portal",loja:"--c-loja",mkt:"--c-mkt",foco:"--c-foco",rede:"--c-rede",dxp:"--c-dxp"};
 const CANAIS = [
  {id:"cnr", num:"01", sigla:"CNR", nome:"CNR — operação ativa e receptiva",
@@ -302,6 +318,10 @@ function criarMandala(el, tam){
 /* ============ SLIDES ============ */
 const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
 const chip=id=>{const c=CANAIS.find(x=>x.id===id);return '<span class="chip" style="background:var('+CORES[id]+')">'+c.sigla+'</span>';};
+// Mesma URL que tools/gerar_qrcodes_canais.js usou pra gerar qrcodes/<id>.png (BASE_URL ali).
+// Sem ciclo, sem facilitador — só ?canal=<id> (docs/PLANO_CANVA_OFICINAS.md §7/§12 item 7).
+// Se este texto mudar, os PNGs em qrcodes/ ficam desatualizados: regerar com o script antes.
+const urlCanva=id=>"https://www.cartacorso.com.br/canva.html?canal="+id;
 const S=[];
 
 S.push({foco:null,par:[],capa:true,html:`
@@ -377,6 +397,29 @@ CANAIS.forEach(c=>{
       <div>${cons}</div>
       <div>
         <div class="jogada"><div class="tt">JOGADA DA INOVAÇÃO · <span class="selo ${c.jogada.selo=="PROPOSTA UI"?"ui":""}">${c.jogada.selo}</span></div><p style="font-size:14.5px">${esc(c.jogada.t)}</p></div>
+      </div>
+    </div>`});
+  // Slide de fechamento do canal, §10 do plano: QR grande + URL por extenso, pra quem não
+  // conseguir ler o QR digitar. Referencia qrcodes/<id>.png em vez de desenhar o QR inline
+  // (SVG) por três razões: (1) o PNG já é exatamente o "QR grande + URL por extenso" que o §10
+  // pede — não precisa recompor o layout aqui, só posicionar a imagem; (2) cada PNG foi
+  // decodificado de volta contra a URL esperada antes de entrar no repo (§12 item 7) — desenhar
+  // de novo aqui reintroduziria o risco que aquela verificação já eliminou, sem ganhar nada; (3)
+  // este arquivo é HTML único e portátil, sem <script src> além das fontes — trazer o encoder de
+  // tools/vendor/ pra cá só pra redesenhar um QR que já existe pronto seria dependência nova sem
+  // motivo. A URL escrita abaixo da imagem usa a mesma urlCanva() que valida a imagem em si: as
+  // duas nunca podem divergir porque nascem da mesma função.
+  S.push({foco:c.id,par:[],canal:c,tingida:true,html:`
+    <div class="eyebrow">CANAL ${c.num} · 08 &nbsp;<b>${esc(c.sigla)} · ACESSO</b></div>
+    <h2>Aponte a câmera e registre a demanda.</h2>
+    <div class="barra"></div>
+    <div class="qr-bloco">
+      <img class="qr-img" src="qrcodes/${c.id}.png" alt="QR code para abrir o canvas de demandas do canal ${esc(c.nome)}: ${esc(urlCanva(c.id))}">
+      <div class="qr-texto">
+        <p class="assin" style="margin-bottom:8px">Não conseguiu ler o QR?</p>
+        <p class="lead" style="font-size:16px">Digite no navegador do celular:</p>
+        <p class="qr-url">${esc(urlCanva(c.id))}</p>
+        <p style="margin-top:16px;color:var(--grafite);font-size:14px">Sem senha, sem cadastro — abre direto na oficina de ${esc(c.sigla)}.</p>
       </div>
     </div>`});
 });
