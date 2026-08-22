@@ -26,6 +26,12 @@
  * Client: window.CC_SUPABASE.clientePrincipal() (js/supabase.js) — mesmo padrão dos
  * outros js/db-*.js, com o header x-cc-token de escrita e a mesma seleção de SDK que o
  * resto da página usa (clássica via <script> do CDN em demandas.html, ESM no resto).
+ *
+ * montarModelo()/paraSnapshot() (item 3.3): a montagem da grade (célula → linha/coluna)
+ * e a tradução pro formato de data/matriz.js moraram só em demandas.html até o item 3.2.
+ * Vieram pra cá pra a aba "matriz" do editor.html usar a MESMA função — a leitura ao
+ * vivo (DB_CANAIS + DB_PROJETOS + matrizStore) e o snapshot exportado batem chave a
+ * chave com o que demandas.html mostra e exporta por construção, não por promessa.
  */
 (function (root) {
   "use strict";
@@ -246,6 +252,144 @@
     }
   }
 
+  /* ---- modelo de grade (linhas × colunas), item 3.3 do plano ----
+     Movido pra cá de demandas.html (item 3.2) pra virar a MESMA função nas duas telas
+     que precisam montar a Matriz a partir dos três cadastros de referência (projetos,
+     canais, células): demandas.html (edição ao vivo) e a aba "matriz" do editor.html
+     (leitura + snapshot). Uma cópia colada em cada arquivo garantiria divergir cedo ou
+     tarde; uma função só, chamada dos dois lugares, não. */
+
+  function norm(s) { return String(s == null ? "" : s).trim().toLowerCase(); }
+
+  /* montarModelo(projetos, canais, celulas) -> { colunas, linhas }
+       linhas   = window.DB_PROJETOS.carregar().lista (ou o seed local)
+       colunas  = window.DB_CANAIS.carregar().lista (ou o seed local), na ordem de `ordem`
+       celulas  = matrizStore.carregar().lista — uma por (projeto_id, canal_id)
+     Casa cada célula com sua linha/coluna por id e, quando falta id (catálogo caiu pro
+     seed local mas as células vieram do Supabase, ou vice-versa), pelo NOME/SLUG que a
+     célula já traz junto (junção feita em normalizar(), acima). Célula cujo projeto ou
+     canal não existe em nenhum catálogo vira uma linha/coluna extra marcada "órfã" — só
+     quando tem estado preenchido, pra nunca fazer dado sumir em silêncio nem materializar
+     linha/coluna fantasma totalmente vazia. Canal desativado no catálogo só continua na
+     grade se ainda tiver estado gravado em alguma célula. */
+  function montarModelo(projetos, canais, celulas) {
+    const cols = [], mapaCol = new Map();
+    const lins = [], mapaLin = new Map();
+    let seq = 0;
+
+    function registrarCol(col) {
+      cols.push(col);
+      if (col.canal_id != null) mapaCol.set("id:" + col.canal_id, col);
+      if (col.slug) mapaCol.set("slug:" + norm(col.slug), col);
+      return col;
+    }
+    function registrarLin(lin) {
+      lins.push(lin);
+      if (lin.projeto_id != null) mapaLin.set("id:" + lin.projeto_id, lin);
+      if (lin.iniciativa) mapaLin.set("nome:" + norm(lin.iniciativa), lin);
+      return lin;
+    }
+
+    (canais || []).slice()
+      .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0))
+      .forEach((c) => registrarCol({
+        chave: "c" + (seq++),
+        canal_id: c.db_id != null ? Number(c.db_id) : null,
+        slug: c.slug || null,
+        nome: c.nome || c.slug || "canal",
+        nome_completo: c.nome_completo || "",
+        ativo: c.ativo !== false,
+        foraDoCatalogo: false,
+        temDado: false,
+      }));
+
+    (projetos || []).forEach((p) => registrarLin({
+      projeto_id: p.db_id != null ? Number(p.db_id) : null,
+      iniciativa: p.iniciativa || "",
+      nucleo: p.nucleo || "",
+      orfa: false,
+      celulas: {},
+    }));
+
+    function nomeDeLinha(cel) { return cel.iniciativa || (cel.projeto_id != null ? "Iniciativa #" + cel.projeto_id : ""); }
+    function nomeDeColuna(cel) { return cel.canal_slug || (cel.canal_id != null ? "Canal #" + cel.canal_id : ""); }
+
+    function acharLinha(cel, criar) {
+      let lin = cel.projeto_id != null ? mapaLin.get("id:" + cel.projeto_id) : null;
+      if (lin) return lin;
+      lin = cel.iniciativa ? mapaLin.get("nome:" + norm(cel.iniciativa)) : null;
+      if (lin) {
+        if (lin.projeto_id == null && cel.projeto_id != null) {
+          lin.projeto_id = Number(cel.projeto_id);
+          mapaLin.set("id:" + lin.projeto_id, lin);
+        }
+        return lin;
+      }
+      if (!criar) return null;
+      return registrarLin({
+        projeto_id: cel.projeto_id != null ? Number(cel.projeto_id) : null,
+        iniciativa: nomeDeLinha(cel), nucleo: "", orfa: true, celulas: {},
+      });
+    }
+
+    function acharColuna(cel, criar) {
+      let col = cel.canal_id != null ? mapaCol.get("id:" + cel.canal_id) : null;
+      if (col) return col;
+      col = cel.canal_slug ? mapaCol.get("slug:" + norm(cel.canal_slug)) : null;
+      if (col) {
+        if (col.canal_id == null && cel.canal_id != null) {
+          col.canal_id = Number(cel.canal_id);
+          mapaCol.set("id:" + col.canal_id, col);
+        }
+        return col;
+      }
+      if (!criar) return null;
+      return registrarCol({
+        chave: "c" + (seq++),
+        canal_id: cel.canal_id != null ? Number(cel.canal_id) : null,
+        slug: cel.canal_slug || null,
+        nome: nomeDeColuna(cel), nome_completo: "", ativo: false, foraDoCatalogo: true, temDado: true,
+      });
+    }
+
+    (celulas || []).forEach((cel) => {
+      let lin = acharLinha(cel, false);
+      let col = acharColuna(cel, false);
+      if (!lin || !col) {
+        if (!cel.estado) return;
+        if (!lin && !nomeDeLinha(cel)) return;
+        if (!col && !nomeDeColuna(cel)) return;
+        lin = lin || acharLinha(cel, true);
+        col = col || acharColuna(cel, true);
+      }
+      lin.celulas[col.chave] = cel;
+      if (cel.estado) col.temDado = true;
+    });
+
+    return { colunas: cols.filter((c) => c.ativo || c.temDado), linhas: lins };
+  }
+
+  /* paraSnapshot(linhas, colunas) -> { iniciativa: { slug_do_canal: estado } }
+     Traduz um modelo de montarModelo() pro formato CONGELADO de data/matriz.js — ver a
+     nota grande no topo de PLANO_EXECUCAO_GOLDEN_RECORD.md (Camada 3, item 3.3): esse
+     formato é o fallback offline de demandas.html, indexado por SLUG e não por
+     canal_id, e não pode mudar sem trocar os três lugares junto (aqui, seedLocal() acima
+     e o seedCelulas() de demandas.html). Coluna sem slug (canal conhecido só por id)
+     fica de fora — o arquivo é indexado por slug. */
+  function paraSnapshot(linhas, colunas) {
+    const obj = {};
+    (linhas || []).forEach((l) => {
+      const cells = {};
+      (colunas || []).forEach((c) => {
+        if (!c.slug) return;
+        const cel = l.celulas[c.chave];
+        cells[c.slug] = (cel && cel.estado) || "";
+      });
+      obj[l.iniciativa] = cells;
+    });
+    return obj;
+  }
+
   const matrizStore = {
     TABELA: TABELA,
     TABELA_LEGADA: TABELA_LEGADA,
@@ -255,6 +399,8 @@
     invalidar: invalidar,
     salvarCelula: salvarCelula,
     subscribeRealtime: subscribeRealtime,
+    montarModelo: montarModelo,
+    paraSnapshot: paraSnapshot,
   };
 
   root.matrizStore = matrizStore;
