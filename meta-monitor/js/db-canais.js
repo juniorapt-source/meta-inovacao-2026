@@ -1,56 +1,40 @@
-/* Camada de dados do conjunto PESSOAS ("Correções v0.18.x", migração do restante do
- * Modo edição pro Supabase) — window.DB_PESSOAS.
+/* Camada de dados do catálogo CANAIS (golden record de cadastros de referência,
+ * Camada 0, item 0.5) — window.DB_CANAIS.
  *
- * Lê de meta_inovacao_pessoas no Supabase; cai pra window.DB.pessoas (data/pessoas.js,
- * SEED + fallback) se a rede falhar. Mesmo mecanismo de ?semrede=1/CC_FORCAR_FALLBACK e
- * a mesma trava de escrita em modo de teste de js/db-plano.js — ver comentários lá.
+ * Lê de meta_inovacao_canais no Supabase; cai pra window.DB.canais (data/canais.js,
+ * SEED + fallback) se a rede falhar. Mesmo mecanismo de sempre — ver js/db-projetos.js.
  *
- * NÃO confundir com window.DB.responsaveis (lista canônica do P4, usada por
- * plano-acao.html/minhas-acoes.html) — são dados diferentes, este módulo só cobre
- * window.DB.pessoas (nome/papel/grupo/nucleo/pendente + nome_completo/nome_exibicao/
- * email/ativo, golden record de pessoas — Camada 1, tools/sql/2026-08_pessoas_golden.sql
- * — editado em editor.html e exibido em participantes.html).
- *
- * nome/papel/grupo/nucleo/pendente/ordem são os campos ORIGINAIS (P·Correções v0.18.x) —
- * continuam existindo e sendo lidos por participantes.html sem mudança nenhuma.
- * nome_completo/nome_exibicao/email/ativo são as colunas novas da Camada 1: identidade
- * única por pessoa física, preenchida a partir do dedupe confirmado (ver
- * meta-monitor/docs/CAMADA1_DEDUPE_PESSOAS.md) — convivem com as antigas até a Camada 5
- * decidir aposentar o texto livre duplicado por grupo.
+ * Formato canônico devolvido por carregar() (bate com as colunas da tabela nova, não
+ * com o formato antigo de data/canais.js — ver seedLocal()):
+ *   { slug, nome, nome_completo, formato, pauta, ordem, ativo, db_id }
  */
 (function (root) {
   "use strict";
 
-  const TABELA = "meta_inovacao_pessoas";
+  const TABELA = "meta_inovacao_canais";
 
-  function linhaParaPessoa(r) {
+  function linhaParaCanal(r) {
     return {
+      slug: r.slug,
       nome: r.nome,
-      papel: r.papel || null,
-      grupo: r.grupo,
-      nucleo: r.nucleo || null,
-      pendente: !!r.pendente,
+      nome_completo: r.nome_completo,
+      formato: r.formato,
+      pauta: r.pauta || [],
       ordem: r.ordem,
-      nome_completo: r.nome_completo || null,
-      nome_exibicao: r.nome_exibicao || null,
-      email: r.email || null,
-      ativo: r.ativo == null ? true : !!r.ativo,
+      ativo: r.ativo,
       db_id: r.id,
     };
   }
 
-  function pessoaParaLinha(p) {
+  function canalParaLinha(c) {
     return {
-      nome: p.nome,
-      papel: p.papel || null,
-      grupo: p.grupo,
-      nucleo: p.nucleo || null,
-      pendente: !!p.pendente,
-      ordem: p.ordem,
-      nome_completo: p.nome_completo || null,
-      nome_exibicao: p.nome_exibicao || null,
-      email: p.email || null,
-      ativo: p.ativo == null ? true : !!p.ativo,
+      slug: c.slug,
+      nome: c.nome,
+      nome_completo: c.nome_completo,
+      formato: c.formato,
+      pauta: c.pauta || [],
+      ordem: c.ordem,
+      ativo: c.ativo,
     };
   }
 
@@ -64,11 +48,24 @@
     const supa = await root.CC_SUPABASE.obterClienteEsm();
     const { data, error } = await supa.from(TABELA).select("*").is("deleted_at", null).order("ordem", { ascending: true });
     if (error) throw error;
-    return (data || []).map(linhaParaPessoa);
+    return (data || []).map(linhaParaCanal);
   }
 
+  // data/canais.js usa o formato antigo (id/completo, sem ordem/ativo) — traduzido
+  // aqui pro formato canônico da tabela nova, pra quem consome carregar() nunca
+  // precisar saber qual das duas fontes respondeu.
   function seedLocal() {
-    return ((root.DB && root.DB.pessoas) || []).slice();
+    const brutos = (root.DB && root.DB.canais) || [];
+    return brutos.map((c, i) => ({
+      slug: c.id,
+      nome: c.nome,
+      nome_completo: c.completo,
+      formato: c.formato,
+      pauta: c.pauta || [],
+      ordem: i + 1,
+      ativo: true,
+      db_id: null,
+    }));
   }
 
   let promessa = null;
@@ -83,7 +80,7 @@
         const lista = await buscarDoSupabase();
         return { lista: lista, usandoFallback: false, motivoFallback: null };
       } catch (err) {
-        console.error("db-pessoas: falha ao carregar do Supabase, caindo pro seed local (data/pessoas.js)", err);
+        console.error("db-canais: falha ao carregar do Supabase, caindo pro seed local (data/canais.js)", err);
         return { lista: seedLocal(), usandoFallback: true, motivoFallback: (err && err.message) || String(err) };
       }
     })();
@@ -100,16 +97,16 @@
     const patch = Object.assign({}, campos, { updated_by: usuario || null });
     const { data, error } = await supa.from(TABELA).update(patch).eq("id", id).select().single();
     if (error) throw error;
-    return linhaParaPessoa(data);
+    return linhaParaCanal(data);
   }
 
-  async function criar(pessoaParcial, usuario) {
+  async function criar(canalParcial, usuario) {
     bloquearEscritaEmTeste();
     const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const payload = Object.assign({}, pessoaParaLinha(pessoaParcial), { updated_by: usuario || null });
+    const payload = Object.assign({}, canalParaLinha(canalParcial), { updated_by: usuario || null });
     const { data, error } = await supa.from(TABELA).insert(payload).select().single();
     if (error) throw error;
-    return linhaParaPessoa(data);
+    return linhaParaCanal(data);
   }
 
   async function removerSoft(id, usuario) {
@@ -120,12 +117,12 @@
     if (error) throw error;
   }
 
-  root.DB_PESSOAS = {
+  root.DB_CANAIS = {
     TABELA: TABELA,
     carregar: carregar,
     salvar: salvar,
     criar: criar,
     removerSoft: removerSoft,
-    pessoaParaLinha: pessoaParaLinha,
+    canalParaLinha: canalParaLinha,
   };
 })(this);
