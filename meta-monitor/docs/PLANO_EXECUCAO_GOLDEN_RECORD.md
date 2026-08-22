@@ -10,6 +10,27 @@ Fonte do desenho: `meta-monitor/docs/PROPOSTA_ESQUEMA_CADASTROS_REFERENCIA.md`
 `https://claude.ai/code/artifact/883d85fb-304d-4ad0-9130-07bfa8f90c9c`. Este
 documento não redesenha nada — só quebra a implementação em atividades executáveis.
 
+> **ESTE É O ÚNICO PLANO DESTA FRENTE.** Até 22/08/2026 existiam duas cópias — esta e
+> `PLANO_EXECUCAO_GOLDEN_RECORD já em execução.md`, na raiz do repositório. Em menos de
+> um dia elas divergiram: a da raiz tinha tabelas de status ricas nas Camadas 0–2 mas
+> dizia que a Camada 3 não tinha começado (quando 3.1 já estava em produção); esta tinha
+> a Camada 3 em dia mas nenhum status nas Camadas 0–2. As duas foram fundidas aqui e a
+> da raiz foi apagada. **Não recrie a segunda cópia** — se precisar de uma visão de
+> acompanhamento, ela mora neste arquivo, na seção "Status por camada" no fim.
+
+> **STATUS GERAL (atualizado 22/08/2026): Camadas 0 e 1 concluídas e verificadas em
+> produção; Camada 2 concluída com o item 2.5 em aberto (ver abaixo — não é bloqueio, é
+> escopo que ficou de fora sem registro); Camada 3 em andamento — 3.1, 3.2 e 3.4 já em
+> `main` e validados, faltam o 3.3 (tem um aviso a ler antes de começar) e o 3.5
+> (validação humana, em curso).** Camadas 4 e 5 ainda não iniciadas. Se você está
+> retomando este trabalho numa sessão nova: leia a seção "Status por camada" no fim
+> primeiro — ela lista o que já existe no banco e no repositório, pra não repetir
+> trabalho nem presumir algo que ainda não foi feito.
+
+**Como ler as tabelas:** camada já executada tem coluna **Status** (o que de fato
+aconteceu); camada ainda não executada mantém **Modelo/Esforço** (o planejamento
+original). Quando uma camada for executada, a coluna troca.
+
 ## Legenda — modelo e esforço por atividade
 
 | Modelo | Quando usar aqui |
@@ -32,171 +53,178 @@ gerado é pra rodar manualmente no SQL Editor, como já é o padrão do projeto.
 
 ---
 
-## Camada 0 — Catálogos-base
+## Camada 0 — Catálogos-base — ✅ CONCLUÍDA (22/08/2026)
 
-> **Status: concluída (inferido)** — não confirmado independentemente aqui, mas a
-> Camada 1 (abaixo) já usa seletor de núcleo em `editor.html`, o que depende desta
-> camada ter rodado antes.
+| # | Atividade | Arquivo(s) | Status |
+|---|---|---|---|
+| 0.1 | Migração SQL `meta_inovacao_nucleos` (tabela + RLS + trigger + seed dos 5 núcleos) | `tools/sql/2026-08_nucleos.sql` | ✅ rodada em produção |
+| 0.2 | Migração SQL `meta_inovacao_canais` (unifica `data/canais.js` + `CANAIS_URC`, 10 canais) | `tools/sql/2026-08_canais.sql` | ✅ rodada em produção |
+| 0.3 | Migração SQL `meta_inovacao_coletivos` (seed: Comitê, URC, Coordenadores, Gestores dos projetos, Soluções) | `tools/sql/2026-08_coletivos.sql` | ✅ rodada em produção |
+| 0.4 | **[humano]** Rodar as 3 migrações no SQL Editor, conferir contagens e RLS ativa | — | ✅ feito por José |
+| 0.5 | `js/db-nucleos.js`, `js/db-canais.js`, `js/db-coletivos.js`, espelhando `js/db-projetos.js` | `js/db-*.js` | ✅ criados e testados (`tools/testar_catalogos_base.js`) |
 
-| # | Atividade | Arquivo(s) | Modelo | Esforço |
-|---|---|---|---|---|
-| 0.1 | Migração SQL `meta_inovacao_nucleos` (tabela + RLS + trigger + seed dos 5 núcleos) | `tools/sql/2026-XX_nucleos.sql` | Sonnet | médio |
-| 0.2 | Migração SQL `meta_inovacao_canais` (unifica `data/canais.js` + `CANAIS_URC`, 10 canais) | `tools/sql/2026-XX_canais.sql` | Sonnet | médio |
-| 0.3 | Migração SQL `meta_inovacao_coletivos` (seed: Comitê, URC, Coordenadores, Gestores dos projetos, Soluções) | `tools/sql/2026-XX_coletivos.sql` | Sonnet | baixo |
-| 0.4 | **[humano]** Rodar as 3 migrações no SQL Editor, conferir contagens e RLS ativa | — | José | — |
-| 0.5 | `js/db-nucleos.js`, `js/db-canais.js`, `js/db-coletivos.js`, espelhando `js/db-projetos.js` | `js/db-*.js` | Haiku | baixo |
+`2026-08_canais.sql` preserva o **slug** de `data/canais.js` (`foco`, `cnr`, …) — é o que
+permitiu às Camadas 2 e 3 casarem o texto antigo com `canal_id` por igualdade simples,
+sem heurística de nome. Continua valendo pra qualquer camada futura.
 
-**Teste de aceite:** as 3 tabelas existem com RLS ativa; contagens batem (5/10/5); os
-3 wrappers carregam sem erro (`node`, mesmo padrão de `tools/testar_calc.js`).
-
----
-
-## Camada 1 — Golden record de pessoas
-
-> **Status: concluída e pushada (22/08/2026).** `js/db-pessoas.js` + novo
-> `js/db-pessoa-papeis.js` lendo/gravando os campos novos; aba "Pessoas" do
-> `editor.html` com seletor de núcleo; `data/pessoas.js` ressincronizado (47 pessoas
-> em produção). No caminho, um bug de card duplicado em `participantes.html` (grupos
-> "Projetos"/"URC" novos) foi pego e corrigido antes de virar regressão, e o teste
-> que deveria ter pegado isso foi ajustado (se autovalidava contra o próprio bug).
-> Suíte rodada (roundtrip, participantes, busca, dashboard, iniciativas cruzadas,
-> validador Python) verde; `testar_drawer_headless.js` falha, mas **já falhava antes
-> desta frente** — não é regressão da Camada 1, só não foi corrigido aqui (relevante
-> pra Camada 4, que também mexe em `js/drawer.js`).
->
-> **Fora de escopo desta rodada, não bloqueia nada:** UI dedicada em `editor.html`
-> pra gerenciar múltiplos papéis por pessoa (adicionar/remover linha em
-> `pessoa_papeis`) — as linhas já gravadas estão corretas, só sem tela própria ainda.
->
-> **Atenção pra Camada 2:** ficaram ~15 nomes em aberto (dados incompletos,
-> preenchíveis pela nova aba "Pessoas"). Não bloqueia começar a Camada 2, mas os
-> itens 2.2 e 2.6 resolvem texto livre contra o golden record por nome — quanto mais
-> desses 15 estiverem completos antes, menos `NULL` o relatório de 2.9 mostra depois.
-
-| # | Atividade | Arquivo(s) | Modelo | Esforço |
-|---|---|---|---|---|
-| 1.1 | Levantar a lista de dedupe das ~40 pessoas (cruzar as 4 fontes, aplicar os aliases já existentes em `js/responsaveis.js`, sinalizar todo caso ambíguo em vez de decidir sozinho) | relatório novo | Sonnet | alto |
-| 1.2 | **[humano]** José confirma/corrige a lista de dedupe | — | José | — |
-| 1.3 | Migração SQL: `ALTER meta_inovacao_pessoas` (+ `nome_completo`, `nome_exibicao`, `email`, `ativo`) + `CREATE meta_inovacao_pessoa_papeis` + seed da lista confirmada em 1.2 | `tools/sql/2026-XX_pessoas_golden.sql` | Sonnet | alto |
-| 1.4 | **[humano]** Rodar no SQL Editor, conferir contagem = lista confirmada | — | José | — |
-| 1.5 | `js/db-pessoas.js` pro novo formato (pessoa + papéis) | `js/db-pessoas.js` | Sonnet | médio |
-| 1.6 | Aba "Pessoas" do `editor.html`: CRUD de pessoa + papéis, seletor de núcleo | `editor.html` | Sonnet | médio |
-
-**Teste de aceite:** contagem de pessoas = lista confirmada em 1.2; toda pessoa tem
-pelo menos 1 papel; aba "Pessoas" cria/edita/soft-deleta sem erro (mesmo padrão de
-`tools/testar_participantes_headless.js`).
+**Teste de aceite:** ✅ passou — 3 tabelas com RLS ativa; contagens 5/10/5; wrappers
+carregam sem erro.
 
 ---
 
-## Camada 2 — FK pontual, convivendo com o texto
+## Camada 1 — Golden record de pessoas — ✅ CONCLUÍDA (22/08/2026)
 
-| # | Atividade | Arquivo(s) | Modelo | Esforço |
-|---|---|---|---|---|
-| 2.1 | `ALTER meta_inovacao_projetos` (+ `nucleo_id`), popular a partir do texto | sql | Sonnet | médio |
-| 2.2 | `CREATE meta_inovacao_projeto_representantes`, popular de `representantes[]` (resolver pelos aliases) | sql | Sonnet | alto |
-| 2.3 | `ALTER meta_inovacao_urc_lideranca` (+ `pessoa_id`), popular | sql | Sonnet | baixo |
-| 2.4 | Evoluir `meta_inovacao_urc_canais_responsaveis` (+ `canal_id`, + `pessoa_id`), popular | sql | Sonnet | médio |
-| 2.5 | `ALTER meta_inovacao_canva_demandas` (+ 4 FK: núcleo, canal, facilitador, responsável), popular | sql | Sonnet | médio |
-| 2.6 | `CREATE meta_inovacao_plano_responsaveis`, popular de `responsavel_id[]` (separar pessoa de coletivo) | sql | Sonnet | alto |
-| 2.7 | `ALTER corsario_status` (+ `projeto_id`, + `nucleo_id`), popular, checar a linha órfã do 27×28 | sql | Sonnet | médio |
-| 2.8 | **[humano]** Rodar as 7 migrações | — | José | — |
-| 2.9 | Auditoria de cobertura: % de FK que ficou `NULL` por tabela, relatório pra decidir o que resolver na mão | script node | Sonnet | médio |
+| # | Atividade | Arquivo(s) | Status |
+|---|---|---|---|
+| 1.1 | Levantar a lista de dedupe das ~40 pessoas (cruzar as 4 fontes, aplicar os aliases de `js/responsaveis.js`, sinalizar todo caso ambíguo em vez de decidir sozinho) | `docs/CAMADA1_DEDUPE_PESSOAS.md` | ✅ relatório pronto |
+| 1.2 | **[humano]** José confirma/corrige a lista de dedupe | — | ✅ confirmado 22/08 — decisões abaixo |
+| 1.3 | Migração SQL: `ALTER meta_inovacao_pessoas` + `CREATE meta_inovacao_pessoa_papeis` + seed | `tools/sql/2026-08_pessoas_golden.sql`, `tools/sql/2026-08_coletivos_gerencia_ui.sql` | ✅ rodadas em produção |
+| 1.4 | **[humano]** Rodar no SQL Editor, conferir contagem | — | ✅ feito por José (47 pessoas, 18 papéis) |
+| 1.5 | `js/db-pessoas.js` pro novo formato (pessoa + papéis) | `js/db-pessoas.js`, `js/db-pessoa-papeis.js` (novo) | ✅ feito |
+| 1.6 | Aba "Pessoas" do `editor.html`: campos novos + seletor de núcleo | `editor.html` | ✅ feito (CRUD de papéis multi-linha ficou de fora — nota abaixo) |
 
-**Teste de aceite:** relatório de cobertura existe e foi visto por José — não precisa
-ser 100%, mas precisa estar visível (mesmo espírito de "sinalizar discrepância, não
-esconder" do golden record de projetos).
+**Decisões de dedupe fechadas por José (22/08/2026)** — relatório completo em
+`docs/CAMADA1_DEDUPE_PESSOAS.md`:
 
----
+- **Sandra (UI) = Sandra Chaves Silva Paraíso (núcleo)** — mesma pessoa, 3 papéis
+  (UI + Comitê + núcleo Gestão do Conhecimento e Processos).
+- **JR. = José Mendes de Oliveira Júnior** — mesma pessoa, 2 papéis (coordenação UI +
+  núcleo Inovação para Competitividade). Isso contraria o que
+  `js/responsaveis.js.ALIASES` assumia (tratava como 2 pessoas): os ids `jr` e
+  `jose_mendes_junior`/`junior` de `window.DB.responsaveis` continuam separados de
+  propósito (decisão de UX adiada pra Camada 4), mas resolvem pro MESMO `pessoa_id`
+  nas tabelas novas.
+- **Filipe Medeiros Ferreira (URC/CNR) ≠ Felipe (Inova Biomas)** — pessoas diferentes.
+  Felipe (Inova Biomas) é **Philippe Fauguet Figueiredo**.
+- **"Pova" não é agente de IA — é pessoa física: Gabriel Silva Povoa.**
+- **"Gerência UI"** não é pessoa física (papel institucional) — virou linha em
+  `meta_inovacao_coletivos`.
+- **15 pessoas ficaram com `nome_completo` em aberto** (só primeiro nome conhecido) —
+  decisão de José: deixar assim e completar pelo site (aba "Pessoas" do `editor.html`).
 
-## Camada 3 — Normalizar a matriz de demandas (maior risco do pacote)
+**Achado no caminho:** um bug de card duplicado em `participantes.html` (grupos
+"Projetos"/"URC" novos) foi pego e corrigido antes de virar regressão — e o teste que
+deveria tê-lo pego foi ajustado, porque se autovalidava contra o próprio bug.
 
-> **Item 3.1: concluído e validado em produção (22/08/2026).**
-> `tools/sql/2026-08_matriz_celulas.sql` rodado no SQL Editor — `meta_inovacao_matriz_celulas`
-> criada, RLS no padrão de token vigente (`PADRAO_TABELA.md`), 32 células migradas das
-> 10 colunas físicas de `meta_inovacao_matriz_demandas` (que continua intacta e viva em
-> paralelo). Conferido linha a linha com José: total de células migradas bate com o total
-> de células preenchidas na tabela antiga (32 = 32); checagem de iniciativa órfã (célula
-> preenchida sem projeto correspondente no golden record) veio vazia — nenhum dado
-> perdido na migração; único ponto informativo é "Startup Summit" (projeto criado
-> depois do último snapshot da matriz, nasce sem histórico, não é erro).
->
-> **Item 3.2: em produção (22/08/2026).** `demandas.html` monta a grade em runtime:
-> linhas = `meta_inovacao_projetos`, colunas = `meta_inovacao_canais` na ordem de
-> `ordem`, células = `meta_inovacao_matriz_celulas` (`js/matriz-store.js` reescrito).
-> Célula ausente = célula vazia; a escrita é um **upsert no par `(projeto_id, canal_id)`**
-> — não um update por id de linha — pra duas pessoas na mesma célula ao mesmo tempo não
-> virarem `23505`. O upsert casa pela LISTA DE COLUNAS, não pelo nome da constraint, então
-> não depende de a UNIQUE se chamar `cc_matriz_celulas_projeto_canal_unico`.
->
-> **O teste de aceite virou parte da tela.** `demandas.html` lê também a tabela ANTIGA
-> (só leitura) e mostra um painel "Conferência com a tabela antiga" com a comparação
-> célula a célula, aberto durante toda a janela do item 3.5. Fora do navegador, o mesmo
-> retrato sai em `node tools/conferir_matriz_celulas.js` (lê produção, não escreve nada).
->
-> **A tabela antiga congela na virada.** Não há escrita dupla: `meta_inovacao_matriz_demandas`
-> fica exatamente como a migração do 3.1 a deixou, servindo de rede de rollback e de base
-> de comparação. Consequência a ter em mente no 3.5: toda edição feita na grade nova depois
-> da virada aparece como divergência no painel — isso é o esperado; divergência que
-> ninguém reconhece como edição própria é que é sinal de erro de migração. Se em algum
-> momento fizer mais sentido manter as duas tabelas vivas de verdade (escrita dupla), é
-> uma decisão nova, não algo que o 3.2 tenha deixado pela metade.
->
-> **Diagnóstico de banco:** `tools/sql/2026-08_matriz_celulas_diagnostico.sql` (só leitura)
-> responde "o schema em produção bate com o arquivo?" e "a tabela está na publicação
-> `supabase_realtime`?" em 17 checagens com veredito `OK`/`DIVERGE`/`ATENÇÃO`, mais a
-> conferência célula a célula com `updated_at`/`updated_by` de cada divergência. Nasceu
-> porque o 3.2 foi feito numa branch que ainda não tinha o `2026-08_matriz_celulas.sql`
-> do 3.1 mergeado em `main` — sem enxergar produção, a única saída honesta era dar um
-> jeito de PERGUNTAR ao banco em vez de supor. Continua útil depois disso: é o que se roda
-> quando a dúvida é sobre o estado do banco, não sobre o código. Foi exercitado num
-> Postgres 16 local em três estados — schema íntegro, schema quebrado de propósito em 7
-> pontos (os 7 acusados, nenhum falso positivo) e tabela inexistente (não explode).
->
-> **Correção de rota achada no caminho:** o `<select>` da Matriz oferecia 9 estados, mas o
-> `CHECK` da tabela (antiga e nova) só aceita 7 — escolher "Oficina confirmada" ou "Não se
-> aplica o uso" sempre falhou no salvar, em silêncio, desde a v0.7.0 (confirmado contra o
-> Postgres local: `violates check constraint`). O `<select>` agora oferece só os 7 que o
-> banco aceita. Pra reabilitar os outros dois, entram primeiro no `CHECK`, depois na lista
-> de `js/matriz-store.js` — nessa ordem. `js/status.js` e `css/base.css` mantêm os 9, que
-> continuam servindo pra EXIBIR um valor herdado, se algum dia existir.
->
-> **Realtime: resolvido em produção (22/08/2026)** — José rodou
-> `ALTER PUBLICATION supabase_realtime ADD TABLE public.meta_inovacao_matriz_celulas`.
-> A grade se atualiza sozinha quando outra pessoa edita ("atualizado por … agora").
-> Atenção pra quem recriar o ambiente do zero: esse `ALTER` **não** está em
-> `2026-08_matriz_celulas.sql` — é passo manual. Um banco recriado só pela migração nasce
-> sem realtime, e é a checagem 16 do diagnóstico que denuncia.
->
-> **Aberto:** a aba "matriz" do `editor.html` continua no snapshot antigo — é o item 3.3,
-> de propósito. Depois dele, a validação humana do 3.5.
->
-> **AVISO PRA QUEM FOR FAZER O 3.3.** Aquela aba gera `data/matriz.js`, que **é o fallback
-> offline da `demandas.html`** — quando o Supabase não responde, a Matriz inteira é montada
-> a partir dele. O formato é `{ iniciativa: { slug_do_canal: estado } }`, indexado por
-> **slug**, não por `canal_id`, e a `demandas.html` continua exportando exatamente assim
-> (botão "Exportar matriz") de propósito, mesmo lendo por id agora. Mudar o formato do
-> snapshot quebra (a) o modo offline da Matriz — que só aparece no dia em que o Supabase
-> cair — e (b) o `tools/testar_status_badges_headless.js`, que conta 270 badges (27 × 10)
-> vindos desse arquivo. Ou o 3.3 mantém o formato, ou muda os três lugares juntos: o
-> snapshot, `seedLocal()` em `js/matriz-store.js` e `seedCelulas()` em `demandas.html`.
-> `node tools/testar_matriz_headless.js` (cenário offline) + `node
-> tools/testar_status_badges_headless.js` fecham a conta.
+**Pendência conhecida, não bloqueante:** não existe UI em `editor.html` pra gerenciar
+múltiplos papéis por pessoa (adicionar/remover linha em `meta_inovacao_pessoa_papeis`) —
+as 18 linhas gravadas no 1.3 estão corretas, só sem tela própria de edição. Se for
+necessário antes da Camada 4, é item novo, não coberto por este plano.
 
-| # | Atividade | Arquivo(s) | Modelo | Esforço |
-|---|---|---|---|---|
-| 3.1 | Migração SQL: `CREATE meta_inovacao_matriz_celulas` + migrar as 10 colunas fixas pra linhas (tabela antiga continua viva em paralelo) | `tools/sql/2026-08_matriz_celulas.sql` | Sonnet | alto — ✅ concluído |
-| 3.2 | Reescrever `demandas.html`: grade dinâmica a partir de `meta_inovacao_canais` × `meta_inovacao_projetos`, ler/gravar em `matriz_celulas` | `demandas.html` | **Opus** | **xhigh** |
-| 3.3 | Ajustar a aba "matriz" do `editor.html` (hoje é `snapshot:true`) | `editor.html` | Sonnet | baixo |
-| 3.4 | Testes headless da nova grade — `tools/testar_matriz_headless.js` **já existe e está verde** (adiantado no 3.2, 11 cenários); sobra aqui o que o 3.3 mexer no `editor.html` | tools | Sonnet | baixo |
-| 3.5 | **[humano]** Validar em produção por um tempo, comparando com a tabela antiga, antes de aposentá-la | — | José | — |
-
-**Teste de aceite:** grade nova mostra os mesmos estados que a tabela antiga, célula a
-célula; cadastrar um canal novo em `meta_inovacao_canais` faz a coluna aparecer sem
-deploy nem `ALTER TABLE`.
+**Teste de aceite:** ✅ passou.
 
 ---
 
-## Camada 4 — Telas migram pra seletor
+## Camada 2 — FK pontual, convivendo com o texto — ✅ CONCLUÍDA (22/08/2026), com o 2.5 em aberto
+
+| # | Atividade | Arquivo(s) | Status | Cobertura real |
+|---|---|---|---|---|
+| 2.1 | `ALTER meta_inovacao_projetos` (+ `nucleo_id`), popular | `tools/sql/2026-08_projetos_nucleo_id.sql` | ✅ | 28/28 |
+| 2.2 | `CREATE meta_inovacao_projeto_representantes`, popular (resolução de alias) | `tools/sql/2026-08_projeto_representantes.sql` | ✅ | 34/35 |
+| 2.3 | `ALTER meta_inovacao_urc_lideranca` (+ `pessoa_id`), popular | `tools/sql/2026-08_urc_lideranca_pessoa_id.sql` | ✅ | 3/3 |
+| 2.4 | Evoluir `meta_inovacao_urc_canais_responsaveis` (+ `canal_id`, `pessoa_id`), popular | `tools/sql/2026-08_urc_canais_fk.sql` | ✅ | 11/11 nos dois FKs |
+| 2.5 | `ALTER meta_inovacao_canva_demandas` (+ 4 FK: núcleo, canal, facilitador, responsável), popular | — | ⏳ **NÃO FEITO** — ver nota | — |
+| 2.6 | `CREATE meta_inovacao_plano_responsaveis`, popular (resolução de alias) | `tools/sql/2026-08_plano_responsaveis.sql` | ✅ | 61/61 |
+| 2.7 | `ALTER corsario_status` (+ `projeto_id`, `nucleo_id`), popular | `tools/sql/2026-08_corsario_status_fk.sql` | ✅ | 27/27, zero órfãos |
+| 2.8 | **[humano]** Rodar as migrações | — | ✅ feito por José, uma por uma, cada uma conferida antes da próxima | — |
+| 2.9 | Auditoria de cobertura: % de FK NULL por tabela | `docs/CAMADA2_COBERTURA_FK.md`, `tools/relatorio_cobertura_fk.js` | ✅ relatório com números reais de produção | — |
+
+**Sobre o 2.5 (achado em 22/08/2026, ao consolidar os dois planos):** o item estava no
+plano original mas **não foi executado e não estava registrado como pendência** — sumiu
+da tabela de acompanhamento, o que fazia a camada parecer 100% fechada. Confirmado:
+não existe migração de FK pra `meta_inovacao_canva_demandas`, ela não aparece em
+`docs/CAMADA2_COBERTURA_FK.md` nem em `tools/relatorio_cobertura_fk.js`. Não bloqueia
+nada hoje — `meta_inovacao_canva_demandas` já guarda `projeto_id` e o texto cru, e as
+telas do canvas funcionam. **Decisão pendente de José:** executar o 2.5 agora, adiar
+pra Camada 4 (quando as telas de oficina virarem seletor) ou tirar do escopo. Enquanto
+não decidir, fica aqui, visível.
+
+**Único "faltando" esperado (não é problema):** `Sebrae Startups` → representante
+`"Núcleo de Startups"` (placeholder de "aguarda indicação nominal") não vira vínculo em
+`meta_inovacao_projeto_representantes` — investigado e documentado como não-órfão
+(`GOVERNANCA_GOLDEN_RECORD.md`).
+
+**Descobertas ao rodar em produção** (o dado tinha mudado desde os testes locais; as
+duas absorvidas sem tocar nos scripts, porque a resolução é por texto e não por lista
+fixa): o portfólio cresceu pra 28 projetos ("Startup Summit" novo) e "Consult" trocou de
+representante. Detalhes em `docs/CAMADA2_COBERTURA_FK.md`.
+
+**Teste de aceite:** ✅ passou — relatório de cobertura existe, visto por José.
+
+---
+
+## Camada 3 — Normalizar a matriz de demandas (maior risco do pacote) — ⏳ EM ANDAMENTO (3.1, 3.2 e 3.4 concluídos)
+
+| # | Atividade | Arquivo(s) | Status |
+|---|---|---|---|
+| 3.1 | Migração SQL: `CREATE meta_inovacao_matriz_celulas` + migrar as 10 colunas fixas pra linhas (tabela antiga continua viva em paralelo) | `tools/sql/2026-08_matriz_celulas.sql` | ✅ rodada em produção — 32 células migradas, 32 = 32 conferido linha a linha, zero órfãs |
+| 3.2 | Reescrever `demandas.html`: grade dinâmica a partir de `meta_inovacao_canais` × `meta_inovacao_projetos`, ler/gravar em `matriz_celulas` | `demandas.html`, `js/matriz-store.js` | ✅ em `main` — schema real conferido 16/16 no diagnóstico, RLS e upsert testados contra o schema de produção, suíte verde |
+| 3.3 | Ajustar a aba "matriz" do `editor.html` (hoje é `snapshot:true`) | `editor.html` | ⏳ **não iniciado — LEIA O AVISO ABAIXO ANTES DE COMEÇAR** |
+| 3.4 | Testes headless da nova grade | `tools/testar_matriz_headless.js` | ✅ veio junto no 3.2 — 11 cenários, verde |
+| 3.5 | **[humano]** Validar em produção por um tempo, comparando com a tabela antiga, antes de aposentá-la | — | ⏳ em andamento por José |
+
+Único ponto informativo do 3.1: **"Startup Summit"** é projeto criado depois do último
+snapshot da matriz — nasce sem histórico de células, não é erro.
+
+Como o 3.2 ficou: célula ausente = célula vazia, e a escrita é um **upsert no par
+`(projeto_id, canal_id)`** — não um update por id de linha — pra duas pessoas na mesma
+célula ao mesmo tempo não virarem `23505`. O upsert casa pela **lista de colunas**, não
+pelo nome da constraint, então não depende de a UNIQUE se chamar
+`cc_matriz_celulas_projeto_canal_unico`.
+
+**Teste de aceite:** ✅ passou nas duas metades — a grade nova mostra os mesmos estados
+que a tabela antiga célula a célula (conferência automática, ver abaixo), e cadastrar um
+canal novo em `meta_inovacao_canais` faz a coluna aparecer sem deploy nem `ALTER TABLE`
+(coberto por cenário do `tools/testar_matriz_headless.js`).
+
+### ⚠️ Antes de executar o 3.3 — a pegadinha do snapshot
+
+A aba "matriz" do `editor.html` é `snapshot:true` e serve pra gerar `data/matriz.js`.
+Esse arquivo **não é decorativo**: é o *fallback offline* da `demandas.html`. Quando o
+Supabase não responde, é dele que a Matriz inteira é montada.
+
+O formato é `{ iniciativa: { slug_do_canal: estado } }` — indexado por **slug de canal**,
+não por `canal_id`. A `demandas.html` continua exportando exatamente nesse formato (botão
+"Exportar matriz"), de propósito, mesmo agora que ela lê por id.
+
+**Se o 3.3 mudar o formato do snapshot, quebra duas coisas de uma vez:**
+
+1. o modo offline da `demandas.html` (a grade aparece vazia sem rede — e ninguém percebe
+   até o dia em que o Supabase cair);
+2. o `tools/testar_status_badges_headless.js`, que conta 270 badges (27 iniciativas × 10
+   canais) vindos justamente desse arquivo.
+
+Então: ou o 3.3 **mantém o formato** de `data/matriz.js` intacto, ou muda os três lugares
+juntos — snapshot, `seedLocal()` de `js/matriz-store.js` e `seedCelulas()` da
+`demandas.html`. Rodar `node tools/testar_matriz_headless.js` (cenário "offline") e
+`node tools/testar_status_badges_headless.js` fecha a conta nos dois casos.
+
+### Como está a validação do 3.5
+
+`demandas.html` tem um painel **"Conferência com a tabela antiga"** que compara célula a
+célula, ao vivo, e se atualiza a cada edição. O mesmo retrato sai por fora com
+`node tools/conferir_matriz_celulas.js`.
+
+A tabela antiga **congelou na virada do 3.2** — não recebe mais escrita (não há escrita
+dupla; ela é rede de rollback e base de comparação). Logo, toda edição feita na grade
+nova a partir de agora aparece como divergência, e isso é o esperado. Divergência que
+ninguém reconhece como edição própria é que é sinal de erro de migração.
+
+Estado do banco (schema, RLS, publicação `supabase_realtime`, conferência) se checa com
+`tools/sql/2026-08_matriz_celulas_diagnostico.sql` — só leitura, 17 checagens com
+veredito `OK`/`DIVERGE`/`ATENÇÃO`. **O `ALTER PUBLICATION` do realtime não está na
+migração** (foi passo manual em produção): um ambiente recriado só pelo `.sql` nasce sem
+realtime, e é a checagem 16 que denuncia.
+
+**Pendência de decisão (não bloqueia nada):** "Oficina confirmada" e "Não se aplica o
+uso" existem em `js/status.js`/`css/base.css` desde a v0.7.0 mas **nunca** estiveram no
+`CHECK` da tabela — escolher esses valores sempre falhou no salvar, em silêncio. O
+`<select>` agora oferece só os 7 que o banco aceita. Pra reabilitar: primeiro `ALTER` no
+`CHECK`, depois a lista `ESTADOS` de `js/matriz-store.js` — nessa ordem.
+
+---
+
+## Camada 4 — Telas migram pra seletor — ⏳ NÃO INICIADA
 
 | # | Atividade | Arquivo(s) | Modelo | Esforço |
 |---|---|---|---|---|
@@ -205,13 +233,23 @@ deploy nem `ALTER TABLE`.
 | 4.3 | `plano-acao.html` / `minhas-acoes.html`: select de responsável lê pessoas + coletivos, aposenta parsing de `js/responsaveis.js` | `plano-acao.html`, `minhas-acoes.html` | Sonnet | alto |
 | 4.4 | `participantes.html` / `js/drawer.js`: exibição via join, não mais array de string | `participantes.html`, `js/drawer.js` | Sonnet | médio |
 
+**Notas pra quando chegar aqui:**
+
+- É o momento certo de decidir a UX dos ids duplicados `jr`/`jose_mendes_junior` e
+  `sandra`/`sandra_chaves_paraiso` em `window.DB.responsaveis` (ver Camada 1) — hoje
+  resolvem pro mesmo `pessoa_id`, mas a lista ainda mostra 2 entradas pro mesmo humano.
+- O item 2.5 (FKs de `meta_inovacao_canva_demandas`) pode ser absorvido aqui, se a
+  decisão for adiá-lo — ver nota da Camada 2.
+- `tools/testar_drawer_headless.js` **já falha hoje**, desde antes desta frente. O 4.4
+  mexe em `js/drawer.js`: entrar nele com o teste vermelho é entrar sem rede de proteção.
+
 **Teste de aceite:** nenhuma das 4 telas tem mais campo de texto livre pra nome de
 pessoa; os testes headless existentes (`testar_participantes_headless.js`,
 `testar_drawer_headless.js`, `testar_minhas_acoes_headless.js`) continuam verdes.
 
 ---
 
-## Camada 5 — Aposentar texto livre
+## Camada 5 — Aposentar texto livre — ⏳ NÃO INICIADA
 
 | # | Atividade | Arquivo(s) | Modelo | Esforço |
 |---|---|---|---|---|
@@ -219,6 +257,8 @@ pessoa; os testes headless existentes (`testar_participantes_headless.js`,
 | 5.2 | **[humano]** Decidir, tabela a tabela, se dropa a coluna de texto ou mantém como cache | — | José | — |
 | 5.3 | Migrações de `DROP COLUMN` onde decidido em 5.2 | sql | Sonnet | baixo |
 | 5.4 | Atualizar `PADRAO_TABELA.md`/`GOVERNANCA_GOLDEN_RECORD.md` com o novo estado; aposentar `js/responsaveis.js` se não sobrar uso | docs, js | Haiku | baixo |
+
+A aposentadoria de `meta_inovacao_matriz_demandas` (decidida no 3.5) entra aqui.
 
 **Teste de aceite:** suíte de testes headless inteira verde; nenhuma tela lê mais
 coluna de texto que foi dropada em 5.3.
@@ -231,13 +271,58 @@ coluna de texto que foi dropada em 5.3.
    pra esta frente, ou anexado ao existente).
 2. Corrigir. Reexecutar o teste (máx. 3 tentativas).
 3. Persistindo, isolar o item, registrar como pendência e **seguir com o resto da
-   camada** — uma atividade travada não trava a camada inteira, e uma camada
-   travada não trava as anteriores (que já estão em produção).
+   camada** — uma atividade travada não trava a camada inteira, e uma camada travada
+   não trava as anteriores (que já estão em produção).
+
+**Corolário aprendido no 2.5:** item que ficou pra trás vira **linha com status
+`⏳ NÃO FEITO` na tabela da camada**, nunca linha removida. Sumir da tabela é o mesmo
+que nunca ter sido planejado.
 
 ## Ordem — por que não pular camada
 
 Camada 3 (matriz) é deliberadamente a mais tardia entre as mudanças de dado, não a
-primeira: é a de maior ineditismo técnico (única tabela redesenhada, não só
-FK nova) e mexe na tela mais usada do site. Rodar as Camadas 0–2 primeiro dá o
-golden record de pessoas/núcleos/canais já estável — inclusive testável — antes de
-arriscar a peça mais delicada.
+primeira: é a de maior ineditismo técnico (única tabela redesenhada, não só FK nova) e
+mexe na tela mais usada do site. Rodar as Camadas 0–2 primeiro dá o golden record de
+pessoas/núcleos/canais já estável — inclusive testável — antes de arriscar a peça mais
+delicada.
+
+---
+
+## Status por camada — resumo pra retomar em sessão nova
+
+Se você está começando uma sessão nova pra continuar este trabalho, isto é o que
+precisa saber sem reler tudo acima:
+
+1. **Camadas 0 e 1 estão 100% em produção**, testadas e confirmadas linha a linha por
+   José no SQL Editor. **Camada 2 idem, exceto o item 2.5**, que nunca foi executado
+   (ver nota na Camada 2 — decisão pendente, não bloqueia). Todos os scripts SQL estão
+   em `meta-monitor/tools/sql/2026-08_*.sql`. Não precisam rodar de novo.
+2. **Camada 3 está em andamento:** 3.1 (tabela + migração), 3.2 (grade dinâmica) e 3.4
+   (testes headless) estão em `main` e validados em produção. **O próximo passo é o
+   3.3** — e ele tem um aviso próprio, na seção da Camada 3, que precisa ser lido antes
+   de encostar no `editor.html`. Em paralelo corre o 3.5, que é validação humana.
+3. Documentos de apoio já existentes, não precisam ser refeitos:
+   - `docs/CAMADA1_DEDUPE_PESSOAS.md` — decisões de identidade de pessoas.
+   - `docs/CAMADA2_COBERTURA_FK.md` — cobertura real de cada FK da Camada 2.
+   - `docs/PROPOSTA_ESQUEMA_CADASTROS_REFERENCIA.md` — desenho original completo.
+   - `docs/GOVERNANCA_GOLDEN_RECORD.md` — governança do golden record de *projetos*
+     (frente irmã, concluída antes desta).
+4. Ferramentas desta frente que já existem — use em vez de reinventar:
+   - `tools/relatorio_cobertura_fk.js` — cobertura de FK da Camada 2, contra produção.
+   - `tools/conferir_matriz_celulas.js` — matriz nova × antiga, célula a célula.
+   - `tools/sql/2026-08_matriz_celulas_diagnostico.sql` — schema/RLS/realtime da
+     Camada 3, só leitura, com veredito por checagem.
+   - `tools/testar_matriz_headless.js` — 11 cenários da grade dinâmica.
+5. **Pendências não bloqueantes acumuladas:** UI de múltiplos papéis por pessoa em
+   `editor.html` (Camada 1); item 2.5 (Camada 2); "Oficina confirmada"/"Não se aplica o
+   uso" fora do `CHECK` (Camada 3); e duas falhas antigas na suíte —
+   `testar_status_badges_headless.js` (`index.html`, 21 vs 25) e
+   `testar_drawer_headless.js` — que **já falhavam antes desta frente** e não são
+   regressão de nenhuma camada.
+6. **Toda migração SQL é rodada manualmente por José no SQL Editor do Supabase** —
+   nenhuma automação tem acesso de escrita à produção. As sessões do Claude Code também
+   **não conseguem LER** o Supabase de produção (rede bloqueada pra `supabase.co`): todo
+   teste de migração é feito num Postgres local simulando o estado de produção antes de
+   entregar o script pra José rodar de verdade. Quando precisar saber algo do banco real,
+   o caminho é gerar uma consulta pra José rodar — como o diagnóstico da Camada 3 — e não
+   supor.
