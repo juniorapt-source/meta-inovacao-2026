@@ -13,7 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* mesmo override de corsario.html/editor.html — .conteudo vem com max-width:1180px em
-   css/base.css, mas a matriz (27 iniciativas × 10 canais + colunas extras) passa de
+   css/base.css, mas a matriz (uma linha por iniciativa × uma coluna por canal) passa de
    1180px: sobrava margem à direita enquanto a tabela rolava por dentro de .matriz-wrap.
    min-width:0 evita que o min-content da tabela vaze pro grid .shell e empurre a página
    inteira; o scroll horizontal segue contido em .matriz-wrap{overflow:auto}. */
@@ -31,11 +31,20 @@
 .cel-salvando{outline:2px solid var(--ambar) !important}
 .cel-salvo{outline:2px solid var(--verde) !important}
 .cel-falhou{outline:2px solid var(--critico) !important}
-.mz-del{background:none;border:0;color:var(--critico);cursor:pointer;font-size:13px;margin-left:6px;line-height:1}
-.mz-del:hover{text-decoration:underline}
 .mz-badge-rt{position:fixed;bottom:18px;right:18px;background:var(--tinta);color:var(--branco);padding:8px 14px;border-radius:0;font-family:'DM Sans',sans-serif;font-size:12px;letter-spacing:.01em;box-shadow:var(--sombra);opacity:0;transition:opacity .25s;pointer-events:none;z-index:50}
 .mz-badge-rt.show{opacity:1}
 .mz-rodape{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* marcador de linha/coluna que existe nos dados mas não no cadastro de referência
+   (mesmo vocabulário visual do "fora do portfólio" que a Matriz já usava nas linhas). */
+.mz-marca{font:600 9.5px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:#b45309;background:#fef3c7;border:1px solid #fcd34d;border-radius:2px;padding:1px 5px;margin-left:6px;vertical-align:middle;white-space:nowrap}
+
+/* conferência com a tabela antiga (item 3.5 — validação humana ao longo do tempo) */
+.mz-conf{border:1px solid var(--linha);background:var(--branco);padding:8px 14px;margin-bottom:14px;font-family:var(--font-sans);font-size:13px}
+.mz-conf summary{cursor:pointer;color:var(--grafite)}
+.mz-conf table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+.mz-conf th,.mz-conf td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--linha)}
+.mz-conf .mz-conf-nota{margin-top:8px;color:var(--grafite);font-size:12px}
 </style>
 </head>
 <body>
@@ -43,16 +52,16 @@
   <nav class="nav" aria-label="Navegação do painel"></nav>
   <main class="conteudo">
     <h1 class="pagina-titulo">Matriz de demandas</h1>
-    <p class="pagina-sub">27 iniciativas × 10 canais, editados direto aqui — oficina feita → formulário em 5 dias úteis (ou justificativa) → priorização do Comitê → encaminhado à URC. Sem login: todo mundo que abre o site vê e edita a mesma matriz. C1 até 01/09 · C2 até 30/09.</p>
+    <p class="pagina-sub"><span id="mz-dimensao">Iniciativas × canais</span>, editados direto aqui — oficina feita → formulário em 5 dias úteis (ou justificativa) → priorização do Comitê → encaminhado à URC. Sem login: todo mundo que abre o site vê e edita a mesma matriz. C1 até 01/09 · C2 até 30/09.</p>
 
     <!-- item 2.4 do plano de melhorias — Matriz é desktop-only abaixo de 768px: a tabela
-         não cabe em card nenhum sem virar sopa de letrinhas (27 iniciativas × 10 canais),
-         então em vez de forçar um layout ruim, mostra um aviso e manda pra outras páginas.
+         não cabe em card nenhum sem virar sopa de letrinhas (uma coluna por canal), então
+         em vez de forçar um layout ruim, mostra um aviso e manda pra outras páginas.
          .largura-desktop some no mobile (css/base.css); .aviso-mobile.mostrar só aparece
          lá — "mostrar" fica sempre presente porque esta página inteira É a Matriz (não há
          uma visão alternativa dela mesma pra alternar, diferente do Corsário). -->
     <div class="aviso aviso-mobile mostrar" id="mz-aviso-mobile">
-      <b>Esta carta é grande demais para o bolso</b> — abra num monitor pra ver a Matriz de demandas completa (27 iniciativas × 10 canais).
+      <b>Esta carta é grande demais para o bolso</b> — abra num monitor pra ver a Matriz de demandas completa (todas as iniciativas × todos os canais).
       Enquanto isso: <a href="index.html">Dashboard</a> · <a href="plano.html">Plano de ação</a> · <a href="minhas-acoes.html">Minhas ações</a>.
     </div>
 
@@ -83,6 +92,11 @@
     </div>
 
     <div id="mz-estado" class="largura-desktop"></div>
+
+    <!-- Conferência célula a célula com a tabela antiga (meta_inovacao_matriz_demandas).
+         É o teste de aceite da Camada 3 rodando na própria tela, durante toda a janela de
+         validação do item 3.5 — não um relatório que alguém precisa lembrar de rodar. -->
+    <details class="mz-conf largura-desktop" id="mz-conferencia" hidden></details>
 
     <div class="matriz-wrap largura-desktop" id="mz-wrap" style="display:none">
       <table class="matriz"><thead id="cab"></thead><tbody id="matriz"></tbody></table>
@@ -115,6 +129,7 @@
 <script src="js/drawer.js"></script>
 <script src="js/matriz-store.js"></script>
 <script src="js/db-projetos.js"></script>
+<script src="js/db-canais.js"></script>
 <script src="js/portfolio.js"></script>
 <script src="js/editor_atual.js"></script>
 <script>
@@ -122,117 +137,259 @@
   "use strict";
   montarShell("demandas.html");
 
-  // ORDEM continua a lista dos valores BRUTOS gravados no Supabase/data/matriz.js (o
-  // contrato de dado não muda neste prompt) — só os RÓTULOS saem daqui e passam a vir de
-  // window.CC_STATUS (js/status.js, contexto "celula_matriz"), taxonomia única (item 2.4).
-  // CC_STATUS.chaveDeEntrada traduz "" -> "vazia" e os demais 1:1 (já eram snake_case).
-  const ORDEM = ["", "previsto", "oficina_confirmada", "oficina", "formulario", "justificado", "nao_aplica", "priorizado", "encaminhado"];
-  const CANAIS = DB.canais;
-  const CANAL_IDS = CANAIS.map(c => c.id);
+  /* ============================================================================
+     GRADE DINÂMICA — Camada 3 do golden record (item 3.2).
+     ============================================================================
+     Antes: as 10 colunas eram fixas no código (CANAL_IDS = DB.canais) e cada célula
+     era uma COLUNA FÍSICA da tabela meta_inovacao_matriz_demandas. Cadastrar o canal 11
+     exigia ALTER TABLE + deploy desta página.
 
-  document.getElementById("cab").innerHTML = "<tr><th>Iniciativa</th>" +
-    CANAIS.map(c => "<th>" + esc(c.nome) + "</th>").join("") + "</tr>";
+     Agora a grade é montada em runtime a partir de dois CADASTROS DE REFERÊNCIA:
+       linhas   = meta_inovacao_projetos  (window.DB_PROJETOS, seed data/projetos.js)
+       colunas  = meta_inovacao_canais    (window.DB_CANAIS,   seed data/canais.js), na
+                  ordem da coluna `ordem` do catálogo
+     e as células vêm de meta_inovacao_matriz_celulas (window.matrizStore), uma linha por
+     par (projeto_id, canal_id). Célula ausente = célula vazia. Cadastrar um canal novo em
+     meta_inovacao_canais faz a coluna aparecer aqui sozinha — sem deploy, sem ALTER TABLE.
 
-  let linhas = null;          // registros carregados (do Supabase, ou do fallback local)
-  let usandoFallback = false; // true quando o Supabase não respondeu e caímos pro data/matriz.js
-  // Edição viva: como Plano de ação e Projetos, a Matriz não tem mais toggle "Ativar edição"
-  // — as células já vêm editáveis. Só cai pra somente-leitura quando usandoFallback (offline),
-  // porque escrever no Supabase não funciona sem conexão.
-  let realtimeCanal = null;
-  let badgeTimer = null;
+     GOVERNANÇA (inalterada): iniciativa não nasce nem morre aqui, e canal também não —
+     linha se cadastra em editor.html › Projetos & Representantes, coluna em
+     meta_inovacao_canais. Esta tela edita só o ESTADO de cada célula.
+
+     NADA SOME EM SILÊNCIO: célula que aponta pra um projeto fora do portfólio vira uma
+     linha extra marcada "fora do portfólio" (comportamento que a tela já tinha); célula
+     que aponta pra um canal fora do catálogo — ou pra um canal marcado inativo — vira,
+     pela mesma razão, uma COLUNA extra marcada. As duas só aparecem quando têm estado
+     preenchido: célula vazia de entidade desconhecida não carrega informação nenhuma.
+     ============================================================================ */
+
+  const ESTADOS = matrizStore.ESTADOS; // os 7 valores que o CHECK da tabela aceita
 
   const elStatus = document.getElementById("mz-status");
   const elEstado = document.getElementById("mz-estado");
   const elWrap = document.getElementById("mz-wrap");
+  const elCab = document.getElementById("cab");
   const elMatriz = document.getElementById("matriz");
   const elRodape = document.getElementById("mz-rodape");
   const elBadge = document.getElementById("mz-badge-rt");
+  const elConf = document.getElementById("mz-conferencia");
+  const elDimensao = document.getElementById("mz-dimensao");
 
-  // item 3.4 do plano de melhorias — identificação de quem edita agora é o módulo
-  // compartilhado window.EDITOR_ATUAL (js/editor_atual.js), com rodapé "Editando
-  // como…" (montado mais abaixo) em vez do prompt único de antes.
+  let colunas = [];   // colunas visíveis, na ordem de exibição
+  let linhas = [];    // linhas visíveis, na ordem de exibição
+  let origem = { celulasFallback: false, celulasMotivo: null, projetosFallback: false, canaisFallback: false };
+  let legado = null;          // linhas cruas da tabela antiga (null = conferência indisponível)
+  let realtimeCanal = null;
+  let badgeTimer = null;
 
-  // GOVERNANÇA (golden record): o EIXO de iniciativas (as linhas) vem SEMPRE do portfólio
-  // canônico — meta_inovacao_projetos via DB_PROJETOS, seed data/projetos.js no offline.
-  // As CÉLULAS de canal continuam em meta_inovacao_matriz_demandas (matrizStore), unidas
-  // por nome de iniciativa. Iniciativa não nasce nem morre aqui: isso é no editor.html.
-  // unir() cruza os dois: 1) uma linha por iniciativa do golden, na ordem do golden;
-  // 2) qualquer iniciativa que tenha célula na matriz mas NÃO exista no golden aparece no
-  // fim marcada como "fora do portfólio" — nada some em silêncio, vira insumo de reconciliação.
-  function unir(projLista, matrizRows) {
-    const porIni = new Map();
-    (matrizRows || []).forEach(r => porIni.set(r.iniciativa, r));
-    const usadas = new Set();
-    const out = [];
-    (projLista || []).forEach(p => {
-      const m = porIni.get(p.iniciativa);
-      if (m) usadas.add(p.iniciativa);
-      const row = { id: m ? m.id : null, iniciativa: p.iniciativa, nucleo: p.nucleo || "",
-        atualizado_em: m ? m.atualizado_em : null, atualizado_por: m ? m.atualizado_por : null, orfa: false };
-      CANAL_IDS.forEach(c => { row[c] = (m && m[c]) || ""; });
-      out.push(row);
+  // item 3.4 do plano de melhorias — identificação de quem edita vem do módulo
+  // compartilhado window.EDITOR_ATUAL (js/editor_atual.js), com rodapé "Editando como…".
+
+  function norm(s) { return String(s == null ? "" : s).trim().toLowerCase(); }
+  function ehModoTeste(motivo) { return String(motivo || "").indexOf("modo de teste") === 0; }
+
+  /* ---------------------------------------------------------------- modelo ---- */
+
+  function montarModelo(projetos, canais, celulas) {
+    const cols = [], mapaCol = new Map();
+    const lins = [], mapaLin = new Map();
+    let seq = 0;
+
+    function registrarCol(col) {
+      cols.push(col);
+      if (col.canal_id != null) mapaCol.set("id:" + col.canal_id, col);
+      if (col.slug) mapaCol.set("slug:" + norm(col.slug), col);
+      return col;
+    }
+    function registrarLin(lin) {
+      lins.push(lin);
+      if (lin.projeto_id != null) mapaLin.set("id:" + lin.projeto_id, lin);
+      if (lin.iniciativa) mapaLin.set("nome:" + norm(lin.iniciativa), lin);
+      return lin;
+    }
+
+    // colunas do catálogo de canais, na ordem de `ordem` (empate: pela ordem em que o
+    // catálogo devolveu — .sort do JS é estável desde o ES2019).
+    (canais || []).slice()
+      .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0))
+      .forEach((c) => registrarCol({
+        chave: "c" + (seq++),
+        canal_id: c.db_id != null ? Number(c.db_id) : null,
+        slug: c.slug || null,
+        nome: c.nome || c.slug || "canal",
+        nome_completo: c.nome_completo || "",
+        ativo: c.ativo !== false,
+        foraDoCatalogo: false,
+        temDado: false,
+      }));
+
+    // linhas do portfólio (golden record), na ordem que o portfólio devolveu
+    (projetos || []).forEach((p) => registrarLin({
+      projeto_id: p.db_id != null ? Number(p.db_id) : null,
+      iniciativa: p.iniciativa || "",
+      nucleo: p.nucleo || "",
+      orfa: false,
+      celulas: {},
+    }));
+
+    /* Casamento célula → (linha, coluna): tenta pelo ID do banco e, se não achar, pelo
+       NOME/SLUG que a célula traz junto (junção feita no matriz-store). O caminho por
+       nome é o que segura o caso misto — catálogo caiu pro seed local (sem db_id) mas as
+       células vieram do Supabase; sem ele, a grade inteira apareceria vazia, que é
+       exatamente o tipo de "sumiu em silêncio" que esta tela não pode ter. Quando o
+       casamento é por nome e a célula sabe o id, a linha/coluna ADOTA o id — assim ela
+       volta a ser editável mesmo nesse modo misto. */
+    // nome de exibição de uma ponta órfã. Em teoria nunca é vazio (projeto_id/canal_id
+    // são NOT NULL na tabela, e o seed local sempre traz nome/slug), mas o modelo não
+    // aposta nisso: sem nome, a órfã não é materializada.
+    function nomeDeLinha(cel) { return cel.iniciativa || (cel.projeto_id != null ? "Iniciativa #" + cel.projeto_id : ""); }
+    function nomeDeColuna(cel) { return cel.canal_slug || (cel.canal_id != null ? "Canal #" + cel.canal_id : ""); }
+
+    function acharLinha(cel, criar) {
+      let lin = cel.projeto_id != null ? mapaLin.get("id:" + cel.projeto_id) : null;
+      if (lin) return lin;
+      lin = cel.iniciativa ? mapaLin.get("nome:" + norm(cel.iniciativa)) : null;
+      if (lin) {
+        if (lin.projeto_id == null && cel.projeto_id != null) {
+          lin.projeto_id = Number(cel.projeto_id);
+          mapaLin.set("id:" + lin.projeto_id, lin);
+        }
+        return lin;
+      }
+      if (!criar) return null;
+      return registrarLin({
+        projeto_id: cel.projeto_id != null ? Number(cel.projeto_id) : null,
+        iniciativa: nomeDeLinha(cel), nucleo: "", orfa: true, celulas: {},
+      });
+    }
+
+    function acharColuna(cel, criar) {
+      let col = cel.canal_id != null ? mapaCol.get("id:" + cel.canal_id) : null;
+      if (col) return col;
+      col = cel.canal_slug ? mapaCol.get("slug:" + norm(cel.canal_slug)) : null;
+      if (col) {
+        if (col.canal_id == null && cel.canal_id != null) {
+          col.canal_id = Number(cel.canal_id);
+          mapaCol.set("id:" + col.canal_id, col);
+        }
+        return col;
+      }
+      if (!criar) return null;
+      return registrarCol({
+        chave: "c" + (seq++),
+        canal_id: cel.canal_id != null ? Number(cel.canal_id) : null,
+        slug: cel.canal_slug || null,
+        nome: nomeDeColuna(cel), nome_completo: "", ativo: false, foraDoCatalogo: true, temDado: true,
+      });
+    }
+
+    /* Resolve as duas pontas ANTES de criar qualquer órfã: uma linha órfã sem coluna pra
+       chamar de sua (ou o contrário) seria uma linha/coluna fantasma, inteiramente vazia,
+       na tela — pior que não mostrar. Ou materializa as duas, ou nenhuma. */
+    (celulas || []).forEach((cel) => {
+      let lin = acharLinha(cel, false);
+      let col = acharColuna(cel, false);
+      if (!lin || !col) {
+        if (!cel.estado) return;                                  // vazia + desconhecida = nada a dizer
+        if (!lin && !nomeDeLinha(cel)) return;
+        if (!col && !nomeDeColuna(cel)) return;
+        lin = lin || acharLinha(cel, true);
+        col = col || acharColuna(cel, true);
+      }
+      lin.celulas[col.chave] = cel;
+      if (cel.estado) col.temDado = true;
     });
-    (matrizRows || []).forEach(m => {
-      if (usadas.has(m.iniciativa)) return;
-      const row = { id: m.id, iniciativa: m.iniciativa, nucleo: m.nucleo || "",
-        atualizado_em: m.atualizado_em || null, atualizado_por: m.atualizado_por || null, orfa: true };
-      CANAL_IDS.forEach(c => { row[c] = m[c] || ""; });
-      out.push(row);
-    });
-    return out;
+
+    // canal desativado no catálogo só continua na grade se ainda tiver estado gravado
+    // em alguma célula — some quando não tiver mais nada pra mostrar.
+    return { colunas: cols.filter((c) => c.ativo || c.temDado), linhas: lins };
   }
 
-  function fallbackLocal() {
-    usandoFallback = true;
-    const matrizRows = Object.keys(DB.matriz || {}).map(nome => {
-      const cells = DB.matriz[nome] || {};
-      const r = { id: "local:" + nome, iniciativa: nome, atualizado_em: null, atualizado_por: null };
-      CANAL_IDS.forEach(c => { r[c] = cells[c] || ""; });
-      return r;
-    });
-    return unir((DB && DB.projetos) || [], matrizRows);
+  function celulaDe(lin, col) { return lin.celulas[col.chave] || null; }
+  function estadoDe(lin, col) { const c = celulaDe(lin, col); return (c && c.estado) || ""; }
+  function podeEditar(lin, col) {
+    return !origem.celulasFallback && lin.projeto_id != null && col.canal_id != null;
   }
+
+  /* --------------------------------------------------------------- carregar ---- */
 
   function mostrarSkeleton() {
-    elEstado.innerHTML = '<div class="mz-skel">' + Array.from({length:6}).map(()=>"<div></div>").join("") + "</div>";
+    elEstado.innerHTML = '<div class="mz-skel">' + Array.from({ length: 6 }).map(() => "<div></div>").join("") + "</div>";
     elWrap.style.display = "none";
   }
 
-  function mostrarErro(err) {
-    elEstado.innerHTML = '<div class="mz-erro"><span><b>Não foi possível atualizar os dados agora.</b></span><button type="button" class="btn sec" id="mz-retry">Tentar de novo</button></div>' +
-      '<div class="mz-aviso">Mostrando a última versão salva, somente leitura, até a conexão voltar.</div>';
-    document.getElementById("mz-retry").addEventListener("click", () => carregar(true));
-    elWrap.style.display = "";
+  function renderAvisos() {
+    let html = "";
+    if (origem.celulasFallback && !ehModoTeste(origem.celulasMotivo)) {
+      html += '<div class="mz-erro"><span><b>Não foi possível atualizar os dados agora.</b></span><button type="button" class="btn sec" id="mz-retry">Tentar de novo</button></div>';
+    }
+    if (origem.celulasFallback) {
+      html += '<div class="mz-aviso">Mostrando a última versão salva, somente leitura, até a conexão voltar.</div>';
+    } else if (origem.projetosFallback || origem.canaisFallback) {
+      const quais = [origem.projetosFallback ? "as iniciativas" : null, origem.canaisFallback ? "os canais" : null].filter(Boolean).join(" e ");
+      html += '<div class="mz-aviso">Parte da grade (' + esc(quais) + ') está sendo exibida a partir da última versão salva; os estados das células estão atualizados. Células dessa parte ficam somente leitura até a lista voltar.</div>';
+    }
+    elEstado.innerHTML = html;
+    const retry = document.getElementById("mz-retry");
+    if (retry) retry.addEventListener("click", () => carregar(true));
   }
 
-  async function carregar(forcar) {
+  async function carregar(recarregar) {
     mostrarSkeleton();
+    const opts = recarregar ? { recarregar: true } : undefined;
     try {
-      // eixo = golden record (DB_PROJETOS); células = matriz. DB_PROJETOS.carregar() nunca
-      // lança (cai pro seed local por dentro), então só matrizStore.load pode rejeitar —
-      // e aí caímos pro fallbackLocal completo, como antes.
-      const [matrizRows, proj] = await Promise.all([
-        window.matrizStore.load(forcar),
-        window.DB_PROJETOS.carregar(forcar ? { recarregar: true } : undefined)
+      // nenhuma das três lança (as três caem pro seed local por dentro) — o try aqui é
+      // rede de segurança pra erro inesperado não deixar a página em branco.
+      const [celulasRes, projRes, canaisRes] = await Promise.all([
+        matrizStore.carregar(opts),
+        DB_PROJETOS.carregar(opts),
+        DB_CANAIS.carregar(opts),
       ]);
-      linhas = unir(proj.lista || [], matrizRows);
-      usandoFallback = false;
-      elEstado.innerHTML = proj.usandoFallback
-        ? '<div class="mz-aviso">Parte das iniciativas está sendo exibida a partir da última versão salva; os dados da matriz estão atualizados.</div>'
-        : "";
+      origem = {
+        celulasFallback: !!celulasRes.usandoFallback,
+        celulasMotivo: celulasRes.motivoFallback,
+        projetosFallback: !!projRes.usandoFallback,
+        canaisFallback: !!canaisRes.usandoFallback,
+      };
+      const modelo = montarModelo(projRes.lista, canaisRes.lista, celulasRes.lista);
+      colunas = modelo.colunas;
+      linhas = modelo.linhas;
     } catch (err) {
-      console.error("carregar (matriz + golden record) falhou:", err);
-      linhas = fallbackLocal();
-      mostrarErro(err);
+      console.error("carregar (matriz de células + catálogos) falhou:", err);
+      origem = { celulasFallback: true, celulasMotivo: (err && err.message) || String(err), projetosFallback: true, canaisFallback: true };
+      const modelo = montarModelo(seedProjetos(), seedCanais(), seedCelulas());
+      colunas = modelo.colunas;
+      linhas = modelo.linhas;
     }
     renderTudo();
-    if (!usandoFallback) iniciarRealtime();
+    if (!origem.celulasFallback) {
+      iniciarRealtime();
+      carregarConferencia();
+    } else {
+      legado = null;
+      renderConferencia();
+    }
+  }
+
+  // seeds crus, só pro catch de erro inesperado acima (o caminho normal de fallback é o
+  // de dentro de cada camada DB_*/matrizStore, que já devolve o seed traduzido).
+  function seedProjetos() { return ((window.DB && DB.projetos) || []).slice(); }
+  function seedCanais() {
+    return ((window.DB && DB.canais) || []).map((c, i) => ({ slug: c.id, nome: c.nome, nome_completo: c.completo, ordem: i + 1, ativo: true, db_id: null }));
+  }
+  function seedCelulas() {
+    const out = [];
+    const bruto = (window.DB && DB.matriz) || {};
+    Object.keys(bruto).forEach((ini) => Object.keys(bruto[ini] || {}).forEach((slug) => {
+      out.push({ id: null, projeto_id: null, canal_id: null, estado: bruto[ini][slug] || "", iniciativa: ini, canal_slug: slug, updated_at: null, updated_by: null });
+    }));
+    return out;
   }
 
   function iniciarRealtime() {
     if (realtimeCanal) return;
-    realtimeCanal = window.matrizStore.subscribeRealtime((payload) => {
-      const quem = (payload.new && payload.new.atualizado_por) || "alguém";
+    realtimeCanal = matrizStore.subscribeRealtime((payload) => {
+      const quem = (payload && payload.new && payload.new.updated_by) || "alguém";
       mostrarBadge("atualizado por " + quem + " agora");
       carregar(true);
     });
@@ -245,109 +402,214 @@
     badgeTimer = setTimeout(() => elBadge.classList.remove("show"), 3000);
   }
 
+  /* ----------------------------------------------------------------- render ---- */
+
+  function renderDimensao() {
+    elDimensao.textContent = linhas.length + " iniciativa(s) × " + colunas.length + " canal(is)";
+  }
+
   function renderStatus() {
-    if (usandoFallback) {
+    if (origem.celulasFallback) {
       elStatus.textContent = "Exibindo a última versão salva · somente leitura.";
       return;
     }
-    const comData = linhas.filter(l => l.atualizado_em).sort((a,b) => b.atualizado_em.localeCompare(a.atualizado_em));
-    if (!comData.length) { elStatus.textContent = "Nenhuma edição registrada ainda."; return; }
-    const ultima = comData[0];
-    const d = new Date(ultima.atualizado_em);
-    const dataFmt = isNaN(d) ? ultima.atualizado_em : d.toLocaleString("pt-BR");
-    elStatus.textContent = "Última atualização: " + dataFmt + " por " + (ultima.atualizado_por || "—") + ".";
+    let ultima = null;
+    linhas.forEach((l) => colunas.forEach((c) => {
+      const cel = celulaDe(l, c);
+      if (cel && cel.updated_at && (!ultima || String(cel.updated_at) > String(ultima.updated_at))) ultima = cel;
+    }));
+    if (!ultima) { elStatus.textContent = "Nenhuma edição registrada ainda."; return; }
+    const d = new Date(ultima.updated_at);
+    const dataFmt = isNaN(d) ? ultima.updated_at : d.toLocaleString("pt-BR");
+    elStatus.textContent = "Última atualização: " + dataFmt + " por " + (ultima.updated_by || "—") + ".";
   }
 
   function renderResumo() {
-    let tot = { formulario: 0, justificado: 0, priorizado: 0, encaminhado: 0, oficina: 0, previsto: 0 };
-    linhas.forEach(l => CANAL_IDS.forEach(c => { const v = l[c]; if (v) tot[v] = (tot[v]||0)+1; }));
-    const total = linhas.length * CANAL_IDS.length;
-    const entregues = tot.formulario + tot.justificado + tot.priorizado + tot.encaminhado;
+    const tot = {};
+    linhas.forEach((l) => colunas.forEach((c) => { const v = estadoDe(l, c); if (v) tot[v] = (tot[v] || 0) + 1; }));
+    const n = (k) => tot[k] || 0;
+    const total = linhas.length * colunas.length;
+    const entregues = n("formulario") + n("justificado") + n("priorizado") + n("encaminhado");
     document.getElementById("resumo").textContent =
       "Progresso: " + entregues + " célula(s) com formulário/justificativa de " + total +
-      " possíveis · oficinas registradas: " + (tot.oficina + entregues) +
-      " · priorizadas: " + (tot.priorizado + tot.encaminhado) + " · encaminhadas à URC: " + tot.encaminhado + ".";
+      " possíveis · oficinas registradas: " + (n("oficina") + entregues) +
+      " · priorizadas: " + (n("priorizado") + n("encaminhado")) + " · encaminhadas à URC: " + n("encaminhado") + ".";
   }
 
-  function celulaEstatica(v) {
-    const chave = CC_STATUS.chaveDeEntrada("celula_matriz", v || "");
-    return "<td>" + CC_STATUS.badge(chave) + "</td>";
+  function marca(texto, dica) {
+    return ' <span class="mz-marca" title="' + esc(dica) + '">' + esc(texto) + "</span>";
   }
-
-  function celulaEditavel(linha, canalId) {
-    const v = linha[canalId] || "";
-    const opts = ORDEM.map(o => {
-      const chave = CC_STATUS.chaveDeEntrada("celula_matriz", o);
-      return '<option value="' + esc(o) + '"' + (o === v ? " selected" : "") + '>' + esc(CC_STATUS.rotulo(chave)) + "</option>";
-    }).join("");
-    // lookup por NOME de iniciativa (chave estável do golden), não por id da matriz —
-    // linhas do golden ainda sem célula na matriz têm id null até a 1ª edição criar a linha.
-    return '<td><select class="cel-editar" data-ini="' + esc(linha.iniciativa) + '" data-campo="' + canalId + '">' + opts + "</select></td>";
-  }
-
-  // marcador de iniciativa que existe na matriz mas não no golden record (portfólio)
-  function marcadorOrfa(l) {
+  function marcadorLinha(l) {
     if (!l.orfa) return "";
-    return ' <span title="Esta iniciativa tem células na matriz mas não está no portfólio (golden record). Cadastre-a no editor.html ou remova a linha lá para reconciliar." ' +
-      'style="font:600 9.5px \'DM Sans\',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:#b45309;background:#fef3c7;border:1px solid #fcd34d;border-radius:2px;padding:1px 5px;margin-left:6px;vertical-align:middle">fora do portfólio</span>';
+    return marca("fora do portfólio", "Esta iniciativa tem células na matriz mas não está no portfólio (golden record). Cadastre-a no editor.html ou remova as células para reconciliar.");
+  }
+  function marcadorColuna(c) {
+    if (c.foraDoCatalogo) return marca("fora do catálogo", "Este canal tem células na matriz mas não está em meta_inovacao_canais. Cadastre-o no catálogo ou limpe as células para reconciliar.");
+    if (!c.ativo) return marca("inativo", "Canal marcado como inativo no catálogo, mas ainda com estado gravado em alguma célula — continua visível até as células serem limpas.");
+    return "";
+  }
+
+  function renderCabecalho() {
+    elCab.innerHTML = "<tr><th>Iniciativa</th>" + colunas.map((c) =>
+      "<th" + (c.nome_completo ? ' title="' + esc(c.nome_completo) + '"' : "") + ">" + esc(c.nome) + marcadorColuna(c) + "</th>"
+    ).join("") + "</tr>";
+  }
+
+  function celulaEstatica(lin, col) {
+    const v = estadoDe(lin, col);
+    const dica = origem.celulasFallback ? "" :
+      ' title="Somente leitura: ' + esc(lin.projeto_id == null ? "esta iniciativa não veio do cadastro do Supabase agora" : "este canal não veio do cadastro do Supabase agora") + '"';
+    return "<td" + dica + ">" + CC_STATUS.badge(CC_STATUS.chaveDeEntrada("celula_matriz", v)) + "</td>";
+  }
+
+  function celulaEditavel(lin, col, li, ci) {
+    const v = estadoDe(lin, col);
+    // um estado gravado fora da lista do CHECK (não deveria existir, mas se existir)
+    // entra como opção pra aparecer na tela em vez de ser trocado em silêncio pelo
+    // primeiro item do <select>.
+    const valores = ESTADOS.indexOf(v) === -1 ? ESTADOS.concat([v]) : ESTADOS;
+    const opts = valores.map((o) => {
+      const chave = CC_STATUS.chaveDeEntrada("celula_matriz", o);
+      return '<option value="' + esc(o) + '"' + (o === v ? " selected" : "") + ">" + esc(CC_STATUS.rotulo(chave)) + "</option>";
+    }).join("");
+    return '<td><select class="cel-editar" data-l="' + li + '" data-c="' + ci + '" aria-label="' +
+      esc(lin.iniciativa + " · " + col.nome) + '">' + opts + "</select></td>";
   }
 
   function renderTabela() {
-    const editavel = !usandoFallback;
-    elMatriz.innerHTML = linhas.map(l =>
-      "<tr><td>" + DRAWER.spanIniciativa(l.iniciativa) + marcadorOrfa(l) + "</td>" +
-      CANAL_IDS.map(c => editavel ? celulaEditavel(l, c) : celulaEstatica(l[c])).join("") +
+    elMatriz.innerHTML = linhas.map((l, li) =>
+      "<tr><td>" + DRAWER.spanIniciativa(l.iniciativa) + marcadorLinha(l) + "</td>" +
+      colunas.map((c, ci) => podeEditar(l, c) ? celulaEditavel(l, c, li, ci) : celulaEstatica(l, c)).join("") +
       "</tr>"
     ).join("");
-
-    if (editavel) {
-      elMatriz.querySelectorAll("select.cel-editar").forEach(sel => {
-        sel.addEventListener("change", onSalvarCelula);
-      });
-    }
+    elMatriz.querySelectorAll("select.cel-editar").forEach((sel) => sel.addEventListener("change", onSalvarCelula));
   }
 
   async function onSalvarCelula(e) {
-    const sel = e.target, ini = sel.dataset.ini, campo = sel.dataset.campo, valor = sel.value;
+    const sel = e.target;
+    const lin = linhas[Number(sel.dataset.l)];
+    const col = colunas[Number(sel.dataset.c)];
     const td = sel.closest("td");
-    const linha = linhas.find(l => l.iniciativa === ini);
-    if (!linha) return;
-    td.classList.remove("cel-salvo", "cel-falhou"); td.classList.add("cel-salvando");
+    if (!lin || !col) return;
+    const valor = sel.value;
+    td.classList.remove("cel-salvo", "cel-falhou");
+    td.classList.add("cel-salvando");
     try {
-      const usuario = EDITOR_ATUAL.nomeAtual();
-      let atualizado;
-      if (linha.id == null) {
-        // iniciativa do golden ainda sem linha na matriz — cria sob demanda já com esta célula.
-        const dados = { iniciativa: ini };
-        CANAL_IDS.forEach(c => { dados[c] = (c === campo) ? valor : (linha[c] || ""); });
-        atualizado = await window.matrizStore.addRow(dados, usuario);
-      } else {
-        atualizado = await window.matrizStore.saveCell(linha.id, campo, valor, usuario);
-      }
-      Object.assign(linha, atualizado);
-      td.classList.remove("cel-salvando"); td.classList.add("cel-salvo");
+      const gravada = await matrizStore.salvarCelula({
+        projeto_id: lin.projeto_id, canal_id: col.canal_id, estado: valor,
+        iniciativa: lin.iniciativa, canal_slug: col.slug,
+      }, EDITOR_ATUAL.nomeAtual());
+      lin.celulas[col.chave] = gravada;
+      if (gravada.estado) col.temDado = true;
+      sel.title = "";
+      td.classList.remove("cel-salvando");
+      td.classList.add("cel-salvo");
       setTimeout(() => td.classList.remove("cel-salvo"), 1500);
-      renderStatus(); renderResumo();
+      renderStatus(); renderResumo(); renderConferencia();
     } catch (err) {
-      console.error("saveCell falhou:", err);
-      td.classList.remove("cel-salvando"); td.classList.add("cel-falhou");
-      sel.title = (CC_SUPABASE.mensagemEscritaAmigavel(err) || ("Falhou: " + ((err && err.message) || err) + " — mude de novo pra tentar salvar outra vez."));
+      console.error("salvarCelula falhou:", err);
+      td.classList.remove("cel-salvando");
+      td.classList.add("cel-falhou");
+      // o <select> fica com o valor escolhido de propósito: uma nova escolha (ou a mesma
+      // de novo) refaz a tentativa sem a pessoa ter que reencontrar a célula.
+      sel.title = CC_SUPABASE.mensagemEscritaAmigavel(err) ||
+        ("Não salvou (" + CC_SUPABASE.detalheErro(err) + ") — escolha de novo pra tentar outra vez.");
     }
   }
 
-  // GOVERNANÇA: iniciativa (linha) não nasce nem morre aqui — só no golden record. O rodapé
-  // deixou de ter "+ Adicionar linha" (que criava iniciativa solta, fora do portfólio) e
-  // aponta para o editor. Aqui edita-se apenas o status por canal. Sem o toggle "Ativar
-  // edição", o rodapé aparece sempre que a edição está ativa (i.e., online — em fallback a
-  // matriz vira somente leitura e o aviso de origem já explica o motivo).
   function renderRodape() {
-    if (usandoFallback) { elRodape.innerHTML = ""; return; }
-    elRodape.innerHTML = '<p style="font-size:12px;color:var(--grafite);margin:4px 0 0">As iniciativas (linhas) são geridas no <b>golden record</b> — cadastre ou remova em <a href="editor.html">editor.html › Projetos &amp; Representantes</a>. Aqui você edita só o status por canal.</p>';
+    if (origem.celulasFallback) { elRodape.innerHTML = ""; return; }
+    elRodape.innerHTML = '<p style="font-size:12px;color:var(--grafite);margin:4px 0 0">As <b>linhas</b> (iniciativas) são geridas no golden record — cadastre ou remova em <a href="editor.html">editor.html › Projetos &amp; Representantes</a>. As <b>colunas</b> vêm do catálogo de canais: um canal novo cadastrado lá aparece aqui sozinho, sem deploy. Aqui você edita só o estado de cada célula.</p>';
   }
 
+  /* ------------------------------------------- conferência com a tabela antiga ---- */
+
+  /* Compara, célula a célula, o que a grade nova mostra com o que a tabela antiga
+     (meta_inovacao_matriz_demandas, 10 colunas físicas) guarda. É o teste de aceite da
+     Camada 3 — e continua valendo durante toda a janela do item 3.5, porque a tabela
+     antiga NÃO recebe mais escrita: a partir da migração ela é um retrato congelado, e
+     toda divergência listada aqui é ou uma edição feita depois da virada (esperado) ou
+     um erro de migração (o que a conferência existe pra pegar). */
+  function compararComLegado(linhasLegado) {
+    const novo = new Map();
+    linhas.forEach((l) => {
+      if (!l.iniciativa) return;
+      colunas.forEach((c) => {
+        if (!c.slug) return;
+        novo.set(norm(l.iniciativa) + "|" + norm(c.slug), { estado: estadoDe(l, c), iniciativa: l.iniciativa, canal: c.nome });
+      });
+    });
+    const vistos = new Set();
+    let iguais = 0;
+    const divergentes = [];
+    (linhasLegado || []).forEach((c) => {
+      const k = norm(c.iniciativa) + "|" + norm(c.canal_slug);
+      vistos.add(k);
+      const atual = novo.get(k);
+      if (!atual) {
+        // par que a grade nova nem exibe (iniciativa saiu do portfólio, canal saiu do
+        // catálogo). Vazio dos dois lados ainda é "confere" — ausência = célula vazia.
+        if (!c.estado) { iguais++; return; }
+        divergentes.push({ iniciativa: c.iniciativa, canal: c.canal_slug, antiga: c.estado, nova: "— (sem célula na grade nova)" });
+        return;
+      }
+      if ((atual.estado || "") === (c.estado || "")) iguais++;
+      else divergentes.push({ iniciativa: c.iniciativa, canal: atual.canal, antiga: c.estado || "—", nova: atual.estado || "—" });
+    });
+    novo.forEach((v, k) => {
+      if (v.estado && !vistos.has(k)) divergentes.push({ iniciativa: v.iniciativa, canal: v.canal, antiga: "— (sem célula na tabela antiga)", nova: v.estado });
+    });
+    return { iguais: iguais, divergentes: divergentes };
+  }
+
+  async function carregarConferencia() {
+    try {
+      legado = await matrizStore.carregarLegado();
+    } catch (err) {
+      // a grade não depende disto: sem conferência, o painel simplesmente não aparece.
+      console.warn("conferência com a tabela antiga indisponível:", err);
+      legado = null;
+    }
+    renderConferencia();
+  }
+
+  const LIMITE_DIVERGENCIAS = 40;
+
+  // recompara a cada render (e não uma vez só, no carregamento): salvar uma célula muda
+  // a contagem na hora, sem precisar recarregar a tabela antiga de novo.
+  function renderConferencia() {
+    if (!legado || origem.celulasFallback) { elConf.hidden = true; elConf.innerHTML = ""; return; }
+    const conferencia = compararComLegado(legado);
+    const d = conferencia.divergentes;
+    const resumo = "Conferência com a tabela antiga: <b>" + conferencia.iguais + "</b> célula(s) conferem · <b>" +
+      d.length + "</b> divergem.";
+    let corpo;
+    if (!d.length) {
+      corpo = '<p class="mz-conf-nota">Nenhuma divergência: a grade nova mostra exatamente o mesmo que a tabela antiga, célula a célula.</p>';
+    } else {
+      const linhasTab = d.slice(0, LIMITE_DIVERGENCIAS).map((x) =>
+        "<tr><td>" + esc(x.iniciativa) + "</td><td>" + esc(x.canal) + "</td><td>" + esc(x.antiga) + "</td><td>" + esc(x.nova) + "</td></tr>").join("");
+      corpo = "<table><thead><tr><th>Iniciativa</th><th>Canal</th><th>Tabela antiga</th><th>Grade nova</th></tr></thead><tbody>" +
+        linhasTab + "</tbody></table>" +
+        (d.length > LIMITE_DIVERGENCIAS ? '<p class="mz-conf-nota">…e mais ' + (d.length - LIMITE_DIVERGENCIAS) + " divergência(s).</p>" : "") +
+        '<p class="mz-conf-nota">A tabela antiga parou de receber escrita na migração da Camada 3: toda edição feita aqui depois disso aparece como divergência — é o esperado. Divergência que você não reconhece como edição sua é o que este painel existe pra mostrar.</p>';
+    }
+    elConf.innerHTML = "<summary>" + resumo + "</summary>" + corpo;
+    elConf.hidden = false;
+  }
+
+  /* ----------------------------------------------------------------- export ---- */
+
+  // mantém o formato de data/matriz.js (fallback offline + snapshot da aba "matriz" do
+  // editor.html): { iniciativa: { slug_do_canal: estado } }. Coluna sem slug (canal
+  // conhecido só por id) fica de fora — o formato do arquivo é indexado por slug.
   function exportarJSON() {
     const obj = {};
-    linhas.forEach(l => { obj[l.iniciativa] = Object.fromEntries(CANAL_IDS.map(c => [c, l[c] || ""])); });
+    linhas.forEach((l) => {
+      const cells = {};
+      colunas.forEach((c) => { if (c.slug) cells[c.slug] = estadoDe(l, c); });
+      obj[l.iniciativa] = cells;
+    });
     const conteudo = "window.DB = window.DB || {};\nwindow.DB.matriz = " + JSON.stringify(obj, null, 1) + ";\n";
     const blob = new Blob([conteudo], { type: "text/javascript;charset=utf-8" });
     const a = document.createElement("a");
@@ -358,15 +620,18 @@
 
   function renderTudo() {
     elWrap.style.display = "";
+    renderAvisos();
+    renderDimensao();
     renderStatus();
     renderResumo();
+    renderCabecalho();
     renderTabela();
     renderRodape();
   }
 
   // Sem botão "Atualizar" — o realtime do Supabase (iniciarRealtime) já refaz a carga
   // sozinho quando outra pessoa mexe numa célula. Se o Supabase cair, o aviso de fallback
-  // aparece no #mz-estado com um "Tentar de novo" próprio (mostrarErro).
+  // aparece no #mz-estado com um "Tentar de novo" próprio (renderAvisos).
   document.getElementById("mz-exportar").addEventListener("click", exportarJSON);
 
   carregar(false);
