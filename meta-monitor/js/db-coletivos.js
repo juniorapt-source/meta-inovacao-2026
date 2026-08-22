@@ -1,56 +1,27 @@
-/* Camada de dados do conjunto PESSOAS ("Correções v0.18.x", migração do restante do
- * Modo edição pro Supabase) — window.DB_PESSOAS.
+/* Camada de dados do catálogo COLETIVOS (golden record de cadastros de referência,
+ * Camada 0, item 0.5) — window.DB_COLETIVOS.
  *
- * Lê de meta_inovacao_pessoas no Supabase; cai pra window.DB.pessoas (data/pessoas.js,
- * SEED + fallback) se a rede falhar. Mesmo mecanismo de ?semrede=1/CC_FORCAR_FALLBACK e
- * a mesma trava de escrita em modo de teste de js/db-plano.js — ver comentários lá.
- *
- * NÃO confundir com window.DB.responsaveis (lista canônica do P4, usada por
- * plano-acao.html/minhas-acoes.html) — são dados diferentes, este módulo só cobre
- * window.DB.pessoas (nome/papel/grupo/nucleo/pendente + nome_completo/nome_exibicao/
- * email/ativo, golden record de pessoas — Camada 1, tools/sql/2026-08_pessoas_golden.sql
- * — editado em editor.html e exibido em participantes.html).
- *
- * nome/papel/grupo/nucleo/pendente/ordem são os campos ORIGINAIS (P·Correções v0.18.x) —
- * continuam existindo e sendo lidos por participantes.html sem mudança nenhuma.
- * nome_completo/nome_exibicao/email/ativo são as colunas novas da Camada 1: identidade
- * única por pessoa física, preenchida a partir do dedupe confirmado (ver
- * meta-monitor/docs/CAMADA1_DEDUPE_PESSOAS.md) — convivem com as antigas até a Camada 5
- * decidir aposentar o texto livre duplicado por grupo.
+ * Lê de meta_inovacao_coletivos no Supabase; cai pra window.DB.coletivos
+ * (data/coletivos.js, SEED + fallback) se a rede falhar. Mesmo mecanismo de sempre —
+ * ver js/db-projetos.js.
  */
 (function (root) {
   "use strict";
 
-  const TABELA = "meta_inovacao_pessoas";
+  const TABELA = "meta_inovacao_coletivos";
 
-  function linhaParaPessoa(r) {
+  function linhaParaColetivo(r) {
     return {
       nome: r.nome,
-      papel: r.papel || null,
-      grupo: r.grupo,
-      nucleo: r.nucleo || null,
-      pendente: !!r.pendente,
       ordem: r.ordem,
-      nome_completo: r.nome_completo || null,
-      nome_exibicao: r.nome_exibicao || null,
-      email: r.email || null,
-      ativo: r.ativo == null ? true : !!r.ativo,
       db_id: r.id,
     };
   }
 
-  function pessoaParaLinha(p) {
+  function coletivoParaLinha(c) {
     return {
-      nome: p.nome,
-      papel: p.papel || null,
-      grupo: p.grupo,
-      nucleo: p.nucleo || null,
-      pendente: !!p.pendente,
-      ordem: p.ordem,
-      nome_completo: p.nome_completo || null,
-      nome_exibicao: p.nome_exibicao || null,
-      email: p.email || null,
-      ativo: p.ativo == null ? true : !!p.ativo,
+      nome: c.nome,
+      ordem: c.ordem,
     };
   }
 
@@ -64,11 +35,11 @@
     const supa = await root.CC_SUPABASE.obterClienteEsm();
     const { data, error } = await supa.from(TABELA).select("*").is("deleted_at", null).order("ordem", { ascending: true });
     if (error) throw error;
-    return (data || []).map(linhaParaPessoa);
+    return (data || []).map(linhaParaColetivo);
   }
 
   function seedLocal() {
-    return ((root.DB && root.DB.pessoas) || []).slice();
+    return ((root.DB && root.DB.coletivos) || []).slice();
   }
 
   let promessa = null;
@@ -83,7 +54,7 @@
         const lista = await buscarDoSupabase();
         return { lista: lista, usandoFallback: false, motivoFallback: null };
       } catch (err) {
-        console.error("db-pessoas: falha ao carregar do Supabase, caindo pro seed local (data/pessoas.js)", err);
+        console.error("db-coletivos: falha ao carregar do Supabase, caindo pro seed local (data/coletivos.js)", err);
         return { lista: seedLocal(), usandoFallback: true, motivoFallback: (err && err.message) || String(err) };
       }
     })();
@@ -100,16 +71,16 @@
     const patch = Object.assign({}, campos, { updated_by: usuario || null });
     const { data, error } = await supa.from(TABELA).update(patch).eq("id", id).select().single();
     if (error) throw error;
-    return linhaParaPessoa(data);
+    return linhaParaColetivo(data);
   }
 
-  async function criar(pessoaParcial, usuario) {
+  async function criar(coletivoParcial, usuario) {
     bloquearEscritaEmTeste();
     const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const payload = Object.assign({}, pessoaParaLinha(pessoaParcial), { updated_by: usuario || null });
+    const payload = Object.assign({}, coletivoParaLinha(coletivoParcial), { updated_by: usuario || null });
     const { data, error } = await supa.from(TABELA).insert(payload).select().single();
     if (error) throw error;
-    return linhaParaPessoa(data);
+    return linhaParaColetivo(data);
   }
 
   async function removerSoft(id, usuario) {
@@ -120,12 +91,12 @@
     if (error) throw error;
   }
 
-  root.DB_PESSOAS = {
+  root.DB_COLETIVOS = {
     TABELA: TABELA,
     carregar: carregar,
     salvar: salvar,
     criar: criar,
     removerSoft: removerSoft,
-    pessoaParaLinha: pessoaParaLinha,
+    coletivoParaLinha: coletivoParaLinha,
   };
 })(this);

@@ -80,7 +80,15 @@
     return n ? " — " + esc(n) : "";
   }
 
-  const grupos = [...new Set(pessoas.map(p => p.grupo))];
+  // Camada 1 do golden record de pessoas (tools/sql/2026-08_pessoas_golden.sql)
+  // acrescentou pessoas com grupo "Projetos" e "URC" a meta_inovacao_pessoas — golden
+  // records de identidade, não pensados pra ganhar card próprio aqui ainda: "URC" já
+  // tem card dedicado embaixo (renderUrc(), outra fonte de dado) e "Projetos" aparece
+  // via representantes de iniciativa nas telas de projeto, não nesta lista de pessoas
+  // da UI/Comitê/Núcleos. Integrar de vez é Camada 4 (seletor de pessoa nas telas);
+  // até lá, só os 3 grupos originais viram seção nesta página.
+  const GRUPOS_NESTA_PAGINA = new Set(["UI", "Comitê", "Núcleos"]);
+  const grupos = [...new Set(pessoas.map(p => p.grupo))].filter(g => GRUPOS_NESTA_PAGINA.has(g));
   const blocos = grupos.map(g =>
     '<section class="card"><h3 style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite);margin-bottom:8px">' + esc(TITULO_GRUPO[g] || g) + "</h3>" +
     pessoas.filter(p => p.grupo === g).map(p => {
