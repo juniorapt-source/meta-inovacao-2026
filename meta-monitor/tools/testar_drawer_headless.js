@@ -18,6 +18,15 @@
  * load "de verdade" a cada cenário pra sincronizar certo via CDP.
  *
  * Mesmo padrão de CDP cru (sem Playwright) dos outros testes headless do repo.
+ *
+ * Diferente do resto da suíte, os cenários 1 (régua da Sebraetec, js/drawer.js
+ * supaBuscar) e 5 (corsario.html#cards) fazem fetch() direto no Supabase de verdade —
+ * não são cobertos por CC_FORCAR_FALLBACK/?semrede=1 (esse mecanismo só existe pra
+ * DB_PLANO/DB_AGENDA). Precisam de rede de saída liberada pra SUPABASE_URL
+ * (js/config.js, só leitura, RLS pública) pra passar; num sandbox sem egress pra fora
+ * (proxy bloqueando com 403), esses dois falham com "Failed to fetch" mesmo com o
+ * drawer funcionando certo — os outros 3 cenários (fechar X/Esc/overlay, #pessoa=sandra,
+ * nome clicável em plano.html) não dependem de rede e continuam validando de verdade.
  */
 "use strict";
 const { spawn } = require("node:child_process");
@@ -158,8 +167,17 @@ async function principal() {
     }
     // navega sempre por "about:blank" primeiro — troca só de #hash no mesmo path não
     // dispara Page.loadEventFired de novo, e cada cenário aqui precisa de um load real.
+    // Registra o listener ANTES de cada Page.navigate (mesmo padrão do laço principal de
+    // testar_status_badges_headless.js) e espera o load do about:blank terminar antes de
+    // disparar a navegação real: sem isso, o "próximo" Page.loadEventFired capturado é o
+    // do about:blank (que carrega quase instantâneo) em vez do da página real — a real
+    // navegação fica em curso, o teste segue em frente, document.readyState nunca sai de
+    // "loading" e toda sonda no DOM (ex.: .drawer-painel) vem null (bug do teste, não da
+    // página — reproduzido isolando o CDP puro fora do harness do teste).
     async function abrir(url) {
+      const brancoCarregou = cdp.once("Page.loadEventFired");
       await cdp.send("Page.navigate", { url: "about:blank" }, sessionId);
+      await brancoCarregou;
       const carregou = cdp.once("Page.loadEventFired");
       await cdp.send("Page.navigate", { url }, sessionId);
       await carregou;

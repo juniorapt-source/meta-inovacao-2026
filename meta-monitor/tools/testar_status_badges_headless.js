@@ -26,12 +26,40 @@ const CAMINHOS_CHROME = [
 // "antes" — capturado contra o código pré-migração (node /tmp/contar_badges.js, registrado
 // no relatório da migração). Cada seletor exclui explicitamente as legendas (#legenda-vocab,
 // #legenda) — só conta badge que representa um registro de dado.
+//
+// index.html é a ÚNICA página desta lista cujo recorte de badges depende de "hoje" em
+// tempo real: "Atrasadas agora" (CALC.ehAtrasada) e "Próximos 7 dias" (CALC.somaDias) são
+// SUBCONJUNTOS filtrados por data, não a tabela/grade inteira — as outras 5 páginas
+// desenham uma badge por LINHA de uma lista fixa (nó/ação/atividade/célula), então a
+// contagem delas não muda com o calendário. Travar um número absoluto aqui envelhece
+// sozinho: 21 em 13/08 (dia em que foi capturado, ver git blame) virou 24 em 15–18/08 e 25
+// em 22/08 com data/plano.js intocado desde 13/08 — mesma armadilha que
+// testar_minhas_acoes_headless.js já evita calculando a expectativa contra os MESMOS
+// dados que o site lê, em vez de um valor fixo. calcularEsperadoIndexHtml() replica aqui
+// exatamente a lógica de index.html (CALC.ehAtrasada + ccChip nas atrasadas + janela de 7
+// dias) — mesmo princípio, mesmo helper de resolução de "hoje" (hoje_referencia > relógio).
+function calcularEsperadoIndexHtml() {
+  global.window = global;
+  delete require.cache[require.resolve(path.join(REPO, "data", "config.js"))];
+  delete require.cache[require.resolve(path.join(REPO, "data", "plano.js"))];
+  window.DB = {};
+  require(path.join(REPO, "data", "config.js"));
+  require(path.join(REPO, "data", "plano.js"));
+  const CALC = require(path.join(REPO, "js", "calc.js"));
+  const hoje = (window.DB.config && window.DB.config.hoje_referencia) || new Date().toISOString().slice(0, 10);
+  const plano = window.DB.plano;
+  const atrasadas = plano.filter((a) => CALC.ehAtrasada(a, hoje));
+  // ccChip(a, true) — só em "Atrasadas agora" (mostrarCC=true), badge ★ Nó N extra nas
+  // ações de nó crítico (a.cc.tipo), ver index.html e window.ccChip em js/core.js.
+  const atrasadasComCC = atrasadas.filter((a) => a.cc && a.cc.tipo).length;
+  const lim = CALC.somaDias(hoje, 7);
+  const prox7 = plano.filter((a) => a.prazo_iso && a.status !== "Concluído" && a.prazo_iso >= hoje && a.prazo_iso <= lim).length;
+  return atrasadas.length + atrasadasComCC + prox7;
+}
+
 const PAGINAS = [
   { pagina: "plano.html?semrede=1", seletor: "#tabela .chip", esperado: 62 },
-  // esperado subiu de 16→21 ("Dashboard orientado à decisão", item 3): "Atrasadas agora"
-  // agora mostra o badge ★ Nó N (ccChip(a, true)) nas ações de nó crítico, que antes só
-  // aparecia no Kanban/Lista de plano.html.
-  { pagina: "index.html?semrede=1", seletor: "#atrasadas .chip, #prox .chip", esperado: 21 },
+  { pagina: "index.html?semrede=1", seletor: "#atrasadas .chip, #prox .chip", esperado: calcularEsperadoIndexHtml() },
   { pagina: "caminho.html?semrede=1", seletor: "#lista-nos .chip", esperado: 18 },
   { pagina: "agenda.html?semrede=1", seletor: "#encontros .chip", esperado: 20 },
   { pagina: "demandas.html", seletor: "#matriz .cel", esperado: 270 },

@@ -106,6 +106,18 @@ carregam sem erro.
 "Projetos"/"URC" novos) foi pego e corrigido antes de virar regressão — e o teste que
 deveria tê-lo pego foi ajustado, porque se autovalidava contra o próprio bug.
 
+**Addendum (22/08/2026, depois desta rodada — PR #10):** as duas falhas permanentes da
+suíte headless que esta camada deixou registradas como herdadas
+(`testar_status_badges_headless.js` e `testar_drawer_headless.js`) **foram corrigidas**.
+Nenhuma era regressão de página: a do badges era um número travado que envelheceu (a
+contagem de `index.html` depende de "hoje" em tempo real e o valor tinha sido capturado
+em 13/08); a do drawer era uma condição de corrida na navegação do próprio teste — o
+`TypeError: Cannot read properties of null` estourava antes de qualquer asserção rodar.
+Duas asserções do drawer (régua da Sebraetec e `corsario.html#cards`) continuam
+dependendo de rede de saída real pro Supabase — não são cobertas por
+`CC_FORCAR_FALLBACK`/`?semrede=1` — e falham em ambiente sem esse acesso; está
+documentado no cabeçalho do próprio teste. Não é regressão, é rede.
+
 **Pendência conhecida, não bloqueante:** não existe UI em `editor.html` pra gerenciar
 múltiplos papéis por pessoa (adicionar/remover linha em `meta_inovacao_pessoa_papeis`) —
 as 18 linhas gravadas no 1.3 estão corretas, só sem tela própria de edição. Se for
@@ -240,8 +252,10 @@ uso" existem em `js/status.js`/`css/base.css` desde a v0.7.0 mas **nunca** estiv
   resolvem pro mesmo `pessoa_id`, mas a lista ainda mostra 2 entradas pro mesmo humano.
 - O item 2.5 (FKs de `meta_inovacao_canva_demandas`) pode ser absorvido aqui, se a
   decisão for adiá-lo — ver nota da Camada 2.
-- `tools/testar_drawer_headless.js` **já falha hoje**, desde antes desta frente. O 4.4
-  mexe em `js/drawer.js`: entrar nele com o teste vermelho é entrar sem rede de proteção.
+- `tools/testar_drawer_headless.js` foi consertado em 22/08 (PR #10) e é a rede de
+  proteção do 4.4, que mexe justamente em `js/drawer.js` — rode ANTES e DEPOIS de tocar
+  nesse arquivo. Só lembre que 2 asserções dele precisam de rede real pro Supabase: num
+  ambiente sem esse acesso elas falham sozinhas, e isso não é regressão sua.
 
 **Teste de aceite:** nenhuma das 4 telas tem mais campo de texto livre pra nome de
 pessoa; os testes headless existentes (`testar_participantes_headless.js`,
@@ -315,10 +329,10 @@ precisa saber sem reler tudo acima:
    - `tools/testar_matriz_headless.js` — 11 cenários da grade dinâmica.
 5. **Pendências não bloqueantes acumuladas:** UI de múltiplos papéis por pessoa em
    `editor.html` (Camada 1); item 2.5 (Camada 2); "Oficina confirmada"/"Não se aplica o
-   uso" fora do `CHECK` (Camada 3); e duas falhas antigas na suíte —
-   `testar_status_badges_headless.js` (`index.html`, 21 vs 25) e
-   `testar_drawer_headless.js` — que **já falhavam antes desta frente** e não são
-   regressão de nenhuma camada.
+   uso" fora do `CHECK` (Camada 3). **As duas falhas antigas da suíte
+   (`testar_status_badges_headless.js` e `testar_drawer_headless.js`) foram corrigidas em
+   22/08 (PR #10)** — a suíte do README está verde. Num ambiente sem rede de saída pro
+   Supabase, 2 asserções do drawer falham por isso e só por isso.
 6. **Toda migração SQL é rodada manualmente por José no SQL Editor do Supabase** —
    nenhuma automação tem acesso de escrita à produção. As sessões do Claude Code também
    **não conseguem LER** o Supabase de produção (rede bloqueada pra `supabase.co`): todo
