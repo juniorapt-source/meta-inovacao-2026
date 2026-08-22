@@ -20,12 +20,11 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 
 > **STATUS GERAL (atualizado 22/08/2026): Camadas 0 e 1 concluídas e verificadas em
 > produção; Camada 2 concluída com o item 2.5 em aberto (ver abaixo — não é bloqueio, é
-> escopo que ficou de fora sem registro); Camada 3 em andamento — 3.1, 3.2 e 3.4 já em
-> `main` e validados, faltam o 3.3 (tem um aviso a ler antes de começar) e o 3.5
-> (validação humana, em curso).** Camadas 4 e 5 ainda não iniciadas. Se você está
-> retomando este trabalho numa sessão nova: leia a seção "Status por camada" no fim
-> primeiro — ela lista o que já existe no banco e no repositório, pra não repetir
-> trabalho nem presumir algo que ainda não foi feito.
+> escopo que ficou de fora sem registro); Camada 3 quase concluída — 3.1, 3.2, 3.3 e 3.4
+> já em `main` e validados, falta só o 3.5 (validação humana, em curso).** Camadas 4 e 5
+> ainda não iniciadas. Se você está retomando este trabalho numa sessão nova: leia a
+> seção "Status por camada" no fim primeiro — ela lista o que já existe no banco e no
+> repositório, pra não repetir trabalho nem presumir algo que ainda não foi feito.
 
 **Como ler as tabelas:** camada já executada tem coluna **Status** (o que de fato
 aconteceu); camada ainda não executada mantém **Modelo/Esforço** (o planejamento
@@ -165,13 +164,13 @@ representante. Detalhes em `docs/CAMADA2_COBERTURA_FK.md`.
 
 ---
 
-## Camada 3 — Normalizar a matriz de demandas (maior risco do pacote) — ⏳ EM ANDAMENTO (3.1, 3.2 e 3.4 concluídos)
+## Camada 3 — Normalizar a matriz de demandas (maior risco do pacote) — ⏳ EM ANDAMENTO (3.1, 3.2, 3.3 e 3.4 concluídos)
 
 | # | Atividade | Arquivo(s) | Status |
 |---|---|---|---|
 | 3.1 | Migração SQL: `CREATE meta_inovacao_matriz_celulas` + migrar as 10 colunas fixas pra linhas (tabela antiga continua viva em paralelo) | `tools/sql/2026-08_matriz_celulas.sql` | ✅ rodada em produção — 32 células migradas, 32 = 32 conferido linha a linha, zero órfãs |
 | 3.2 | Reescrever `demandas.html`: grade dinâmica a partir de `meta_inovacao_canais` × `meta_inovacao_projetos`, ler/gravar em `matriz_celulas` | `demandas.html`, `js/matriz-store.js` | ✅ em `main` — schema real conferido 16/16 no diagnóstico, RLS e upsert testados contra o schema de produção, suíte verde |
-| 3.3 | Ajustar a aba "matriz" do `editor.html` (hoje é `snapshot:true`) | `editor.html` | ⏳ **não iniciado — LEIA O AVISO ABAIXO ANTES DE COMEÇAR** |
+| 3.3 | Ajustar a aba "matriz" do `editor.html` (hoje é `snapshot:true`) | `editor.html`, `js/matriz-store.js`, `demandas.html` | ✅ em `main` — a aba lê ao vivo (mesmas 3 fontes de `demandas.html`: `matrizStore` + `DB_PROJETOS` + `DB_CANAIS`), virou só leitura (a edição de verdade continua em `demandas.html`), e o botão exporta o snapshot do modelo ao vivo. Detalhe abaixo. |
 | 3.4 | Testes headless da nova grade | `tools/testar_matriz_headless.js` | ✅ veio junto no 3.2 — 11 cenários, verde |
 | 3.5 | **[humano]** Validar em produção por um tempo, comparando com a tabela antiga, antes de aposentá-la | — | ⏳ em andamento por José |
 
@@ -189,27 +188,40 @@ que a tabela antiga célula a célula (conferência automática, ver abaixo), e 
 canal novo em `meta_inovacao_canais` faz a coluna aparecer sem deploy nem `ALTER TABLE`
 (coberto por cenário do `tools/testar_matriz_headless.js`).
 
-### ⚠️ Antes de executar o 3.3 — a pegadinha do snapshot
+### Como o 3.3 ficou — histórico da pegadinha do snapshot
 
-A aba "matriz" do `editor.html` é `snapshot:true` e serve pra gerar `data/matriz.js`.
-Esse arquivo **não é decorativo**: é o *fallback offline* da `demandas.html`. Quando o
-Supabase não responde, é dele que a Matriz inteira é montada.
+Antes do 3.3, a aba "matriz" do `editor.html` era `snapshot:true` em cima de uma cópia de
+trabalho ESTÁTICA (`data/matriz.js` copiado pra `W.matriz`, editável ali e reexportado
+idêntico) — as colunas vinham de `data/canais.js` fixo, então um canal novo cadastrado em
+`meta_inovacao_canais` nunca aparecia nessa tela, e o `<select>` de cada célula oferecia
+9 estados (`ESTADOS_CEL`) quando o `CHECK` da tabela só aceita 7 — "oficina_confirmada" e
+"nao_aplica" nunca foram aceitos pelo banco, escolhê-los sempre falhou no salvar em
+silêncio.
 
-O formato é `{ iniciativa: { slug_do_canal: estado } }` — indexado por **slug de canal**,
-não por `canal_id`. A `demandas.html` continua exportando exatamente nesse formato (botão
-"Exportar matriz"), de propósito, mesmo agora que ela lê por id.
+O aviso original alertava que o formato de `data/matriz.js` — `{ iniciativa: { slug_do_
+canal: estado } }`, indexado por **slug de canal**, não por `canal_id` — é o *fallback
+offline* da `demandas.html`: se mudasse, quebrava o modo offline dela (grade vazia sem
+rede, sem ninguém perceber até o Supabase cair de verdade) e o
+`tools/testar_status_badges_headless.js` (270 badges vindos justamente desse arquivo).
 
-**Se o 3.3 mudar o formato do snapshot, quebra duas coisas de uma vez:**
+**O que o 3.3 fez, de fato:**
 
-1. o modo offline da `demandas.html` (a grade aparece vazia sem rede — e ninguém percebe
-   até o dia em que o Supabase cair);
-2. o `tools/testar_status_badges_headless.js`, que conta 270 badges (27 iniciativas × 10
-   canais) vindos justamente desse arquivo.
-
-Então: ou o 3.3 **mantém o formato** de `data/matriz.js` intacto, ou muda os três lugares
-juntos — snapshot, `seedLocal()` de `js/matriz-store.js` e `seedCelulas()` da
-`demandas.html`. Rodar `node tools/testar_matriz_headless.js` (cenário "offline") e
-`node tools/testar_status_badges_headless.js` fecha a conta nos dois casos.
+- A aba passou a ler AO VIVO, pelas mesmas 3 fontes de `demandas.html`: `matrizStore` +
+  `DB_PROJETOS` + `DB_CANAIS`. Canal novo cadastrado no catálogo aparece na tela sem
+  deploy, igual já acontecia em `demandas.html`.
+- A montagem da grade (`montarModelo`) e a tradução pro formato de `data/matriz.js`
+  (`paraSnapshot`) saíram de `demandas.html` e viraram funções de `js/matriz-store.js`,
+  chamadas dos DOIS lugares — o formato do snapshot não mudou nem 1 caractere, e agora os
+  dois exports batem chave a chave POR CONSTRUÇÃO (mesma função), não por promessa entre
+  dois arquivos.
+- A aba ficou **só leitura** (badges via `CC_STATUS.badge`, sem `<select>`) — a edição de
+  verdade continua só em `demandas.html`, que tem upsert e realtime de verdade. A lista
+  `ESTADOS_CEL` (9 valores, com os 2 que o banco nunca aceitou) foi removida; se um dia a
+  aba precisar voltar a ser editável, a fonte dos 7 valores válidos é `matrizStore.ESTADOS`.
+- Testado: `tools/testar_matriz_headless.js` e `tools/testar_status_badges_headless.js`
+  seguem verdes (o formato não mudou); e uma verificação ponta a ponta em headless real
+  (offline e com dado vivo mockado) confirmou que o snapshot exportado pela aba bate
+  byte a byte com o que `demandas.html` exporta, nos dois modos.
 
 ### Como está a validação do 3.5
 
@@ -233,6 +245,16 @@ uso" existem em `js/status.js`/`css/base.css` desde a v0.7.0 mas **nunca** estiv
 `CHECK` da tabela — escolher esses valores sempre falhou no salvar, em silêncio. O
 `<select>` agora oferece só os 7 que o banco aceita. Pra reabilitar: primeiro `ALTER` no
 `CHECK`, depois a lista `ESTADOS` de `js/matriz-store.js` — nessa ordem.
+
+**Ponta solta resolvida junto com o 3.3:** a aba "Histórico" do `editor.html` (auditoria)
+só filtrava por `meta_inovacao_matriz_demandas` — a tabela antiga, que congelou na virada
+do 3.2. As edições feitas depois disso na grade nova ficavam invisíveis nesse filtro. O
+trigger de auditoria pra tabela sucessora (`cc_audit_matriz_celulas`) já existia desde o
+item 3.1 (criado junto com a tabela em `tools/sql/2026-08_matriz_celulas.sql`, reusando
+`cc_audit()` de `tools/sql/2026-08_auditoria.sql`), então bastou acrescentar
+`meta_inovacao_matriz_celulas` como opção nova no filtro — a tabela antiga ficou como
+opção separada ("histórico anterior ao 3.2"), pro que já foi gravado nela não sumir da
+tela.
 
 ---
 
@@ -311,10 +333,11 @@ precisa saber sem reler tudo acima:
    José no SQL Editor. **Camada 2 idem, exceto o item 2.5**, que nunca foi executado
    (ver nota na Camada 2 — decisão pendente, não bloqueia). Todos os scripts SQL estão
    em `meta-monitor/tools/sql/2026-08_*.sql`. Não precisam rodar de novo.
-2. **Camada 3 está em andamento:** 3.1 (tabela + migração), 3.2 (grade dinâmica) e 3.4
-   (testes headless) estão em `main` e validados em produção. **O próximo passo é o
-   3.3** — e ele tem um aviso próprio, na seção da Camada 3, que precisa ser lido antes
-   de encostar no `editor.html`. Em paralelo corre o 3.5, que é validação humana.
+2. **Camada 3 está quase concluída:** 3.1 (tabela + migração), 3.2 (grade dinâmica), 3.3
+   (aba "matriz" do `editor.html` lendo ao vivo, só leitura, com snapshot gerado do
+   mesmo modelo de `demandas.html`) e 3.4 (testes headless) estão em `main` e validados.
+   **Falta só o 3.5**, que é validação humana em andamento por José — ver "Como está a
+   validação do 3.5" na seção da Camada 3.
 3. Documentos de apoio já existentes, não precisam ser refeitos:
    - `docs/CAMADA1_DEDUPE_PESSOAS.md` — decisões de identidade de pessoas.
    - `docs/CAMADA2_COBERTURA_FK.md` — cobertura real de cada FK da Camada 2.

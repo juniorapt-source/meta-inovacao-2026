@@ -108,14 +108,17 @@
     </div>
 
     <div id="aba-historico" style="display:none">
-      <p class="pagina-sub">Últimas 100 alterações nas 5 tabelas editáveis (plano, agenda, atividades por iniciativa, matriz de demandas, Caminho para o Corsário) — quem mudou o quê e quando.</p>
+      <p class="pagina-sub">Últimas 100 alterações nas tabelas editáveis (plano, agenda, atividades por iniciativa, matriz de demandas, Caminho para o Corsário) — quem mudou o quê e quando.</p>
       <div class="filtros">
         <select id="hist-tabela" aria-label="Filtrar por tabela">
           <option value="">Todas as tabelas</option>
           <option value="meta_inovacao_plano_acoes">Plano de ação</option>
           <option value="meta_inovacao_agenda_encontros">Agenda</option>
           <option value="plano_acao_atividades">Atividades por iniciativa</option>
-          <option value="meta_inovacao_matriz_demandas">Matriz de demandas</option>
+          <option value="meta_inovacao_matriz_celulas">Matriz de demandas</option>
+          <!-- item 3.3 — congelada na virada do 3.2 (não recebe mais escrita), mas o
+               histórico já gravado nela não pode sumir da tela: fica como opção à parte. -->
+          <option value="meta_inovacao_matriz_demandas">Matriz de demandas (histórico anterior ao 3.2)</option>
           <option value="corsario_status">O Caminho para o Corsário</option>
         </select>
         <select id="hist-autor" aria-label="Filtrar por autor"><option value="">Todos os autores</option></select>
@@ -135,8 +138,10 @@
 <script src="js/db-agenda.js"></script>
 <script src="js/db-pessoas.js"></script>
 <script src="js/db-projetos.js"></script>
+<script src="js/db-canais.js"></script>
 <script src="js/db-urc.js"></script>
 <script src="js/db-corsario.js"></script>
+<script src="js/matriz-store.js"></script>
 <script src="js/responsaveis.js"></script>
 <script src="js/editor_atual.js"></script>
 <script src="data/plano.js"></script>
@@ -166,7 +171,7 @@ montarShell("editor.html");
 // pra servir de fallback), não um flag de "ainda falta migrar".
 const CONJUNTOS = {
   plano:        { rotulo:"Plano de ação — status e prazos (editado ao vivo)", vivo:true },
-  matriz:       { rotulo:"Matriz de demandas — 27 iniciativas × 10 canais (edite em demandas.html)", snapshot:true, arquivo:"matriz.js" },
+  matriz:       { rotulo:"Matriz de demandas — iniciativas × canais, ao vivo (edite em demandas.html)", snapshot:true, arquivo:"matriz.js" },
   agenda:       { rotulo:"Agenda — encontros dos ciclos (editada ao vivo)", vivo:true },
   pessoas:      { rotulo:"Pessoas — representantes e papéis (editado ao vivo)", vivo:true },
   projetos:     { rotulo:"Projetos & Representantes — núcleos e portfólio UI (editado ao vivo)", vivo:true },
@@ -180,21 +185,14 @@ const STATUS_ACAO = ["Não iniciado","Em andamento","Concluído"];
 // 2.4): STATUS_ENC tinha os rótulos crus de antes da migração de meta_inovacao_agenda_
 // encontros pras chaves canônicas "encontro_*" (P10) — o <select> da Agenda mostrava a
 // própria chave interna cortada ("encontro_agen…") porque nem o valor bate mais com o
-// que está gravado, nem havia rótulo (dropdown sem 3º argumento em opts()). Já
-// ESTADOS_CEL/ROTULO_CEL da Matriz tinham o mesmo tipo de defasagem, só que dormente
-// (nenhuma célula usa "oficina_confirmada"/"nao_aplica" nos dados de hoje — mas se
-// usasse, vazava cru do mesmo jeito). Corrigido derivando os dois de window.CC_STATUS
-// (fonte única), não mais uma cópia própria que pode ficar pra trás de novo.
+// que está gravado, nem havia rótulo (dropdown sem 3º argumento em opts()). A Matriz
+// tinha o mesmo tipo de defasagem numa lista ESTADOS_CEL própria (9 valores, incluindo
+// "oficina_confirmada"/"nao_aplica" — que NUNCA estiveram no CHECK do banco, escolhê-
+// los sempre falhou em silêncio) — removida no item 3.3: a aba "matriz" ficou leitura
+// (CC_STATUS.badge, sem <select>) e a fonte pros 7 valores que o CHECK aceita, se um dia
+// precisar de novo, é matrizStore.ESTADOS (js/matriz-store.js), não uma cópia local.
 const STATUS_ENC  = Object.keys(CC_STATUS.ESTADOS).filter((k)=>CC_STATUS.ESTADOS[k].contexto==="encontro");
 const ROTULO_ENC  = Object.fromEntries(STATUS_ENC.map((k)=>[k, CC_STATUS.rotulo(k)]));
-const ESTADOS_CEL = ["", "previsto", "oficina_confirmada", "oficina", "formulario", "justificado", "nao_aplica", "priorizado", "encaminhado"]; // mesma lista de demandas.html (ORDEM)
-const ROTULO_CEL  = Object.fromEntries(ESTADOS_CEL.map((v)=>[v, CC_STATUS.rotulo(CC_STATUS.chaveDeEntrada("celula_matriz", v))]));
-
-/* cópia de trabalho isolada dos dados carregados — só sobra a matriz aqui ("Correções
-   v0.18.x": pessoas/projetos/urc_lideranca/urc_canais saem da cópia local + download,
-   plano/agenda já tinham saído no P10). Matriz é CRUD ao vivo em demandas.html; a cópia
-   aqui é só pra gerar o snapshot data/matriz.js (fallback), nunca pra editar de verdade. */
-const W = JSON.parse(JSON.stringify({ matriz:DB.matriz }));
 
 // item 3.4 do plano de melhorias — identificação de quem edita agora é o módulo
 // compartilhado window.EDITOR_ATUAL (js/editor_atual.js), com rodapé "Editando
@@ -213,6 +211,13 @@ let projetosAtual = null, projetosFallback = false, projetosCarregando = false;
 // editando só os canais.
 let urcAtual = null, urcFallback = false, urcCarregando = false;
 let corsarioAtual = null, corsarioFallback = false, corsarioCarregando = false;
+// item 3.3 do plano — matrizModelo é { colunas, linhas } de matrizStore.montarModelo(),
+// as MESMAS três fontes que demandas.html usa (matrizStore + DB_PROJETOS + DB_CANAIS).
+// A aba fica só leitura aqui (a edição de verdade continua em demandas.html); o botão
+// "Exportar cópia de segurança" gera data/matriz.js a partir deste modelo, via
+// matrizStore.paraSnapshot() — a mesma função que o botão "Exportar matriz" de
+// demandas.html usa, pra os dois exports baterem chave a chave por construção.
+let matrizModelo = null, matrizFallback = false, matrizCarregando = false;
 let formNovaIniciativaAberto = false;
 let formNovoProjetoAberto = false;
 
@@ -449,25 +454,55 @@ async function adicionarAtividade(){
   }
 }
 
-function renderMatriz(){
-  const canais = DB.canais.map(c=>c.id);
-  let h='<div class="aviso" style="margin-bottom:12px"><b>A Matriz de demandas é editada ao vivo na própria página</b> — edite em '+
-    '<a href="demandas.html">demandas.html</a> (Modo edição). O que você mexer aqui atualiza só a '+
-    'cópia de segurança usada como reserva.</div>';
+// item 3.3 do plano — a aba lia data/matriz.js estático (DB.matriz) e montava colunas
+// fixas a partir de DB.canais (também estático): canal novo cadastrado no catálogo não
+// aparecia aqui, o problema que a Camada 3 existe pra resolver sobrevivia nesta tela.
+// Agora lê ao vivo, com o mesmo modelo que demandas.html usa (matrizStore.montarModelo
+// sobre matrizStore + DB_PROJETOS + DB_CANAIS) — mesmo padrão de carregar-sob-demanda-e-
+// cachear de renderPlano/renderAgenda acima, só que sem edição: quem quiser mudar uma
+// célula vai pra demandas.html, que tem realtime e upsert de verdade; aqui é leitura +
+// gerar o snapshot de reserva (botão "Exportar cópia de segurança", mais abaixo).
+async function renderMatriz(){
+  if(!matrizModelo && !matrizCarregando){
+    matrizCarregando = true;
+    area.innerHTML = '<div class="ed-carregando">Carregando matriz…</div>';
+    try {
+      const [celulasRes, projRes, canaisRes] = await Promise.all([
+        matrizStore.carregar(), DB_PROJETOS.carregar(), DB_CANAIS.carregar()
+      ]);
+      matrizModelo = matrizStore.montarModelo(projRes.lista, canaisRes.lista, celulasRes.lista);
+      matrizFallback = !!(celulasRes.usandoFallback || projRes.usandoFallback || canaisRes.usandoFallback);
+    } catch(err){
+      console.error("editor: falha ao carregar a matriz", err);
+      matrizCarregando = false;
+      area.innerHTML = '<div class="ed-erro-carregar">Não foi possível carregar a matriz agora.</div>';
+      return;
+    }
+    matrizCarregando = false;
+  }
+  if(sel.value!=="matriz") return; // usuário trocou de conjunto enquanto isso carregava
+  if(!matrizModelo) return; // outra chamada concorrente ainda está carregando — ela renderiza quando terminar
+
+  const { linhas, colunas } = matrizModelo;
+  let h = '<div class="aviso" style="margin-bottom:12px"><b>A Matriz de demandas é editada ao vivo em '+
+    '<a href="demandas.html">demandas.html</a></b> — aqui é só leitura, pra conferência e pra gerar a '+
+    'cópia de segurança (botão abaixo).</div>';
+  if(matrizFallback) h += '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não foi '+
+    'possível atualizar os dados agora; isto é a última versão salva (data/matriz.js). Gerar a cópia de '+
+    'segurança agora reexportaria o mesmo arquivo que já está publicado.</div>';
   h+='<div class="ed-wrap"><table class="ed-tab ed-matriz"><thead><tr><th class="col-ini">Iniciativa</th>';
-  DB.canais.forEach(c=>h+='<th>'+esc(c.sigla||c.nome)+'</th>');
+  colunas.forEach(c=>h+='<th'+(c.nome_completo?' title="'+esc(c.nome_completo)+'"':'')+'>'+esc(c.nome)+'</th>');
   h+='</tr></thead><tbody>';
-  Object.keys(W.matriz).forEach(ini=>{
-    h+='<tr><td class="col-ini">'+esc(ini)+'</td>';
-    canais.forEach(cn=>{
-      h+='<td><select data-ini="'+esc(ini)+'" data-cn="'+cn+'">'+opts(ESTADOS_CEL,W.matriz[ini][cn]||"",ROTULO_CEL)+'</select></td>';
+  linhas.forEach(l=>{
+    h+='<tr><td class="col-ini">'+esc(l.iniciativa)+'</td>';
+    colunas.forEach(c=>{
+      const cel = l.celulas[c.chave];
+      const v = (cel && cel.estado) || "";
+      h+='<td>'+CC_STATUS.badge(CC_STATUS.chaveDeEntrada("celula_matriz", v))+'</td>';
     });
     h+='</tr>';
   });
   area.innerHTML=h+'</tbody></table></div>';
-  area.querySelectorAll("select").forEach(el=>el.addEventListener("change",e=>{
-    W.matriz[e.target.dataset.ini][e.target.dataset.cn]=e.target.value;
-  }));
 }
 
 // AGENDA guarda "local"+"modo" combinados num único campo texto (local_modo) e
@@ -1063,8 +1098,12 @@ render();
 btnBaixar.addEventListener("click", function(){
   const k = sel.value;
   if (CONJUNTOS[k].vivo) return; // conjuntos vivos não passam por aqui — botão fica escondido, isto é só rede de segurança
-  // só "matriz" chega aqui agora — snapshot/export, não fluxo de edição (ver PASSOS_SNAPSHOT acima)
-  const conteudo = IO.serializar(k, W[k]);
+  // só "matriz" chega aqui agora — snapshot/export, não fluxo de edição (ver PASSOS_SNAPSHOT acima).
+  // item 3.3: o objeto exportado vem do MESMO modelo ao vivo que a tabela mostrou
+  // (matrizModelo), traduzido pro formato de data/matriz.js por matrizStore.paraSnapshot
+  // — a mesma função que o botão "Exportar matriz" de demandas.html usa.
+  if (!matrizModelo) { window.alert("A matriz ainda está carregando — aguarde terminar e tente de novo."); return; }
+  const conteudo = IO.serializar(k, matrizStore.paraSnapshot(matrizModelo.linhas, matrizModelo.colunas));
   const nomeArquivo = CONJUNTOS[k].arquivo;
 
   saida.value = conteudo;
@@ -1093,16 +1132,24 @@ function alternarAba(aba){
 btnAbaDados.addEventListener("click", ()=>alternarAba("dados"));
 btnAbaHistorico.addEventListener("click", ()=>alternarAba("historico"));
 
+// item 3.3 — meta_inovacao_matriz_demandas congelou na virada do 3.2 (não recebe mais
+// escrita: js/matriz-store.js só LÊ dela, pra conferência com a tabela antiga). O
+// trigger de auditoria (cc_audit_matriz_celulas, criado junto com a tabela no item 3.1 —
+// tools/sql/2026-08_matriz_celulas.sql) já grava as edições novas na tabela sucessora,
+// meta_inovacao_matriz_celulas: as duas ficam no mapa, a antiga só pra não fazer o
+// histórico já gravado sumir da tela.
 const TABELAS_HISTORICO = {
   meta_inovacao_plano_acoes: "Plano de ação",
   meta_inovacao_agenda_encontros: "Agenda",
   plano_acao_atividades: "Atividades por iniciativa",
-  meta_inovacao_matriz_demandas: "Matriz de demandas",
+  meta_inovacao_matriz_celulas: "Matriz de demandas",
+  meta_inovacao_matriz_demandas: "Matriz de demandas (histórico anterior ao 3.2)",
   corsario_status: "O Caminho para o Corsário",
 };
 // contexto de js/status.js (CC_STATUS) pro campo "status" de cada tabela — a matriz não
-// tem uma coluna "status" única, tem uma por canal (id do canal), então ela é tratada à
-// parte em valorParaExibicao() abaixo, traduzindo TODO campo que não seja id/iniciativa.
+// tem uma coluna "status" única (tinha uma por canal na tabela antiga; a nova tem uma
+// só, "estado"), então as duas são tratadas à parte em valorParaExibicao() abaixo,
+// traduzindo TODO campo que não seja id/iniciativa (antiga) ou o campo "estado" (nova).
 const CONTEXTO_STATUS_POR_TABELA = {
   meta_inovacao_plano_acoes: "acao",
   meta_inovacao_agenda_encontros: "encontro",
@@ -1118,6 +1165,9 @@ function valorParaExibicaoHistorico(tabela, campo, valor){
   if(typeof valor === "boolean") return valor ? "sim" : "não";
   if(window.CC_STATUS){
     if(tabela === "meta_inovacao_matriz_demandas" && campo !== "id" && campo !== "iniciativa"){
+      return CC_STATUS.rotulo(CC_STATUS.chaveDeEntrada("celula_matriz", valor));
+    }
+    if(tabela === "meta_inovacao_matriz_celulas" && campo === "estado"){
       return CC_STATUS.rotulo(CC_STATUS.chaveDeEntrada("celula_matriz", valor));
     }
     if(campo === "status" && CONTEXTO_STATUS_POR_TABELA[tabela]){
