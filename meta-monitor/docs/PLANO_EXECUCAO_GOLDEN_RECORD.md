@@ -168,7 +168,19 @@ esconder" do golden record de projetos).
 > sem realtime, e é a checagem 16 do diagnóstico que denuncia.
 >
 > **Aberto:** a aba "matriz" do `editor.html` continua no snapshot antigo — é o item 3.3,
-> de propósito. Depois dele, 3.4 e a validação humana do 3.5.
+> de propósito. Depois dele, a validação humana do 3.5.
+>
+> **AVISO PRA QUEM FOR FAZER O 3.3.** Aquela aba gera `data/matriz.js`, que **é o fallback
+> offline da `demandas.html`** — quando o Supabase não responde, a Matriz inteira é montada
+> a partir dele. O formato é `{ iniciativa: { slug_do_canal: estado } }`, indexado por
+> **slug**, não por `canal_id`, e a `demandas.html` continua exportando exatamente assim
+> (botão "Exportar matriz") de propósito, mesmo lendo por id agora. Mudar o formato do
+> snapshot quebra (a) o modo offline da Matriz — que só aparece no dia em que o Supabase
+> cair — e (b) o `tools/testar_status_badges_headless.js`, que conta 270 badges (27 × 10)
+> vindos desse arquivo. Ou o 3.3 mantém o formato, ou muda os três lugares juntos: o
+> snapshot, `seedLocal()` em `js/matriz-store.js` e `seedCelulas()` em `demandas.html`.
+> `node tools/testar_matriz_headless.js` (cenário offline) + `node
+> tools/testar_status_badges_headless.js` fecham a conta.
 
 | # | Atividade | Arquivo(s) | Modelo | Esforço |
 |---|---|---|---|---|
