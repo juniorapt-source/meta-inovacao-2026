@@ -7,8 +7,16 @@
  *
  * NÃO confundir com window.DB.responsaveis (lista canônica do P4, usada por
  * plano-acao.html/minhas-acoes.html) — são dados diferentes, este módulo só cobre
- * window.DB.pessoas (nome/papel/grupo/nucleo/pendente, editado em editor.html e exibido
- * em participantes.html).
+ * window.DB.pessoas (nome/papel/grupo/nucleo/pendente + nome_completo/nome_exibicao/
+ * email/ativo, golden record de pessoas — Camada 1, tools/sql/2026-08_pessoas_golden.sql
+ * — editado em editor.html e exibido em participantes.html).
+ *
+ * nome/papel/grupo/nucleo/pendente/ordem são os campos ORIGINAIS (P·Correções v0.18.x) —
+ * continuam existindo e sendo lidos por participantes.html sem mudança nenhuma.
+ * nome_completo/nome_exibicao/email/ativo são as colunas novas da Camada 1: identidade
+ * única por pessoa física, preenchida a partir do dedupe confirmado (ver
+ * meta-monitor/docs/CAMADA1_DEDUPE_PESSOAS.md) — convivem com as antigas até a Camada 5
+ * decidir aposentar o texto livre duplicado por grupo.
  */
 (function (root) {
   "use strict";
@@ -23,6 +31,10 @@
       nucleo: r.nucleo || null,
       pendente: !!r.pendente,
       ordem: r.ordem,
+      nome_completo: r.nome_completo || null,
+      nome_exibicao: r.nome_exibicao || null,
+      email: r.email || null,
+      ativo: r.ativo == null ? true : !!r.ativo,
       db_id: r.id,
     };
   }
@@ -35,6 +47,10 @@
       nucleo: p.nucleo || null,
       pendente: !!p.pendente,
       ordem: p.ordem,
+      nome_completo: p.nome_completo || null,
+      nome_exibicao: p.nome_exibicao || null,
+      email: p.email || null,
+      ativo: p.ativo == null ? true : !!p.ativo,
     };
   }
 

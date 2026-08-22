@@ -159,7 +159,11 @@ async function principal() {
     // fonte de verdade: os mesmos seeds locais (data/pessoas.js/data/urc.js) que o
     // fallback usa — em modo de teste é exatamente isso que a página está mostrando.
     const esperado = JSON.parse(await evaluate(`JSON.stringify((function(){
-      const grupos = [...new Set(window.DB.pessoas.map(p => p.grupo))];
+      // mesmo filtro de participantes.html: a Camada 1 do golden record de pessoas
+      // acrescentou grupos "Projetos"/"URC" a window.DB.pessoas que não ganham card
+      // próprio nesta página (ver comentário em participantes.html).
+      const GRUPOS_NESTA_PAGINA = new Set(["UI", "Comitê", "Núcleos"]);
+      const grupos = [...new Set(window.DB.pessoas.map(p => p.grupo))].filter(g => GRUPOS_NESTA_PAGINA.has(g));
       return {
         totalCards: grupos.length + 1, // +1 = card fixo da URC
         pendentes: window.DB.pessoas.filter(p => p.pendente).length,
