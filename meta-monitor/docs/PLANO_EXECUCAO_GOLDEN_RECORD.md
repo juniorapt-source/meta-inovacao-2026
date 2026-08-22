@@ -110,9 +110,22 @@ esconder" do golden record de projetos).
 
 ## Camada 3 — Normalizar a matriz de demandas (maior risco do pacote)
 
+> **Item 3.1: concluído e validado em produção (22/08/2026).**
+> `tools/sql/2026-08_matriz_celulas.sql` rodado no SQL Editor — `meta_inovacao_matriz_celulas`
+> criada, RLS no padrão de token vigente (`PADRAO_TABELA.md`), 32 células migradas das
+> 10 colunas físicas de `meta_inovacao_matriz_demandas` (que continua intacta e viva em
+> paralelo, ainda a fonte de `demandas.html` até o item 3.2 cortar a edição pra cá).
+> Conferido linha a linha com José: total de células migradas bate com o total de
+> células preenchidas na tabela antiga (32 = 32); checagem de iniciativa órfã (célula
+> preenchida sem projeto correspondente no golden record) veio vazia — nenhum dado
+> perdido na migração; único ponto informativo é "Startup Summit" (projeto criado
+> depois do último snapshot da matriz, nasce sem histórico, não é erro).
+> **Itens 3.2–3.5 seguem não iniciados** — próximo passo é o 3.2 (reescrita de
+> `demandas.html`, Opus/xhigh).
+
 | # | Atividade | Arquivo(s) | Modelo | Esforço |
 |---|---|---|---|---|
-| 3.1 | Migração SQL: `CREATE meta_inovacao_matriz_celulas` + migrar as 10 colunas fixas pra linhas (tabela antiga continua viva em paralelo) | sql | Sonnet | alto |
+| 3.1 | Migração SQL: `CREATE meta_inovacao_matriz_celulas` + migrar as 10 colunas fixas pra linhas (tabela antiga continua viva em paralelo) | `tools/sql/2026-08_matriz_celulas.sql` | Sonnet | alto — ✅ concluído |
 | 3.2 | Reescrever `demandas.html`: grade dinâmica a partir de `meta_inovacao_canais` × `meta_inovacao_projetos`, ler/gravar em `matriz_celulas` | `demandas.html` | **Opus** | **xhigh** |
 | 3.3 | Ajustar a aba "matriz" do `editor.html` (hoje é `snapshot:true`) | `editor.html` | Sonnet | baixo |
 | 3.4 | Testes headless da nova grade (novo `tools/testar_matriz_headless.js`, mesmo padrão de `tools/testar_dashboard_headless.js`) | tools | Sonnet | médio |
