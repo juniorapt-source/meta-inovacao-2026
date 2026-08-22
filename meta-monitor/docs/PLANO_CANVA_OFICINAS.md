@@ -98,7 +98,7 @@ Isso separa duas coisas que hoje se confundem: **status da relação** (`previst
 | Canal | whitelist fechada, validação dura | são fixos, e a matriz depende deles pra casar a célula |
 | Projeto | dropdown do golden record **+ escape "meu projeto não está na lista"** | projeto novo nasce a qualquer momento. Não pode ser barrado na porta |
 | Layout | mini-matriz do gestor, não formulário chapado | espelha `demandas.html`, que ele vai ver projetada na oficina |
-| Menu | `canva.html` **fora** do menu lateral | é página de destino de QR, não de navegação. A consolidação é que entra no menu |
+| Menu | `canva.html` **entra** no menu, no grupo Oficinas, mas **sem shell** na própria página | revisto em 22/08/2026. A decisão original era deixá-la fora ("destino de QR, não de navegação"), e o motivo continua valendo pra quem chega pela câmera: a página em si segue sem menu lateral, pra não distrair na sala. O que mudou é que a equipe também precisa abrir o canvas sem ter um QR na frente — testar, preencher no lugar de quem não conseguiu, mostrar pra alguém. O grupo Oficinas junta as três peças da mesma cena: apresentação, QR e canvas |
 
 ---
 
@@ -579,6 +579,9 @@ um canal novo nascer algum dia, é preciso bater nos cinco.
 
 ## 13. O que fica de fora, de propósito
 
+- **Menu lateral dentro do `canva.html`.** A página tem link no menu (grupo Oficinas, §4), mas
+  ela própria continua sem `montarShell()`: quem entrou pelo QR está numa oficina, não navegando
+  no painel. Consequência aceita: quem clica no menu e cai lá volta pelo botão do navegador
 - **Login pros gestores.** Decisão consciente. Fricção de cadastro mata preenchimento em oficina
 - **Senha, conta, e-mail e chave, em qualquer tela.** Regra do projeto, §6.6. Nenhuma tela pede
   credencial — nem a consolidação. Um pedido futuro de "coloca um login aqui" se responde com os

@@ -26,6 +26,14 @@ OBRIG = {
     # canva-consolidado.html (item 4 do plano do canvas das oficinas) ENTRA no menu — ao
     # contrário de canva.html, que dispensa isso de propósito (§12 item 4 do plano).
     "canva-consolidado.html": ["cvc-contadores", "cvc-fila-novos", "cvc-filtros", "cvc-estado", "cvc-lista"],
+    # As duas abaixo entraram em 22/08/2026, quando ganharam item de menu (grupo Oficinas).
+    # Nas duas o que mais importa aqui não são os ids: é a checagem de referência quebrada,
+    # porque ambas apontam pros qrcodes/<canal>.png. Um arquivo renomeado ou um canal novo
+    # sem PNG só apareceria na sala, projetado.
+    "qrcodes.html": ["qr-grade"],
+    # (só ids do HTML estático: "legenda" e as mandalas nascem dentro de template string
+    # montada em JS, e o parser desta checagem não enxerga o que ainda não foi executado)
+    "apresentacao_canais.html": ["palco", "mini", "contador"],
 }
 
 class P(HTMLParser):
@@ -79,4 +87,4 @@ def _checar_inline(paginas):
 
 if __name__ == "__main__":
     import sys as _sys
-    _checar_inline(_sys.argv[1:] or ["index.html","plano.html","minhas-acoes.html","caminho.html","agenda.html","demandas.html","participantes.html","projetos.html","plano-acao.html","corsario.html","editor.html","canva.html","canva-consolidado.html"])
+    _checar_inline(_sys.argv[1:] or ["index.html","plano.html","minhas-acoes.html","caminho.html","agenda.html","demandas.html","participantes.html","projetos.html","plano-acao.html","corsario.html","editor.html","canva.html","canva-consolidado.html","qrcodes.html","apresentacao_canais.html"])

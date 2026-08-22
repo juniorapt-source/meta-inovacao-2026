@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>QR das oficinas · Carta de Corso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<style>
+.qr-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:18px}
+.qr-cartao{border:1px solid var(--linha);background:var(--branco);padding:14px;display:flex;flex-direction:column}
+.qr-cartao h2{font:600 15px var(--font-sans);color:var(--tinta);margin:0 0 2px}
+.qr-cartao .qr-completo{font-size:12px;color:var(--grafite);margin:0 0 10px;min-height:2.4em;line-height:1.2}
+.qr-cartao img{width:100%;height:auto;display:block;border:1px solid var(--border-soft);background:#fff}
+.qr-cartao .qr-url{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--grafite);
+  word-break:break-all;margin:10px 0 12px;line-height:1.45}
+.qr-cartao .qr-acoes{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
+.qr-cartao .qr-acoes .btn,.qr-cartao .qr-acoes .btn.sec{padding:6px 11px;font-size:11px}
+/* impressão: um cartão por vez, grande, sem menu — pra quem preferir imprimir esta página
+   em vez de abrir os PNG um a um */
+@media print{
+  .nav,.mob-header,.mob-backdrop,.pagina-sub,.aviso,.qr-acoes{display:none!important}
+  .qr-grade{grid-template-columns:1fr 1fr;gap:24px}
+  .qr-cartao{break-inside:avoid;border-color:#999}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">QR das oficinas</h1>
+    <p class="pagina-sub">Um QR por canal. Cada um abre o canvas de demandas já com aquele canal
+      destacado — é a porta de entrada do gestor na sala, sem login e sem digitar nada.</p>
+
+    <p class="aviso">Os oito canais da URC já têm este QR no último slide do canal, dentro da
+      <a href="apresentacao_canais.html">Apresentação dos canais</a>. Os outros dois — Sebrae na
+      sua empresa e Contabilizações e instrumentos — não aparecem naquela apresentação: para eles,
+      baixe o PNG aqui e cole no material que a oficina usar.</p>
+
+    <div class="qr-grade" id="qr-grade"></div>
+
+    <p style="color:var(--grafite);font-size:12.5px;margin-top:16px">
+      Os arquivos vivem em <code>qrcodes/&lt;canal&gt;.png</code> e são gerados por
+      <code>tools/gerar_qrcodes_canais.js</code>. Se a URL do site mudar, é preciso regerar:
+      o QR é impresso e não se corrige depois.</p>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="js/config.js"></script>
+<script src="js/gate.js"></script>
+<script src="data/canais.js"></script>
+<script src="js/core.js"></script>
+<script>
+(function () {
+  "use strict";
+  montarShell("qrcodes.html");
+
+  const CANAIS = (window.DB && DB.canais) || [];
+
+  // Mesma URL de tools/gerar_qrcodes_canais.js (BASE_URL) e do slide de QR em
+  // apresentacao_canais.html. Se este texto divergir do que está DENTRO do PNG, a página
+  // passa a mentir: o que o gestor lê embaixo da imagem não é o que a câmera abre.
+  const urlCanva = (id) => "https://www.cartacorso.com.br/canva.html?canal=" + id;
+
+  document.getElementById("qr-grade").innerHTML = CANAIS.map((c) =>
+    '<div class="qr-cartao">' +
+      "<h2>" + esc(c.nome) + "</h2>" +
+      '<p class="qr-completo">' + esc(c.completo || "") + "</p>" +
+      '<img src="qrcodes/' + esc(c.id) + '.png" alt="QR code do canal ' + esc(c.nome) +
+        ": " + esc(urlCanva(c.id)) + '" loading="lazy">' +
+      '<p class="qr-url">' + esc(urlCanva(c.id)) + "</p>" +
+      '<span class="qr-acoes">' +
+        '<a class="btn sec" href="canva.html?canal=' + esc(c.id) + '">abrir o canvas</a>' +
+        '<a class="btn sec" href="qrcodes/' + esc(c.id) + '.png" download>baixar o PNG</a>' +
+      "</span>" +
+    "</div>").join("");
+})();
+</script>
+</body>
+</html>

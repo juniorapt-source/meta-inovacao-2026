@@ -18,6 +18,22 @@
       ["canva-consolidado.html", "Consolidação do canvas"],
       ["plano-acao.html", "Atividades por iniciativa"],
     ] },
+    // Grupo criado em 22/08/2026, a pedido do José. As três páginas existiam e eram
+    // alcançáveis só por URL direta — o QR levava à primeira, e as outras duas ninguém
+    // achava sem saber o endereço.
+    //
+    // canva.html no menu CONTRARIA a decisão original do §4 do plano do canvas
+    // ("fora do menu lateral: é página de destino de QR, não de navegação"). A decisão
+    // foi revista: o motivo de mantê-la fora era não distrair quem chega pelo QR na
+    // sala, e isso continua valendo pra ELE — mas a equipe também precisa abrir o canvas
+    // sem ter um QR na frente (testar, preencher no lugar de quem não conseguiu, mostrar
+    // pra alguém). O §4 e o §13 do plano foram atualizados junto, pra documento e site
+    // não passarem a dizer coisas diferentes.
+    { titulo: "Oficinas", paginas: [
+      ["apresentacao_canais.html", "Apresentação dos canais"],
+      ["qrcodes.html", "QR das oficinas"],
+      ["canva.html", "Preencher canvas"],
+    ] },
     { titulo: "Pessoas", paginas: [
       ["participantes.html", "Participantes"],
       ["projetos.html", "Projetos"],
