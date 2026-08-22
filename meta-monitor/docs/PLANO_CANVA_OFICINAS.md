@@ -4,7 +4,8 @@
 21/08/2026, `tools/sql/2026-08_canva_leitura_aberta.sql`); `js/db-canva.js`, `canva.html`,
 `js/db-canva-consolidado.js` e `canva-consolidado.html` no site. Item 7 (QR codes por canal)
 também pronto, fora de ordem — não depende dos itens 5/6. Itens 5 (promoção pra
-`meta_inovacao_matriz_demandas`) e 6 (exportadores `.docx`) seguem pendentes.
+`meta_inovacao_matriz_demandas`) e 6 (exportadores `.docx`) seguem pendentes — detalhamento e
+checklist dos dois em `docs/PLANO_CANVA_OFICINAS_parte2.md`.
 **Versão:** v8, 21/08/2026
 (v1 tratava o canal como eixo principal, corrigido na v2, ver §2. v3 acertou a leitura para o mundo
 pós-v0.30.0, ver §6.5. v4 travou a regra de que este site não tem senha, ver §6.6. v5 corrigiu duas
