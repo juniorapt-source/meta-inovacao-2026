@@ -113,7 +113,29 @@ node tools/testar_drawer_headless.js   # drawer de Iniciativa/Pessoa: #iniciativ
                                         # e #pessoa=sandra renderizam os blocos esperados,
                                         # fechar (X/Esc/clique fora) limpa o hash, nomes
                                         # clicáveis abrem o painel certo
+node tools/testar_matriz_headless.js   # grade dinâmica da Matriz (Camada 3 do golden
+                                        # record): colunas saem de meta_inovacao_canais na
+                                        # ordem do catálogo, canal novo vira coluna sem
+                                        # deploy, gravação é upsert no par (projeto, canal),
+                                        # órfãos continuam visíveis e o offline segue
+                                        # somente-leitura. Substitui o Supabase por um dublê
+                                        # injetado no navegador — não fala com a rede
+node tools/testar_catalogos_base.js    # Camada 0: seeds (5/10/5) e os 3 wrappers db-*.js
 ```
+
+Dois relatórios leem **produção** (só leitura, anon key de `js/config.js`) — não entram na
+suíte acima porque dependem de rede e do estado real do banco:
+
+```bash
+node tools/relatorio_cobertura_fk.js      # Camada 2: quanto de FK ficou NULL, por tabela
+node tools/conferir_matriz_celulas.js     # Camada 3: matriz nova × matriz antiga, célula a
+                                          # célula (--check sai 1 se houver divergência)
+```
+
+E um diagnóstico em SQL puro, pra rodar no SQL Editor do Supabase quando a dúvida for
+sobre o BANCO e não sobre o site — `tools/sql/2026-08_matriz_celulas_diagnostico.sql`:
+17 checagens de schema/RLS/publicação `supabase_realtime` de `meta_inovacao_matriz_celulas`,
+cada uma com veredito `OK`/`DIVERGE`/`ATENÇÃO` e o que fazer em cada caso. Só leitura.
 
 Os testes headless que tocam páginas que leem Plano/Agenda (`index.html`, `plano.html`,
 `caminho.html`, `minhas-acoes.html`, `agenda.html`) não dependem de rede: cada sessão CDP

@@ -114,21 +114,68 @@ esconder" do golden record de projetos).
 > `tools/sql/2026-08_matriz_celulas.sql` rodado no SQL Editor — `meta_inovacao_matriz_celulas`
 > criada, RLS no padrão de token vigente (`PADRAO_TABELA.md`), 32 células migradas das
 > 10 colunas físicas de `meta_inovacao_matriz_demandas` (que continua intacta e viva em
-> paralelo, ainda a fonte de `demandas.html` até o item 3.2 cortar a edição pra cá).
-> Conferido linha a linha com José: total de células migradas bate com o total de
-> células preenchidas na tabela antiga (32 = 32); checagem de iniciativa órfã (célula
+> paralelo). Conferido linha a linha com José: total de células migradas bate com o total
+> de células preenchidas na tabela antiga (32 = 32); checagem de iniciativa órfã (célula
 > preenchida sem projeto correspondente no golden record) veio vazia — nenhum dado
 > perdido na migração; único ponto informativo é "Startup Summit" (projeto criado
 > depois do último snapshot da matriz, nasce sem histórico, não é erro).
-> **Itens 3.2–3.5 seguem não iniciados** — próximo passo é o 3.2 (reescrita de
-> `demandas.html`, Opus/xhigh).
+>
+> **Item 3.2: em produção (22/08/2026).** `demandas.html` monta a grade em runtime:
+> linhas = `meta_inovacao_projetos`, colunas = `meta_inovacao_canais` na ordem de
+> `ordem`, células = `meta_inovacao_matriz_celulas` (`js/matriz-store.js` reescrito).
+> Célula ausente = célula vazia; a escrita é um **upsert no par `(projeto_id, canal_id)`**
+> — não um update por id de linha — pra duas pessoas na mesma célula ao mesmo tempo não
+> virarem `23505`. O upsert casa pela LISTA DE COLUNAS, não pelo nome da constraint, então
+> não depende de a UNIQUE se chamar `cc_matriz_celulas_projeto_canal_unico`.
+>
+> **O teste de aceite virou parte da tela.** `demandas.html` lê também a tabela ANTIGA
+> (só leitura) e mostra um painel "Conferência com a tabela antiga" com a comparação
+> célula a célula, aberto durante toda a janela do item 3.5. Fora do navegador, o mesmo
+> retrato sai em `node tools/conferir_matriz_celulas.js` (lê produção, não escreve nada).
+>
+> **A tabela antiga congela na virada.** Não há escrita dupla: `meta_inovacao_matriz_demandas`
+> fica exatamente como a migração do 3.1 a deixou, servindo de rede de rollback e de base
+> de comparação. Consequência a ter em mente no 3.5: toda edição feita na grade nova depois
+> da virada aparece como divergência no painel — isso é o esperado; divergência que
+> ninguém reconhece como edição própria é que é sinal de erro de migração. Se em algum
+> momento fizer mais sentido manter as duas tabelas vivas de verdade (escrita dupla), é
+> uma decisão nova, não algo que o 3.2 tenha deixado pela metade.
+>
+> **Diagnóstico de banco:** `tools/sql/2026-08_matriz_celulas_diagnostico.sql` (só leitura)
+> responde "o schema em produção bate com o arquivo?" e "a tabela está na publicação
+> `supabase_realtime`?" em 17 checagens com veredito `OK`/`DIVERGE`/`ATENÇÃO`, mais a
+> conferência célula a célula com `updated_at`/`updated_by` de cada divergência. Nasceu
+> porque o 3.2 foi feito numa branch que ainda não tinha o `2026-08_matriz_celulas.sql`
+> do 3.1 mergeado em `main` — sem enxergar produção, a única saída honesta era dar um
+> jeito de PERGUNTAR ao banco em vez de supor. Continua útil depois disso: é o que se roda
+> quando a dúvida é sobre o estado do banco, não sobre o código. Foi exercitado num
+> Postgres 16 local em três estados — schema íntegro, schema quebrado de propósito em 7
+> pontos (os 7 acusados, nenhum falso positivo) e tabela inexistente (não explode).
+>
+> **Correção de rota achada no caminho:** o `<select>` da Matriz oferecia 9 estados, mas o
+> `CHECK` da tabela (antiga e nova) só aceita 7 — escolher "Oficina confirmada" ou "Não se
+> aplica o uso" sempre falhou no salvar, em silêncio, desde a v0.7.0 (confirmado contra o
+> Postgres local: `violates check constraint`). O `<select>` agora oferece só os 7 que o
+> banco aceita. Pra reabilitar os outros dois, entram primeiro no `CHECK`, depois na lista
+> de `js/matriz-store.js` — nessa ordem. `js/status.js` e `css/base.css` mantêm os 9, que
+> continuam servindo pra EXIBIR um valor herdado, se algum dia existir.
+>
+> **Realtime: resolvido em produção (22/08/2026)** — José rodou
+> `ALTER PUBLICATION supabase_realtime ADD TABLE public.meta_inovacao_matriz_celulas`.
+> A grade se atualiza sozinha quando outra pessoa edita ("atualizado por … agora").
+> Atenção pra quem recriar o ambiente do zero: esse `ALTER` **não** está em
+> `2026-08_matriz_celulas.sql` — é passo manual. Um banco recriado só pela migração nasce
+> sem realtime, e é a checagem 16 do diagnóstico que denuncia.
+>
+> **Aberto:** a aba "matriz" do `editor.html` continua no snapshot antigo — é o item 3.3,
+> de propósito. Depois dele, 3.4 e a validação humana do 3.5.
 
 | # | Atividade | Arquivo(s) | Modelo | Esforço |
 |---|---|---|---|---|
 | 3.1 | Migração SQL: `CREATE meta_inovacao_matriz_celulas` + migrar as 10 colunas fixas pra linhas (tabela antiga continua viva em paralelo) | `tools/sql/2026-08_matriz_celulas.sql` | Sonnet | alto — ✅ concluído |
 | 3.2 | Reescrever `demandas.html`: grade dinâmica a partir de `meta_inovacao_canais` × `meta_inovacao_projetos`, ler/gravar em `matriz_celulas` | `demandas.html` | **Opus** | **xhigh** |
 | 3.3 | Ajustar a aba "matriz" do `editor.html` (hoje é `snapshot:true`) | `editor.html` | Sonnet | baixo |
-| 3.4 | Testes headless da nova grade (novo `tools/testar_matriz_headless.js`, mesmo padrão de `tools/testar_dashboard_headless.js`) | tools | Sonnet | médio |
+| 3.4 | Testes headless da nova grade — `tools/testar_matriz_headless.js` **já existe e está verde** (adiantado no 3.2, 11 cenários); sobra aqui o que o 3.3 mexer no `editor.html` | tools | Sonnet | baixo |
 | 3.5 | **[humano]** Validar em produção por um tempo, comparando com a tabela antiga, antes de aposentá-la | — | José | — |
 
 **Teste de aceite:** grade nova mostra os mesmos estados que a tabela antiga, célula a
