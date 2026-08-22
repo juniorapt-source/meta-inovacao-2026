@@ -1,9 +1,10 @@
 # Camada 1, item 1.1 — Levantamento de dedupe das pessoas físicas
 
-> Status: **relatório para confirmação humana (item 1.2)** — nenhuma tabela foi
-> alterada, nenhum SQL foi rodado. Este documento só cruza os dados que já existem
-> hoje e propõe uma lista única; José confirma/corrige antes de a Camada 1 seguir
-> pro `ALTER`/`CREATE` (item 1.3).
+> Status: **4 de 6 pendências do item 1.2 já confirmadas por José (22/08/2026)** —
+> ver §3.1/§3.2/§3.4/§3.5-Pova, todas marcadas ✅ RESOLVIDO. Faltam só os 15 nomes
+> completos de §3.3 e a decisão sobre "Gerência UI" (§3.5) pra fechar o item 1.2
+> por inteiro e a Camada 1 seguir pro `ALTER`/`CREATE` (item 1.3). Nenhuma tabela
+> foi alterada, nenhum SQL foi rodado ainda.
 
 ## Fonte dos dados e uma limitação a registrar
 
@@ -46,59 +47,56 @@ distintas), 34 instâncias em `representantes` (13 pessoas sem linha própria +
 
 ---
 
-## 1) Lista consolidada — pessoas com identidade única resolvida (36)
+## 1) Lista consolidada — pessoas com identidade única resolvida (37)
 
 (Inclui as que ainda precisam de sobrenome/confirmação — sinalizadas na coluna
 "Observação" e detalhadas em §3; "sem ambiguidade" aqui significa só que o
-casamento entre fontes é 1:1, não que o cadastro já está completo.)
+casamento entre fontes é 1:1, não que o cadastro já está completo. Números após
+as fusões confirmadas em 22/08 — ver §3.1/§3.2.)
 
 Nome canônico proposto (`nome_completo`), de onde vem, e em que fontes aparece.
 
 | # | Nome completo proposto | Fontes | Observação |
 |---|---|---|---|
-| 1 | JR. (José Júnior) | pessoas (UI) · representantes (`"Jr."`, ALI Rural, via alias `jr`) | nome de exibição sugerido: "JR." |
-| 2 | Anny | pessoas (UI) | só primeiro nome em toda a base — ver §3 se há sobrenome |
-| 3 | Gabriel Gil Barreto Barros | pessoas (Comitê + Núcleos, já duplicado lá) · representantes (`"Gabriel"`, Inova Biomas, via alias) | dedupe interno de `meta_inovacao_pessoas` (2 linhas → 1 pessoa) |
-| 4 | Hulda Oliveira Giesbrecht | pessoas (Comitê + Núcleos) · representantes (`"Hulda"` ×3, via alias) | dedupe interno + 3 projetos |
-| 5 | Lara Chicuta Franco | pessoas (Comitê + Núcleos) | dedupe interno |
-| 6 | Marcus Vinicius Lopes Bezerra | pessoas (Comitê + Núcleos) | dedupe interno |
-| 7 | Matheus Lopes de Queiroz Campos | pessoas (Comitê + Núcleos) · representantes (`"Matheus"` ×2, via alias) | dedupe interno + 2 projetos |
-| 8 | Paulo Puppin Zandonadi | pessoas (Comitê + Núcleos) | dedupe interno |
-| 9 | José Mendes de Oliveira Júnior | pessoas (Núcleos, só 1 linha) | **não** confundir com #1 (ver §3, caso já resolvido por alias mas vale confirmar) |
-| 10 | Enio | urc_lideranca | só primeiro nome — ver §3 |
-| 11 | Milva | urc_lideranca | só primeiro nome — ver §3 |
-| 12 | Iuri Barbosa de Andrade | urc_lideranca | tem e-mail (`iuri.andrade@sebrae.com.br`) |
-| 13 | Cendie Carvalho Da Costa Barbieri | urc_canais (CNR) | tem e-mail |
-| 14 | André Luís M. Chanpan dos Santos | urc_canais (CNR) | tem e-mail |
-| 15 | Filipe Medeiros Ferreira | urc_canais (CNR) | tem e-mail — ver §3 (proximidade com #33 "Felipe") |
-| 16 | Rafael Rodrigues de Lima | urc_canais (Portal) | tem e-mail |
-| 17 | Thaíza Soares Cardoso Lima Kopp | urc_canais (Portal) | tem e-mail |
-| 18 | Michelle Carsten Santos | urc_canais (Portal) | tem e-mail |
-| 19 | Marcos Paulo de Sousa Santos Soares | urc_canais (Portal) | tem e-mail |
-| 20 | Sabrina Mendes Gonçalves | urc_canais (Portal) | tem e-mail |
-| 21 | Leandro Pereira de Jesus | urc_canais (Loja) | tem e-mail |
-| 22 | Cláudia Schirmbeck Peixoto | urc_canais (Loja) | tem e-mail |
-| 23 | Davison da Silva Ferreira | urc_canais (Loja) | tem e-mail |
-| 24 | Dario | representantes (Catalisa Gov) | só primeiro nome — ver §3 |
-| 25 | Rafa | representantes (Catalisa Gov) | só primeiro nome — ver §3 |
-| 26 | Wébia | representantes (Startup NE) | só primeiro nome — ver §3 |
-| 27 | Jéssica | representantes (Startup NE) | só primeiro nome — ver §3 |
-| 28 | Fernanda | representantes (Startup NE) | só primeiro nome — ver §3 |
-| 29 | Agnaldo | representantes (Catalisa ICT, Embrapii) ×2 | só primeiro nome — ver §3 |
-| 30 | Valéria | representantes (Inova Biomas) | só primeiro nome — ver §3 |
-| 31 | Felipe | representantes (Inova Biomas) | só primeiro nome — ver §3 (proximidade com #15 "Filipe") |
-| 32 | Carol | representantes ×4 | só primeiro nome — ver §3 |
-| 33 | Fred | representantes | só primeiro nome — ver §3 |
-| 34 | Thiago | representantes | só primeiro nome — ver §3 |
-| 35 | Raquel | representantes ×4 | só primeiro nome — ver §3 |
-| 36 | Cris | representantes ×4 | só primeiro nome — ver §3 |
+| 1 | José Mendes de Oliveira Júnior | pessoas (UI, como "JR.") · pessoas (Núcleos, "José Mendes de Oliveira Júnior") · representantes (`"Jr."`, ALI Rural) | ✅ RESOLVIDO §3.2 — mesma pessoa, 2 papéis (coordenação UI + núcleo Inovação p/ Competitividade). `nome_exibicao`: "JR." |
+| 2 | Sandra Chaves Silva Paraíso | pessoas (UI, como "Sandra") · pessoas (Núcleos, "Sandra Chaves Silva Paraíso") | ✅ RESOLVIDO §3.1 — mesma pessoa, 2 papéis (assistente do plano + núcleo Gestão do Conhecimento e Processos). `nome_exibicao`: "Sandra" |
+| 3 | Gabriel Silva Povoa | pessoas (UI, como "Pova") · representantes (`"Pova"` ×3) | ✅ RESOLVIDO §3.5 — pessoa física, não agente de IA. `nome_exibicao`: "Pova". Papel atual em `data/pessoas.js` ("Agente de IA de apoio ao formulário") precisa de revisão no item 1.3/1.6 — descreve uma função, não o que a pessoa é |
+| 4 | Anny | pessoas (UI) | só primeiro nome em toda a base — ver §3.3 se há sobrenome |
+| 5 | Gabriel Gil Barreto Barros | pessoas (Comitê + Núcleos, já duplicado lá) · representantes (`"Gabriel"`, Inova Biomas, via alias) | dedupe interno de `meta_inovacao_pessoas` (2 linhas → 1 pessoa) |
+| 6 | Hulda Oliveira Giesbrecht | pessoas (Comitê + Núcleos) · representantes (`"Hulda"` ×3, via alias) | dedupe interno + 3 projetos |
+| 7 | Lara Chicuta Franco | pessoas (Comitê + Núcleos) | dedupe interno |
+| 8 | Marcus Vinicius Lopes Bezerra | pessoas (Comitê + Núcleos) | dedupe interno |
+| 9 | Matheus Lopes de Queiroz Campos | pessoas (Comitê + Núcleos) · representantes (`"Matheus"` ×2, via alias) | dedupe interno + 2 projetos |
+| 10 | Paulo Puppin Zandonadi | pessoas (Comitê + Núcleos) | dedupe interno |
+| 11 | Enio | urc_lideranca | só primeiro nome — ver §3.3 |
+| 12 | Milva | urc_lideranca | só primeiro nome — ver §3.3 |
+| 13 | Iuri Barbosa de Andrade | urc_lideranca | tem e-mail (`iuri.andrade@sebrae.com.br`) |
+| 14 | Cendie Carvalho Da Costa Barbieri | urc_canais (CNR) | tem e-mail |
+| 15 | André Luís M. Chanpan dos Santos | urc_canais (CNR) | tem e-mail |
+| 16 | Filipe Medeiros Ferreira | urc_canais (CNR) | tem e-mail — ✅ RESOLVIDO §3.4, pessoa diferente de #29 |
+| 17 | Rafael Rodrigues de Lima | urc_canais (Portal) | tem e-mail |
+| 18 | Thaíza Soares Cardoso Lima Kopp | urc_canais (Portal) | tem e-mail |
+| 19 | Michelle Carsten Santos | urc_canais (Portal) | tem e-mail |
+| 20 | Marcos Paulo de Sousa Santos Soares | urc_canais (Portal) | tem e-mail |
+| 21 | Sabrina Mendes Gonçalves | urc_canais (Portal) | tem e-mail |
+| 22 | Leandro Pereira de Jesus | urc_canais (Loja) | tem e-mail |
+| 23 | Cláudia Schirmbeck Peixoto | urc_canais (Loja) | tem e-mail |
+| 24 | Davison da Silva Ferreira | urc_canais (Loja) | tem e-mail |
+| 25 | Dario | representantes (Catalisa Gov) | só primeiro nome — ver §3.3 |
+| 26 | Rafa | representantes (Catalisa Gov) | só primeiro nome — ver §3.3 |
+| 27 | Wébia | representantes (Startup NE) | só primeiro nome — ver §3.3 |
+| 28 | Jéssica | representantes (Startup NE) | só primeiro nome — ver §3.3 |
+| 29 | Philippe Fauguet Figueiredo | representantes (`"Felipe"`, Inova Biomas) | ✅ RESOLVIDO §3.4 — nome completo confirmado por José, pessoa diferente de #16. `nome_exibicao`: "Felipe" (o que já é usado hoje) |
+| 30 | Fernanda | representantes (Startup NE) | só primeiro nome — ver §3.3 |
+| 31 | Agnaldo | representantes (Catalisa ICT, Embrapii) ×2 | só primeiro nome — ver §3.3 |
+| 32 | Valéria | representantes (Inova Biomas) | só primeiro nome — ver §3.3 |
+| 33 | Carol | representantes ×4 | só primeiro nome — ver §3.3 |
+| 34 | Fred | representantes | só primeiro nome — ver §3.3 |
+| 35 | Thiago | representantes | só primeiro nome — ver §3.3 |
+| 36 | Raquel | representantes ×4 | só primeiro nome — ver §3.3 |
+| 37 | Cris | representantes ×4 | só primeiro nome — ver §3.3 |
 
-Não incluídos na lista acima (não são pessoa física — ver §3 pra decisão de como
-modelar cada um):
-- **Sandra** (pessoas/UI) e **Sandra Chaves Silva Paraíso** (pessoas/Núcleos) —
-  tratadas como 2 entradas SEM fundir, porque não dá pra saber sem perguntar se são
-  a mesma pessoa (ver §3, é o caso de maior impacto deste levantamento).
-- **Pova** — agente de IA, não pessoa física.
+Não incluído na lista acima (não é pessoa física — segue em aberto, §3.5):
 - **Gerência UI** — papel institucional, não indivíduo nomeado.
 - **"Núcleo de Startups"** — placeholder de "ainda sem representante nomeado" em
   `representantes` (Sebrae Startups), não um nome de pessoa.
@@ -113,70 +111,67 @@ entram aqui.
 
 ## 3) Casos que precisam de confirmação sua (item 1.2)
 
-### 3.1 — Maior impacto: "Sandra" é a mesma pessoa que "Sandra Chaves Silva Paraíso"?
+### 3.1 — ✅ RESOLVIDO (José, 22/08) — "Sandra" é a mesma pessoa que "Sandra Chaves Silva Paraíso"
 
-- `meta_inovacao_pessoas` tem **duas linhas** com "Sandra" no nome:
-  - `grupo: "UI"`, nome **"Sandra"**, papel *"Assistente do plano: agendas,
-    prazos, monitoramento, boletim"*.
-  - `grupo: "Núcleos"`, nome **"Sandra Chaves Silva Paraíso"**, núcleo *"Gestão do
-    Conhecimento e Processos"*.
-- Podem ser (a) a mesma pessoa acumulando os dois papéis, ou (b) duas Sandras
-  diferentes por coincidência de primeiro nome — a base atual não tem e-mail nem
-  sobrenome na linha "UI" pra decidir.
-- **Pergunta:** é a mesma pessoa? Se sim, o registro final vira 1 linha em
-  `meta_inovacao_pessoas` com **2 papéis** em `meta_inovacao_pessoa_papeis`
-  (`contexto: UI` + `contexto: Nucleo, nucleo_id: Gestão do Conhecimento e
-  Processos`). Se não, seguem 2 pessoas — mas aí a "Sandra" da UI provavelmente
-  precisa de um sobrenome pra não colidir por nome com a outra na hora de exibir.
+**Confirmado: mesma pessoa, acumulando os dois papéis.** Nome completo:
+**Sandra Chaves Silva Paraíso**. O registro final vira **1 linha** em
+`meta_inovacao_pessoas` com **2 papéis** em `meta_inovacao_pessoa_papeis`:
+`contexto: UI` (assistente do plano) + `contexto: Nucleo, nucleo_id: Gestão do
+Conhecimento e Processos`. `nome_exibicao` continua "Sandra" (o que já é usado
+hoje nas telas que só mostram o grupo UI).
 
-### 3.2 — "JR." × "José Mendes de Oliveira Júnior": leitura correta?
+### 3.2 — ✅ RESOLVIDO (José, 22/08) — "JR." × "José Mendes de Oliveira Júnior"
 
-- `js/responsaveis.js` já trata como **2 pessoas diferentes**: `jr` = "JR. (José
-  Júnior)" (coordenação do plano, grupo UI) e `junior` = "José Mendes de Oliveira
-  Júnior" (representante do núcleo Inovação para Competitividade, grupo Núcleos).
-- O representante do projeto "ALI Rural" em `meta_inovacao_projetos.representantes`
-  é o texto `"Jr."`, que a normalização (remove ponto, minúsculo) casa com o alias
-  `jr` → **JR. (José Júnior)**, não com José Mendes.
-- **Pergunta:** essa leitura está certa — é o JR. coordenador que representa o
-  projeto ALI Rural, e não José Mendes de Oliveira Júnior? Não muda nenhum dado
-  (o alias já existe e já decide isso), só confirmando antes de gravar
-  `projeto_representantes` na Camada 2.
+**Confirmado: mesma pessoa, acumulando os dois papéis** — não são 2 pessoas
+diferentes, ao contrário do que `js/responsaveis.js.ALIASES` assumia até aqui
+(`jr` e `junior` apontando pra 2 ids distintos). Nome completo: **José Mendes de
+Oliveira Júnior**. Registro final: **1 linha** em `meta_inovacao_pessoas` com
+**2 papéis**: `contexto: UI` (coordenação do plano) + `contexto: Nucleo,
+nucleo_id: Inovação para Competitividade`. `nome_exibicao`: "JR.".
 
-### 3.3 — Nomes curtos sem sobrenome em nenhuma fonte (13 pessoas)
+⚠️ Isso muda o que a Camada 2 precisa fazer com `js/responsaveis.js`: os ids `jr`
+e `junior` de `window.DB.responsaveis` hoje apontam pra 2 pessoas — depois desta
+migração, os dois vão resolver pra **1** `pessoa_id` só (mas continuam válidos
+como 2 entradas de `responsavel_id` se o caso de uso for "por qual papel" e não
+"por qual pessoa" — decisão de UX pra Camada 4, não deste relatório).
+
+### 3.3 — Nomes curtos sem sobrenome em nenhuma fonte (15 pessoas, pendente)
 
 Nenhuma das fontes disponíveis (`pessoas`, `representantes`, `urc_lideranca`,
 `urc_canais_responsaveis`, `window.DB.responsaveis`) tem o nome completo destas
 pessoas — só o primeiro nome usado em `representantes` de projeto:
 
 **Carol, Fred, Thiago, Raquel, Dario, Rafa, Cris, Wébia, Jéssica, Fernanda,
-Agnaldo, Valéria, Felipe** — mais **Anny, Enio, Milva** (grupo UI/urc_lideranca,
-mesmo problema).
+Agnaldo, Valéria** — mais **Anny, Enio, Milva** (grupo UI/urc_lideranca, mesmo
+problema). ("Felipe" saiu desta lista — resolvido em §3.4 como Philippe Fauguet
+Figueiredo.)
 
 **Pergunta, pra cada uma:** nome completo (pra `nome_completo`) e, se tiver,
 e-mail — mesmo que fique só `nome_exibicao` = o primeiro nome que já é usado hoje
 (não precisa mudar o que aparece na tela, só preencher o campo que faltar).
 
-### 3.4 — "Filipe Medeiros Ferreira" (URC/CNR) × "Felipe" (Inova Biomas)
+### 3.4 — ✅ RESOLVIDO (José, 22/08) — "Filipe Medeiros Ferreira" (URC/CNR) × "Felipe" (Inova Biomas)
 
-Grafias diferentes (Filipe/Felipe) em contextos sem sobreposição óbvia (um é
-responsável de canal da URC pro CNR, o outro é representante do projeto Inova
-Biomas — núcleo Tecnologias Portadoras de Futuro). Provavelmente são pessoas
-diferentes, mas a proximidade de nome é grande o bastante pra valer confirmar
-**não** são a mesma pessoa antes de tratá-los como 2 registros — nenhuma
-automação decidiu isso sozinha.
+**Confirmado: são pessoas diferentes.** O representante de Inova Biomas, hoje só
+"Felipe" em `representantes`, tem nome completo **Philippe Fauguet Figueiredo**
+(`nome_exibicao` continua "Felipe"). "Filipe Medeiros Ferreira" (responsável de
+canal da URC pro CNR) não muda.
 
-### 3.5 — Como modelar "Pova" (agente de IA) e "Gerência UI" (papel institucional)
+### 3.5 — "Pova" (✅ RESOLVIDO, é pessoa) e "Gerência UI" (pendente)
 
-Nenhum dos dois é pessoa física, mas os dois aparecem hoje como se fossem: "Pova"
-tem linha em `meta_inovacao_pessoas` e entra em `representantes` de 3 projetos;
-"Gerência UI" tem linha em `meta_inovacao_pessoas`. `meta_inovacao_coletivos`
-(Camada 0) foi desenhada pra "Comitê"/"URC"/grupos de pessoas, não pra um agente
-de IA ou um cargo institucional — não é claramente o mesmo conceito.
+**Pova — ✅ RESOLVIDO (José, 22/08):** não é agente de IA, é pessoa física —
+**Gabriel Silva Povoa** (`nome_exibicao`: "Pova"). O `papel` atual em
+`data/pessoas.js` ("Agente de IA de apoio ao formulário (CAN-08/09)") descreve
+uma função que essa pessoa exerce, não o que ela é — revisar o texto do papel no
+item 1.3/1.6 pra não induzir o próximo leitor ao mesmo engano deste relatório.
 
-**Pergunta:** os dois viram linha em `meta_inovacao_coletivos` mesmo assim (mais
-largo do que "grupo de pessoas", mas reaproveita a tabela existente), ou merecem
-um terceiro catálogo (`meta_inovacao_papeis_institucionais`/equivalente)? Sem essa
-decisão, a Camada 1 não sabe se dedupe "Pova" para pessoa ou pra coletivo.
+**Gerência UI — ainda pendente.** Não é indivíduo nomeado, é papel institucional.
+`meta_inovacao_coletivos` (Camada 0) foi desenhada pra "Comitê"/"URC"/grupos de
+pessoas — não é claramente o mesmo conceito que um cargo.
+
+**Pergunta:** "Gerência UI" vira linha em `meta_inovacao_coletivos` mesmo assim
+(mais largo do que "grupo de pessoas", mas reaproveita a tabela existente), ou
+merece um terceiro catálogo (`meta_inovacao_papeis_institucionais`/equivalente)?
 
 ### 3.6 — "Núcleo de Startups" (placeholder em `representantes`)
 
@@ -191,16 +186,20 @@ projeto simplesmente **não ganha linha nenhuma** até haver um nome real — o 
 
 ## Resumo executivo pra decisão rápida
 
-| Bloco | Qtde | Ação |
+| Bloco | Qtde | Status |
 |---|---|---|
-| Nome completo já conhecido, sem flag nenhum (linhas 1,3–8,12–14,16–23 da tabela §1) | 18 | segue direto pro seed do item 1.3 |
-| Só primeiro nome, precisa de sobrenome/confirmação (§3.3 — Anny, Enio, Milva + 13 de `representantes`, inclui #15/#31 que também caem em §3.4) | 16 | preencher nome completo (pode ficar em aberto = `pendente: true`, não bloqueia) |
-| Ambiguidade de identidade a mais, além da falta de sobrenome (§3.2 José Mendes, §3.4 Filipe×Felipe) | 2 casos, já contados na linha acima | decisão binária cada um |
-| Não estão na tabela §1: ambiguidade de identidade (§3.1 — Sandra × Sandra Chaves Silva Paraíso) | 2 | decisão binária: 1 pessoa ou 2 |
-| Não estão na tabela §1: não é pessoa física, decidir onde entra (§3.5) | 2 (Pova, Gerência UI) | decisão de modelagem |
-| Placeholder, não vira pessoa (§3.6) | 1 (Núcleo de Startups, fora da conta dos 40) | confirmar leitura, sem ação |
+| Identidade e nome completo já prontos (tabela §1, exceto as 15 de §3.3) | 22 | ✅ prontas pro seed do item 1.3 |
+| ✅ Ambiguidades de identidade — todas resolvidas por José em 22/08 | 4 casos (§3.1 Sandra, §3.2 JR./José Mendes, §3.4 Filipe×Felipe, §3.5 Pova) | ✅ RESOLVIDO |
+| Só primeiro nome, falta nome completo (§3.3) | 15 | ⏳ pendente — preencher nome completo (pode ficar `pendente: true`, não bloqueia o resto) |
+| Não é pessoa física, falta decidir onde entra (§3.5 — Gerência UI) | 1 | ⏳ pendente |
+| Placeholder, não vira pessoa (§3.6) | 1 (Núcleo de Startups, fora da conta) | confirmado, sem ação |
 
-**Total: 18 prontos + 16 com flag de nome incompleto (dentro da tabela de 36) + 4
-fora da tabela (Sandra ×2, Pova, Gerência UI) = 40**, batendo com o "~40" da
-proposta original (13 pessoas + 13 representantes novos + 3 urc_lideranca + 11
-urc_canais).
+**Total de pessoas físicas distintas após as fusões confirmadas: 37** (era "~40"
+na proposta original — os 3 a menos são as 2 fusões, Sandra e JR./José Mendes, e
+"Pova" que já estava contado nas 13 de `meta_inovacao_pessoas` e só mudou de
+"não pessoa" pra pessoa, sem alterar a contagem total de linhas cruzadas).
+
+**Falta só isto pra fechar o item 1.2 e liberar o item 1.3 (migração):**
+1. Nome completo de: Carol, Fred, Thiago, Raquel, Dario, Rafa, Cris, Wébia,
+   Jéssica, Fernanda, Agnaldo, Valéria, Anny, Enio, Milva (§3.3).
+2. Onde "Gerência UI" entra: `meta_inovacao_coletivos` ou catálogo novo (§3.5).
