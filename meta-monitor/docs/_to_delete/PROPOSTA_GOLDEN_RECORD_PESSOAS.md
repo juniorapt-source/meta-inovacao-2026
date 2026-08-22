@@ -3,6 +3,11 @@
 > Status: **proposta em aberto** — nada abaixo foi executado no banco. Só depois de
 > aprovado isto vira migração SQL (mesmo formato de `2026-08_migracao_modo_edicao.sql`),
 > seguindo `tools/sql/PADRAO_TABELA.md`.
+>
+> **Ampliada em 22/08/2026** por `PROPOSTA_ESQUEMA_CADASTROS_REFERENCIA.md` — aquele
+> doc cobre núcleos, canais/URC e projetos além de pessoas, e é a referência mais
+> atual. Este arquivo continua valendo como o detalhamento de pessoas especificamente
+> (dedupe das ~40 pessoas, `pessoa_papeis`, decisão A/B de coletivos).
 
 ## O problema, com números
 
@@ -146,25 +151,12 @@ fallback, não sumiu) até as telas migrarem pro seletor.
 
 ---
 
-## Decisão em aberto — preciso da sua palavra antes de fechar a Camada 2
+## Decisão — fechada em 22/08/2026: Opção A
 
-**Opção A (recomendada): coletivo fica fora da tabela de pessoas.**
-`meta_inovacao_pessoas` guarda só gente física. Onde hoje um "responsável" pode ser
-pessoa OU grupo (`meta_inovacao_plano_responsaveis`), a tabela tem duas FKs opcionais
+**Coletivo fica fora da tabela de pessoas**, em `meta_inovacao_coletivos` própria.
+`meta_inovacao_pessoas` guarda só gente física. Onde um "responsável" pode ser pessoa
+OU grupo (`meta_inovacao_plano_responsaveis`), a tabela tem duas FKs opcionais
 (`pessoa_id` / `coletivo_id`) com `CHECK` garantindo que só uma está preenchida.
-Mais correto (Comitê não é uma pessoa, não tem e-mail individual), mas toda tela de
-"responsável" trata dois casos.
-
-**Opção B: uma tabela só, com uma coluna `tipo`.**
-`meta_inovacao_pessoas` ganha `tipo text check in ('pessoa','coletivo')` e os coletivos
-entram como linhas de `tipo='coletivo'`. Uma FK só em todo lugar, mas mistura duas
-naturezas na mesma tabela (coletivo não tem e-mail, não tem "ativo" no mesmo sentido).
-
-Pelo padrão que vocês já usam no golden record de projetos — sinalizar discrepância
-em vez de esconder ("fora do portfólio" em vez de sumir) — a Opção A é a que mais se
-parece com o que já funciona pra vocês: o `CHECK` deixa explícito, linha a linha, se o
-responsável é pessoa ou grupo. Mas a decisão final é sua — ela muda o desenho de
-`meta_inovacao_plano_responsaveis` (e qualquer outra tabela de "responsável" futura).
 
 ---
 
