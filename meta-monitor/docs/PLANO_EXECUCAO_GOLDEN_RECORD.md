@@ -34,6 +34,10 @@ gerado é pra rodar manualmente no SQL Editor, como já é o padrão do projeto.
 
 ## Camada 0 — Catálogos-base
 
+> **Status: concluída (inferido)** — não confirmado independentemente aqui, mas a
+> Camada 1 (abaixo) já usa seletor de núcleo em `editor.html`, o que depende desta
+> camada ter rodado antes.
+
 | # | Atividade | Arquivo(s) | Modelo | Esforço |
 |---|---|---|---|---|
 | 0.1 | Migração SQL `meta_inovacao_nucleos` (tabela + RLS + trigger + seed dos 5 núcleos) | `tools/sql/2026-XX_nucleos.sql` | Sonnet | médio |
@@ -48,6 +52,26 @@ gerado é pra rodar manualmente no SQL Editor, como já é o padrão do projeto.
 ---
 
 ## Camada 1 — Golden record de pessoas
+
+> **Status: concluída e pushada (22/08/2026).** `js/db-pessoas.js` + novo
+> `js/db-pessoa-papeis.js` lendo/gravando os campos novos; aba "Pessoas" do
+> `editor.html` com seletor de núcleo; `data/pessoas.js` ressincronizado (47 pessoas
+> em produção). No caminho, um bug de card duplicado em `participantes.html` (grupos
+> "Projetos"/"URC" novos) foi pego e corrigido antes de virar regressão, e o teste
+> que deveria ter pegado isso foi ajustado (se autovalidava contra o próprio bug).
+> Suíte rodada (roundtrip, participantes, busca, dashboard, iniciativas cruzadas,
+> validador Python) verde; `testar_drawer_headless.js` falha, mas **já falhava antes
+> desta frente** — não é regressão da Camada 1, só não foi corrigido aqui (relevante
+> pra Camada 4, que também mexe em `js/drawer.js`).
+>
+> **Fora de escopo desta rodada, não bloqueia nada:** UI dedicada em `editor.html`
+> pra gerenciar múltiplos papéis por pessoa (adicionar/remover linha em
+> `pessoa_papeis`) — as linhas já gravadas estão corretas, só sem tela própria ainda.
+>
+> **Atenção pra Camada 2:** ficaram ~15 nomes em aberto (dados incompletos,
+> preenchíveis pela nova aba "Pessoas"). Não bloqueia começar a Camada 2, mas os
+> itens 2.2 e 2.6 resolvem texto livre contra o golden record por nome — quanto mais
+> desses 15 estiverem completos antes, menos `NULL` o relatório de 2.9 mostra depois.
 
 | # | Atividade | Arquivo(s) | Modelo | Esforço |
 |---|---|---|---|---|
