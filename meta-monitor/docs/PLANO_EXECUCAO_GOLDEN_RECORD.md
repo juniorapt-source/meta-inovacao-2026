@@ -1,0 +1,147 @@
+# PLANO DE EXECUÇÃO — Golden record de cadastros de referência
+
+**Regime: pré-autorizado, camada por camada.** Cada camada só começa depois da
+anterior estar rodando em produção e validada — mesmo espírito do
+`PLANO_EXECUCAO.md` original: teste de aceite manda, protocolo de ajuste corrige,
+nada trava o conjunto inteiro por um item.
+
+Fonte do desenho: `meta-monitor/docs/PROPOSTA_ESQUEMA_CADASTROS_REFERENCIA.md`
+(esquema completo, decisões já fechadas) e o diagrama publicado em
+`https://claude.ai/code/artifact/883d85fb-304d-4ad0-9130-07bfa8f90c9c`. Este
+documento não redesenha nada — só quebra a implementação em atividades executáveis.
+
+## Legenda — modelo e esforço por atividade
+
+| Modelo | Quando usar aqui |
+|---|---|
+| **Haiku** | Cópia de um padrão já existente quase à risca — wrapper JS espelhando um arquivo irmão, atualização de changelog/comentário. Baixa ambiguidade, baixo custo de errar. |
+| **Sonnet** | A maioria do pacote — migração SQL seguindo `PADRAO_TABELA.md`, popular FK a partir de texto existente, telas que já têm precedente direto no projeto (a Camada 2 do golden record de *projetos* já fez isso uma vez). |
+| **Opus** | As duas atividades de maior risco/ineditismo: reescrever a grade da matriz de demandas (maior tela do site, sai de "colunas fixas" pra "grade dinâmica") e a auditoria final de ponta a ponta. |
+
+| Esforço | Quando usar |
+|---|---|
+| **baixo** | Mudança pequena e contida, um arquivo, padrão já resolvido antes. |
+| **médio** | Várias partes móveis, mas caminho conhecido (padrão documentado ou já feito uma vez no projeto). |
+| **alto** | Mexe em lógica de dado e de tela ao mesmo tempo, ou stakes altos (tabela golden, dedupe, resolução de alias). |
+| **xhigh** | Reservado pra Camada 3 (reescrita da matriz) e pra auditoria final — vale revisão adversarial, não só uma passada. |
+
+Atividades marcadas **[humano]** não são tarefa de modelo — são decisão ou execução
+que só José faz (rodar SQL no dashboard do Supabase, confirmar uma lista de dedupe).
+Nenhuma migração roda sozinha contra o Supabase de produção; todo `tools/sql/*.sql`
+gerado é pra rodar manualmente no SQL Editor, como já é o padrão do projeto.
+
+---
+
+## Camada 0 — Catálogos-base
+
+| # | Atividade | Arquivo(s) | Modelo | Esforço |
+|---|---|---|---|---|
+| 0.1 | Migração SQL `meta_inovacao_nucleos` (tabela + RLS + trigger + seed dos 5 núcleos) | `tools/sql/2026-XX_nucleos.sql` | Sonnet | médio |
+| 0.2 | Migração SQL `meta_inovacao_canais` (unifica `data/canais.js` + `CANAIS_URC`, 10 canais) | `tools/sql/2026-XX_canais.sql` | Sonnet | médio |
+| 0.3 | Migração SQL `meta_inovacao_coletivos` (seed: Comitê, URC, Coordenadores, Gestores dos projetos, Soluções) | `tools/sql/2026-XX_coletivos.sql` | Sonnet | baixo |
+| 0.4 | **[humano]** Rodar as 3 migrações no SQL Editor, conferir contagens e RLS ativa | — | José | — |
+| 0.5 | `js/db-nucleos.js`, `js/db-canais.js`, `js/db-coletivos.js`, espelhando `js/db-projetos.js` | `js/db-*.js` | Haiku | baixo |
+
+**Teste de aceite:** as 3 tabelas existem com RLS ativa; contagens batem (5/10/5); os
+3 wrappers carregam sem erro (`node`, mesmo padrão de `tools/testar_calc.js`).
+
+---
+
+## Camada 1 — Golden record de pessoas
+
+| # | Atividade | Arquivo(s) | Modelo | Esforço |
+|---|---|---|---|---|
+| 1.1 | Levantar a lista de dedupe das ~40 pessoas (cruzar as 4 fontes, aplicar os aliases já existentes em `js/responsaveis.js`, sinalizar todo caso ambíguo em vez de decidir sozinho) | relatório novo | Sonnet | alto |
+| 1.2 | **[humano]** José confirma/corrige a lista de dedupe | — | José | — |
+| 1.3 | Migração SQL: `ALTER meta_inovacao_pessoas` (+ `nome_completo`, `nome_exibicao`, `email`, `ativo`) + `CREATE meta_inovacao_pessoa_papeis` + seed da lista confirmada em 1.2 | `tools/sql/2026-XX_pessoas_golden.sql` | Sonnet | alto |
+| 1.4 | **[humano]** Rodar no SQL Editor, conferir contagem = lista confirmada | — | José | — |
+| 1.5 | `js/db-pessoas.js` pro novo formato (pessoa + papéis) | `js/db-pessoas.js` | Sonnet | médio |
+| 1.6 | Aba "Pessoas" do `editor.html`: CRUD de pessoa + papéis, seletor de núcleo | `editor.html` | Sonnet | médio |
+
+**Teste de aceite:** contagem de pessoas = lista confirmada em 1.2; toda pessoa tem
+pelo menos 1 papel; aba "Pessoas" cria/edita/soft-deleta sem erro (mesmo padrão de
+`tools/testar_participantes_headless.js`).
+
+---
+
+## Camada 2 — FK pontual, convivendo com o texto
+
+| # | Atividade | Arquivo(s) | Modelo | Esforço |
+|---|---|---|---|---|
+| 2.1 | `ALTER meta_inovacao_projetos` (+ `nucleo_id`), popular a partir do texto | sql | Sonnet | médio |
+| 2.2 | `CREATE meta_inovacao_projeto_representantes`, popular de `representantes[]` (resolver pelos aliases) | sql | Sonnet | alto |
+| 2.3 | `ALTER meta_inovacao_urc_lideranca` (+ `pessoa_id`), popular | sql | Sonnet | baixo |
+| 2.4 | Evoluir `meta_inovacao_urc_canais_responsaveis` (+ `canal_id`, + `pessoa_id`), popular | sql | Sonnet | médio |
+| 2.5 | `ALTER meta_inovacao_canva_demandas` (+ 4 FK: núcleo, canal, facilitador, responsável), popular | sql | Sonnet | médio |
+| 2.6 | `CREATE meta_inovacao_plano_responsaveis`, popular de `responsavel_id[]` (separar pessoa de coletivo) | sql | Sonnet | alto |
+| 2.7 | `ALTER corsario_status` (+ `projeto_id`, + `nucleo_id`), popular, checar a linha órfã do 27×28 | sql | Sonnet | médio |
+| 2.8 | **[humano]** Rodar as 7 migrações | — | José | — |
+| 2.9 | Auditoria de cobertura: % de FK que ficou `NULL` por tabela, relatório pra decidir o que resolver na mão | script node | Sonnet | médio |
+
+**Teste de aceite:** relatório de cobertura existe e foi visto por José — não precisa
+ser 100%, mas precisa estar visível (mesmo espírito de "sinalizar discrepância, não
+esconder" do golden record de projetos).
+
+---
+
+## Camada 3 — Normalizar a matriz de demandas (maior risco do pacote)
+
+| # | Atividade | Arquivo(s) | Modelo | Esforço |
+|---|---|---|---|---|
+| 3.1 | Migração SQL: `CREATE meta_inovacao_matriz_celulas` + migrar as 10 colunas fixas pra linhas (tabela antiga continua viva em paralelo) | sql | Sonnet | alto |
+| 3.2 | Reescrever `demandas.html`: grade dinâmica a partir de `meta_inovacao_canais` × `meta_inovacao_projetos`, ler/gravar em `matriz_celulas` | `demandas.html` | **Opus** | **xhigh** |
+| 3.3 | Ajustar a aba "matriz" do `editor.html` (hoje é `snapshot:true`) | `editor.html` | Sonnet | baixo |
+| 3.4 | Testes headless da nova grade (novo `tools/testar_matriz_headless.js`, mesmo padrão de `tools/testar_dashboard_headless.js`) | tools | Sonnet | médio |
+| 3.5 | **[humano]** Validar em produção por um tempo, comparando com a tabela antiga, antes de aposentá-la | — | José | — |
+
+**Teste de aceite:** grade nova mostra os mesmos estados que a tabela antiga, célula a
+célula; cadastrar um canal novo em `meta_inovacao_canais` faz a coluna aparecer sem
+deploy nem `ALTER TABLE`.
+
+---
+
+## Camada 4 — Telas migram pra seletor
+
+| # | Atividade | Arquivo(s) | Modelo | Esforço |
+|---|---|---|---|---|
+| 4.1 | `editor.html` "Projetos & Representantes": campo vira seletor de pessoa | `editor.html` | Sonnet | médio |
+| 4.2 | `editor.html` "URC — Liderança" / "URC — Responsáveis por canal": seletor de pessoa/canal | `editor.html` | Sonnet | médio |
+| 4.3 | `plano-acao.html` / `minhas-acoes.html`: select de responsável lê pessoas + coletivos, aposenta parsing de `js/responsaveis.js` | `plano-acao.html`, `minhas-acoes.html` | Sonnet | alto |
+| 4.4 | `participantes.html` / `js/drawer.js`: exibição via join, não mais array de string | `participantes.html`, `js/drawer.js` | Sonnet | médio |
+
+**Teste de aceite:** nenhuma das 4 telas tem mais campo de texto livre pra nome de
+pessoa; os testes headless existentes (`testar_participantes_headless.js`,
+`testar_drawer_headless.js`, `testar_minhas_acoes_headless.js`) continuam verdes.
+
+---
+
+## Camada 5 — Aposentar texto livre
+
+| # | Atividade | Arquivo(s) | Modelo | Esforço |
+|---|---|---|---|---|
+| 5.1 | Auditoria final: confirmar cobertura de FK das Camadas 2 e 4, ponta a ponta | script | **Opus** | alto |
+| 5.2 | **[humano]** Decidir, tabela a tabela, se dropa a coluna de texto ou mantém como cache | — | José | — |
+| 5.3 | Migrações de `DROP COLUMN` onde decidido em 5.2 | sql | Sonnet | baixo |
+| 5.4 | Atualizar `PADRAO_TABELA.md`/`GOVERNANCA_GOLDEN_RECORD.md` com o novo estado; aposentar `js/responsaveis.js` se não sobrar uso | docs, js | Haiku | baixo |
+
+**Teste de aceite:** suíte de testes headless inteira verde; nenhuma tela lê mais
+coluna de texto que foi dropada em 5.3.
+
+---
+
+## Protocolo de ajuste (mesmo do `PLANO_EXECUCAO.md` original)
+
+1. Teste de aceite da camada falhou → registrar a causa (num `BUILD_STATUS.md` novo
+   pra esta frente, ou anexado ao existente).
+2. Corrigir. Reexecutar o teste (máx. 3 tentativas).
+3. Persistindo, isolar o item, registrar como pendência e **seguir com o resto da
+   camada** — uma atividade travada não trava a camada inteira, e uma camada
+   travada não trava as anteriores (que já estão em produção).
+
+## Ordem — por que não pular camada
+
+Camada 3 (matriz) é deliberadamente a mais tardia entre as mudanças de dado, não a
+primeira: é a de maior ineditismo técnico (única tabela redesenhada, não só
+FK nova) e mexe na tela mais usada do site. Rodar as Camadas 0–2 primeiro dá o
+golden record de pessoas/núcleos/canais já estável — inclusive testável — antes de
+arriscar a peça mais delicada.
