@@ -132,6 +132,11 @@ node tools/conferir_matriz_celulas.js     # Camada 3: matriz nova × matriz anti
                                           # célula (--check sai 1 se houver divergência)
 ```
 
+E um diagnóstico em SQL puro, pra rodar no SQL Editor do Supabase quando a dúvida for
+sobre o BANCO e não sobre o site — `tools/sql/2026-08_matriz_celulas_diagnostico.sql`:
+17 checagens de schema/RLS/publicação `supabase_realtime` de `meta_inovacao_matriz_celulas`,
+cada uma com veredito `OK`/`DIVERGE`/`ATENÇÃO` e o que fazer em cada caso. Só leitura.
+
 Os testes headless que tocam páginas que leem Plano/Agenda (`index.html`, `plano.html`,
 `caminho.html`, `minhas-acoes.html`, `agenda.html`) não dependem de rede: cada sessão CDP
 injeta `window.CC_FORCAR_FALLBACK = true` antes de navegar (via

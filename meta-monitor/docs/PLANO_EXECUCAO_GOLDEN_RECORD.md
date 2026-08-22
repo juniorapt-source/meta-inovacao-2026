@@ -138,7 +138,9 @@ esconder" do golden record de projetos).
 > 270 conferem / 0 divergem. As policies também foram exercitadas com `SET ROLE anon`: os
 > dois caminhos do upsert (INSERT e ON CONFLICT DO UPDATE) passam com o `x-cc-token` certo
 > e são recusados sem ele. Rodar no SQL Editor é seguro (não sobrescreve edição feita
-> depois da virada), mas **só é necessário se o schema em produção divergir do arquivo**.
+> depois da virada), mas **só é necessário se o schema em produção divergir do arquivo** —
+> e quem responde isso é `tools/sql/2026-08_matriz_celulas_diagnostico.sql` (só leitura,
+> 17 checagens com veredito, roda no SQL Editor).
 >
 > **Correção de rota achada no caminho:** o `<select>` da Matriz oferecia 9 estados, mas o
 > `CHECK` da tabela (antiga e nova) só aceita 7 — escolher "Oficina confirmada" ou "Não se
@@ -150,8 +152,8 @@ esconder" do golden record de projetos).
 >
 > **Pendências conhecidas, não bloqueantes:** (a) `meta_inovacao_matriz_celulas` pode não
 > estar na publicação `supabase_realtime` — sem isso a grade não se atualiza sozinha quando
-> outra pessoa edita (a página funciona igual, só sem o "atualizado por … agora"); o bloco 5
-> do SQL adiciona. (b) a aba "matriz" do `editor.html` continua no snapshot antigo — é o
+> outra pessoa edita (a página funciona igual, só sem o "atualizado por … agora"). A
+> checagem 16 do diagnóstico diz se está ou não; o bloco 5 do SQL da migração adiciona. (b) a aba "matriz" do `editor.html` continua no snapshot antigo — é o
 > item 3.3, de propósito.
 
 | # | Atividade | Arquivo(s) | Modelo | Esforço |
