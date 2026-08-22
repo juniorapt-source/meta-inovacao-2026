@@ -2,8 +2,9 @@
 
 **Status:** itens 1, 2, 3 e 4 prontos. SQL dos itens 1 e 4 rodado em produção (o do item 4 em
 21/08/2026, `tools/sql/2026-08_canva_leitura_aberta.sql`); `js/db-canva.js`, `canva.html`,
-`js/db-canva-consolidado.js` e `canva-consolidado.html` no site. Item 5 (promoção pra
-`meta_inovacao_matriz_demandas`) é o próximo.
+`js/db-canva-consolidado.js` e `canva-consolidado.html` no site. Item 7 (QR codes por canal)
+também pronto, fora de ordem — não depende dos itens 5/6. Itens 5 (promoção pra
+`meta_inovacao_matriz_demandas`) e 6 (exportadores `.docx`) seguem pendentes.
 **Versão:** v8, 21/08/2026
 (v1 tratava o canal como eixo principal, corrigido na v2, ver §2. v3 acertou a leitura para o mundo
 pós-v0.30.0, ver §6.5. v4 travou a regra de que este site não tem senha, ver §6.6. v5 corrigiu duas
@@ -537,7 +538,20 @@ Cada item é um commit pequeno e testável.
      (`js/core.js`, grupo Execução, abaixo de "Matriz de demandas")
 5. Promoção pra `meta_inovacao_matriz_demandas` com a regra da §9, e ajustes em `demandas.html`
 6. Exportadores `.csv` e `.docx` — o `.csv` reaproveitando o helper do item 4, não reescrevendo
-7. QR codes por canal, gerados uma vez e colados no último slide de cada apresentação
+7. QR codes por canal, gerados uma vez e colados no último slide de cada apresentação. **Pronto,**
+   fora de ordem — não depende dos itens 5 e 6, só de `canva.html` (item 3) já aceitar
+   `?canal=<id>` em produção. `tools/gerar_qrcodes_canais.js` lê `data/canais.js` (a mesma lista
+   que `canva.html` e a matriz usam — não é um 6º lugar com a whitelist duplicada, ver a nota no
+   fim desta seção), monta um cartão por canal (QR + nome do canal + a URL escrita por extenso,
+   §10) e tira o screenshot via CDP cru no Chromium já instalado — sem Playwright, sem
+   dependência nova, mesmo mecanismo dos `tools/testar_*_headless.js`. Única exceção: o encoder
+   de QR em `tools/vendor/qrcode-generator.js` (vendorizado do npm, MIT, ver
+   `tools/vendor/README.md`) — escrever um encoder próprio sem decoder pra validar contra era
+   risco maior do que vendorizar a implementação de referência. Cada um dos 10 `.png` de
+   `qrcodes/` foi decodificado de volta (OpenCV, fora do repositório) contra a URL esperada antes
+   de considerar pronto. Saída em `qrcodes/` (10 arquivos + `qrcodes/README.md`); a URL não leva
+   `ciclo` nem `facilitador` — só `?canal=<id>`, pela mesma razão do item 3: o QR é impresso e não
+   dá pra corrigir depois
 
 **Checkpoint entre o item 1 e o item 3.** O item 1 não está pronto quando o script existe, e sim
 quando ele **rodou em produção** e o `anon` foi testado contra o endpoint real. Enquanto o SQL não

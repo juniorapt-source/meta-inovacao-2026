@@ -153,6 +153,12 @@ data/*.js             config, plano, nos, canais, agenda, iniciativas, matriz, p
                        Supabase, ver "Como os dados funcionam" acima)
 tools/                geração de dados a partir do xlsx + os testes
 tools/sql/             scripts SQL pra rodar manualmente no Supabase (RLS, tabelas etc.)
+tools/vendor/          único código de terceiro do repositório (encoder de QR, ver
+                        tools/vendor/README.md) — não é carregado por nenhuma página do site
+qrcodes/               um QR code .png por canal (item 7 do plano do canvas das oficinas,
+                        docs/PLANO_CANVA_OFICINAS.md), gerado por
+                        tools/gerar_qrcodes_canais.js — pronto pra colar no último slide de
+                        cada apresentação, ver qrcodes/README.md
 docs/                 PLANO_EXECUCAO.md, BUILD_STATUS.md, PENDENCIAS.md (se houver)
 ```
 
