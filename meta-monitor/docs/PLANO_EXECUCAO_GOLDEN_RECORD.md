@@ -64,6 +64,19 @@ gerado é pra rodar manualmente no SQL Editor, como já é o padrão do projeto.
 > desta frente** — não é regressão da Camada 1, só não foi corrigido aqui (relevante
 > pra Camada 4, que também mexe em `js/drawer.js`).
 >
+> **Atualização (22/08/2026, depois desta rodada):** as duas falhas permanentes da
+> suíte headless (`testar_status_badges_headless.js` e `testar_drawer_headless.js`,
+> citada acima) foram corrigidas — nenhuma era regressão de página. A do badges era
+> um número travado que tinha envelhecido (contagem depende de "hoje" em tempo real);
+> a do drawer era uma condição de corrida na navegação do próprio teste (o
+> `TypeError: Cannot read properties of null` acontecia antes de qualquer asserção
+> rodar). Suíte inteira do README verde de novo — ver PR
+> [#10](https://github.com/juniorapt-source/meta-inovacao-2026/pull/10). Só 2
+> asserções do drawer (régua da Sebraetec e `corsario.html#cards`) continuam
+> dependendo de rede de saída de verdade pro Supabase — não cobertas por
+> `CC_FORCAR_FALLBACK`/`?semrede=1` — e podem falhar num ambiente sem esse acesso
+> (documentado no cabeçalho do próprio teste); não é regressão, é rede.
+>
 > **Fora de escopo desta rodada, não bloqueia nada:** UI dedicada em `editor.html`
 > pra gerenciar múltiplos papéis por pessoa (adicionar/remover linha em
 > `pessoa_papeis`) — as linhas já gravadas estão corretas, só sem tela própria ainda.
