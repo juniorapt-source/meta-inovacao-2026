@@ -228,7 +228,8 @@
   /* assina mudanças em tempo real na tabela NOVA. onChange recebe o payload do Supabase
      Realtime. Não lança: se o canal não estiver disponível (por exemplo, se
      meta_inovacao_matriz_celulas ainda não tiver sido adicionada à publicação
-     supabase_realtime — ver tools/sql/2026-08_matriz_celulas.sql), devolve null e quem
+     supabase_realtime — a checagem 16 de tools/sql/2026-08_matriz_celulas_diagnostico.sql
+     diz se está ou não, e a migração NÃO cuida disso), devolve null e quem
      chama segue sem atualização automática, exatamente como antes de existir realtime. */
   function subscribeRealtime(onChange) {
     try {
