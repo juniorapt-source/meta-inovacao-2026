@@ -120,6 +120,13 @@ node tools/testar_matriz_headless.js   # grade dinâmica da Matriz (Camada 3 do 
                                         # órfãos continuam visíveis e o offline segue
                                         # somente-leitura. Substitui o Supabase por um dublê
                                         # injetado no navegador — não fala com a rede
+node tools/testar_matriz_editor_headless.js # a aba "matriz" do editor.html (item 3.3):
+                                        # carrega ao vivo (DB_CANAIS/DB_PROJETOS/
+                                        # matrizStore), colunas na ordem do catálogo,
+                                        # canal novo vira coluna sem deploy, zero <select>
+                                        # (somente leitura), e o snapshot exportado bate
+                                        # chave a chave com o de demandas.html — offline e
+                                        # com o mesmo dublê de Supabase
 node tools/testar_catalogos_base.js    # Camada 0: seeds (5/10/5) e os 3 wrappers db-*.js
 ```
 
