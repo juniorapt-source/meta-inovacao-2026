@@ -219,9 +219,12 @@ rede, sem ninguém perceber até o Supabase cair de verdade) e o
   `ESTADOS_CEL` (9 valores, com os 2 que o banco nunca aceitou) foi removida; se um dia a
   aba precisar voltar a ser editável, a fonte dos 7 valores válidos é `matrizStore.ESTADOS`.
 - Testado: `tools/testar_matriz_headless.js` e `tools/testar_status_badges_headless.js`
-  seguem verdes (o formato não mudou); e uma verificação ponta a ponta em headless real
-  (offline e com dado vivo mockado) confirmou que o snapshot exportado pela aba bate
-  byte a byte com o que `demandas.html` exporta, nos dois modos.
+  seguem verdes (o formato não mudou); e a fiação da própria aba (carregar as 3 fontes,
+  renderizar a grade, gerar o snapshot) ganhou teste próprio em
+  `tools/testar_matriz_editor_headless.js` — offline e com o mesmo dublê de Supabase de
+  `tools/testar_matriz_headless.js`, confirma que a grade sai só leitura e que o snapshot
+  exportado pela aba bate byte a byte (e chave a chave) com o que `demandas.html` exporta,
+  nos dois modos.
 
 ### Como está a validação do 3.5
 
@@ -350,6 +353,9 @@ precisa saber sem reler tudo acima:
    - `tools/sql/2026-08_matriz_celulas_diagnostico.sql` — schema/RLS/realtime da
      Camada 3, só leitura, com veredito por checagem.
    - `tools/testar_matriz_headless.js` — 11 cenários da grade dinâmica.
+   - `tools/testar_matriz_editor_headless.js` — fiação da aba "matriz" do `editor.html`:
+     carrega ao vivo, coluna por `ordem`, canal novo, só leitura, e o snapshot batendo
+     chave a chave com o de `demandas.html`.
 5. **Pendências não bloqueantes acumuladas:** UI de múltiplos papéis por pessoa em
    `editor.html` (Camada 1); item 2.5 (Camada 2); "Oficina confirmada"/"Não se aplica o
    uso" fora do `CHECK` (Camada 3). **As duas falhas antigas da suíte
