@@ -1,14 +1,19 @@
 /* Camada 2, item 2.9 — relatório de cobertura de FK.
  *
  * Rodar DEPOIS das migrações da Camada 2 estarem aplicadas em produção (itens
- * 2.1/2.2/2.3/2.4/2.6/2.7 — tools/sql/2026-08_{projetos_nucleo_id,
- * projeto_representantes,urc_lideranca_pessoa_id,urc_canais_fk,
+ * 2.1/2.2/2.3/2.4/2.5/2.6/2.7 — tools/sql/2026-08_{projetos_nucleo_id,
+ * projeto_representantes,urc_lideranca_pessoa_id,urc_canais_fk,canva_demandas_fk,
  * plano_responsaveis,corsario_status_fk}.sql). Lê o Supabase (só leitura, anon
  * key de js/config.js — mesmo padrão de tools/publicar_seed_projetos.js) e
  * imprime, por tabela, quantas linhas/instâncias ficaram sem a FK nova — não
  * precisa bater 100%: o objetivo é DEIXAR VISÍVEL o que sobrou pra José decidir
  * o que resolver na mão (mesmo espírito de "sinalizar discrepância, não
  * esconder" do golden record de projetos).
+ *
+ * EXCEÇÃO — item 2.5: meta_inovacao_canva_demandas não tem leitura pública (a
+ * única policy de SELECT exige authenticated + cc_eh_editor()), então a anon key
+ * deste script não mede a cobertura real dessa tabela — só confirma que a
+ * migração rodou e explica por que não dá pra ir além. Ver bloco 2.5 abaixo.
  *
  * Uso:
  *   node tools/relatorio_cobertura_fk.js
@@ -90,6 +95,48 @@ function linha(rotulo, feitas, total, exemplos) {
   } catch (err) {
     algumaFalha = true;
     relatorio.push("  2.4 urc_canais_responsaveis — ERRO: " + err.message);
+  }
+
+  // 2.5 — meta_inovacao_canva_demandas: nucleo_id, canal_id, facilitador_pessoa_id,
+  // responsavel_pessoa_id (tools/sql/2026-08_canva_demandas_fk.sql). Diferente de
+  // toda outra tabela deste relatório, a leitura AQUI não é pública de propósito —
+  // a única policy de SELECT é authenticated + cc_eh_editor() (2026-08_canva_demandas.sql,
+  // EXCEÇÃO 1) — então a anon key deste script normalmente não enxerga nenhuma linha.
+  // Tenta mesmo assim: se um dia a policy mudar e a leitura abrir, o relatório passa a
+  // calcular de verdade; até lá, "permission denied" aqui é esperado, não falha da
+  // migração — só um erro DIFERENTE desse (coluna/tabela não existe) é que indica que
+  // o 2.5 ainda não rodou.
+  try {
+    const rows = await buscar(
+      "meta_inovacao_canva_demandas",
+      "select=nucleo,nucleo_id,canal,canal_id,facilitador,facilitador_pessoa_id,responsavel,responsavel_pessoa_id&deleted_at=is.null"
+    );
+    const comNucleo = rows.filter((r) => r.nucleo != null);
+    const semNucleo = comNucleo.filter((r) => r.nucleo_id == null);
+    relatorio.push(linha("2.5 canva_demandas.nucleo_id", comNucleo.length - semNucleo.length, comNucleo.length, semNucleo.map((r) => r.nucleo)));
+
+    const semCanal = rows.filter((r) => r.canal_id == null);
+    relatorio.push(linha("2.5 canva_demandas.canal_id", rows.length - semCanal.length, rows.length, semCanal.map((r) => r.canal)));
+
+    const comFacilitador = rows.filter((r) => r.facilitador != null);
+    const semFacilitador = comFacilitador.filter((r) => r.facilitador_pessoa_id == null);
+    relatorio.push(linha("2.5 canva_demandas.facilitador_pessoa_id", comFacilitador.length - semFacilitador.length, comFacilitador.length, semFacilitador.map((r) => r.facilitador)));
+
+    const semResponsavel = rows.filter((r) => r.responsavel_pessoa_id == null);
+    relatorio.push(linha("2.5 canva_demandas.responsavel_pessoa_id", rows.length - semResponsavel.length, rows.length, semResponsavel.map((r) => r.responsavel)));
+  } catch (err) {
+    const msg = String((err && err.message) || "");
+    if (/permission denied|42501/i.test(msg)) {
+      relatorio.push(
+        "  2.5 canva_demandas (núcleo/canal/facilitador/responsável) — sem leitura por aqui: RLS fecha\n" +
+        "      SELECT pra anon nesta tabela de propósito (só authenticated + cc_eh_editor() lê). A\n" +
+        "      cobertura real fica nas consultas de verificação de tools/sql/2026-08_canva_demandas_fk.sql,\n" +
+        "      rodadas por José no SQL Editor."
+      );
+    } else {
+      algumaFalha = true;
+      relatorio.push("  2.5 canva_demandas — ERRO: " + msg + " (colunas existem? migração 2.5 já rodou?)");
+    }
   }
 
   // 2.7 — corsario_status.projeto_id + nucleo_id (por INICIATIVA/NÚCLEO distintos,
