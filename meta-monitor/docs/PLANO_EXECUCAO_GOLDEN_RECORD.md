@@ -18,13 +18,15 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > da raiz foi apagada. **Não recrie a segunda cópia** — se precisar de uma visão de
 > acompanhamento, ela mora neste arquivo, na seção "Status por camada" no fim.
 
-> **STATUS GERAL (atualizado 23/08/2026): Camadas 0, 1 e 2 concluídas e verificadas em
+> **STATUS GERAL (atualizado 26/08/2026): Camadas 0, 1 e 2 concluídas e verificadas em
 > produção, incluindo o item 2.5 (rodado por José em 23/08/2026 — ver nota da Camada 2);
 > Camada 3 quase concluída — 3.1, 3.2, 3.3 e 3.4
-> já em `main` e validados, falta só o 3.5 (validação humana, em curso).** Camadas 4 e 5
-> ainda não iniciadas. Se você está retomando este trabalho numa sessão nova: leia a
-> seção "Status por camada" no fim primeiro — ela lista o que já existe no banco e no
-> repositório, pra não repetir trabalho nem presumir algo que ainda não foi feito.
+> já em `main` e validados, falta só o 3.5 (validação humana, em curso); Camada 4 começou
+> — o item 4.1 (`editor.html` "Projetos & Representantes" vira seletor de pessoa) já está
+> em `main`, faltam 4.2/4.3/4.4.** Camada 5 ainda não iniciada. Se você está retomando
+> este trabalho numa sessão nova: leia a seção "Status por camada" no fim primeiro — ela
+> lista o que já existe no banco e no repositório, pra não repetir trabalho nem presumir
+> algo que ainda não foi feito.
 
 **Como ler as tabelas:** camada já executada tem coluna **Status** (o que de fato
 aconteceu); camada ainda não executada mantém **Modelo/Esforço** (o planejamento
@@ -291,16 +293,46 @@ tela.
 
 ---
 
-## Camada 4 — Telas migram pra seletor — ⏳ NÃO INICIADA
+## Camada 4 — Telas migram pra seletor — ⏳ EM ANDAMENTO (4.1 concluído)
 
-| # | Atividade | Arquivo(s) | Modelo | Esforço |
-|---|---|---|---|---|
-| 4.1 | `editor.html` "Projetos & Representantes": campo vira seletor de pessoa | `editor.html` | Sonnet | médio |
-| 4.2 | `editor.html` "URC — Liderança" / "URC — Responsáveis por canal": seletor de pessoa/canal | `editor.html` | Sonnet | médio |
-| 4.3 | `plano-acao.html` / `minhas-acoes.html`: select de responsável lê pessoas + coletivos, aposenta parsing de `js/responsaveis.js` | `plano-acao.html`, `minhas-acoes.html` | Sonnet | alto |
-| 4.4 | `participantes.html` / `js/drawer.js`: exibição via join, não mais array de string | `participantes.html`, `js/drawer.js` | Sonnet | médio |
+| # | Atividade | Arquivo(s) | Status |
+|---|---|---|---|
+| 4.1 | `editor.html` "Projetos & Representantes": campo vira seletor de pessoa | `editor.html`, `js/db-projeto-representantes.js` | ✅ em `main` — chip removível (junção `meta_inovacao_projeto_representantes`, item 2.2) + `<select>` de pessoas ativas, no lugar do texto livre "Representantes (vírgula)". Detalhe abaixo. |
+| 4.2 | `editor.html` "URC — Liderança" / "URC — Responsáveis por canal": seletor de pessoa/canal | `editor.html` | ⏳ NÃO INICIADO (Sonnet, médio) |
+| 4.3 | `plano-acao.html` / `minhas-acoes.html`: select de responsável lê pessoas + coletivos, aposenta parsing de `js/responsaveis.js` | `plano-acao.html`, `minhas-acoes.html` | ⏳ NÃO INICIADO (Sonnet, alto) |
+| 4.4 | `participantes.html` / `js/drawer.js`: exibição via join, não mais array de string | `participantes.html`, `js/drawer.js` | ⏳ NÃO INICIADO (Sonnet, médio) |
 
-**Notas pra quando chegar aqui:**
+### Como o 4.1 ficou
+
+- A célula de "Representantes" deixou de ser um `<input type="text">` com nomes
+  separados por vírgula. Cada projeto agora mostra um **chip removível** por
+  representante já vinculado (`.chip.pessoa`, o mesmo estilo de `js/drawer.js`) e um
+  `<select>` "+ adicionar…" com as pessoas **ativas** de `meta_inovacao_pessoas` que
+  ainda não estão vinculadas àquele projeto — `js/db-projeto-representantes.js` (novo,
+  mesmo padrão de `js/db-pessoa-papeis.js`) lê/grava a junção
+  `meta_inovacao_projeto_representantes` criada no item 2.2.
+- `meta_inovacao_projetos.representantes` (`text[]`) **continua sendo gravado em
+  paralelo** — a Camada 5 é quem decide se ele é aposentado, e `projetos.html`,
+  `index.html`, `js/drawer.js` e `js/busca.js` ainda leem só o array. Adicionar/remover
+  pelo seletor novo sincroniza o array (nome curto da pessoa) best-effort: se o vínculo
+  grava mas a sincronia do texto falhar, fica só um aviso no console — o vínculo (fonte
+  nova) não é desfeito por isso.
+- Projeto sem vínculo pra nenhum representante (ainda não migrado, ou o placeholder
+  intencional "Núcleo de Startups"/"Núcleo de X" — ver nota do item 2.2) continua
+  mostrando o texto puro de `representantes[]`, sem quebrar; o `<select>` de adicionar
+  aparece do mesmo jeito, pra dar o próximo passo quando a indicação nominal vier.
+- "+ Novo projeto" trocou o campo de texto por chips + `<select>` também — as pessoas
+  escolhidas viram vínculo assim que o projeto é criado (mesma chamada em sequência,
+  1 por representante); um campo de texto opcional cobre só o placeholder de
+  "indicação pendente" (não vira vínculo, mesmo padrão do "Núcleo de Startups").
+- Testado offline (`?semrede=1`: sem tabela de vínculo pra ler, cai pro texto puro,
+  controles desabilitados — nunca uma escrita de verdade em teste) e online (dublê de
+  Supabase in-memory, sem tocar rede de verdade): vínculo existente vira chip, pessoa já
+  vinculada some do `<select>`, pessoa inativa nunca aparece nele, adicionar grava o
+  vínculo e sincroniza o texto, remover desfaz as duas coisas — ver
+  `tools/testar_projetos_editor_representantes_headless.js`.
+
+**Notas pra quando chegar no resto da camada (4.2–4.4):**
 
 - É o momento certo de decidir a UX dos ids duplicados `jr`/`jose_mendes_junior` e
   `sandra`/`sandra_chaves_paraiso` em `window.DB.responsaveis` (ver Camada 1) — hoje
@@ -314,7 +346,9 @@ tela.
 
 **Teste de aceite:** nenhuma das 4 telas tem mais campo de texto livre pra nome de
 pessoa; os testes headless existentes (`testar_participantes_headless.js`,
-`testar_drawer_headless.js`, `testar_minhas_acoes_headless.js`) continuam verdes.
+`testar_drawer_headless.js`, `testar_minhas_acoes_headless.js`) continuam verdes. O 4.1
+já passa nesse critério — `testar_projetos_editor_representantes_headless.js` é a rede
+de proteção nova dele.
 
 ---
 
@@ -371,13 +405,19 @@ precisa saber sem reler tudo acima:
    mesmo modelo de `demandas.html`) e 3.4 (testes headless) estão em `main` e validados.
    **Falta só o 3.5**, que é validação humana em andamento por José — ver "Como está a
    validação do 3.5" na seção da Camada 3.
-3. Documentos de apoio já existentes, não precisam ser refeitos:
+3. **Camada 4 começou:** o item 4.1 (`editor.html` "Projetos & Representantes" —
+   texto livre virou seletor de pessoa, chip + `<select>`, sobre a junção
+   `meta_inovacao_projeto_representantes` do item 2.2) está em `main`. Faltam 4.2 (URC),
+   4.3 (plano de ação/minhas ações) e 4.4 (participantes/drawer) — ver "Como o 4.1 ficou"
+   na seção da Camada 4 antes de mexer no resto, o padrão de chip+select criado ali serve
+   de referência pros próximos itens.
+4. Documentos de apoio já existentes, não precisam ser refeitos:
    - `docs/CAMADA1_DEDUPE_PESSOAS.md` — decisões de identidade de pessoas.
    - `docs/CAMADA2_COBERTURA_FK.md` — cobertura real de cada FK da Camada 2.
    - `docs/PROPOSTA_ESQUEMA_CADASTROS_REFERENCIA.md` — desenho original completo.
    - `docs/GOVERNANCA_GOLDEN_RECORD.md` — governança do golden record de *projetos*
      (frente irmã, concluída antes desta).
-4. Ferramentas desta frente que já existem — use em vez de reinventar:
+5. Ferramentas desta frente que já existem — use em vez de reinventar:
    - `tools/relatorio_cobertura_fk.js` — cobertura de FK da Camada 2, contra produção.
    - `tools/conferir_matriz_celulas.js` — matriz nova × antiga, célula a célula.
    - `tools/sql/2026-08_matriz_celulas_diagnostico.sql` — schema/RLS/realtime da
@@ -386,13 +426,17 @@ precisa saber sem reler tudo acima:
    - `tools/testar_matriz_editor_headless.js` — fiação da aba "matriz" do `editor.html`:
      carrega ao vivo, coluna por `ordem`, canal novo, só leitura, e o snapshot batendo
      chave a chave com o de `demandas.html`.
-5. **Pendências não bloqueantes acumuladas:** UI de múltiplos papéis por pessoa em
+   - `tools/testar_projetos_editor_representantes_headless.js` — aba "Projetos &
+     Representantes" do `editor.html` (item 4.1): vínculo vira chip, adicionar/remover
+     grava o vínculo e sincroniza `representantes[]` (texto legado), offline e online
+     (dublê de Supabase).
+6. **Pendências não bloqueantes acumuladas:** UI de múltiplos papéis por pessoa em
    `editor.html` (Camada 1); "Oficina confirmada"/"Não se aplica o
    uso" fora do `CHECK` (Camada 3). **As duas falhas antigas da suíte
    (`testar_status_badges_headless.js` e `testar_drawer_headless.js`) foram corrigidas em
    22/08 (PR #10)** — a suíte do README está verde. Num ambiente sem rede de saída pro
    Supabase, 2 asserções do drawer falham por isso e só por isso.
-6. **Toda migração SQL é rodada manualmente por José no SQL Editor do Supabase** —
+7. **Toda migração SQL é rodada manualmente por José no SQL Editor do Supabase** —
    nenhuma automação tem acesso de escrita à produção. As sessões do Claude Code também
    **não conseguem LER** o Supabase de produção (rede bloqueada pra `supabase.co`): todo
    teste de migração é feito num Postgres local simulando o estado de produção antes de

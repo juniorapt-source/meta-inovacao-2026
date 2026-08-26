@@ -128,6 +128,12 @@ node tools/testar_matriz_editor_headless.js # a aba "matriz" do editor.html (ite
                                         # chave a chave com o de demandas.html — offline e
                                         # com o mesmo dublê de Supabase
 node tools/testar_catalogos_base.js    # Camada 0: seeds (5/10/5) e os 3 wrappers db-*.js
+node tools/testar_projetos_editor_representantes_headless.js # aba "Projetos &
+                                        # Representantes" do editor.html (item 4.1):
+                                        # vínculo existente vira chip removível, texto
+                                        # puro pro placeholder sem pessoa, adicionar
+                                        # grava o vínculo E sincroniza representantes[]
+                                        # (texto legado), remover desfaz as duas coisas
 ```
 
 Dois relatórios leem **produção** (só leitura, anon key de `js/config.js`) — não entram na

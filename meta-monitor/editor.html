@@ -66,6 +66,16 @@
 .ed-carregando,.ed-erro-carregar{color:var(--grafite);font-size:13px;padding:10px 2px}
 .ed-erro-carregar{color:var(--critico)}
 
+/* item 4.1 — seletor de pessoa em "Projetos & Representantes": chip removível
+   (mesmo .chip.pessoa de js/drawer.js) + <select> de "+ adicionar", no lugar do
+   campo de texto livre "Representantes (vírgula)". */
+.ed-repr-cel{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.ed-repr-cel select,.ed-repr-cel input[type=text]{width:auto;min-width:150px}
+.ed-chip-remover{border:0;background:transparent;color:inherit;cursor:pointer;font-size:12px;
+  line-height:1;padding:0 0 0 4px;font-family:var(--font-sans)}
+.ed-chip-remover:hover{color:var(--critico)}
+.ed-repr-vazio{color:var(--ink-2);font-size:12.5px;font-style:italic}
+
 /* item 3.4 — aba Histórico (mesmo .vista-toggle de agenda.html/plano.html) */
 .vista-toggle{display:flex;gap:8px;margin-bottom:14px}
 .vista-toggle button{font:600 12px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.06em;padding:8px 14px;border-radius:0;border:1px solid var(--linha);background:var(--branco);color:var(--tinta);cursor:pointer}
@@ -138,6 +148,7 @@
 <script src="js/db-agenda.js"></script>
 <script src="js/db-pessoas.js"></script>
 <script src="js/db-projetos.js"></script>
+<script src="js/db-projeto-representantes.js"></script>
 <script src="js/db-canais.js"></script>
 <script src="js/db-urc.js"></script>
 <script src="js/db-corsario.js"></script>
@@ -205,6 +216,13 @@ let planoAtual = null, planoFallback = false, planoCarregando = false;
 let agendaAtual = null, agendaFallback = false, agendaCarregando = false;
 let pessoasAtual = null, pessoasFallback = false, pessoasCarregando = false;
 let projetosAtual = null, projetosFallback = false, projetosCarregando = false;
+// item 4.1 do plano — vínculo projeto×pessoa (meta_inovacao_projeto_representantes,
+// Camada 2, item 2.2), carregado junto com projetosAtual/pessoasAtual na primeira vez
+// que "Projetos & Representantes" é aberto. É a fonte do seletor de pessoa que
+// substituiu o campo de texto livre; representantes[] (text[]) continua sendo
+// gravado em paralelo (Camada 5 decide se algum dia é aposentado), pra não quebrar
+// projetos.html/index.html/js/drawer.js/js/busca.js, que ainda leem só o array.
+let projRepresentantesAtual = null, formNovoProjRepresentantesSelecionados = [];
 // URC: liderança e canais compartilham uma única carga (DB_URC.carregar() busca as duas
 // tabelas juntas) porque o guardrail de "responsável de canal não pode ter nome de
 // liderança" (item 4.4) precisa da lista de liderança carregada mesmo quando se está
@@ -257,6 +275,20 @@ function rotuloColunaCorsario(c) {
 function opts(lista, atual, rot){
   const l = lista.includes(atual)||atual===""&&lista.includes("") ? lista : [atual].concat(lista);
   return l.map(v=>'<option value="'+esc(v)+'"'+(v===atual?" selected":"")+'>'+esc(rot?(rot[v]!==undefined?rot[v]:v):(v||"—"))+'</option>').join("");
+}
+
+// item 4.1 — mesma régua de tools/sql/2026-08_projeto_representantes.sql
+// (public.cc_pessoa_normalizar): minúsculas, sem acento, sem ponto, trim. Usada só
+// pra casar um token de representantes[] (texto legado) com a pessoa escolhida no
+// seletor novo, ao sincronizar os dois — não é uma segunda régua de identidade.
+function normalizarNomePessoa(txt){
+  return String(txt||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\./g,"").trim();
+}
+// rótulo de exibição de uma pessoa nos seletores/chips novos — mesma prioridade de
+// docs/CAMADA1_DEDUPE_PESSOAS.md §3.3 (nome_completo > nome_exibicao > nome, porque
+// 15 pessoas ainda não têm nome_completo preenchido).
+function nomeExibicaoPessoa(p){
+  return (p && (p.nome_completo||p.nome_exibicao||p.nome)) || "";
 }
 
 /* prefixo de ID por frente, descoberto a partir dos dados carregados (não hardcodado) */
@@ -638,13 +670,70 @@ async function renderPessoas(){
   }));
 }
 
+// item 4.1 do plano — monta chips+select de "adicionar" pro formulário de novo
+// projeto, a partir de formNovoProjRepresentantesSelecionados (estado do cliente,
+// nenhum vínculo grava no banco antes do projeto existir). O campo de texto
+// opcional cobre o único caso legítimo de placeholder ("Núcleo de Startups", ver
+// docs/CAMADA2_COBERTURA_FK.md) — quem digitar ali não vira vínculo em
+// meta_inovacao_projeto_representantes, só entra no representantes[] (texto),
+// igual à linha que já existe em produção.
+function nvpReprAreaHtml(){
+  const escolhidos = new Set(formNovoProjRepresentantesSelecionados.map(ps=>String(ps.db_id)));
+  const disponiveis = (pessoasAtual||[]).filter(ps=>ps.ativo!==false && !escolhidos.has(String(ps.db_id)))
+    .slice().sort((a,b)=>nomeExibicaoPessoa(a).localeCompare(nomeExibicaoPessoa(b),"pt-BR"));
+  const chips = formNovoProjRepresentantesSelecionados.map(ps=>
+    '<span class="chip pessoa">'+esc(nomeExibicaoPessoa(ps))+
+    ' <button type="button" class="ed-chip-remover" data-remover-nvp-repr="'+esc(String(ps.db_id))+'" title="Remover">×</button></span>'
+  ).join("");
+  return chips+
+    '<select id="nvp-repr-select"><option value="">+ adicionar pessoa…</option>'+
+    disponiveis.map(ps=>'<option value="'+esc(String(ps.db_id))+'">'+esc(nomeExibicaoPessoa(ps))+'</option>').join("")+
+    '</select> <input type="text" id="nvp-repr-placeholder" placeholder="ou indicação pendente, ex.: Núcleo de Startups">';
+}
+function ligarNvpReprHandlers(){
+  const reprSel = document.getElementById("nvp-repr-select");
+  if(reprSel) reprSel.addEventListener("change",e=>{
+    const id = e.target.value; if(!id) return;
+    const pessoa = (pessoasAtual||[]).find(ps=>String(ps.db_id)===id);
+    if(pessoa && !formNovoProjRepresentantesSelecionados.some(ps=>String(ps.db_id)===id)) formNovoProjRepresentantesSelecionados.push(pessoa);
+    atualizarNvpReprArea();
+  });
+  document.querySelectorAll("[data-remover-nvp-repr]").forEach(btn=>btn.addEventListener("click",e=>{
+    const id = e.target.dataset.removerNvpRepr;
+    formNovoProjRepresentantesSelecionados = formNovoProjRepresentantesSelecionados.filter(ps=>String(ps.db_id)!==id);
+    atualizarNvpReprArea();
+  }));
+}
+// re-renderiza só a área de chips/select — preserva o que já foi digitado em
+// Núcleo/Iniciativa/placeholder (um innerHTML da ed-nova inteira apagaria o que o
+// usuário ainda não confirmou, porque os valores só voltam pro estado no "Adicionar").
+function atualizarNvpReprArea(){
+  const cont = document.getElementById("nvp-repr-area");
+  if(!cont) return;
+  const placeholderAntes = (document.getElementById("nvp-repr-placeholder")||{}).value || "";
+  cont.innerHTML = nvpReprAreaHtml();
+  const placeholderEl = document.getElementById("nvp-repr-placeholder");
+  if(placeholderEl) placeholderEl.value = placeholderAntes;
+  ligarNvpReprHandlers();
+}
+
 async function renderProjetos(){
   if(!projetosAtual && !projetosCarregando){
     projetosCarregando = true;
     area.innerHTML = '<div class="ed-carregando">Carregando projetos…</div>';
     try {
-      const { lista, usandoFallback } = await DB_PROJETOS.carregar();
-      projetosAtual = lista; projetosFallback = usandoFallback;
+      // item 4.1 — o seletor de pessoa precisa de DB_PESSOAS (lista pra escolher) e
+      // DB_PROJETO_REPRESENTANTES (vínculo projeto×pessoa, item 2.2) junto com
+      // DB_PROJETOS; reaproveita pessoasAtual se a aba "Pessoas" já carregou antes
+      // (mesmo cache dos dois lados), pra não buscar a mesma tabela duas vezes.
+      const [projRes, pessoasRes, represRes] = await Promise.all([
+        DB_PROJETOS.carregar(),
+        pessoasAtual ? Promise.resolve({ lista: pessoasAtual, usandoFallback: pessoasFallback }) : DB_PESSOAS.carregar(),
+        DB_PROJETO_REPRESENTANTES.carregar(),
+      ]);
+      projetosAtual = projRes.lista; projetosFallback = projRes.usandoFallback;
+      pessoasAtual = pessoasRes.lista; pessoasFallback = pessoasRes.usandoFallback;
+      projRepresentantesAtual = represRes.lista;
     } catch(err){
       console.error("editor: falha ao carregar projetos", err);
       projetosCarregando = false;
@@ -656,7 +745,15 @@ async function renderProjetos(){
   if(sel.value!=="projetos") return;
   const lista = projetosAtual || [];
   const dis = projetosFallback ? " disabled" : "";
+  // "adicionar representante" exige rede (grava em duas tabelas) — some no fallback,
+  // mesmo critério de "+ Novo projeto" logo abaixo.
+  const disRepr = (projetosFallback || pessoasFallback) ? " disabled" : "";
   let h = projetosFallback ? avisoFallback("data/projetos.js") : "";
+  const pessoasPorId = {};
+  (pessoasAtual||[]).forEach(ps=>{ pessoasPorId[String(ps.db_id)]=ps; });
+  const pessoasSelecionaveis = (pessoasAtual||[]).filter(ps=>ps.ativo!==false)
+    .slice().sort((a,b)=>nomeExibicaoPessoa(a).localeCompare(nomeExibicaoPessoa(b),"pt-BR"));
+  const represPorProjeto = DB_PROJETO_REPRESENTANTES.porProjeto(projRepresentantesAtual);
   // "+ Novo projeto" — cria uma iniciativa nova direto no golden record (meta_inovacao_projetos
   // via DB_PROJETOS.criar). É a ÚNICA porta de entrada de projeto novo no site (demandas.html
   // deixou de criar iniciativa na camada 1 da governança). Some no modo fallback (sem rede).
@@ -667,25 +764,38 @@ async function renderProjetos(){
       '<div data-campo="nucleo"><label>Núcleo *</label><select id="nvp-nucleo">'+opts(NUCLEOS_VALIDOS,NUCLEOS_VALIDOS[0])+'</select></div>'+
       '<div class="full" data-campo="iniciativa"><label>Iniciativa *</label><input type="text" id="nvp-iniciativa" placeholder="ex.: Nova iniciativa X">'+
         '<span class="ed-erro-msg">Obrigatório.</span></div>'+
-      '<div class="full" data-campo="representantes"><label>Representantes (vírgula) *</label><input type="text" id="nvp-representantes" placeholder="ex.: Carol, Matheus">'+
-        '<span class="ed-erro-msg">Pelo menos um — use "Núcleo de X" se ainda aguarda indicação nominal.</span></div>'+
+      '<div class="full" data-campo="representantes"><label>Representantes *</label>'+
+        '<div id="nvp-repr-area" class="ed-repr-cel">'+nvpReprAreaHtml()+'</div>'+
+        '<span class="ed-erro-msg">Escolha ao menos uma pessoa, ou preencha a indicação pendente.</span></div>'+
     '</div>'+
     '<div class="ed-nova-acoes"><button type="button" id="ed-confirmar-novo-proj" class="ed-btn">Adicionar</button>'+
       '<button type="button" id="ed-cancelar-novo-proj" class="ed-btn sec">Cancelar</button></div>'+
   '</div>';
-  h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Núcleo</th><th>Iniciativa</th><th>Representantes (vírgula)</th><th style="width:70px"></th></tr></thead><tbody>';
+  h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Núcleo</th><th>Iniciativa</th><th>Representantes</th><th style="width:70px"></th></tr></thead><tbody>';
   lista.forEach((p)=>{
+    const vinculos = represPorProjeto[p.db_id] || [];
+    const jaSelecionados = new Set(vinculos.map(v=>String(v.pessoa_id)));
+    const disponiveis = pessoasSelecionaveis.filter(ps=>!jaSelecionados.has(String(ps.db_id)));
+    const chips = vinculos.map(v=>{
+      const pessoa = pessoasPorId[String(v.pessoa_id)];
+      const nomeRepr = pessoa ? nomeExibicaoPessoa(pessoa) : "pessoa removida";
+      return '<span class="chip pessoa" data-pessoa="'+esc(String(v.pessoa_id))+'">'+esc(nomeRepr)+
+        ' <button type="button" class="ed-chip-remover" data-remover-repr="'+esc(String(v.db_id))+'" title="Remover representante" aria-label="Remover '+esc(nomeRepr)+'"'+disRepr+'>×</button></span>';
+    }).join("") || (vinculos.length ? "" : '<span class="ed-repr-vazio">'+esc((p.representantes||[]).join(", ")||"nenhum")+'</span>');
     h+='<tr data-id="'+esc(String(p.db_id))+'">'+
       '<td><select data-f="nucleo"'+dis+'>'+opts(NUCLEOS_VALIDOS,p.nucleo)+'</select></td>'+
       '<td><input type="text" data-f="iniciativa" value="'+esc(p.iniciativa)+'"'+dis+'></td>'+
-      '<td><input type="text" data-f="representantes" value="'+esc(p.representantes.join(", "))+'" placeholder="ex.: Carol, Matheus"'+dis+'></td>'+
+      '<td><div class="ed-repr-cel">'+chips+
+        '<select class="ed-add-repr" data-projeto="'+esc(String(p.db_id))+'"'+disRepr+'><option value="">+ adicionar…</option>'+
+        disponiveis.map(ps=>'<option value="'+esc(String(ps.db_id))+'">'+esc(nomeExibicaoPessoa(ps))+'</option>').join("")+
+        '</select></div></td>'+
       '<td><span class="ed-row-status" aria-live="polite"></span> <button type="button" class="ed-btn sec" data-del="'+esc(String(p.db_id))+'" style="padding:4px 8px"'+dis+' title="Remover projeto">×</button></td></tr>';
   });
   area.innerHTML=h+'</tbody></table></div>';
 
   area.querySelectorAll("tbody select[data-f],tbody input[data-f]").forEach(el=>el.addEventListener("change",async e=>{
     const t=e.target, tr=t.closest("tr"), id=tr.dataset.id, campo=t.dataset.f;
-    const valor = campo==="representantes" ? t.value.split(",").map(s=>s.trim()).filter(Boolean) : t.value;
+    const valor = t.value;
     const p = lista.find(x=>String(x.db_id)===id);
     if(p) p[campo]=valor;
     marcarLinhaStatus(tr,"salvando");
@@ -694,6 +804,81 @@ async function renderProjetos(){
       marcarLinhaStatus(tr,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar projeto",err);
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
+    }
+  }));
+
+  // item 4.1 — adicionar representante: grava o vínculo em
+  // meta_inovacao_projeto_representantes (fonte nova) e, best-effort, sincroniza
+  // representantes[] (texto legado que projetos.html/index.html/js/drawer.js/
+  // js/busca.js ainda leem) — uma falha só na sincronia do texto não desfaz o
+  // vínculo, só fica registrada no console pra investigar depois.
+  area.querySelectorAll(".ed-add-repr").forEach(elSel=>elSel.addEventListener("change",async e=>{
+    const t=e.target, tr=t.closest("tr"), projetoId=t.dataset.projeto, pessoaIdStr=t.value;
+    if(!pessoaIdStr) return;
+    const p = lista.find(x=>String(x.db_id)===projetoId);
+    const pessoa = pessoasPorId[pessoaIdStr];
+    if(!p || !pessoa) return;
+    t.disabled = true;
+    marcarLinhaStatus(tr,"salvando");
+    try {
+      const vinculosAtuais = represPorProjeto[p.db_id] || [];
+      const proximaOrdem = vinculosAtuais.length ? Math.max.apply(null,vinculosAtuais.map(v=>v.ordem||0))+1 : 1;
+      const criado = await DB_PROJETO_REPRESENTANTES.criar({ projeto_id: p.db_id, pessoa_id: Number(pessoaIdStr), ordem: proximaOrdem }, EDITOR_ATUAL.nomeAtual());
+      projRepresentantesAtual.push(criado);
+      try {
+        const novoTexto = (p.representantes||[]).concat([pessoa.nome]);
+        await DB_PROJETOS.salvar(p.db_id, { representantes: novoTexto }, EDITOR_ATUAL.nomeAtual());
+        p.representantes = novoTexto;
+      } catch(errTexto){
+        console.error("editor: representante vinculado, mas falhou ao sincronizar representantes[] (texto legado) — pode ficar desatualizado em projetos.html/index.html até o próximo ajuste",errTexto);
+      }
+      marcarLinhaStatus(tr,"salvo");
+      renderProjetos();
+    } catch(err){
+      console.error("editor: falha ao adicionar representante",err);
+      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
+      t.disabled = false;
+    }
+  }));
+
+  // item 4.1 — remover representante: soft-delete do vínculo + tenta tirar o token
+  // correspondente de representantes[], casando pela mesma régua de normalização de
+  // tools/sql/2026-08_projeto_representantes.sql (nome ou nome_exibicao). Se não achar
+  // (nome divergente demais do texto legado), só o vínculo sai — o texto fica como
+  // estava, sem risco de remover o token errado.
+  area.querySelectorAll("[data-remover-repr]").forEach(btn=>btn.addEventListener("click",async e=>{
+    const t = e.target, tr = t.closest("tr"), chip = t.closest(".chip");
+    const vinculoId = t.dataset.removerRepr;
+    const projetoId = tr.dataset.id;
+    const p = lista.find(x=>String(x.db_id)===projetoId);
+    const pessoaIdStr = chip && chip.dataset.pessoa;
+    const pessoa = pessoaIdStr ? pessoasPorId[pessoaIdStr] : null;
+    const nomeRepr = pessoa ? nomeExibicaoPessoa(pessoa) : "este representante";
+    if(!window.confirm('Remover "'+nomeRepr+'" dos representantes de "'+(p?p.iniciativa:"este projeto")+'"?')) return;
+    marcarLinhaStatus(tr,"salvando");
+    try {
+      await DB_PROJETO_REPRESENTANTES.removerSoft(vinculoId, EDITOR_ATUAL.nomeAtual());
+      projRepresentantesAtual = (projRepresentantesAtual||[]).filter(v=>String(v.db_id)!==vinculoId);
+      if(p && pessoa){
+        const idx = (p.representantes||[]).findIndex(tok=>{
+          const n = normalizarNomePessoa(tok);
+          return n===normalizarNomePessoa(pessoa.nome) || n===normalizarNomePessoa(pessoa.nome_exibicao);
+        });
+        if(idx>=0){
+          const novoTexto = p.representantes.slice(0,idx).concat(p.representantes.slice(idx+1));
+          try {
+            await DB_PROJETOS.salvar(p.db_id, { representantes: novoTexto }, EDITOR_ATUAL.nomeAtual());
+            p.representantes = novoTexto;
+          } catch(errTexto){
+            console.error("editor: representante desvinculado, mas falhou ao sincronizar representantes[] (texto legado)",errTexto);
+          }
+        }
+      }
+      marcarLinhaStatus(tr,"salvo");
+      renderProjetos();
+    } catch(err){
+      console.error("editor: falha ao remover representante",err);
       marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
     }
   }));
@@ -716,10 +901,11 @@ async function renderProjetos(){
   }));
 
   const btnAbrirNovoProj = document.getElementById("ed-abrir-novo-proj");
-  if(btnAbrirNovoProj) btnAbrirNovoProj.addEventListener("click",()=>{ formNovoProjetoAberto=true; renderProjetos(); });
+  if(btnAbrirNovoProj) btnAbrirNovoProj.addEventListener("click",()=>{ formNovoProjetoAberto=true; formNovoProjRepresentantesSelecionados=[]; renderProjetos(); });
   if(formNovoProjetoAberto){
-    document.getElementById("ed-cancelar-novo-proj").addEventListener("click",()=>{ formNovoProjetoAberto=false; renderProjetos(); });
+    document.getElementById("ed-cancelar-novo-proj").addEventListener("click",()=>{ formNovoProjetoAberto=false; formNovoProjRepresentantesSelecionados=[]; renderProjetos(); });
     document.getElementById("ed-confirmar-novo-proj").addEventListener("click", criarProjeto);
+    ligarNvpReprHandlers();
     const iniEl = document.getElementById("nvp-iniciativa");
     if(iniEl) iniEl.focus();
   }
@@ -728,23 +914,25 @@ async function renderProjetos(){
 async function criarProjeto(){
   const campo = id => document.getElementById(id);
   const iniciativa = campo("nvp-iniciativa").value.trim();
-  const representantes = campo("nvp-representantes").value.split(",").map(s=>s.trim()).filter(Boolean);
+  const selecionados = formNovoProjRepresentantesSelecionados.slice();
+  const placeholderTexto = (campo("nvp-repr-placeholder")||{}).value ? campo("nvp-repr-placeholder").value.trim() : "";
   document.querySelectorAll("#ed-form-novo-proj .ed-campo-erro").forEach(el=>el.classList.remove("ed-campo-erro"));
   let erro = false;
   if(!iniciativa){ document.querySelector('#ed-form-novo-proj [data-campo="iniciativa"]').classList.add("ed-campo-erro"); erro = true; }
   // representantes >= 1: mesmo requisito do validar_dados.py (o seed regenerado pela camada 3
-  // precisa passar); se a indicação nominal ainda não veio, usar o placeholder "Núcleo de X".
-  if(!representantes.length){ document.querySelector('#ed-form-novo-proj [data-campo="representantes"]').classList.add("ed-campo-erro"); erro = true; }
+  // precisa passar); se a indicação nominal ainda não veio, usar o placeholder de texto.
+  if(!selecionados.length && !placeholderTexto){ document.querySelector('#ed-form-novo-proj [data-campo="representantes"]').classList.add("ed-campo-erro"); erro = true; }
   if(erro) return;
   const jaExiste = (projetosAtual||[]).some(p=>p.iniciativa.toLowerCase()===iniciativa.toLowerCase());
   if(jaExiste){
     window.alert('Já existe um projeto chamado "'+iniciativa+'" — edite a linha dele na tabela em vez de criar de novo.');
     return;
   }
+  const representantesTexto = selecionados.map(ps=>ps.nome).concat(placeholderTexto ? [placeholderTexto] : []);
   const nova = {
     nucleo: campo("nvp-nucleo").value,
     iniciativa: iniciativa,
-    representantes: representantes,
+    representantes: representantesTexto,
     ordem: (projetosAtual||[]).length + 1
   };
   const btn = document.getElementById("ed-confirmar-novo-proj");
@@ -752,6 +940,18 @@ async function criarProjeto(){
   try {
     const criado = await DB_PROJETOS.criar(nova, EDITOR_ATUAL.nomeAtual());
     projetosAtual.push(criado);
+    // item 4.1 — vincula cada pessoa escolhida no seletor em
+    // meta_inovacao_projeto_representantes; o texto de indicação pendente (se
+    // preenchido) não vira vínculo de propósito, mesmo padrão do "Núcleo de
+    // Startups" já existente em produção (docs/GOVERNANCA_GOLDEN_RECORD.md).
+    for(let i=0;i<selecionados.length;i++){
+      try {
+        const vinculo = await DB_PROJETO_REPRESENTANTES.criar({ projeto_id: criado.db_id, pessoa_id: selecionados[i].db_id, ordem: i+1 }, EDITOR_ATUAL.nomeAtual());
+        projRepresentantesAtual.push(vinculo);
+      } catch(errRepr){
+        console.error("editor: projeto criado, mas falhou ao vincular representante \""+selecionados[i].nome+"\"",errRepr);
+      }
+    }
     // Propaga pro "Caminho do Corsário". O golden record (meta_inovacao_projetos) é a fonte
     // única, mas a tela do Corsário monta a lista de iniciativas a partir de corsario_status
     // (tabela à parte, status por iniciativa×critério) — sem semear essa tabela, o projeto
@@ -775,6 +975,7 @@ async function criarProjeto(){
       window.alert('Projeto criado. Mas não consegui incluí-lo automaticamente no Caminho do Corsário — crie a iniciativa "'+criado.iniciativa+'" no conjunto "O Caminho para o Corsário".');
     }
     formNovoProjetoAberto = false;
+    formNovoProjRepresentantesSelecionados = [];
     renderProjetos();
   } catch(err){
     console.error("editor: falha ao criar projeto",err);
