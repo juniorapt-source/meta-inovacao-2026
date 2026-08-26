@@ -23,8 +23,10 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > Camada 3 quase concluída — 3.1, 3.2, 3.3 e 3.4
 > já em `main` e validados, falta só o 3.5 (validação humana, em curso); Camada 4 em
 > andamento — os itens 4.1 (`editor.html` "Projetos & Representantes" vira seletor de
-> pessoa) e 4.2 (`editor.html` "URC — Liderança"/"URC — Responsáveis por canal" viram
-> seletor de pessoa/canal) já estão em `main`, faltam 4.3/4.4.** Camada 5 ainda não
+> pessoa), 4.2 (`editor.html` "URC — Liderança"/"URC — Responsáveis por canal" viram
+> seletor de pessoa/canal) e 4.3 (`plano-acao.html`/`minhas-acoes.html`: select de
+> "Responsável"/"Ver como" passa a ler pessoas+coletivos do golden record, sem migração —
+> ver `js/db-responsaveis.js`) já estão em `main`, falta 4.4.** Camada 5 ainda não
 > iniciada. Se você está retomando este trabalho numa sessão nova: leia a seção "Status
 > por camada" no fim primeiro — ela lista o que já existe no banco e no repositório, pra
 > não repetir trabalho nem presumir algo que ainda não foi feito.
@@ -294,13 +296,13 @@ tela.
 
 ---
 
-## Camada 4 — Telas migram pra seletor — ⏳ EM ANDAMENTO (4.1 e 4.2 concluídos)
+## Camada 4 — Telas migram pra seletor — ⏳ EM ANDAMENTO (4.1, 4.2 e 4.3 concluídos)
 
 | # | Atividade | Arquivo(s) | Status |
 |---|---|---|---|
 | 4.1 | `editor.html` "Projetos & Representantes": campo vira seletor de pessoa | `editor.html`, `js/db-projeto-representantes.js` | ✅ em `main` — chip removível (junção `meta_inovacao_projeto_representantes`, item 2.2) + `<select>` de pessoas ativas, no lugar do texto livre "Representantes (vírgula)". Detalhe abaixo. |
 | 4.2 | `editor.html` "URC — Liderança" / "URC — Responsáveis por canal": seletor de pessoa/canal | `editor.html`, `js/db-urc.js` | ✅ em `main` — "Nome" (nas duas abas) virou `<select>` de pessoa (golden record, `pessoa_id` dos itens 2.3/2.4), pré-selecionado por FK; o `<select>` de canal (já existia, sobre `CANAIS_FIXOS`) passou a manter `canal_id` em sincronia; "+ Adicionar responsável" trocou o `prompt()` de nome livre por 2 `<select>` (canal + pessoa). Detalhe abaixo. |
-| 4.3 | `plano-acao.html` / `minhas-acoes.html`: select de responsável lê pessoas + coletivos, aposenta parsing de `js/responsaveis.js` | `plano-acao.html`, `minhas-acoes.html` | ⏳ NÃO INICIADO (Sonnet, alto) |
+| 4.3 | `plano-acao.html` / `minhas-acoes.html`: select de responsável lê pessoas + coletivos, aposenta parsing de `js/responsaveis.js` | `plano-acao.html`, `minhas-acoes.html`, `js/db-responsaveis.js` (novo) | ✅ em `main` — o `<select>` de "Responsável"/"Ver como" agora é montado a partir de `DB_PESSOAS`+`DB_COLETIVOS` (golden record), não mais da lista estática `window.DB.responsaveis`; os ~32 ids já gravados no Supabase são preservados exatamente, sem migração. Detalhe abaixo. |
 | 4.4 | `participantes.html` / `js/drawer.js`: exibição via join, não mais array de string | `participantes.html`, `js/drawer.js` | ⏳ NÃO INICIADO (Sonnet, médio) |
 
 ### Como o 4.1 ficou
@@ -373,11 +375,67 @@ tela.
   continua bloqueando, e "+ Adicionar responsável" grava as 4 colunas a partir dos 2
   `<select>` do topo — ver `tools/testar_urc_editor_headless.js`.
 
-**Notas pra quando chegar no resto da camada (4.3–4.4):**
+### Como o 4.3 ficou
 
-- É o momento certo de decidir a UX dos ids duplicados `jr`/`jose_mendes_junior` e
-  `sandra`/`sandra_chaves_paraiso` em `window.DB.responsaveis` (ver Camada 1) — hoje
-  resolvem pro mesmo `pessoa_id`, mas a lista ainda mostra 2 entradas pro mesmo humano.
+- **Novo módulo `js/db-responsaveis.js`** (`window.DB_RESPONSAVEIS`) — função pura (sem
+  rede, sem DOM, testável via node como `js/calc.js`/`js/responsaveis.js`) que MONTA a
+  lista de responsáveis (pessoa OU coletivo) a partir de `DB_PESSOAS.carregar()` +
+  `DB_COLETIVOS.carregar()` já resolvidos, substituindo a lista estática
+  `window.DB.responsaveis` (`data/pessoas.js`) como fonte dos `<select>` de "Responsável"
+  (`plano-acao.html`) e "Ver como" (`minhas-acoes.html`). Não é um wrapper de tabela
+  Supabase — não existe `meta_inovacao_responsaveis` — é derivado em memória a partir dos
+  dois catálogos que já existem.
+- **Compatibilidade com o já gravado, sem migração nenhuma:** `plano_acao_atividades.
+  responsavel` e `meta_inovacao_plano_acoes.responsavel_id` guardam os ~32 ids antigos de
+  `window.DB.responsaveis` ("jr", "comite", "gabriel_barreto_barros"...) — preservados
+  EXATAMENTE em `js/db-responsaveis.js.LEGADO` (mesma tradução id→pessoa/coletivo já usada
+  e confirmada em produção pelo item 2.6, `tools/sql/2026-08_plano_responsaveis.sql`).
+  Nenhum `ALTER TABLE` foi necessário — dado antigo continua resolvendo certo.
+- **Decisão da UX dos ids duplicados (adiada da Camada 1 pra esta, como as notas abaixo já
+  antecipavam):** `jr`/`jose_mendes_junior` e `sandra`/`sandra_chaves_paraiso` — que já
+  resolviam pro mesmo `pessoa_id` desde o item 2.6 — agora colapsam numa ÚNICA opção
+  visível no `<select>` ("JR."/"Sandra", grupo Coordenação), com o id "extra" guardado em
+  `aliasIds` só pra reconhecer dado já gravado com o outro id (pré-seleciona certo; a
+  própria renderização do `<select>` já normaliza pro id canônico, sem precisar trocar
+  nada na linha pra isso acontecer).
+- **"Cadastra e aparece sozinho" pra responsável de plano de ação, de verdade:** pessoa ou
+  coletivo golden que NÃO está entre os 32 ids do LEGADO (por exemplo, qualquer pessoa do
+  grupo URC — liderança/canais, que nunca esteve na lista estática) ganha um id novo
+  ("pessoa:<id>"/"coletivo:<id>", a chave primária do golden record) e aparece na lista
+  sozinho, sem editar `js/db-responsaveis.js`. Isso amplia o universo de quem pode ser
+  responsável de uma atividade/ação (antes limitado aos 32 nomes curados à mão) — não é
+  regressão, é a lista ficando tão completa quanto o golden record de pessoas.
+- **`plano-acao.html`:** removido o `<script src="js/responsaveis.js">` (não sobrava
+  nenhum uso direto de `RESP` nesta página) e trocada a linha estática
+  `const RESPONSAVEIS = window.DB.responsaveis` por uma carregada no bootstrap
+  (`DB_PESSOAS.carregar()` + `DB_COLETIVOS.carregar()` em paralelo, antes do 1º render).
+  `opcoesResponsavel()` passou a usar `DB_RESPONSAVEIS.encontrar()` pra decidir a opção
+  selecionada (bate por id canônico OU por `aliasIds`) — o mecanismo de opção "legada"
+  (⚠, `.pa-legado`) pra texto que não bate com NADA continua exatamente como antes.
+- **`minhas-acoes.html`:** mesma troca pro select "Ver como"; `js/responsaveis.js`
+  **continua carregado** — `nosDaPessoa()` segue usando `RESP.mapearTexto` pra resolver o
+  texto livre de verdade `n.guardiao` (`data/nos.js`, ex. "JR. e gestores + Comitê"), que
+  é narrativo e está fora do escopo deste item (ver
+  `docs/PROPOSTA_ESQUEMA_CADASTROS_REFERENCIA.md`) — só que agora contra a lista golden, o
+  que também deixa pessoas do grupo URC reconhecíveis ali se um dia entrarem numa frase de
+  guardião. `acoesDaPessoa()`/`atividadesDaPessoa()` passaram a comparar contra
+  `DB_RESPONSAVEIS.idsEquivalentes()` (id canônico + `aliasIds`) em vez de só o id
+  selecionado, pra uma ação/atividade gravada com o id "extra" antes desta unificação não
+  sumir da guarda de ninguém.
+- `js/responsaveis.js` **não foi alterado** — nenhum dos seus `ALIASES` referencia um id
+  que deixou de existir na lista nova (todos os 32 ids do LEGADO continuam válidos), e o
+  módulo segue com seu uso original (resolver `n.guardiao`) em `minhas-acoes.html`.
+- Testado: `tools/testar_responsaveis.js` (puro — seed local `data/pessoas.js`/
+  `data/coletivos.js` + uma fixture fabricada com pessoa/coletivo fora do LEGADO, pessoa
+  inativa e pessoa sem `nome_exibicao`) e `tools/testar_plano_acao_responsavel_headless.js`
+  (dublê de Supabase in-memory, sem rede real: id antigo pré-seleciona certo, apelido
+  antigo cai na mesma opção sem duplicar, texto sem tradução vira "legado", pessoa golden
+  fora da lista estática aparece agrupada em "URC", trocar grava o id golden novo).
+  `tools/testar_minhas_acoes_headless.js` (já existente, sem alterações) continua verde —
+  confere que a contagem de nós/ações da pessoa "sandra" não mudou com a troca de fonte.
+
+**Notas pra quando chegar no resto da camada (4.4):**
+
 - O item 2.5 (FKs de `meta_inovacao_canva_demandas`) já foi rodado em produção
   (23/08/2026, ver nota da Camada 2) — não precisa ser revisitado aqui.
 - `tools/testar_drawer_headless.js` foi consertado em 22/08 (PR #10) e é a rede de
@@ -394,9 +452,10 @@ tela.
 **Teste de aceite:** nenhuma das 4 telas tem mais campo de texto livre pra nome de
 pessoa; os testes headless existentes (`testar_participantes_headless.js`,
 `testar_drawer_headless.js`, `testar_minhas_acoes_headless.js`) continuam verdes. Os
-itens 4.1 e 4.2 já passam nesse critério —
-`testar_projetos_editor_representantes_headless.js` e `testar_urc_editor_headless.js`
-são a rede de proteção nova de cada um.
+itens 4.1, 4.2 e 4.3 já passam nesse critério —
+`testar_projetos_editor_representantes_headless.js`, `testar_urc_editor_headless.js`,
+`testar_responsaveis.js` e `testar_plano_acao_responsavel_headless.js` são a rede de
+proteção nova de cada um.
 
 ---
 
@@ -455,13 +514,17 @@ precisa saber sem reler tudo acima:
    validação do 3.5" na seção da Camada 3.
 3. **Camada 4 em andamento:** o item 4.1 (`editor.html` "Projetos & Representantes" —
    texto livre virou seletor de pessoa, chip + `<select>`, sobre a junção
-   `meta_inovacao_projeto_representantes` do item 2.2) e o item 4.2 (`editor.html`
+   `meta_inovacao_projeto_representantes` do item 2.2), o item 4.2 (`editor.html`
    "URC — Liderança"/"URC — Responsáveis por canal" — texto livre virou `<select>` de
    pessoa golden, `pessoa_id` dos itens 2.3/2.4, e o `<select>` de canal já existente
-   passou a manter `canal_id` em sincronia) estão em `main`. Faltam 4.3 (plano de
-   ação/minhas ações) e 4.4 (participantes/drawer) — ver "Como o 4.1 ficou" e "Como o 4.2
-   ficou" na seção da Camada 4 antes de mexer no resto, os padrões de chip+select e
-   select-com-sincronia-de-texto criados ali servem de referência pros próximos itens.
+   passou a manter `canal_id` em sincronia) e o item 4.3 (`plano-acao.html`/
+   `minhas-acoes.html` — select de "Responsável"/"Ver como" passa a ler
+   `DB_PESSOAS`+`DB_COLETIVOS`, `js/db-responsaveis.js` novo, sem migração — os ~32 ids já
+   gravados no Supabase são preservados exatamente) estão em `main`. Falta só 4.4
+   (participantes/drawer) — ver "Como o 4.1 ficou", "Como o 4.2 ficou" e "Como o 4.3
+   ficou" na seção da Camada 4 antes de mexer nele, os padrões de chip+select,
+   select-com-sincronia-de-texto e lista-derivada-do-golden-record criados ali servem de
+   referência.
 4. Documentos de apoio já existentes, não precisam ser refeitos:
    - `docs/CAMADA1_DEDUPE_PESSOAS.md` — decisões de identidade de pessoas.
    - `docs/CAMADA2_COBERTURA_FK.md` — cobertura real de cada FK da Camada 2.
@@ -487,6 +550,14 @@ precisa saber sem reler tudo acima:
      trocar canal grava `canal_id`, guardrail do item 4.4 continua valendo, "+ Adicionar
      responsável" grava as 4 colunas a partir dos 2 `<select>` do topo — offline e online
      (dublê de Supabase).
+   - `tools/testar_responsaveis.js` — `js/db-responsaveis.js` (item 4.3): puro, sem DOM;
+     monta a lista de responsáveis a partir do golden record, ids antigos (LEGADO)
+     preservados, jr/jose_mendes_junior e sandra/sandra_chaves_paraiso colapsados, pessoa/
+     coletivo golden fora do LEGADO ganha id novo.
+   - `tools/testar_plano_acao_responsavel_headless.js` — `plano-acao.html` (item 4.3):
+     `<select>` de "Responsável" lendo pessoas+coletivos do golden record, id antigo e
+     apelido antigo pré-selecionam a mesma opção, texto sem tradução vira "legado", pessoa
+     fora da lista estática aparece — dublê de Supabase, sem rede real.
 6. **Pendências não bloqueantes acumuladas:** UI de múltiplos papéis por pessoa em
    `editor.html` (Camada 1); "Oficina confirmada"/"Não se aplica o
    uso" fora do `CHECK` (Camada 3). **As duas falhas antigas da suíte
