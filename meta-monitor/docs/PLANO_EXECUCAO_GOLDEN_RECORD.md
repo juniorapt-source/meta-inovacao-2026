@@ -33,7 +33,9 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > três itens novos, 5.5/5.6/5.7: as FKs dos itens 2.1, 2.6 e 2.7 não são gravadas por
 > nenhuma tela, então derivam a cada linha nova. O 5.2 (decisão humana de dropar ou
 > manter cada coluna de texto) fica esperando esses três, porque hoje nenhuma coluna de
-> texto está pronta pro `DROP` — ver `docs/CAMADA5_AUDITORIA_FK.md`. Se você está
+> texto está pronta pro `DROP`. A rodada em produção (26/08) deu 12 de 13 `OK` na
+> cobertura, com um `DIVERGE`: `corsario_status.nucleo_id` está `0/4` — item 5.8,
+> script de recuperação pronto. Ver `docs/CAMADA5_AUDITORIA_FK.md`. Se você está
 > retomando este trabalho numa sessão nova: leia a seção "Status
 > por camada" no fim primeiro — ela lista o que já existe no banco e no repositório, pra
 > não repetir trabalho nem presumir algo que ainda não foi feito.
@@ -504,6 +506,7 @@ hoje.
 | 5.5 | **Fechar a porta de escrita do 2.1:** `editor.html`/`js/db-projetos.js` gravam `nucleo_id` junto com `nucleo` (projeto novo e troca de núcleo na grade) | `editor.html`, `js/db-projetos.js` | Sonnet / baixo | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
 | 5.6 | **Fechar a porta de escrita do 2.6:** as 3 telas de ação gravam `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `plano-acao.html`, `minhas-acoes.html`, `editor.html`, `js/db-plano.js` | Sonnet / médio | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
 | 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | Sonnet / baixo | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
+| 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (está `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ⏳ **NÃO FEITO** — aberto pelo 5.1; script pronto e testado, SEÇÃO 1 (diagnóstico, só leitura) antes da SEÇÃO 2 |
 
 A aposentadoria de `meta_inovacao_matriz_demandas` (decidida no 3.5) entra aqui.
 
@@ -565,6 +568,34 @@ O SQL foi testado num Postgres 16 local com schema mínimo espelhando produção
 dois estados: saudável (todos `OK`, e a única linha da lista nominal é o
 placeholder "Núcleo de Startups", igual produção) e degradado de propósito com as
 6 lacunas semeadas (cada uma virou `DIVERGE`/`ATENÇÃO` na linha certa).
+
+### O que a rodada em produção devolveu (26/08/2026)
+
+José rodou as 4 consultas no SQL Editor no mesmo dia. Números completos em
+`docs/CAMADA5_AUDITORIA_FK.md`; o que muda o plano:
+
+- **CONSULTA 0: 13/13 `OK`** — nenhuma migração das Camadas 2/4 ficou pra trás.
+- **CONSULTA A: 12 de 13 `OK`.** Os números de 22–23/08 se sustentaram (28/28,
+  34 vínculos, 3/3, 11/11, 61/61, 27/27). Ou seja: as 3 lacunas de escrita ainda
+  **não** derrubaram a cobertura — não entrou projeto, ação nem iniciativa nova
+  desde 22/08. A porta segue aberta; a próxima linha nova é que cai fora.
+- **CONSULTA A, o único `DIVERGE`: `corsario_status.nucleo_id` está `0/4`** — vazia
+  em todas as linhas, embora `projeto_id` esteja 27/27 na mesma tabela e as duas
+  colunas tenham vindo do mesmo `ALTER TABLE`. É a única linha hedgeada de
+  `CAMADA2_COBERTURA_FK.md` cobrando o hedge: a verificação (b) do script original
+  devolvia "vazio" ambíguo (uma linha com célula em branco lê-se como nenhuma
+  linha). Virou o item **5.8**, com script de recuperação pronto e testado.
+- **CONSULTA B: 10/10 `OK`** — nenhuma FK apontando pra linha soft-deleted, nenhum
+  texto discordando da FK.
+
+**Um falso positivo da primeira versão, corrigido:** a auditoria acusou 8 tokens de
+`representantes[]` sem pessoa golden (e um "34/27" sem sentido) porque comparava só
+`nome`, enquanto a migração 2.2 casa por `nome` OU `nome_exibicao` mais o alias
+"Júnior" → "JR.". Os 8 tinham casado por `nome_exibicao`. A CONSULTA A e a
+CONSULTA C agora reusam literalmente a régua da verificação (a) de
+`2026-08_projeto_representantes.sql`. A regra que fica: **régua de casamento só
+serve pra auditar se for a MESMA que populou** — com régua própria, a auditoria
+mede a régua, não o dado.
 
 ---
 
@@ -628,6 +659,11 @@ precisa saber sem reler tudo acima:
    `meta_inovacao_plano_responsaveis` (2.6) e `corsario_status` (2.7) **não são gravadas
    por nenhuma tela** — cada projeto/ação/iniciativa nova desde 22/08 nasceu sem elas.
    Fechar essas três portas virou os itens 5.5, 5.6 e 5.7, e o 5.2 espera por eles.
+   A auditoria já rodou em produção (26/08): 12 de 13 checagens de cobertura `OK` —
+   os números de 22–23/08 se sustentaram, porque nenhuma linha nova entrou nessas
+   tabelas desde então — e um `DIVERGE`: `corsario_status.nucleo_id` está `0/4`,
+   que virou o item 5.8 (`tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql`,
+   pronto e testado, esperando José rodar).
    Não refaça a auditoria do zero: rode `node tools/auditoria_fk_final.js`.
 5. Documentos de apoio já existentes, não precisam ser refeitos:
    - `docs/CAMADA1_DEDUPE_PESSOAS.md` — decisões de identidade de pessoas.

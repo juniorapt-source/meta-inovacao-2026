@@ -14,7 +14,7 @@
 | 2.4 | `meta_inovacao_urc_canais_responsaveis.canal_id` | **11/11 (100%)** | — |
 | 2.4 | `meta_inovacao_urc_canais_responsaveis.pessoa_id` | **11/11 (100%)** | — |
 | 2.7 | `corsario_status.projeto_id` (por iniciativa) | **27/27 (100%)** | — |
-| 2.7 | `corsario_status.nucleo_id` (por núcleo) | — (não quebrado por núcleo na conferência, mas a checagem "sem FK" veio vazia) | — |
+| 2.7 | `corsario_status.nucleo_id` (por núcleo) | ~~— (não quebrado por núcleo na conferência, mas a checagem "sem FK" veio vazia)~~ **⚠️ ERRADO — era 0/4, ver nota abaixo** | 4 |
 | 2.2 | `meta_inovacao_projeto_representantes` (vínculos) | **34/35 (97%)** | 1 — placeholder intencional |
 | 2.6 | `meta_inovacao_plano_responsaveis` (vínculos) | **61/61 (100%)** | — |
 
@@ -55,6 +55,30 @@ limpo na prática — mas **este é o item com menos garantia** dos 6, e o únic
 que eu recomendo rodar `relatorio_cobertura_fk.js` logo depois de aplicar, sem
 esperar o resto da Camada 2, pra pegar cedo se `nucleo`/`iniciativa` tiverem
 alguma grafia divergente do que os testes aqui assumiram.
+
+## ⚠️ Correção (26/08/2026) — a linha hedgeada do 2.7 estava errada
+
+A auditoria final da Camada 5 (item 5.1, `docs/CAMADA5_AUDITORIA_FK.md`) mediu
+`corsario_status.nucleo_id` em produção e achou **0/4**: nenhuma linha da tabela
+tem a FK, embora `projeto_id` — criada pelo mesmo `ALTER TABLE` e populada pelo
+`UPDATE` seguinte do mesmo arquivo — esteja 27/27.
+
+A linha desta tabela era a única das 8 com um veredito hedgeado em vez de um
+número, e o hedge escondia o buraco. A verificação (b) de
+`tools/sql/2026-08_corsario_status_fk.sql` é
+`SELECT DISTINCT nucleo … WHERE nucleo_id IS NULL`: se `nucleo` estivesse NULL nas
+linhas quando ela rodou, o retorno seria UMA linha com a célula vazia — que se lê
+como "veio vazia" no SQL Editor. Hipótese, não certeza; o que é certo é o 0/4 de
+hoje.
+
+**Lição registrada:** checagem cujo "vazio" é ambíguo não é checagem. Por isso a
+CONSULTA A da auditoria conta numerador/denominador em vez de listar o que falta, e
+deixa os nomes pra CONSULTA C.
+
+**Correção:** `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql`
+(item 5.8 do plano) — diagnostica, popula por igualdade exata e depois normalizada,
+reverifica. Idempotente. Não fecha a porta de escrita: iniciativa nova do corsário
+continua nascendo sem as duas FKs até o item 5.7.
 
 ## O único "faltando", confirmado e sem ação necessária
 

@@ -81,14 +81,23 @@ repr_texto AS (
   SELECT p.id AS projeto_id, r.token, r.ord
   FROM proj p, LATERAL unnest(p.representantes) WITH ORDINALITY AS r(token, ord)
 ),
+-- MESMA RÉGUA da verificação (a) de tools/sql/2026-08_projeto_representantes.sql:
+-- `nome` OU `nome_exibicao`, mais o alias explícito "Júnior" → "JR.". Usar só
+-- `nome` aqui produziria 8 falsos positivos (Hulda, Matheus, Gabriel, Jr. — todos
+-- casaram por nome_exibicao na migração), que foi exatamente o que a primeira
+-- versão desta auditoria fez em produção. Régua de casamento só serve pra auditar
+-- se for a MESMA que populou.
 repr_sem_pessoa AS (
   SELECT rt.*
   FROM repr_texto rt
   WHERE NOT EXISTS (
     SELECT 1 FROM public.meta_inovacao_pessoas pe
-    WHERE pe.deleted_at IS NULL
-      AND public.cc_pessoa_normalizar(pe.nome) = public.cc_pessoa_normalizar(rt.token)
+    WHERE pe.deleted_at IS NULL AND (
+      public.cc_pessoa_normalizar(pe.nome)          = public.cc_pessoa_normalizar(rt.token)
+      OR public.cc_pessoa_normalizar(pe.nome_exibicao) = public.cc_pessoa_normalizar(rt.token)
+    )
   )
+  AND public.cc_pessoa_normalizar(rt.token) <> 'junior'
 ),
 acao AS (
   SELECT * FROM public.meta_inovacao_plano_acoes WHERE deleted_at IS NULL
@@ -347,9 +356,12 @@ FROM public.meta_inovacao_projetos p, LATERAL unnest(p.representantes) AS r(toke
 WHERE p.deleted_at IS NULL
   AND NOT EXISTS (
     SELECT 1 FROM public.meta_inovacao_pessoas pe
-    WHERE pe.deleted_at IS NULL
-      AND public.cc_pessoa_normalizar(pe.nome) = public.cc_pessoa_normalizar(r.token)
+    WHERE pe.deleted_at IS NULL AND (
+      public.cc_pessoa_normalizar(pe.nome)             = public.cc_pessoa_normalizar(r.token)
+      OR public.cc_pessoa_normalizar(pe.nome_exibicao) = public.cc_pessoa_normalizar(r.token)
+    )
   )
+  AND public.cc_pessoa_normalizar(r.token) <> 'junior'
 
 UNION ALL
 SELECT '2.3', 'liderança sem pessoa_id', nome, papel
@@ -386,6 +398,19 @@ WHERE a.deleted_at IS NULL
 UNION ALL
 SELECT '2.7', 'iniciativa do corsário sem projeto_id', iniciativa, nucleo
 FROM (SELECT DISTINCT iniciativa, nucleo FROM public.corsario_status WHERE projeto_id IS NULL) s
+
+UNION ALL
+-- o núcleo do corsário sem FK sai com o núcleo golden mais próximo pela régua
+-- normalizada, pra distinguir de cara "nome escrito diferente" (casa normalizado,
+-- é só re-popular) de "núcleo que não existe no catálogo" (é cadastro).
+SELECT '2.7', 'núcleo do corsário sem nucleo_id', s.nucleo,
+       coalesce((SELECT n.nome FROM public.meta_inovacao_nucleos n
+                  WHERE n.deleted_at IS NULL
+                    AND public.cc_pessoa_normalizar(n.nome) = public.cc_pessoa_normalizar(s.nucleo)
+                  LIMIT 1),
+                '(nenhum núcleo do catálogo casa nem normalizado)')
+FROM (SELECT DISTINCT nucleo FROM public.corsario_status
+       WHERE nucleo IS NOT NULL AND nucleo_id IS NULL) s
 
 ORDER BY 1, 3;
 

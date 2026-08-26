@@ -4,12 +4,17 @@
 de dropar ou manter cada coluna de texto).
 
 > **Veredito em uma linha: nenhuma coluna de texto legado está pronta pro `DROP`
-> hoje.** Não por falta de cobertura — a cobertura histórica das Camadas 0–2 é a
-> que José confirmou linha a linha em 22–23/08 e continua registrada em
-> `CAMADA2_COBERTURA_FK.md`. É por causa das outras duas pontas: **3 das 7 FKs
-> não são gravadas por nenhuma tela** (linha nova nasce sem FK) e **4 das 7 não
-> são lidas por nenhuma tela** (o site ainda decide tudo pelo texto). Dropar o
-> texto dessas trocaria dado velho por dado ausente.
+> hoje.** Não por falta de cobertura — a CONSULTA A rodada em produção em
+> 26/08/2026 deu `OK` em 12 das 13 checagens. É por causa das outras duas pontas:
+> **3 das 7 FKs não são gravadas por nenhuma tela** (linha nova nasce sem FK) e
+> **4 das 7 não são lidas por nenhuma tela** (o site ainda decide tudo pelo
+> texto). Dropar o texto dessas trocaria dado velho por dado ausente.
+>
+> **E um achado de dado, esse sim pra agora:** `corsario_status.nucleo_id` está
+> **0/4 — vazia em todas as linhas**, embora `projeto_id`, criada pelo mesmo
+> `ALTER TABLE` e populada pelo `UPDATE` seguinte, esteja 27/27. Script de
+> recuperação pronto: `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql`
+> (item 5.8).
 
 ## O que "ponta a ponta" quer dizer aqui
 
@@ -31,24 +36,86 @@ com ele.
 
 ## A — cobertura das linhas existentes
 
-**Não foi remedida nesta rodada, e não dava pra remedir daqui:** as sessões do
-Claude Code não alcançam `supabase.co` (item 7 do "Status por camada" do plano),
-e a anon key do `relatorio_cobertura_fk.js` não enxerga
-`meta_inovacao_canva_demandas` de jeito nenhum (RLS fecha o SELECT pra `anon` de
-propósito). O que existe, e continua valendo como último retrato real:
+**Medida em produção em 26/08/2026**, com José rodando
+`tools/sql/2026-08_auditoria_fk_final.sql` no SQL Editor (as sessões do Claude Code
+não alcançam `supabase.co`, e a anon key do `relatorio_cobertura_fk.js` não
+enxerga `meta_inovacao_canva_demandas` — a RLS fecha o SELECT pra `anon` de
+propósito). CONSULTA 0: as 13 colunas/tabelas existem, todas `OK` — nenhuma
+migração ficou pra trás.
 
-| Item | FK | Cobertura confirmada em produção | Quando |
+| Item | FK | 26/08/2026 | Veredito |
 |---|---|---|---|
-| 2.1 | `meta_inovacao_projetos.nucleo_id` | 28/28 | 22/08 |
-| 2.2 | `meta_inovacao_projeto_representantes` | 34/35 (o 1 é o placeholder "Núcleo de Startups") | 22/08 |
-| 2.3 | `meta_inovacao_urc_lideranca.pessoa_id` | 3/3 | 22/08 |
-| 2.4 | `meta_inovacao_urc_canais_responsaveis.canal_id`/`.pessoa_id` | 11/11 nos dois | 22/08 |
-| 2.5 | `meta_inovacao_canva_demandas` (4 FKs) | 3/3 do que tinha texto (`facilitador` era NULL na única linha) | 23/08 |
-| 2.6 | `meta_inovacao_plano_responsaveis` | 61/61 | 22/08 |
-| 2.7 | `corsario_status.projeto_id`/`.nucleo_id` | 27/27 iniciativas, zero órfãos | 22/08 |
+| 2.1 | `meta_inovacao_projetos.nucleo_id` | 28/28 | OK |
+| 2.2 | `meta_inovacao_projeto_representantes` (vínculos) | 34/34 | OK |
+| 2.2 | `representantes[]` sem pessoa no golden record | 1 — só o placeholder "Núcleo de Startups" | OK |
+| 2.3 | `meta_inovacao_urc_lideranca.pessoa_id` | 3/3 | OK |
+| 2.4 | `meta_inovacao_urc_canais_responsaveis.canal_id` | 11/11 | OK |
+| 2.4 | `meta_inovacao_urc_canais_responsaveis.pessoa_id` | 11/11 | OK |
+| 2.5 | `canva_demandas.nucleo_id` | 1/1 | OK |
+| 2.5 | `canva_demandas.canal_id` | 1/1 | OK |
+| 2.5 | `canva_demandas.facilitador_pessoa_id` | 0/0 (nenhuma demanda tem facilitador em texto) | OK |
+| 2.5 | `canva_demandas.responsavel_pessoa_id` | 1/1 | OK |
+| 2.6 | `meta_inovacao_plano_responsaveis` (vínculos) | 61/61 | OK |
+| 2.7 | `corsario_status.projeto_id` (por iniciativa) | 27/27 | OK |
+| 2.7 | `corsario_status.nucleo_id` (por núcleo) | **0/4** | **DIVERGE** |
 
-`tools/sql/2026-08_auditoria_fk_final.sql` existe pra transformar essa tabela num
-número de hoje, e vai mais longe que o `relatorio_cobertura_fk.js` em três pontos:
+CONSULTA B (integridade): **10 de 10 `OK`** — nenhuma FK apontando pra linha
+soft-deleted, e nenhum texto discordando da FK que deveria representá-lo.
+
+### O que os números dizem
+
+**Os de 22–23/08 se sustentaram.** 28/28, 34 vínculos, 3/3, 11/11, 61/61, 27/27 —
+os mesmos de quando as migrações rodaram. Isso confirma uma coisa e desmente
+outra: confirma que a resolução por texto das Camadas 0–2 aguentou; e desmente a
+suposição de que as 3 lacunas de escrita (seção B) já tivessem derrubado a
+cobertura. Não derrubaram **ainda** — simplesmente não entrou projeto, ação nem
+iniciativa nova desde 22/08. A porta continua aberta; a próxima linha nova é que
+cai fora.
+
+### O DIVERGE do 2.7 — `corsario_status.nucleo_id` está 0/4
+
+Zero de 4, não "quase". Não é deriva de linha nova (essa seria parcial): **nenhuma**
+linha tem `nucleo_id`, embora `projeto_id` esteja 27/27 na mesma tabela, a coluna
+exista (`bigint`, CONSULTA 0 `OK`) e as duas tenham sido criadas pelo mesmo
+`ALTER TABLE` e populadas por dois `UPDATE` seguidos no mesmo arquivo
+(`tools/sql/2026-08_corsario_status_fk.sql`). Um pegou tudo, o outro pegou nada.
+
+Essa é exatamente a única linha hedgeada de `CAMADA2_COBERTURA_FK.md`:
+
+> | 2.7 | `corsario_status.nucleo_id` (por núcleo) | — (não quebrado por núcleo na conferência, mas a checagem "sem FK" veio vazia) | — |
+
+A verificação (b) daquele script é `SELECT DISTINCT nucleo … WHERE nucleo_id IS
+NULL`. Se `nucleo` estivesse NULL nas linhas quando ela rodou, o retorno seria UMA
+linha com a célula vazia — fácil de ler como "veio vazia" no SQL Editor. É a
+explicação mais provável, e é hipótese: o script de recuperação não depende dela.
+Lição registrada: **checagem cujo "vazio" é ambíguo não é checagem** — por isso a
+CONSULTA A conta numerador/denominador em vez de listar o que falta, e a CONSULTA C
+é que dá os nomes.
+
+`tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` (item 5.8) resolve:
+diagnostica primeiro (por texto distinto, dizendo se casa exato, casa normalizado
+ou não existe no catálogo), popula por igualdade exata e depois por igualdade
+normalizada, e reverifica. Idempotente. **Não fecha a porta de escrita** — isso é o
+item 5.7; enquanto ele não for feito, a recuperação vai precisar ser repetida.
+
+### Um falso positivo que a primeira rodada produziu — e o que ele ensinou
+
+A primeira versão desta auditoria acusou **8** tokens de `representantes[]` sem
+pessoa no golden record (Hulda, Matheus, Gabriel, Jr., …) e um "34/27" sem sentido.
+Não era dado ruim: era a auditoria usando uma régua de casamento **mais estrita que
+a da migração**. O item 2.2 casa por `nome` OU `nome_exibicao`, mais o alias
+"Júnior" → "JR."; a auditoria comparava só `nome`, e todos esses 8 casaram por
+`nome_exibicao`. Corrigido — a CONSULTA A e a CONSULTA C agora reusam a régua da
+verificação (a) de `2026-08_projeto_representantes.sql`, literalmente.
+
+O número real é **34 vínculos / 34 instâncias casáveis**, com 1 placeholder
+("Núcleo de Startups", Sebrae Startups) — os mesmos 34/35 de 22/08, escritos com o
+denominador certo. Regra que fica: **régua de casamento só serve pra auditar se for
+a MESMA que populou** — auditoria com régua própria mede a régua, não o dado.
+
+### Por que este SQL e não o `relatorio_cobertura_fk.js`
+
+Ele vai mais longe que o relatório existente em três pontos:
 
 1. **Alcança o 2.5** — roda como `postgres` no SQL Editor, então a RLS que cega a
    anon key não se aplica.
@@ -86,10 +153,13 @@ Saída de `node tools/auditoria_fk_final.js` em 26/08/2026. **6 lacunas, em 3 da
 | 2.6 | `plano_responsaveis` | ❌ **não** | nenhum arquivo do site sequer menciona a tabela: ação nova e troca de responsável gravam `responsavel_id` (`text[]`) e só |
 | 2.7 | `corsario_status.projeto_id`/`.nucleo_id` | ❌ **não** | `DB_CORSARIO.criar` (primeira avaliação de um critério) e `DB_CORSARIO.criarIniciativa` ("+ Nova iniciativa", 19 linhas de uma vez) não montam as FKs no payload |
 
-Consequência prática: **2.1, 2.6 e 2.7 estão em deriva desde 22/08.** Todo projeto
-novo, toda ação nova e toda iniciativa nova avaliada no corsário desde então
-entrou sem FK. Os números de produção da seção A já não são mais os de hoje —
-quanto derivou é justamente o que a CONSULTA A vai mostrar.
+Consequência prática: **2.1, 2.6 e 2.7 estão com a porta aberta desde 22/08** —
+todo projeto novo, toda ação nova e toda iniciativa nova avaliada no corsário nasce
+sem FK. A CONSULTA A de 26/08 mostrou que a deriva ainda **não se materializou**
+(28/28, 61/61, 27/27 seguem intactos): é que não entrou linha nova nessas três
+tabelas desde então. Isso é sorte de calendário, não garantia — a primeira
+iniciativa nova do corsário ou o primeiro projeto novo no `editor.html` já derruba
+o número, sem aviso e sem erro na tela.
 
 Note que as 3 FKs em deriva são exatamente as 3 que a Camada 4 **não** tocou: os
 itens 4.1–4.4 migraram as telas de representantes, URC e responsável de ação, e
@@ -149,9 +219,15 @@ corolário do 2.5) e no baseline `LACUNAS_REGISTRADAS` de
   texto vindo do `dataset` do editor — resolver o id é uma consulta ao portfólio
   já carregado em memória.
 
-Nenhuma delas é migração de banco: as colunas existem e estão populadas. É só
-fechar a porta de entrada — e enquanto ela não fecha, cada semana derruba um
-pouco mais a cobertura que as Camadas 0–2 conquistaram.
+- **5.8** — **[humano]** rodar
+  `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` no SQL Editor, pra
+  fechar o `0/4` de `corsario_status.nucleo_id`. Único item desta lista que mexe em
+  dado, e o único que precisa do José. Rode a SEÇÃO 1 (diagnóstico, só leitura)
+  antes da SEÇÃO 2.
+
+As três primeiras não são migração de banco: as colunas existem e estão populadas.
+É só fechar a porta de entrada — e enquanto ela não fecha, a cobertura que as
+Camadas 0–2 conquistaram fica dependendo de ninguém cadastrar nada.
 
 ## Como reconferir
 
@@ -164,5 +240,16 @@ node tools/auditoria_fk_final.js --check  # o mesmo, pra suíte: sai != 0 se o
 node tools/relatorio_cobertura_fk.js      # A, no que é público (precisa de rede)
 ```
 
-E, no SQL Editor do Supabase, `tools/sql/2026-08_auditoria_fk_final.sql` — um
-bloco por vez (CONSULTA 0 → A → B → C), como manda o cabeçalho do arquivo.
+E, no SQL Editor do Supabase, um bloco por vez, como manda o cabeçalho de cada
+arquivo:
+
+- `tools/sql/2026-08_auditoria_fk_final.sql` — CONSULTA 0 → A → B → C.
+- `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` — SEÇÃO 1
+  (diagnóstico) → 2 (popular) → 3 (verificar), enquanto o item 5.8 não estiver feito.
+
+Os dois foram testados num Postgres 16 local espelhando o estado real de produção
+de 26/08 (`corsario_status` com `projeto_id` cheio e `nucleo_id` vazio, pessoas com
+`nome_exibicao` curto): a auditoria acusa o `0/4`, a recuperação popula, a auditoria
+volta a 13/13 `OK`. A recuperação roda duas vezes seguidas com `UPDATE 0` na
+segunda, e os três vereditos do diagnóstico (casa exato, casa normalizado, sem
+correspondente) foram exercitados um a um.
