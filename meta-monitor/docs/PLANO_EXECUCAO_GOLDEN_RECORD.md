@@ -18,10 +18,10 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > da raiz foi apagada. **Não recrie a segunda cópia** — se precisar de uma visão de
 > acompanhamento, ela mora neste arquivo, na seção "Status por camada" no fim.
 
-> **STATUS GERAL (atualizado 26/08/2026): Camadas 0, 1 e 2 concluídas e verificadas em
-> produção, incluindo o item 2.5 (rodado por José em 23/08/2026 — ver nota da Camada 2);
-> Camada 3 quase concluída — 3.1, 3.2, 3.3 e 3.4
-> já em `main` e validados, falta só o 3.5 (validação humana, em curso); **Camada 4
+> **STATUS GERAL (atualizado 26/08/2026): Camadas 0, 1, 2 e 3 concluídas e verificadas em
+> produção, incluindo o item 2.5 (rodado por José em 23/08/2026 — ver nota da Camada 2) e
+> o item 3.5 (José validou a Matriz de demandas em produção em 26/08/2026, sem
+> divergência); **Camada 4
 > CONCLUÍDA (26/08/2026)** — os itens 4.1 (`editor.html` "Projetos & Representantes" vira
 > seletor de pessoa), 4.2 (`editor.html` "URC — Liderança"/"URC — Responsáveis por canal"
 > viram seletor de pessoa/canal), 4.3 (`plano-acao.html`/`minhas-acoes.html`: select de
@@ -35,9 +35,11 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > (`editor.html`, único lugar que cria projeto/ação/iniciativa nova) — ver "Como o
 > 5.5/5.6/5.7 ficaram". O 5.2 (decisão humana de dropar ou manter cada coluna de texto)
 > ainda não está maduro — fechar a porta de escrita não é o mesmo que a LEITURA já ter
-> migrado nas outras telas (ver o "Veredito por coluna de texto" em
-> `docs/CAMADA5_AUDITORIA_FK.md`, que precisa de uma nova rodada de auditoria — 5.1 não
-> foi re-executado — antes do 5.2 avançar). A rodada em produção (26/08) deu 12 de 13 `OK` na
+> migrado nas outras telas, o que virou o item novo **5.9** (formalizado a pedido de José
+> em 26/08/2026, ver a tabela da Camada 5), pré-requisito real do 5.2 (ver o "Veredito por
+> coluna de texto" em `docs/CAMADA5_AUDITORIA_FK.md`, que precisa de uma nova rodada de
+> auditoria — 5.1 não foi re-executado — antes do 5.2 avançar). A rodada em produção
+> (26/08) deu 12 de 13 `OK` na
 > cobertura, com um `DIVERGE`: `corsario_status.nucleo_id` estava `0/4` — item **5.8,
 > RESOLVIDO em produção em 26/08/2026** (José rodou SEÇÃO 1→2→3 de
 > `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql`: os 4 núcleos casaram por
@@ -215,7 +217,7 @@ representante. Detalhes em `docs/CAMADA2_COBERTURA_FK.md`.
 
 ---
 
-## Camada 3 — Normalizar a matriz de demandas (maior risco do pacote) — ⏳ EM ANDAMENTO (3.1, 3.2, 3.3 e 3.4 concluídos)
+## Camada 3 — Normalizar a matriz de demandas (maior risco do pacote) — ✅ CONCLUÍDA (3.5 validado em 26/08/2026)
 
 | # | Atividade | Arquivo(s) | Status |
 |---|---|---|---|
@@ -223,7 +225,7 @@ representante. Detalhes em `docs/CAMADA2_COBERTURA_FK.md`.
 | 3.2 | Reescrever `demandas.html`: grade dinâmica a partir de `meta_inovacao_canais` × `meta_inovacao_projetos`, ler/gravar em `matriz_celulas` | `demandas.html`, `js/matriz-store.js` | ✅ em `main` — schema real conferido 16/16 no diagnóstico, RLS e upsert testados contra o schema de produção, suíte verde |
 | 3.3 | Ajustar a aba "matriz" do `editor.html` (hoje é `snapshot:true`) | `editor.html`, `js/matriz-store.js`, `demandas.html` | ✅ em `main` — a aba lê ao vivo (mesmas 3 fontes de `demandas.html`: `matrizStore` + `DB_PROJETOS` + `DB_CANAIS`), virou só leitura (a edição de verdade continua em `demandas.html`), e o botão exporta o snapshot do modelo ao vivo. Detalhe abaixo. |
 | 3.4 | Testes headless da nova grade | `tools/testar_matriz_headless.js` | ✅ veio junto no 3.2 — 11 cenários, verde |
-| 3.5 | **[humano]** Validar em produção por um tempo, comparando com a tabela antiga, antes de aposentá-la | — | ⏳ em andamento por José |
+| 3.5 | **[humano]** Validar em produção por um tempo, comparando com a tabela antiga, antes de aposentá-la | — | ✅ **validado em 26/08/2026** — José conferiu a Matriz de demandas em produção, sem divergência encontrada |
 
 Único ponto informativo do 3.1: **"Startup Summit"** é projeto criado depois do último
 snapshot da matriz — nasce sem histórico de células, não é erro.
@@ -277,7 +279,13 @@ rede, sem ninguém perceber até o Supabase cair de verdade) e o
   exportado pela aba bate byte a byte (e chave a chave) com o que `demandas.html` exporta,
   nos dois modos.
 
-### Como está a validação do 3.5
+### Como ficou a validação do 3.5
+
+**Concluída em 26/08/2026** — José validou a Matriz de demandas em produção, sem
+divergência. A tabela antiga (`meta_inovacao_matriz_demandas`) pode ser considerada
+congelada e candidata a aposentadoria (decisão que entra na Camada 5, junto com as
+demais colunas de texto legado — ver "A aposentadoria de `meta_inovacao_matriz_demandas`
+entra aqui" no fim da seção da Camada 5).
 
 `demandas.html` tem um painel **"Conferência com a tabela antiga"** que compara célula a
 célula, ao vivo, e se atualiza a cada edição. O mesmo retrato sai por fora com
@@ -507,13 +515,14 @@ hoje.
 | # | Atividade | Arquivo(s) | Modelo/Esforço | Status |
 |---|---|---|---|---|
 | 5.1 | Auditoria final: confirmar cobertura de FK das Camadas 2 e 4, ponta a ponta | `tools/auditoria_fk_final.js`, `tools/sql/2026-08_auditoria_fk_final.sql`, `docs/CAMADA5_AUDITORIA_FK.md` | Opus / alto | ✅ **feita em 26/08/2026** — achou 6 lacunas de caminho de escrita em 3 das 7 FKs; ver "Como o 5.1 ficou" |
-| 5.2 | **[humano]** Decidir, tabela a tabela, se dropa a coluna de texto ou mantém como cache | — | José | ⏸️ **esperando 5.5–5.7** — a auditoria concluiu que nenhuma coluna de texto está pronta pro `DROP` hoje; decidir agora seria decidir sobre um dado que ainda deriva |
+| 5.2 | **[humano]** Decidir, tabela a tabela, se dropa a coluna de texto ou mantém como cache | — | José | ⏸️ **esperando 5.9** — 5.5/5.6/5.7 (escrita) já fechados; falta a LEITURA migrar nas telas que ainda decidem por texto, senão dropar quebraria essas telas |
 | 5.3 | Migrações de `DROP COLUMN` onde decidido em 5.2 | sql | Sonnet / baixo | ⏳ não feito (depende do 5.2) |
 | 5.4 | Atualizar `PADRAO_TABELA.md`/`GOVERNANCA_GOLDEN_RECORD.md` com o novo estado; aposentar `js/responsaveis.js` se não sobrar uso | docs, js | Haiku / baixo | ⏳ não feito |
-| 5.5 | **Fechar a porta de escrita do 2.1:** `editor.html`/`js/db-projetos.js` gravam `nucleo_id` junto com `nucleo` (projeto novo e troca de núcleo na grade) | `editor.html`, `js/db-projetos.js` | ✅ em `main` — trocar núcleo na grade e "+ Novo projeto" gravam `nucleo_id` (resolvido pelo golden record `meta_inovacao_nucleos`, item 0.5) junto com o texto. Detalhe abaixo. |
-| 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
-| 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
+| 5.5 | **Fechar a porta de escrita do 2.1:** `editor.html`/`js/db-projetos.js` gravam `nucleo_id` junto com `nucleo` (projeto novo e troca de núcleo na grade) | `editor.html`, `js/db-projetos.js` | — | ✅ em `main` — trocar núcleo na grade e "+ Novo projeto" gravam `nucleo_id` (resolvido pelo golden record `meta_inovacao_nucleos`, item 0.5) junto com o texto. Detalhe abaixo. |
+| 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | — | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
+| 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | — | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
 | 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
+| 5.9 | **Migrar a LEITURA que falta pras 4 FKs restantes** (pré-requisito real do 5.2, formalizado aqui em vez de ficar só em texto no relatório): `participantes.html`/`projetos.html`/`index.html`/`js/busca.js` leem `projetos.representantes`/`.nucleo` como texto; o guardrail `nomeEhLideranca()` (`js/db-urc.js`) e as telas do canva (`canva-*.html`) idem pras suas FKs | `participantes.html`, `projetos.html`, `index.html`, `js/busca.js`, `js/db-urc.js`, telas do canva | Sonnet / alto (mexe em várias telas de leitura, não só uma) | ⏳ **NÃO FEITO** — aberto nesta sessão (26/08/2026), a pedido explícito de José pra rastrear o que falta antes do 5.2 amadurecer |
 
 ### Como o 5.5 ficou
 
@@ -722,11 +731,12 @@ precisa saber sem reler tudo acima:
    José no SQL Editor — incluindo o item 2.5 (`tools/sql/2026-08_canva_demandas_fk.sql`),
    rodado em 23/08/2026, ver nota na Camada 2 pros números reais. Todos os scripts SQL
    estão em `meta-monitor/tools/sql/2026-08_*.sql` e não precisam rodar de novo.
-2. **Camada 3 está quase concluída:** 3.1 (tabela + migração), 3.2 (grade dinâmica), 3.3
+2. **Camada 3 está 100% concluída:** 3.1 (tabela + migração), 3.2 (grade dinâmica), 3.3
    (aba "matriz" do `editor.html` lendo ao vivo, só leitura, com snapshot gerado do
-   mesmo modelo de `demandas.html`) e 3.4 (testes headless) estão em `main` e validados.
-   **Falta só o 3.5**, que é validação humana em andamento por José — ver "Como está a
-   validação do 3.5" na seção da Camada 3.
+   mesmo modelo de `demandas.html`), 3.4 (testes headless) e **3.5 (validação humana em
+   produção por José, concluída em 26/08/2026, sem divergência)** — ver "Como ficou a
+   validação do 3.5" na seção da Camada 3. `meta_inovacao_matriz_demandas` (tabela
+   antiga) pode ser considerada congelada; sua aposentadoria formal entra na Camada 5.
 3. **Camada 4 concluída (26/08/2026):** o item 4.1 (`editor.html` "Projetos & Representantes" —
    texto livre virou seletor de pessoa, chip + `<select>`, sobre a junção
    `meta_inovacao_projeto_representantes` do item 2.2), o item 4.2 (`editor.html`
@@ -759,16 +769,14 @@ precisa saber sem reler tudo acima:
    O `DIVERGE` que a rodada em produção achou (`corsario_status.nucleo_id` `0/4`) virou
    o item **5.8, também RESOLVIDO** (`tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql`,
    rodado por José em 26/08/2026, SEÇÃO 3 confirmou 4/4).
-   **O que falta pra Camada 5:** 5.2 continua travado — fechar a porta de ESCRITA não é o
+   **O que falta pra Camada 5:** 5.2 continua travado, agora esperando o item **5.9**
+   (novo, aberto 26/08/2026) — fechar a porta de ESCRITA (5.5/5.6/5.7, já feitos) não é o
    mesmo que a LEITURA já ter migrado nas outras telas (`participantes.html`,
    `projetos.html`, `index.html`, `js/busca.js`, o guardrail `nomeEhLideranca()`, as telas
    do canva — ver o "Veredito por coluna de texto" em `docs/CAMADA5_AUDITORIA_FK.md`, que
-   ainda reflete o estado de ANTES do 5.5/5.6/5.7). Antes de decidir o 5.2, vale rodar
-   `node tools/auditoria_fk_final.js` de novo (ele tem `--check` contra
-   `LACUNAS_REGISTRADAS` — as 6 lacunas antigas devem ter sumido, e se sumiram sem
-   atualizar o baseline do script, `--check` vai acusar "lacuna que sumiu sem dar baixa",
-   que é o comportamento esperado, não bug) e atualizar `docs/CAMADA5_AUDITORIA_FK.md`
-   com o novo retrato — não foi feito ainda.
+   ainda reflete o estado de ANTES do 5.5/5.6/5.7). Uma nova rodada da CONSULTA A/C em
+   produção (pedida ao José pra confirmar que a escrita fechada não deixou nada pra trás)
+   também está pendente — ver checklist enviado a ele em 26/08/2026.
 5. Documentos de apoio já existentes, não precisam ser refeitos:
    - `docs/CAMADA1_DEDUPE_PESSOAS.md` — decisões de identidade de pessoas.
    - `docs/CAMADA2_COBERTURA_FK.md` — cobertura real de cada FK da Camada 2.
