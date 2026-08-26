@@ -684,6 +684,10 @@ mesma régua da legenda do topo do documento):**
    continuam no fallback de texto por falta dos scripts, não por limitação do código —
    só carregar `js/db-projeto-representantes.js`+`js/db-pessoas.js` nessas páginas já
    ativa o join que o 4.4 escreveu. Literalmente 2 linhas de `<script>` por página.
+   **✅ em 26/08/2026** — `plano.html`, `demandas.html` e `corsario.html` agora têm os
+   dois módulos carregados. `projetos.html` já tinha (adicionado na parte 2). O painel
+   de iniciativa funciona em todas essas páginas ao abrir o drawer: mostra representantes
+   do golden record quando há vínculo, cai pro texto legado quando não há. PR #18 merged.
 5. **Telas do canva (`canva-*.html`)** — `Sonnet / alto`. As 4 FKs do item 2.5
    (`nucleo_id`, `canal_id`, `facilitador_pessoa_id`, `responsavel_pessoa_id`) já são
    gravadas pelas RPCs desde a Camada 2, só não são lidas por ninguém ainda — maior
