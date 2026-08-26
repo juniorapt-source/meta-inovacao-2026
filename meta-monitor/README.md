@@ -160,6 +160,12 @@ node tools/testar_plano_acao_responsavel_headless.js # plano-acao.html (item 4.3
                                         # "legado", pessoa golden fora da lista estática de
                                         # 32 ids aparece (grupo URC), trocar grava o id
                                         # golden novo — dublê de Supabase, sem rede real
+node tools/auditoria_fk_final.js --check # item 5.1: por FK das Camadas 2/4, se toda porta
+                                        # de entrada de linha nova grava a FK (e quem lê a
+                                        # FK hoje). Offline — mede o código, não o banco.
+                                        # Sai != 0 quando o CONJUNTO de lacunas muda: lacuna
+                                        # nova (tela regrediu) ou lacuna registrada que sumiu
+                                        # sem baixa em docs/CAMADA5_AUDITORIA_FK.md
 ```
 
 Dois relatórios leem **produção** (só leitura, anon key de `js/config.js`) — não entram na
@@ -171,10 +177,17 @@ node tools/conferir_matriz_celulas.js     # Camada 3: matriz nova × matriz anti
                                           # célula (--check sai 1 se houver divergência)
 ```
 
-E um diagnóstico em SQL puro, pra rodar no SQL Editor do Supabase quando a dúvida for
-sobre o BANCO e não sobre o site — `tools/sql/2026-08_matriz_celulas_diagnostico.sql`:
-17 checagens de schema/RLS/publicação `supabase_realtime` de `meta_inovacao_matriz_celulas`,
-cada uma com veredito `OK`/`DIVERGE`/`ATENÇÃO` e o que fazer em cada caso. Só leitura.
+E dois diagnósticos em SQL puro, pra rodar no SQL Editor do Supabase quando a dúvida for
+sobre o BANCO e não sobre o site. Os dois são só leitura, com veredito
+`OK`/`DIVERGE`/`ATENÇÃO` por linha e o que fazer em cada caso:
+
+- `tools/sql/2026-08_matriz_celulas_diagnostico.sql` — 17 checagens de schema/RLS/publicação
+  `supabase_realtime` de `meta_inovacao_matriz_celulas` (Camada 3).
+- `tools/sql/2026-08_auditoria_fk_final.sql` — cobertura real das FKs das Camadas 2 e 4
+  (item 5.1), integridade (FK apontando pra linha soft-deleted, FK que discorda do texto)
+  e a lista nominal do que ficou sem FK. É a metade que o `auditoria_fk_final.js` não
+  alcança daqui: mede o BANCO, e enxerga inclusive `meta_inovacao_canva_demandas`, cuja
+  RLS fecha a leitura pra anon key.
 
 Os testes headless que tocam páginas que leem Plano/Agenda (`index.html`, `plano.html`,
 `caminho.html`, `minhas-acoes.html`, `agenda.html`) não dependem de rede: cada sessão CDP

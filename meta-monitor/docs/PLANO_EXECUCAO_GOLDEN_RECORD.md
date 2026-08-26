@@ -28,8 +28,13 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > "Responsável"/"Ver como" passa a ler pessoas+coletivos do golden record, sem migração —
 > ver `js/db-responsaveis.js`) e 4.4 (`js/drawer.js`: painel de iniciativa lê a junção
 > `meta_inovacao_projeto_representantes` quando a página carrega os módulos certos, texto
-> livre como fallback — ver "Como o 4.4 ficou") estão em `main`. Camada 5 ainda não
-> iniciada. Se você está retomando este trabalho numa sessão nova: leia a seção "Status
+> livre como fallback — ver "Como o 4.4 ficou") estão em `main`. **Camada 5 iniciada
+> (26/08/2026)** — o item 5.1 (auditoria final de FK, ponta a ponta) está feito e abriu
+> três itens novos, 5.5/5.6/5.7: as FKs dos itens 2.1, 2.6 e 2.7 não são gravadas por
+> nenhuma tela, então derivam a cada linha nova. O 5.2 (decisão humana de dropar ou
+> manter cada coluna de texto) fica esperando esses três, porque hoje nenhuma coluna de
+> texto está pronta pro `DROP` — ver `docs/CAMADA5_AUDITORIA_FK.md`. Se você está
+> retomando este trabalho numa sessão nova: leia a seção "Status
 > por camada" no fim primeiro — ela lista o que já existe no banco e no repositório, pra
 > não repetir trabalho nem presumir algo que ainda não foi feito.
 
@@ -488,19 +493,78 @@ hoje.
 
 ---
 
-## Camada 5 — Aposentar texto livre — ⏳ NÃO INICIADA
+## Camada 5 — Aposentar texto livre — ⏳ EM ANDAMENTO (5.1 concluído em 26/08/2026)
 
-| # | Atividade | Arquivo(s) | Modelo | Esforço |
+| # | Atividade | Arquivo(s) | Modelo/Esforço | Status |
 |---|---|---|---|---|
-| 5.1 | Auditoria final: confirmar cobertura de FK das Camadas 2 e 4, ponta a ponta | script | **Opus** | alto |
-| 5.2 | **[humano]** Decidir, tabela a tabela, se dropa a coluna de texto ou mantém como cache | — | José | — |
-| 5.3 | Migrações de `DROP COLUMN` onde decidido em 5.2 | sql | Sonnet | baixo |
-| 5.4 | Atualizar `PADRAO_TABELA.md`/`GOVERNANCA_GOLDEN_RECORD.md` com o novo estado; aposentar `js/responsaveis.js` se não sobrar uso | docs, js | Haiku | baixo |
+| 5.1 | Auditoria final: confirmar cobertura de FK das Camadas 2 e 4, ponta a ponta | `tools/auditoria_fk_final.js`, `tools/sql/2026-08_auditoria_fk_final.sql`, `docs/CAMADA5_AUDITORIA_FK.md` | Opus / alto | ✅ **feita em 26/08/2026** — achou 6 lacunas de caminho de escrita em 3 das 7 FKs; ver "Como o 5.1 ficou" |
+| 5.2 | **[humano]** Decidir, tabela a tabela, se dropa a coluna de texto ou mantém como cache | — | José | ⏸️ **esperando 5.5–5.7** — a auditoria concluiu que nenhuma coluna de texto está pronta pro `DROP` hoje; decidir agora seria decidir sobre um dado que ainda deriva |
+| 5.3 | Migrações de `DROP COLUMN` onde decidido em 5.2 | sql | Sonnet / baixo | ⏳ não feito (depende do 5.2) |
+| 5.4 | Atualizar `PADRAO_TABELA.md`/`GOVERNANCA_GOLDEN_RECORD.md` com o novo estado; aposentar `js/responsaveis.js` se não sobrar uso | docs, js | Haiku / baixo | ⏳ não feito |
+| 5.5 | **Fechar a porta de escrita do 2.1:** `editor.html`/`js/db-projetos.js` gravam `nucleo_id` junto com `nucleo` (projeto novo e troca de núcleo na grade) | `editor.html`, `js/db-projetos.js` | Sonnet / baixo | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
+| 5.6 | **Fechar a porta de escrita do 2.6:** as 3 telas de ação gravam `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `plano-acao.html`, `minhas-acoes.html`, `editor.html`, `js/db-plano.js` | Sonnet / médio | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
+| 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | Sonnet / baixo | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
 
 A aposentadoria de `meta_inovacao_matriz_demandas` (decidida no 3.5) entra aqui.
 
 **Teste de aceite:** suíte de testes headless inteira verde; nenhuma tela lê mais
 coluna de texto que foi dropada em 5.3.
+
+### Como o 5.1 ficou
+
+Relatório completo em `docs/CAMADA5_AUDITORIA_FK.md`. O resumo:
+
+**"Ponta a ponta" virou três perguntas, não uma** — e só a primeira era sobre o
+banco:
+
+- **A. as linhas que já existem têm a FK?** Retrato do banco. Não dá pra medir
+  daqui (sem rede pro Supabase) nem pela anon key (a RLS de
+  `meta_inovacao_canva_demandas` fecha o SELECT de propósito). Virou
+  `tools/sql/2026-08_auditoria_fk_final.sql`: só leitura, 4 blocos (existência das
+  colunas → cobertura por FK → integridade → a lista nominal do que ficou sem FK),
+  veredito `OK`/`DIVERGE`/`ATENÇÃO` linha a linha, no mesmo formato do diagnóstico
+  da Camada 3. Pra José rodar no SQL Editor.
+- **B. as linhas que ainda vão existir vão NASCER com a FK?** Isso é propriedade do
+  CÓDIGO, não do banco — dá pra medir offline, e é o que
+  `node tools/auditoria_fk_final.js` faz: percorre toda porta de entrada de linha
+  nova de cada uma das 7 FKs e confere se a FK entra na escrita.
+- **C. alguma tela LÊ a FK?** Se não lê, a coluna de texto continua sendo a fonte
+  de verdade do site, por mais completa que a FK esteja — e o `DROP` do 5.3
+  quebraria tela.
+
+**O que a auditoria achou:** 6 lacunas de escrita, em 3 das 7 FKs — `2.1`
+(`projetos.nucleo_id`), `2.6` (`plano_responsaveis`) e `2.7` (`corsario_status`).
+Nenhuma tela grava essas três, então **elas derivam desde 22/08**: todo projeto
+novo, toda ação nova e toda iniciativa nova do corsário nasce sem FK. As outras 4
+(2.2, 2.3, 2.4, 2.5) estão fechadas — as três primeiras pelos itens 4.1/4.2, a
+última pela reescrita de `cc_canva_gravar`/`cc_canva_editar` no próprio 2.5.
+
+Não é contradição com a Camada 4: as 3 FKs em deriva são exatamente as que ela
+nunca listou. O item 4.3, em particular, mudou de onde o `<select>` de responsável
+tira a LISTA (golden record), sem mudar o que ele GRAVA (`responsavel_id`, texto) —
+está escrito "sem migração" na própria linha dele. A auditoria só mostra o que
+sobrou fora do escopo.
+
+**Por que o 5.2 não começou:** o veredito é que **nenhuma** coluna de texto está
+pronta pro `DROP`. Nas três em deriva, porque a FK está atrasada em relação ao
+texto — chamar o texto de "cache" seria inverter quem é fonte de verdade. Nas
+outras quatro, porque a leitura ainda não migrou: `participantes.html`,
+`projetos.html`, `index.html`, `js/busca.js`, o guardrail `nomeEhLideranca()` e as
+telas do canva continuam decidindo por texto. A decisão madura hoje não é "dropa
+ou mantém", é "fecha a porta ou aceita a deriva" — daí os itens 5.5, 5.6 e 5.7.
+Nenhum dos três é migração de banco: as colunas existem e estão populadas.
+
+**O `--check` é o que impede a auditoria de envelhecer:** ele não falha por causa
+das 6 lacunas conhecidas (elas estão registradas em `LACUNAS_REGISTRADAS`, no
+próprio script) — falha quando o CONJUNTO muda, nos dois sentidos: lacuna nova
+(uma tela regrediu, ou nasceu uma porta de entrada sem FK) ou lacuna registrada
+que sumiu sem ninguém dar baixa aqui e no relatório. É o corolário do 2.5 aplicado
+a código: item que ficou pra trás vira linha com status, nunca linha removida.
+
+O SQL foi testado num Postgres 16 local com schema mínimo espelhando produção, em
+dois estados: saudável (todos `OK`, e a única linha da lista nominal é o
+placeholder "Núcleo de Startups", igual produção) e degradado de propósito com as
+6 lacunas semeadas (cada uma virou `DIVERGE`/`ATENÇÃO` na linha certa).
 
 ---
 
@@ -556,13 +620,31 @@ precisa saber sem reler tudo acima:
    4.2 ficou", "Como o 4.3 ficou" e "Como o 4.4 ficou" na seção da Camada 4 — os padrões de
    chip+select, select-com-sincronia-de-texto, lista-derivada-do-golden-record e
    bloco-assíncrono-com-fallback-de-texto criados ali servem de referência pra Camada 5.
-4. Documentos de apoio já existentes, não precisam ser refeitos:
+4. **Camada 5 iniciada (26/08/2026):** o item 5.1 (auditoria final) está feito —
+   `tools/auditoria_fk_final.js` (caminho de escrita + leitores, offline),
+   `tools/sql/2026-08_auditoria_fk_final.sql` (cobertura real, pra José rodar no SQL
+   Editor) e `docs/CAMADA5_AUDITORIA_FK.md` (o relatório). O que ele achou muda a ordem
+   do resto da camada: as FKs de `meta_inovacao_projetos.nucleo_id` (2.1),
+   `meta_inovacao_plano_responsaveis` (2.6) e `corsario_status` (2.7) **não são gravadas
+   por nenhuma tela** — cada projeto/ação/iniciativa nova desde 22/08 nasceu sem elas.
+   Fechar essas três portas virou os itens 5.5, 5.6 e 5.7, e o 5.2 espera por eles.
+   Não refaça a auditoria do zero: rode `node tools/auditoria_fk_final.js`.
+5. Documentos de apoio já existentes, não precisam ser refeitos:
    - `docs/CAMADA1_DEDUPE_PESSOAS.md` — decisões de identidade de pessoas.
    - `docs/CAMADA2_COBERTURA_FK.md` — cobertura real de cada FK da Camada 2.
+   - `docs/CAMADA5_AUDITORIA_FK.md` — auditoria final de FK (item 5.1): cobertura,
+     caminho de escrita, quem lê cada FK e o veredito por coluna de texto pro 5.2.
    - `docs/PROPOSTA_ESQUEMA_CADASTROS_REFERENCIA.md` — desenho original completo.
    - `docs/GOVERNANCA_GOLDEN_RECORD.md` — governança do golden record de *projetos*
      (frente irmã, concluída antes desta).
-5. Ferramentas desta frente que já existem — use em vez de reinventar:
+6. Ferramentas desta frente que já existem — use em vez de reinventar:
+   - `tools/auditoria_fk_final.js` — auditoria final (item 5.1): por FK das Camadas 2/4,
+     se toda porta de entrada de linha nova grava a FK e quem lê a FK hoje. Offline;
+     `--check` sai != 0 quando o conjunto de lacunas muda (nos dois sentidos).
+   - `tools/sql/2026-08_auditoria_fk_final.sql` — a outra metade do item 5.1: cobertura
+     real das linhas existentes, integridade (FK apontando pra linha soft-deleted, FK
+     que discorda do texto) e a lista nominal do que ficou sem FK. Só leitura, 4 blocos,
+     veredito por linha.
    - `tools/relatorio_cobertura_fk.js` — cobertura de FK da Camada 2, contra produção.
    - `tools/conferir_matriz_celulas.js` — matriz nova × antiga, célula a célula.
    - `tools/sql/2026-08_matriz_celulas_diagnostico.sql` — schema/RLS/realtime da
@@ -589,13 +671,13 @@ precisa saber sem reler tudo acima:
      `<select>` de "Responsável" lendo pessoas+coletivos do golden record, id antigo e
      apelido antigo pré-selecionam a mesma opção, texto sem tradução vira "legado", pessoa
      fora da lista estática aparece — dublê de Supabase, sem rede real.
-6. **Pendências não bloqueantes acumuladas:** UI de múltiplos papéis por pessoa em
+7. **Pendências não bloqueantes acumuladas:** UI de múltiplos papéis por pessoa em
    `editor.html` (Camada 1); "Oficina confirmada"/"Não se aplica o
    uso" fora do `CHECK` (Camada 3). **As duas falhas antigas da suíte
    (`testar_status_badges_headless.js` e `testar_drawer_headless.js`) foram corrigidas em
    22/08 (PR #10)** — a suíte do README está verde. Num ambiente sem rede de saída pro
    Supabase, 2 asserções do drawer falham por isso e só por isso.
-7. **Toda migração SQL é rodada manualmente por José no SQL Editor do Supabase** —
+8. **Toda migração SQL é rodada manualmente por José no SQL Editor do Supabase** —
    nenhuma automação tem acesso de escrita à produção. As sessões do Claude Code também
    **não conseguem LER** o Supabase de produção (rede bloqueada pra `supabase.co`): todo
    teste de migração é feito num Postgres local simulando o estado de produção antes de
