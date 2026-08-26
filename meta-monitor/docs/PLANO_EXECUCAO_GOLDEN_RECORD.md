@@ -522,7 +522,7 @@ hoje.
 | 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | — | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
 | 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | — | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
 | 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
-| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). Ver quebra por tela abaixo. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`) | Sonnet / alto — recomendado quebrar em sessões separadas, uma tela por vez (mesmo padrão dos itens 4.1–4.4) | 🔄 **EM ANDAMENTO** — parte 1 (guardrail `nomeEhLideranca()`, `js/db-urc.js`) ✅ em 26/08/2026, as demais partes (2–7 da quebra abaixo) seguem `⏳ NÃO FEITO` |
+| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`) | ver quebra por parte abaixo (Haiku/baixo a Sonnet/alto, + 2 partes sem classificação até decisão de escopo) | 🔄 **EM ANDAMENTO** — parte 1 (guardrail `nomeEhLideranca()`, `js/db-urc.js`) ✅ em 26/08/2026, as demais partes (2–7 da quebra abaixo) seguem `⏳ NÃO FEITO` |
 
 ### Como o 5.5 ficou
 
@@ -609,58 +609,76 @@ registradas neste plano.
 
 Não numerada individualmente de propósito (evita já fixar um escopo que pode mudar
 quando alguém for mexer de verdade) — é um roteiro, não um contrato. Ordem sugerida,
-do mais contido pro mais espalhado:
+do mais contido pro mais espalhado. **Modelo/Esforço por parte (26/08/2026, a pedido —
+mesma régua da legenda do topo do documento):**
 
-1. **Guardrail `nomeEhLideranca()` (`js/db-urc.js`, item 2.3/2.4)** — hoje compara nome
-   de texto contra a lista de liderança; trocar pra comparar `pessoa_id` fecha a última
-   ponta solta que o item 4.2 deixou registrada. Menor escopo, 1 arquivo. **✅ em
-   26/08/2026** — `nomeEhLideranca(campos, liderancaAtual)` agora recebe o objeto de
-   campos inteiro (não só `nome`) e compara `pessoa_id` quando os dois lados (o patch e
-   a linha de liderança) têm a FK preenchida; só cai pro texto (`nome`) quando falta
-   `pessoa_id` de um dos lados (cadastro antigo sem vínculo, ou o seed local de
-   `data/urc.js`, que nunca teve `pessoa_id`) — assim o guardrail não deixa passar o
-   caso de nome curto/completo divergirem pra mesma pessoa (`nome` da liderança vs.
-   `nome` do responsável de canal podem ser textos diferentes mesmo sendo o mesmo
-   `pessoa_id`). `salvarResponsavel`/`criarResponsavel` (ambos em `js/db-urc.js`)
-   passaram a chamar `nomeEhLideranca` com `campos`/`rParcial` inteiro em vez de só
-   `.nome`. Testado: `node --check js/db-urc.js`; `tools/testar_urc_editor_headless.js`
-   (guardrail continua bloqueando, cenário 4) e `tools/auditoria_fk_final.js` (2.3/2.4
-   continuam `OK`, zero lacuna nova) verdes.
-2. **`projetos.html`** — hoje mostra núcleo e representantes de cada projeto lendo só
-   `p.nucleo`/`p.representantes` (texto). Passa a ler `DB_PROJETOS` (já expõe
-   `nucleo_id` desde o 5.5) + `DB_PROJETO_REPRESENTANTES`/`DB_PESSOAS` (mesma junção que
-   `editor.html`/`js/drawer.js` já usam desde 4.1/4.4) — reaproveita padrão pronto, não
-   inventa nada novo.
-3. **`index.html`** — KPIs/agrupamentos que citam núcleo por projeto; mesma migração do
-   item 2 acima, olhando onde ele lê `projetos.js`/`window.DB.projetos`.
-4. **`js/drawer.js` fora de `participantes.html`** — o item 4.4 só carregou os módulos
-   novos nessa página; os demais lugares que abrem o painel de iniciativa (`plano.html`,
-   `demandas.html`, `corsario.html`, `projetos.html`) continuam no fallback de texto por
-   falta dos scripts, não por limitação do código — só carregar
-   `js/db-projeto-representantes.js`+`js/db-pessoas.js` nessas páginas já ativa o join
-   que o 4.4 escreveu.
-5. **Telas do canva (`canva-*.html`)** — as 4 FKs do item 2.5 (`nucleo_id`, `canal_id`,
-   `facilitador_pessoa_id`, `responsavel_pessoa_id`) já são gravadas pelas RPCs desde a
-   Camada 2, só não são lidas por ninguém ainda — maior escopo desta lista, telas
-   inteiras de exibição pra revisar.
-6. **`js/busca.js`** — cuidado com este: busca é inerentemente sobre TEXTO (o usuário
-   digita caracteres, não um id) — migrar pra FK aqui não é "trocar a fonte", é decidir
-   se a busca deveria resolver o texto digitado pra um id antes de comparar (evitando
-   caso de acento/duplicata) ou se continua comparando string mesmo, e só o RESULTADO
-   (o link gerado) passa a apontar pela FK. Vale uma conversa antes de mexer, não é um
-   "aplicar o mesmo padrão dos outros" direto.
-7. **`meta_inovacao_plano_responsaveis` (2.6)** — hoje não tem NENHUM leitor (nem antes
-   nem depois do 5.6). Não incluído nos 6 itens acima de propósito: `plano-acao.html`/
-   `minhas-acoes.html` já leem a lista de responsáveis via golden record desde o item
-   4.3 (`js/db-responsaveis.js`), só que pelo texto `responsavel_id`/apelidos, não pela
+- **Haiku / baixo** — parte 4: mecânico, zero lógica nova (o código já existe, só falta
+  ativá-lo).
+- **Sonnet / baixo** — parte 1: 1 arquivo, escopo contido, o dado que falta já existe
+  desde o item 4.2.
+- **Sonnet / médio** — partes 2 e 3: mexem em tela + dado junto, mas reaproveitam o
+  mesmo padrão de junção já resolvido em 4.1/4.4, não inventam nada novo.
+- **Sonnet / alto** — parte 5: maior escopo, território que nenhum item anterior
+  percorreu (nenhuma tela lê essas 4 FKs hoje, não tem padrão pronto pra copiar).
+- **Fora da régua (decisão antes de estimar, não é preguiça de classificar)** — partes
+  6 e 7: o esforço de código real só fica claro depois de alguém decidir *o quê* fazer;
+  classificar Modelo/Esforço agora seria estimar uma tarefa que ainda não foi definida.
+
+1. **Guardrail `nomeEhLideranca()` (`js/db-urc.js`, item 2.3/2.4)** — `Sonnet / baixo`.
+   Hoje compara nome de texto contra a lista de liderança; trocar pra comparar
+   `pessoa_id` fecha a última ponta solta que o item 4.2 deixou registrada. Menor
+   escopo, 1 arquivo. **✅ em 26/08/2026** — `nomeEhLideranca(campos, liderancaAtual)`
+   agora recebe o objeto de campos inteiro (não só `nome`) e compara `pessoa_id` quando
+   os dois lados (o patch e a linha de liderança) têm a FK preenchida; só cai pro texto
+   (`nome`) quando falta `pessoa_id` de um dos lados (cadastro antigo sem vínculo, ou o
+   seed local de `data/urc.js`, que nunca teve `pessoa_id`) — assim o guardrail não
+   deixa passar o caso de nome curto/completo divergirem pra mesma pessoa (`nome` da
+   liderança vs. `nome` do responsável de canal podem ser textos diferentes mesmo sendo
+   o mesmo `pessoa_id`). `salvarResponsavel`/`criarResponsavel` (ambos em
+   `js/db-urc.js`) passaram a chamar `nomeEhLideranca` com `campos`/`rParcial` inteiro
+   em vez de só `.nome`. Testado: `node --check js/db-urc.js`;
+   `tools/testar_urc_editor_headless.js` (guardrail continua bloqueando, cenário 4) e
+   `tools/auditoria_fk_final.js` (2.3/2.4 continuam `OK`, zero lacuna nova) verdes.
+2. **`projetos.html`** — `Sonnet / médio`. Hoje mostra núcleo e representantes de cada
+   projeto lendo só `p.nucleo`/`p.representantes` (texto). Passa a ler `DB_PROJETOS` (já
+   expõe `nucleo_id` desde o 5.5) + `DB_PROJETO_REPRESENTANTES`/`DB_PESSOAS` (mesma
+   junção que `editor.html`/`js/drawer.js` já usam desde 4.1/4.4) — reaproveita padrão
+   pronto, não inventa nada novo.
+3. **`index.html`** — `Sonnet / médio` (tende a ser mais raso que a parte 2 — só núcleo,
+   não representantes — mas fica no mesmo grupo por semelhança de trabalho). KPIs/
+   agrupamentos que citam núcleo por projeto; mesma migração do item 2 acima, olhando
+   onde ele lê `projetos.js`/`window.DB.projetos`.
+4. **`js/drawer.js` fora de `participantes.html`** — `Haiku / baixo`. O item 4.4 só
+   carregou os módulos novos nessa página; os demais lugares que abrem o painel de
+   iniciativa (`plano.html`, `demandas.html`, `corsario.html`, `projetos.html`)
+   continuam no fallback de texto por falta dos scripts, não por limitação do código —
+   só carregar `js/db-projeto-representantes.js`+`js/db-pessoas.js` nessas páginas já
+   ativa o join que o 4.4 escreveu. Literalmente 2 linhas de `<script>` por página.
+5. **Telas do canva (`canva-*.html`)** — `Sonnet / alto`. As 4 FKs do item 2.5
+   (`nucleo_id`, `canal_id`, `facilitador_pessoa_id`, `responsavel_pessoa_id`) já são
+   gravadas pelas RPCs desde a Camada 2, só não são lidas por ninguém ainda — maior
+   escopo desta lista, telas inteiras de exibição pra revisar.
+6. **`js/busca.js`** — esforço **não classificado, decisão primeiro**. Cuidado com este:
+   busca é inerentemente sobre TEXTO (o usuário digita caracteres, não um id) — migrar
+   pra FK aqui não é "trocar a fonte", é decidir se a busca deveria resolver o texto
+   digitado pra um id antes de comparar (evitando caso de acento/duplicata) ou se
+   continua comparando string mesmo, e só o RESULTADO (o link gerado) passa a apontar
+   pela FK. Vale uma conversa antes de mexer, não é um "aplicar o mesmo padrão dos
+   outros" direto.
+7. **`meta_inovacao_plano_responsaveis` (2.6)** — esforço **não classificado, decisão
+   primeiro**. Hoje não tem NENHUM leitor (nem antes nem depois do 5.6). Não incluído
+   nos 6 itens acima de propósito: `plano-acao.html`/`minhas-acoes.html` já leem a
+   lista de responsáveis via golden record desde o item 4.3
+   (`js/db-responsaveis.js`), só que pelo texto `responsavel_id`/apelidos, não pela
    junção nova — dá pra migrar, mas o ganho é menor (o 4.3 já resolve a maior parte da
    ambiguidade que a junção resolveria) e pode nem valer o esforço. Decisão de escopo
-   pra quando alguém for avaliar, não repetir o padrão dos outros 6 sem pensar.
+   pra quando alguém for avaliar, não repetir o padrão dos outros sem pensar.
 
 A aposentadoria de `meta_inovacao_matriz_demandas` (decidida no 3.5) entra aqui.
 
 **Teste de aceite:** suíte de testes headless inteira verde; nenhuma tela lê mais
-coluna de texto que foi dropada em 5.3.
+texto legado como fonte de verdade — a coluna continua existindo (decisão do 5.2:
+manter como cópia, nunca `DROP`), só não é mais consultada por código nenhum.
 
 ### Como o 5.1 ficou
 
