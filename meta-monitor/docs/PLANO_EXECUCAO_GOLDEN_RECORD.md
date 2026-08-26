@@ -515,14 +515,14 @@ hoje.
 | # | Atividade | Arquivo(s) | Modelo/Esforço | Status |
 |---|---|---|---|---|
 | 5.1 | Auditoria final: confirmar cobertura de FK das Camadas 2 e 4, ponta a ponta | `tools/auditoria_fk_final.js`, `tools/sql/2026-08_auditoria_fk_final.sql`, `docs/CAMADA5_AUDITORIA_FK.md` | Opus / alto | ✅ **feita em 26/08/2026** — achou 6 lacunas de caminho de escrita em 3 das 7 FKs; ver "Como o 5.1 ficou" |
-| 5.2 | **[humano]** Decidir, tabela a tabela, se dropa a coluna de texto ou mantém como cache | — | José | ⏸️ **esperando 5.9** — 5.5/5.6/5.7 (escrita) já fechados; falta a LEITURA migrar nas telas que ainda decidem por texto, senão dropar quebraria essas telas |
-| 5.3 | Migrações de `DROP COLUMN` onde decidido em 5.2 | sql | Sonnet / baixo | ⏳ não feito (depende do 5.2) |
-| 5.4 | Atualizar `PADRAO_TABELA.md`/`GOVERNANCA_GOLDEN_RECORD.md` com o novo estado; aposentar `js/responsaveis.js` se não sobrar uso | docs, js | Haiku / baixo | ⏳ não feito |
+| 5.2 | **[humano]** Decidir, tabela a tabela, se dropa a coluna de texto ou mantém como cache | — | José | ✅ **DECIDIDO em 26/08/2026: manter as 7 colunas como cópia, nenhum `DROP`.** Condição explícita: o site deve funcionar 100% pela estrutura nova (FK) — a coluna de texto vira histórico congelado, nunca mais fonte de verdade. Confirmado com a CONSULTA 0/A/B/C rodada em produção depois do 5.5/5.6/5.7: 13/13, 13/13, 0 órfãos, só o placeholder já conhecido. Ver nota no topo de `docs/CAMADA5_AUDITORIA_FK.md`. |
+| 5.3 | Migrações de `DROP COLUMN` onde decidido em 5.2 | sql | — | ⛔ **SEM EFEITO — decisão do 5.2 foi manter, não dropar.** Não é "adiado", não vai acontecer (a menos que uma decisão nova troque a de 26/08/2026). |
+| 5.4 | Atualizar `PADRAO_TABELA.md`/`GOVERNANCA_GOLDEN_RECORD.md` com o novo estado; aposentar `js/responsaveis.js` se não sobrar uso | docs, js | Haiku / baixo | ⏳ não feito — depende do 5.9 fechar primeiro (é só depois que dá pra dizer se `js/responsaveis.js` ainda tem uso: `minhas-acoes.html` ainda usa `RESP.mapearTexto` pro texto livre de `n.guardiao`, fora do escopo de qualquer item numerado até aqui) |
 | 5.5 | **Fechar a porta de escrita do 2.1:** `editor.html`/`js/db-projetos.js` gravam `nucleo_id` junto com `nucleo` (projeto novo e troca de núcleo na grade) | `editor.html`, `js/db-projetos.js` | — | ✅ em `main` — trocar núcleo na grade e "+ Novo projeto" gravam `nucleo_id` (resolvido pelo golden record `meta_inovacao_nucleos`, item 0.5) junto com o texto. Detalhe abaixo. |
 | 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | — | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
 | 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | — | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
 | 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
-| 5.9 | **Migrar a LEITURA que falta pras 4 FKs restantes** (pré-requisito real do 5.2, formalizado aqui em vez de ficar só em texto no relatório): `participantes.html`/`projetos.html`/`index.html`/`js/busca.js` leem `projetos.representantes`/`.nucleo` como texto; o guardrail `nomeEhLideranca()` (`js/db-urc.js`) e as telas do canva (`canva-*.html`) idem pras suas FKs | `participantes.html`, `projetos.html`, `index.html`, `js/busca.js`, `js/db-urc.js`, telas do canva | Sonnet / alto (mexe em várias telas de leitura, não só uma) | ⏳ **NÃO FEITO** — aberto nesta sessão (26/08/2026), a pedido explícito de José pra rastrear o que falta antes do 5.2 amadurecer |
+| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). Ver quebra por tela abaixo. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`) | Sonnet / alto — recomendado quebrar em sessões separadas, uma tela por vez (mesmo padrão dos itens 4.1–4.4) | ⏳ **NÃO FEITO** — aberto em 26/08/2026 |
 
 ### Como o 5.5 ficou
 
@@ -604,6 +604,46 @@ rede real já documentados como falha esperada sem egress). **Não existe teste 
 dedicado pras abas "Projetos"/"Corsário"/"Nova atividade" do editor.html** (era lacuna
 antes deste item também) — ponta solta não bloqueante, mesmo padrão de outras já
 registradas neste plano.
+
+### Quebra recomendada do 5.9 — uma tela por vez, mesmo padrão dos itens 4.1–4.4
+
+Não numerada individualmente de propósito (evita já fixar um escopo que pode mudar
+quando alguém for mexer de verdade) — é um roteiro, não um contrato. Ordem sugerida,
+do mais contido pro mais espalhado:
+
+1. **Guardrail `nomeEhLideranca()` (`js/db-urc.js`, item 2.3/2.4)** — hoje compara nome
+   de texto contra a lista de liderança; trocar pra comparar `pessoa_id` fecha a última
+   ponta solta que o item 4.2 deixou registrada. Menor escopo, 1 arquivo.
+2. **`projetos.html`** — hoje mostra núcleo e representantes de cada projeto lendo só
+   `p.nucleo`/`p.representantes` (texto). Passa a ler `DB_PROJETOS` (já expõe
+   `nucleo_id` desde o 5.5) + `DB_PROJETO_REPRESENTANTES`/`DB_PESSOAS` (mesma junção que
+   `editor.html`/`js/drawer.js` já usam desde 4.1/4.4) — reaproveita padrão pronto, não
+   inventa nada novo.
+3. **`index.html`** — KPIs/agrupamentos que citam núcleo por projeto; mesma migração do
+   item 2 acima, olhando onde ele lê `projetos.js`/`window.DB.projetos`.
+4. **`js/drawer.js` fora de `participantes.html`** — o item 4.4 só carregou os módulos
+   novos nessa página; os demais lugares que abrem o painel de iniciativa (`plano.html`,
+   `demandas.html`, `corsario.html`, `projetos.html`) continuam no fallback de texto por
+   falta dos scripts, não por limitação do código — só carregar
+   `js/db-projeto-representantes.js`+`js/db-pessoas.js` nessas páginas já ativa o join
+   que o 4.4 escreveu.
+5. **Telas do canva (`canva-*.html`)** — as 4 FKs do item 2.5 (`nucleo_id`, `canal_id`,
+   `facilitador_pessoa_id`, `responsavel_pessoa_id`) já são gravadas pelas RPCs desde a
+   Camada 2, só não são lidas por ninguém ainda — maior escopo desta lista, telas
+   inteiras de exibição pra revisar.
+6. **`js/busca.js`** — cuidado com este: busca é inerentemente sobre TEXTO (o usuário
+   digita caracteres, não um id) — migrar pra FK aqui não é "trocar a fonte", é decidir
+   se a busca deveria resolver o texto digitado pra um id antes de comparar (evitando
+   caso de acento/duplicata) ou se continua comparando string mesmo, e só o RESULTADO
+   (o link gerado) passa a apontar pela FK. Vale uma conversa antes de mexer, não é um
+   "aplicar o mesmo padrão dos outros" direto.
+7. **`meta_inovacao_plano_responsaveis` (2.6)** — hoje não tem NENHUM leitor (nem antes
+   nem depois do 5.6). Não incluído nos 6 itens acima de propósito: `plano-acao.html`/
+   `minhas-acoes.html` já leem a lista de responsáveis via golden record desde o item
+   4.3 (`js/db-responsaveis.js`), só que pelo texto `responsavel_id`/apelidos, não pela
+   junção nova — dá pra migrar, mas o ganho é menor (o 4.3 já resolve a maior parte da
+   ambiguidade que a junção resolveria) e pode nem valer o esforço. Decisão de escopo
+   pra quando alguém for avaliar, não repetir o padrão dos outros 6 sem pensar.
 
 A aposentadoria de `meta_inovacao_matriz_demandas` (decidida no 3.5) entra aqui.
 

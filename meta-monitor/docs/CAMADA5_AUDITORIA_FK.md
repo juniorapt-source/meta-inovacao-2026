@@ -9,11 +9,22 @@ de dropar ou manter cada coluna de texto).
 > registradas, 0 encontradas). O relatório abaixo não foi reescrito porque documenta
 > um retrato histórico válido (o que a auditoria encontrou e por quê); o estado atual
 > está em `docs/PLANO_EXECUCAO_GOLDEN_RECORD.md`, seção da Camada 5 ("Como o 5.5/5.6/5.7
-> ficaram"). **O veredito do 5.2 abaixo ("nenhuma coluna pronta pro DROP") ainda vale**
-> — fechar a porta de ESCRITA não resolve a ponta da LEITURA (seção C/veredito abaixo),
-> que continua sem migrar nas telas fora do escopo dos itens 4.1–4.4/5.5–5.7. Uma nova
-> rodada da CONSULTA A/C em produção ainda não foi pedida — os números de cobertura
-> abaixo são de ANTES do 5.5/5.6/5.7 fecharem a escrita.
+> ficaram").
+>
+> **CONFIRMADO EM PRODUÇÃO (26/08/2026, José rodou a CONSULTA 0/A/B/C de novo depois do
+> 5.5/5.6/5.7):** os 4 blocos vieram limpos — CONSULTA 0 (13/13 `OK`), CONSULTA A (13/13
+> `OK`, incluindo os 3 itens que estavam em deriva: `28/28`, `61/61`, `27/27`+`4/4`),
+> CONSULTA B (0 órfãos, 0 divergências texto×FK) e CONSULTA C só com o mesmo placeholder
+> já documentado como não-órfão ("Sebrae Startups"/"Núcleo de Startups"). A escrita está
+> genuinamente fechada, confirmado com dado real, não só com o `--check` offline.
+>
+> **DECISÃO DO 5.2 (José, 26/08/2026): manter TODAS as 7 colunas de texto como cópia —
+> nenhum `DROP` (item 5.3 fica sem efeito, não é "adiado", é "não vai acontecer" por
+> decisão).** Condição explícita: o site inteiro deve passar a ler pela estrutura NOVA
+> (FK/golden record) — a coluna de texto vira só histórico congelado, nunca mais fonte de
+> verdade de nenhuma tela. Isso não fecha a Camada 5: o item **5.9** (migrar a leitura que
+> falta) passa a ser o requisito real, não mais "pré-requisito do 5.2" — é o próprio
+> objetivo que falta pra Camada 5 terminar.
 
 > **Veredito em uma linha: nenhuma coluna de texto legado está pronta pro `DROP`
 > hoje.** Não por falta de cobertura — a CONSULTA A rodada em produção em
