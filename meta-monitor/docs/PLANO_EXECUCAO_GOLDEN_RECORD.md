@@ -522,7 +522,7 @@ hoje.
 | 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | — | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
 | 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | — | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
 | 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
-| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`) | ver quebra por parte abaixo (Haiku/baixo a Sonnet/alto, + 2 partes sem classificação até decisão de escopo) | 🔄 **EM ANDAMENTO** — partes 1 (guardrail `nomeEhLideranca()`, `js/db-urc.js`), 2 (`projetos.html`), 3 (`index.html`), 4 (`js/drawer.js` fora de `participantes.html`) e 5 (telas do canva) ✅ em 26/08/2026, as partes 6 e 7 seguem `⏳ NÃO FEITO` (esforço não classificado, decisão de escopo primeiro) |
+| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`), tela(s) a definir pro item 7 | ver quebra por parte abaixo — as 7 partes já têm Modelo/Esforço definido (26/08/2026); só o escopo exato da parte 7 (qual tela) ainda falta confirmar antes de codar | 🔄 **EM ANDAMENTO** — partes 1 (guardrail `nomeEhLideranca()`), 2 (`projetos.html`), 3 (`index.html`), 4 (`js/drawer.js` nas demais páginas) e 5 (telas do canva) ✅ em 26/08/2026; partes 6 (`js/busca.js`, Opção A) e 7 (`plano_responsaveis`, construir) **decididas** mas ainda `⏳ NÃO CODADAS` |
 
 ### Como o 5.5 ficou
 
@@ -614,15 +614,16 @@ mesma régua da legenda do topo do documento):**
 
 - **Haiku / baixo** — parte 4: mecânico, zero lógica nova (o código já existe, só falta
   ativá-lo).
-- **Sonnet / baixo** — parte 1: 1 arquivo, escopo contido, o dado que falta já existe
-  desde o item 4.2.
-- **Sonnet / médio** — partes 2 e 3: mexem em tela + dado junto, mas reaproveitam o
-  mesmo padrão de junção já resolvido em 4.1/4.4, não inventam nada novo.
+- **Sonnet / baixo** — partes 1 e 6: 1 arquivo, escopo contido. A parte 1 porque o dado
+  que falta já existe desde o item 4.2; a parte 6 (`js/busca.js`) porque José decidiu a
+  Opção A (26/08/2026) — só troca o link do resultado, não a lógica de busca.
+- **Sonnet / médio** — partes 2, 3 e 7: mexem em tela + dado junto. As partes 2/3
+  reaproveitam o mesmo padrão de junção já resolvido em 4.1/4.4, não inventam nada
+  novo; a parte 7 (`meta_inovacao_plano_responsaveis`) José decidiu construir
+  (26/08/2026), mas o escopo exato — qual tela, qual mudança visível — ainda não foi
+  definido (ver "Nota de escopo — item 7" logo abaixo da lista).
 - **Sonnet / alto** — parte 5: maior escopo, território que nenhum item anterior
   percorreu (nenhuma tela lê essas 4 FKs hoje, não tem padrão pronto pra copiar).
-- **Fora da régua (decisão antes de estimar, não é preguiça de classificar)** — partes
-  6 e 7: o esforço de código real só fica claro depois de alguém decidir *o quê* fazer;
-  classificar Modelo/Esforço agora seria estimar uma tarefa que ainda não foi definida.
 
 1. **Guardrail `nomeEhLideranca()` (`js/db-urc.js`, item 2.3/2.4)** — `Sonnet / baixo`.
    Hoje compara nome de texto contra a lista de liderança; trocar pra comparar
@@ -735,21 +736,28 @@ mesma régua da legenda do topo do documento):**
      `canva-consolidado.html`) continuam verdes, sem regressão — confirma que a escrita
      de `canva.html` não foi afetada. `tools/auditoria_fk_final.js` — item 2.5 passou a
      listar `canva-consolidado.html` como leitor (antes: "NINGUÉM"); zero lacuna nova.
-6. **`js/busca.js`** — esforço **não classificado, decisão primeiro**. Cuidado com este:
-   busca é inerentemente sobre TEXTO (o usuário digita caracteres, não um id) — migrar
-   pra FK aqui não é "trocar a fonte", é decidir se a busca deveria resolver o texto
-   digitado pra um id antes de comparar (evitando caso de acento/duplicata) ou se
-   continua comparando string mesmo, e só o RESULTADO (o link gerado) passa a apontar
-   pela FK. Vale uma conversa antes de mexer, não é um "aplicar o mesmo padrão dos
-   outros" direto.
-7. **`meta_inovacao_plano_responsaveis` (2.6)** — esforço **não classificado, decisão
-   primeiro**. Hoje não tem NENHUM leitor (nem antes nem depois do 5.6). Não incluído
-   nos 6 itens acima de propósito: `plano-acao.html`/`minhas-acoes.html` já leem a
-   lista de responsáveis via golden record desde o item 4.3
-   (`js/db-responsaveis.js`), só que pelo texto `responsavel_id`/apelidos, não pela
-   junção nova — dá pra migrar, mas o ganho é menor (o 4.3 já resolve a maior parte da
-   ambiguidade que a junção resolveria) e pode nem valer o esforço. Decisão de escopo
-   pra quando alguém for avaliar, não repetir o padrão dos outros sem pensar.
+6. **`js/busca.js`** — `Sonnet / baixo`. **Decidido por José (26/08/2026): Opção A.** A
+   lógica de busca NÃO muda — continua comparando o texto digitado com o texto salvo
+   (é assim que busca deveria funcionar mesmo). O que muda é só o link/clique do
+   resultado: quando o item encontrado tiver uma FK correspondente disponível (ex.:
+   representante de projeto com `pessoa_id` resolvido), o link passa a apontar por ela
+   em vez de depender do texto puro — mesmo espírito de `spanPessoaGolden()`/
+   `representantesHtml()` que o item 4.4 já criou em `js/drawer.js`, possivelmente
+   reaproveitável aqui. Risco baixo, ganho pequeno, por decisão explícita — não é pra
+   crescer escopo tentando "resolver" a busca em si.
+7. **`meta_inovacao_plano_responsaveis` (2.6)** — `Sonnet / médio`. **Decidido por José
+   (26/08/2026): construir.** Escopo exato (que tela mostra o quê, a partir da junção)
+   ainda não foi definido em detalhe — próxima sessão que pegar este item deve validar
+   com José o que exibir antes de codar, não presumir. Ver "Nota de escopo — item 7"
+   logo abaixo de propósito, pra registro do que ficou combinado até aqui.
+
+**Nota de escopo — item 7 (aberta em 26/08/2026):** José decidiu construir a leitura de
+`meta_inovacao_plano_responsaveis`, mas ainda não definiu ONDE/O QUÊ mostrar. Antes de
+codar, a sessão que pegar este item deve confirmar com José algo do tipo: "qual tela e
+qual mudança visível" — por exemplo, `plano-acao.html`/`minhas-acoes.html` passarem a
+ler a junção em vez do texto `responsavel_id` (mesmo requisito de leitura-pela-FK dos
+outros itens do 5.9, sem tela nova) OU uma visão nova (ex. "carga por responsável golden"
+em `minhas-acoes.html`/`index.html`). Não presumir qual das duas.
 
 A aposentadoria de `meta_inovacao_matriz_demandas` (decidida no 3.5) entra aqui.
 
@@ -925,9 +933,12 @@ precisa saber sem reler tudo acima:
    do canva — na prática só `canva-consolidado.html`, a única que LÊ
    `meta_inovacao_canva_demandas`; `canva.html` só grava, via RPC) — todas com "convivendo,
    não substituindo": FK primeiro, texto legado como fallback, nunca quebra. Faltam as
-   partes 6 (`js/busca.js`) e 7 (`meta_inovacao_plano_responsaveis`), as duas com esforço
-   **não classificado de propósito** — decisão de escopo antes de estimar (ver os itens 6
-   e 7 da quebra). `docs/CAMADA5_AUDITORIA_FK.md` ainda reflete o estado de ANTES do
+   partes 6 (`js/busca.js` — José decidiu Opção A em 26/08/2026: só o link do resultado
+   passa a apontar pela FK, a lógica de busca em si não muda) e 7
+   (`meta_inovacao_plano_responsaveis` — José decidiu construir em 26/08/2026, mas o
+   escopo exato — qual tela, qual mudança visível — ainda não foi definido; confirmar
+   com ele antes de codar, ver "Nota de escopo — item 7"), as duas já **decididas** mas
+   ainda `⏳ NÃO CODADAS`. `docs/CAMADA5_AUDITORIA_FK.md` ainda reflete o estado de ANTES do
    5.5/5.6/5.7/5.9 (documento histórico, não atualizado a cada parte — ver nota no topo
    dele); quem quiser o estado atual usa `tools/auditoria_fk_final.js` (offline, sempre
    ao vivo) e esta seção. Uma nova rodada da CONSULTA A/C em produção (pedida ao José pra
