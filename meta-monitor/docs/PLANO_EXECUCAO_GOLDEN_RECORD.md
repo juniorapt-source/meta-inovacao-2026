@@ -21,12 +21,13 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > **STATUS GERAL (atualizado 26/08/2026): Camadas 0, 1 e 2 concluídas e verificadas em
 > produção, incluindo o item 2.5 (rodado por José em 23/08/2026 — ver nota da Camada 2);
 > Camada 3 quase concluída — 3.1, 3.2, 3.3 e 3.4
-> já em `main` e validados, falta só o 3.5 (validação humana, em curso); Camada 4 começou
-> — o item 4.1 (`editor.html` "Projetos & Representantes" vira seletor de pessoa) já está
-> em `main`, faltam 4.2/4.3/4.4.** Camada 5 ainda não iniciada. Se você está retomando
-> este trabalho numa sessão nova: leia a seção "Status por camada" no fim primeiro — ela
-> lista o que já existe no banco e no repositório, pra não repetir trabalho nem presumir
-> algo que ainda não foi feito.
+> já em `main` e validados, falta só o 3.5 (validação humana, em curso); Camada 4 em
+> andamento — os itens 4.1 (`editor.html` "Projetos & Representantes" vira seletor de
+> pessoa) e 4.2 (`editor.html` "URC — Liderança"/"URC — Responsáveis por canal" viram
+> seletor de pessoa/canal) já estão em `main`, faltam 4.3/4.4.** Camada 5 ainda não
+> iniciada. Se você está retomando este trabalho numa sessão nova: leia a seção "Status
+> por camada" no fim primeiro — ela lista o que já existe no banco e no repositório, pra
+> não repetir trabalho nem presumir algo que ainda não foi feito.
 
 **Como ler as tabelas:** camada já executada tem coluna **Status** (o que de fato
 aconteceu); camada ainda não executada mantém **Modelo/Esforço** (o planejamento
@@ -293,12 +294,12 @@ tela.
 
 ---
 
-## Camada 4 — Telas migram pra seletor — ⏳ EM ANDAMENTO (4.1 concluído)
+## Camada 4 — Telas migram pra seletor — ⏳ EM ANDAMENTO (4.1 e 4.2 concluídos)
 
 | # | Atividade | Arquivo(s) | Status |
 |---|---|---|---|
 | 4.1 | `editor.html` "Projetos & Representantes": campo vira seletor de pessoa | `editor.html`, `js/db-projeto-representantes.js` | ✅ em `main` — chip removível (junção `meta_inovacao_projeto_representantes`, item 2.2) + `<select>` de pessoas ativas, no lugar do texto livre "Representantes (vírgula)". Detalhe abaixo. |
-| 4.2 | `editor.html` "URC — Liderança" / "URC — Responsáveis por canal": seletor de pessoa/canal | `editor.html` | ⏳ NÃO INICIADO (Sonnet, médio) |
+| 4.2 | `editor.html` "URC — Liderança" / "URC — Responsáveis por canal": seletor de pessoa/canal | `editor.html`, `js/db-urc.js` | ✅ em `main` — "Nome" (nas duas abas) virou `<select>` de pessoa (golden record, `pessoa_id` dos itens 2.3/2.4), pré-selecionado por FK; o `<select>` de canal (já existia, sobre `CANAIS_FIXOS`) passou a manter `canal_id` em sincronia; "+ Adicionar responsável" trocou o `prompt()` de nome livre por 2 `<select>` (canal + pessoa). Detalhe abaixo. |
 | 4.3 | `plano-acao.html` / `minhas-acoes.html`: select de responsável lê pessoas + coletivos, aposenta parsing de `js/responsaveis.js` | `plano-acao.html`, `minhas-acoes.html` | ⏳ NÃO INICIADO (Sonnet, alto) |
 | 4.4 | `participantes.html` / `js/drawer.js`: exibição via join, não mais array de string | `participantes.html`, `js/drawer.js` | ⏳ NÃO INICIADO (Sonnet, médio) |
 
@@ -332,7 +333,47 @@ tela.
   vínculo e sincroniza o texto, remover desfaz as duas coisas — ver
   `tools/testar_projetos_editor_representantes_headless.js`.
 
-**Notas pra quando chegar no resto da camada (4.2–4.4):**
+### Como o 4.2 ficou
+
+- **"URC — Liderança":** a célula "Nome" deixou de ser um `<input type="text">` e virou
+  um `<select>` de pessoa (golden record, `meta_inovacao_pessoas`), pré-selecionado pelo
+  `pessoa_id` já gravado no item 2.3 (cobertura esperada 100% — as 3 linhas de liderança
+  já vieram casadas na migração). Papel e e-mail continuam texto livre — não têm por que
+  ser os mesmos do cadastro golden de pessoas (o "papel" aqui é o cargo NA URC, e o
+  e-mail pode ser um contato diferente). Trocar a pessoa grava as duas colunas juntas
+  num único `UPDATE`: `pessoa_id` (a FK) e `nome` (texto legado que
+  `participantes.html`/o guardrail de liderança ainda leem) — mesmo padrão de sincronia
+  best-effort do item 4.1, só que aqui as duas colunas vivem na mesma linha, não numa
+  junção à parte.
+- **"URC — Responsáveis por canal":** mesma troca de "Nome" por `<select>` de pessoa. O
+  `<select>` de "Canal" **já existia** (sobre `DB_URC.CANAIS_FIXOS`, texto) — o 4.2 não
+  mudou a LISTA de opções, só passou a manter `canal_id` (item 2.4) em sincronia sempre
+  que o canal muda, resolvendo por igualdade exata de nome contra
+  `meta_inovacao_canais` (mesma régua da migração `2026-08_urc_canais_fk.sql`). A lista
+  continua restrita aos 8 canais de `CANAIS_FIXOS`, não os 10 do catálogo inteiro
+  (`meta_inovacao_canais`) — "Sebrae na sua empresa" e "Contabilizações e instrumentos"
+  ainda não têm responsável indicado, e `agruparPorCanal()` (`js/db-urc.js`), que
+  `participantes.html` usa pra montar o card de cada canal, só conhece esses 8; abrir a
+  lista pros 10 sem tocar naquela função faria um responsável cadastrado num canal novo
+  desaparecer silenciosamente de lá. Fica registrado como ponta solta pra quando alguém
+  decidir cobrir os 2 canais que faltam (não é bloqueante — ver nota abaixo).
+- **"+ Adicionar responsável"** trocou o `prompt()` de nome livre por 2 `<select>` no
+  topo da tabela (canal + pessoa golden, pessoas ativas). Escolher a pessoa e clicar
+  "Adicionar" grava `canal`/`canal_id`/`nome`/`pessoa_id` de uma vez — e-mail sai vazio
+  (editável na própria linha depois, mesmo fluxo de sempre).
+- **Guardrail (item 4.4, herdado de `tools/validar_dados.py`)** continua valendo:
+  `DB_URC.salvarResponsavel`/`criarResponsavel` recebem a lista de liderança e recusam
+  (throw) se o `nome` do patch bater com algum líder — agora disparado pelo `<select>` de
+  pessoa em vez do `<input>` de texto de antes, mesma mensagem de erro.
+- Testado offline (`?semrede=1`: DB_URC/DB_PESSOAS/DB_CANAIS caem pro seed local,
+  `<select>` desabilitados, nunca uma escrita de verdade em teste) e online (dublê de
+  Supabase in-memory, sem tocar rede de verdade): pessoa vinculada pré-selecionada nas
+  duas abas, pessoa inativa nunca aparece nas opções, trocar de pessoa grava `pessoa_id`
+  + `nome`, trocar de canal grava `canal_id` sem mexer no vínculo de pessoa, o guardrail
+  continua bloqueando, e "+ Adicionar responsável" grava as 4 colunas a partir dos 2
+  `<select>` do topo — ver `tools/testar_urc_editor_headless.js`.
+
+**Notas pra quando chegar no resto da camada (4.3–4.4):**
 
 - É o momento certo de decidir a UX dos ids duplicados `jr`/`jose_mendes_junior` e
   `sandra`/`sandra_chaves_paraiso` em `window.DB.responsaveis` (ver Camada 1) — hoje
@@ -343,12 +384,19 @@ tela.
   proteção do 4.4, que mexe justamente em `js/drawer.js` — rode ANTES e DEPOIS de tocar
   nesse arquivo. Só lembre que 2 asserções dele precisam de rede real pro Supabase: num
   ambiente sem esse acesso elas falham sozinhas, e isso não é regressão sua.
+- **Pendência não bloqueante aberta pelo 4.2:** o `<select>` de canal de "URC —
+  Responsáveis por canal" continua restrito aos 8 `CANAIS_FIXOS`, não aos 10 canais do
+  catálogo golden — cobrir "Sebrae na sua empresa"/"Contabilizações e instrumentos" exige
+  primeiro ajustar `agruparPorCanal()` (`js/db-urc.js`) pra não depender de uma lista
+  fixa, senão um responsável cadastrado num canal novo sumiria de `participantes.html`
+  sem ninguém perceber.
 
 **Teste de aceite:** nenhuma das 4 telas tem mais campo de texto livre pra nome de
 pessoa; os testes headless existentes (`testar_participantes_headless.js`,
-`testar_drawer_headless.js`, `testar_minhas_acoes_headless.js`) continuam verdes. O 4.1
-já passa nesse critério — `testar_projetos_editor_representantes_headless.js` é a rede
-de proteção nova dele.
+`testar_drawer_headless.js`, `testar_minhas_acoes_headless.js`) continuam verdes. Os
+itens 4.1 e 4.2 já passam nesse critério —
+`testar_projetos_editor_representantes_headless.js` e `testar_urc_editor_headless.js`
+são a rede de proteção nova de cada um.
 
 ---
 
@@ -405,12 +453,15 @@ precisa saber sem reler tudo acima:
    mesmo modelo de `demandas.html`) e 3.4 (testes headless) estão em `main` e validados.
    **Falta só o 3.5**, que é validação humana em andamento por José — ver "Como está a
    validação do 3.5" na seção da Camada 3.
-3. **Camada 4 começou:** o item 4.1 (`editor.html` "Projetos & Representantes" —
+3. **Camada 4 em andamento:** o item 4.1 (`editor.html` "Projetos & Representantes" —
    texto livre virou seletor de pessoa, chip + `<select>`, sobre a junção
-   `meta_inovacao_projeto_representantes` do item 2.2) está em `main`. Faltam 4.2 (URC),
-   4.3 (plano de ação/minhas ações) e 4.4 (participantes/drawer) — ver "Como o 4.1 ficou"
-   na seção da Camada 4 antes de mexer no resto, o padrão de chip+select criado ali serve
-   de referência pros próximos itens.
+   `meta_inovacao_projeto_representantes` do item 2.2) e o item 4.2 (`editor.html`
+   "URC — Liderança"/"URC — Responsáveis por canal" — texto livre virou `<select>` de
+   pessoa golden, `pessoa_id` dos itens 2.3/2.4, e o `<select>` de canal já existente
+   passou a manter `canal_id` em sincronia) estão em `main`. Faltam 4.3 (plano de
+   ação/minhas ações) e 4.4 (participantes/drawer) — ver "Como o 4.1 ficou" e "Como o 4.2
+   ficou" na seção da Camada 4 antes de mexer no resto, os padrões de chip+select e
+   select-com-sincronia-de-texto criados ali servem de referência pros próximos itens.
 4. Documentos de apoio já existentes, não precisam ser refeitos:
    - `docs/CAMADA1_DEDUPE_PESSOAS.md` — decisões de identidade de pessoas.
    - `docs/CAMADA2_COBERTURA_FK.md` — cobertura real de cada FK da Camada 2.
@@ -429,6 +480,12 @@ precisa saber sem reler tudo acima:
    - `tools/testar_projetos_editor_representantes_headless.js` — aba "Projetos &
      Representantes" do `editor.html` (item 4.1): vínculo vira chip, adicionar/remover
      grava o vínculo e sincroniza `representantes[]` (texto legado), offline e online
+     (dublê de Supabase).
+   - `tools/testar_urc_editor_headless.js` — abas "URC — Liderança"/"URC —
+     Responsáveis por canal" do `editor.html` (item 4.2): `<select>` de pessoa
+     pré-selecionado pelo `pessoa_id`, trocar grava `pessoa_id`+`nome` (texto legado),
+     trocar canal grava `canal_id`, guardrail do item 4.4 continua valendo, "+ Adicionar
+     responsável" grava as 4 colunas a partir dos 2 `<select>` do topo — offline e online
      (dublê de Supabase).
 6. **Pendências não bloqueantes acumuladas:** UI de múltiplos papéis por pessoa em
    `editor.html` (Camada 1); "Oficina confirmada"/"Não se aplica o
