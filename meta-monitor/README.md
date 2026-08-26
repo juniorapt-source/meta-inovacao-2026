@@ -109,6 +109,11 @@ node tools/testar_busca_headless.js    # busca global: "/" foca o campo, um ID d
                                         # conhecido navega certo, iniciativa abre o
                                         # Corsário na visão Cards, pessoa e o painel do
                                         # header mobile também batem
+node tools/testar_busca_golden.js      # item 5.9 parte 6 (js/busca.js, puro/sem Chrome):
+                                        # link do resultado de iniciativa aponta pelo hash
+                                        # #iniciativa= quando há golden record (p.db_id),
+                                        # e continua no link de sempre sem ele — a lógica
+                                        # de busca por texto não muda nos dois cenários
 node tools/testar_drawer_headless.js   # drawer de Iniciativa/Pessoa: #iniciativa=sebraetec
                                         # e #pessoa=sandra renderizam os blocos esperados,
                                         # fechar (X/Esc/clique fora) limpa o hash, nomes

@@ -522,7 +522,7 @@ hoje.
 | 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | — | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
 | 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | — | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
 | 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
-| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`), tela(s) a definir pro item 7 | ver quebra por parte abaixo — as 7 partes já têm Modelo/Esforço definido (26/08/2026); só o escopo exato da parte 7 (qual tela) ainda falta confirmar antes de codar | 🔄 **EM ANDAMENTO** — partes 1 (guardrail `nomeEhLideranca()`), 2 (`projetos.html`), 3 (`index.html`), 4 (`js/drawer.js` nas demais páginas) e 5 (telas do canva) ✅ em 26/08/2026; partes 6 (`js/busca.js`, Opção A) e 7 (`plano_responsaveis`, construir) **decididas** mas ainda `⏳ NÃO CODADAS` |
+| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`), tela(s) a definir pro item 7 | ver quebra por parte abaixo — as 7 partes já têm Modelo/Esforço definido (26/08/2026); só o escopo exato da parte 7 (qual tela) ainda falta confirmar antes de codar | 🔄 **EM ANDAMENTO** — partes 1 (guardrail `nomeEhLideranca()`), 2 (`projetos.html`), 3 (`index.html`), 4 (`js/drawer.js` nas demais páginas), 5 (telas do canva) e 6 (`js/busca.js`, Opção A) ✅ em 26/08/2026; parte 7 (`plano_responsaveis`, construir) **decidida** mas ainda `⏳ NÃO CODADA` |
 
 ### Como o 5.5 ficou
 
@@ -744,7 +744,21 @@ mesma régua da legenda do topo do documento):**
    em vez de depender do texto puro — mesmo espírito de `spanPessoaGolden()`/
    `representantesHtml()` que o item 4.4 já criou em `js/drawer.js`, possivelmente
    reaproveitável aqui. Risco baixo, ganho pequeno, por decisão explícita — não é pra
-   crescer escopo tentando "resolver" a busca em si.
+   crescer escopo tentando "resolver" a busca em si. **✅ em 26/08/2026** — a `chave`
+   de busca (o texto comparado) não mudou; só o `href` do item tipo "iniciativa" muda
+   quando `p.db_id` está resolvido (golden record, item 5.5): passa a apontar pelo hash
+   `#iniciativa=<slug>` que `js/drawer.js` já resolve (item 3.2) — o painel de
+   iniciativa aberto por ali já prioriza núcleo/representante golden sobre o texto livre
+   sozinho (`representantesHtml()`/`spanPessoaGolden()`, item 4.4), reaproveitado sem
+   duplicar a resolução de FK dentro de `busca.js`. Sem `p.db_id` (offline/seed local),
+   mantém o link de sempre (`corsario.html?q=<texto>#cards`, visão Cards). Os demais
+   tipos indexados (ação, pessoa, nó, encontro) já linkavam por id estável, não por
+   texto puro — não precisaram mudar. Testado: `node tools/testar_busca_golden.js`
+   (novo, puro node — confere os dois cenários com/sem golden record e que a `chave`/
+   `buscar()` não mudou) e `node tools/testar_busca_headless.js` (existente, cenário
+   offline sem `db_id`, sem regressão — link de "Sebraetec" continua
+   `corsario.html?q=Sebraetec#cards`); `tools/auditoria_fk_final.js` continua `OK`,
+   zero lacuna nova.
 7. **`meta_inovacao_plano_responsaveis` (2.6)** — `Sonnet / médio`. **Decidido por José
    (26/08/2026): construir.** Escopo exato (que tela mostra o quê, a partir da junção)
    ainda não foi definido em detalhe — próxima sessão que pegar este item deve validar
@@ -927,18 +941,19 @@ precisa saber sem reler tudo acima:
    **O que falta pra Camada 5:** 5.2 continua travado, agora esperando o item **5.9**
    (novo, aberto 26/08/2026) — fechar a porta de ESCRITA (5.5/5.6/5.7, já feitos) não é o
    mesmo que a LEITURA já ter migrado nas outras telas. Das 7 partes da quebra do 5.9
-   (ver "Quebra recomendada do 5.9" na seção da Camada 5), **5 já estão feitas** — parte 1
+   (ver "Quebra recomendada do 5.9" na seção da Camada 5), **6 já estão feitas** — parte 1
    (guardrail `nomeEhLideranca()`, `js/db-urc.js`), parte 2 (`projetos.html`), parte 3
-   (`index.html`), parte 4 (`js/drawer.js` fora de `participantes.html`) e parte 5 (telas
+   (`index.html`), parte 4 (`js/drawer.js` fora de `participantes.html`), parte 5 (telas
    do canva — na prática só `canva-consolidado.html`, a única que LÊ
-   `meta_inovacao_canva_demandas`; `canva.html` só grava, via RPC) — todas com "convivendo,
-   não substituindo": FK primeiro, texto legado como fallback, nunca quebra. Faltam as
-   partes 6 (`js/busca.js` — José decidiu Opção A em 26/08/2026: só o link do resultado
-   passa a apontar pela FK, a lógica de busca em si não muda) e 7
+   `meta_inovacao_canva_demandas`; `canva.html` só grava, via RPC) e parte 6 (`js/busca.js`
+   — Opção A decidida por José em 26/08/2026: só o link do resultado de iniciativa passa a
+   apontar pelo hash `#iniciativa=` do `js/drawer.js` quando há `db_id`, a lógica de busca
+   em si não mudou) — todas com "convivendo, não substituindo": FK primeiro, texto legado
+   como fallback, nunca quebra. Falta a parte 7
    (`meta_inovacao_plano_responsaveis` — José decidiu construir em 26/08/2026, mas o
    escopo exato — qual tela, qual mudança visível — ainda não foi definido; confirmar
-   com ele antes de codar, ver "Nota de escopo — item 7"), as duas já **decididas** mas
-   ainda `⏳ NÃO CODADAS`. `docs/CAMADA5_AUDITORIA_FK.md` ainda reflete o estado de ANTES do
+   com ele antes de codar, ver "Nota de escopo — item 7"), já **decidida** mas
+   ainda `⏳ NÃO CODADA`. `docs/CAMADA5_AUDITORIA_FK.md` ainda reflete o estado de ANTES do
    5.5/5.6/5.7/5.9 (documento histórico, não atualizado a cada parte — ver nota no topo
    dele); quem quiser o estado atual usa `tools/auditoria_fk_final.js` (offline, sempre
    ao vivo) e esta seção. Uma nova rodada da CONSULTA A/C em produção (pedida ao José pra
