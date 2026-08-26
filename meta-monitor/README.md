@@ -134,6 +134,16 @@ node tools/testar_projetos_editor_representantes_headless.js # aba "Projetos &
                                         # puro pro placeholder sem pessoa, adicionar
                                         # grava o vínculo E sincroniza representantes[]
                                         # (texto legado), remover desfaz as duas coisas
+node tools/testar_urc_editor_headless.js # abas "URC — Liderança"/"URC —
+                                        # Responsáveis por canal" do editor.html (item
+                                        # 4.2): <select> de pessoa golden pré-selecionado
+                                        # pelo pessoa_id, trocar grava pessoa_id + nome
+                                        # (texto legado); trocar o <select> de canal
+                                        # grava canal_id junto; guardrail do item 4.4
+                                        # continua bloqueando responsável de canal = nome
+                                        # de liderança, agora pelo <select>; "+ Adicionar
+                                        # responsável" grava canal_id+pessoa_id+nome a
+                                        # partir dos 2 <select> do topo
 ```
 
 Dois relatórios leem **produção** (só leitura, anon key de `js/config.js`) — não entram na

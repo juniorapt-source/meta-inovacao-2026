@@ -24,18 +24,23 @@
   // reservar/remover canal não é uma operação da UI.
   const CANAIS_FIXOS = ["CNR", "Assessoria de Negócios", "Portal", "Loja", "Marketing Cloud", "Foco+", "Rede própria e parceira", "DXP"];
 
+  // pessoa_id (item 2.3) e canal_id/pessoa_id (item 2.4) são as FKs da Camada 2, lidas
+  // aqui desde o item 4.2 — editor.html usa pra oferecer seletor de pessoa/canal em vez
+  // de texto livre. `nome`/`canal` (texto) continuam sendo lidos/gravados em paralelo,
+  // mesmo padrão do item 4.1: participantes.html (agruparPorCanal) e o guardrail de
+  // liderança (nomeEhLideranca) ainda comparam pelo texto, não pela FK.
   function linhaParaLideranca(r) {
-    return { nome: r.nome, papel: r.papel || null, email: r.email || null, ordem: r.ordem, db_id: r.id };
+    return { nome: r.nome, papel: r.papel || null, email: r.email || null, ordem: r.ordem, pessoa_id: r.pessoa_id || null, db_id: r.id };
   }
   function liderancaParaLinha(p) {
-    return { nome: p.nome, papel: p.papel || null, email: p.email || null, ordem: p.ordem };
+    return { nome: p.nome, papel: p.papel || null, email: p.email || null, ordem: p.ordem, pessoa_id: p.pessoa_id || null };
   }
 
   function linhaParaResponsavel(r) {
-    return { canal: r.canal, nome: r.nome, email: r.email || null, ordem: r.ordem, db_id: r.id };
+    return { canal: r.canal, nome: r.nome, email: r.email || null, ordem: r.ordem, canal_id: r.canal_id || null, pessoa_id: r.pessoa_id || null, db_id: r.id };
   }
   function responsavelParaLinha(r) {
-    return { canal: r.canal, nome: r.nome, email: r.email || null, ordem: r.ordem };
+    return { canal: r.canal, nome: r.nome, email: r.email || null, ordem: r.ordem, canal_id: r.canal_id || null, pessoa_id: r.pessoa_id || null };
   }
 
   // agrupa a lista achatada de volta na forma canônica de sempre (1 objeto por canal,

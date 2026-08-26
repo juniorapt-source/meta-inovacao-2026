@@ -215,6 +215,12 @@ const ROTULO_ENC  = Object.fromEntries(STATUS_ENC.map((k)=>[k, CC_STATUS.rotulo(
 let planoAtual = null, planoFallback = false, planoCarregando = false;
 let agendaAtual = null, agendaFallback = false, agendaCarregando = false;
 let pessoasAtual = null, pessoasFallback = false, pessoasCarregando = false;
+// item 4.2 do plano — catálogo golden de canais (meta_inovacao_canais, Camada 0), pra
+// resolver canal_id no seletor de "URC — Responsáveis por canal"; mesmo cache
+// carregado-sob-demanda de pessoasAtual, reaproveitado se a aba "matriz" já carregou
+// DB_CANAIS antes (só que ali a leitura é local à função — aqui vira global pra a URC
+// poder reaproveitar).
+let canaisAtual = null, canaisFallback = false;
 let projetosAtual = null, projetosFallback = false, projetosCarregando = false;
 // item 4.1 do plano — vínculo projeto×pessoa (meta_inovacao_projeto_representantes,
 // Camada 2, item 2.2), carregado junto com projetosAtual/pessoasAtual na primeira vez
@@ -986,12 +992,24 @@ async function criarProjeto(){
 
 // URC — liderança e canais compartilham uma carga (DB_URC.carregar()); ver comentário
 // na declaração de urcAtual, mais acima.
+//
+// item 4.2 — carrega junto DB_PESSOAS (seletor de pessoa, liderança e responsável de
+// canal) e DB_CANAIS (seletor de canal, só pra resolver canal_id — a LISTA de opções do
+// <select> continua sendo DB_URC.CANAIS_FIXOS, ver renderUrcCanais). Reaproveita
+// pessoasAtual/canaisAtual se alguma outra aba já carregou (mesmo padrão de
+// renderProjetos reaproveitando pessoasAtual da aba "Pessoas").
 async function garantirUrcCarregada(){
   if(urcAtual || urcCarregando) return true;
   urcCarregando = true;
   try {
-    const r = await DB_URC.carregar();
-    urcAtual = r; urcFallback = r.usandoFallback;
+    const [urcRes, pessoasRes, canaisRes] = await Promise.all([
+      DB_URC.carregar(),
+      pessoasAtual ? Promise.resolve({ lista: pessoasAtual, usandoFallback: pessoasFallback }) : DB_PESSOAS.carregar(),
+      canaisAtual ? Promise.resolve({ lista: canaisAtual, usandoFallback: canaisFallback }) : DB_CANAIS.carregar(),
+    ]);
+    urcAtual = urcRes; urcFallback = urcRes.usandoFallback;
+    pessoasAtual = pessoasRes.lista; pessoasFallback = pessoasRes.usandoFallback;
+    canaisAtual = canaisRes.lista; canaisFallback = canaisRes.usandoFallback;
     return true;
   } catch(err){
     console.error("editor: falha ao carregar URC", err);
@@ -999,6 +1017,36 @@ async function garantirUrcCarregada(){
   } finally {
     urcCarregando = false;
   }
+}
+
+// item 4.2 — <select> de pessoa (golden record, meta_inovacao_pessoas) pra "URC —
+// Liderança" e "URC — Responsáveis por canal", no lugar do texto livre. Mesma prioridade
+// de rótulo de nomeExibicaoPessoa(); se a linha ainda não tem pessoa_id (não deveria
+// acontecer — cobertura esperada 100% no item 2.3/2.4), tenta casar pelo texto atual
+// (normalizarNomePessoa, mesma régua do item 4.1) só pra pré-selecionar visualmente, sem
+// gravar nada sozinho. Se não achar ninguém, mostra o texto como opção "não vinculada" —
+// escolher outra pessoa na lista é o que resolve o vínculo.
+function selectPessoaUrcHtml(pessoaIdAtual, nomeAtualTexto, dis){
+  const pessoas = (pessoasAtual||[]).slice().sort((a,b)=>nomeExibicaoPessoa(a).localeCompare(nomeExibicaoPessoa(b),"pt-BR"));
+  let atualId = pessoaIdAtual==null ? null : String(pessoaIdAtual);
+  if(atualId==null && nomeAtualTexto){
+    const achado = pessoas.find(ps=>normalizarNomePessoa(ps.nome)===normalizarNomePessoa(nomeAtualTexto) || normalizarNomePessoa(ps.nome_exibicao)===normalizarNomePessoa(nomeAtualTexto));
+    if(achado) atualId = String(achado.db_id);
+  }
+  const rotuloVazio = atualId ? "— selecionar pessoa —" : (nomeAtualTexto ? nomeAtualTexto+" (não vinculado)" : "— selecionar pessoa —");
+  let h = '<option value=""'+(atualId?"":" selected")+'>'+esc(rotuloVazio)+'</option>';
+  h += pessoas.filter(ps=>ps.ativo!==false || String(ps.db_id)===atualId)
+    .map(ps=>'<option value="'+esc(String(ps.db_id))+'"'+(String(ps.db_id)===atualId?" selected":"")+'>'+esc(nomeExibicaoPessoa(ps))+'</option>').join("");
+  return '<select data-f="pessoa_id"'+dis+'>'+h+'</select>';
+}
+// resolve canal_id a partir do texto do canal (mesma régua da migração 2026-08_urc_canais_fk.sql
+// — igualdade exata contra meta_inovacao_canais.nome), pra manter a FK em sincronia quando o
+// <select> de canal (CANAIS_FIXOS, texto) muda — a LISTA de opções não muda no 4.2 (ver
+// comentário em renderUrcCanais sobre por que os 2 canais golden fora de CANAIS_FIXOS ficam
+// de fora aqui).
+function canalIdPorNome(nomeCanal){
+  const c = (canaisAtual||[]).find(x=>x.nome===nomeCanal);
+  return c ? c.db_id : null;
 }
 
 async function renderUrcLideranca(){
@@ -1011,24 +1059,41 @@ async function renderUrcLideranca(){
   const lista = urcAtual.lideranca;
   const dis = urcFallback ? " disabled" : "";
   let h = urcFallback ? avisoFallback("data/urc.js") : "";
+  // item 4.2 — "Nome" trocou de <input type="text"> pra <select> de pessoa (golden
+  // record, meta_inovacao_pessoas via pessoa_id — item 2.3). Papel/email continuam
+  // texto livre (o cargo na URC e o e-mail de contato não têm por que ser os mesmos do
+  // cadastro golden de pessoas).
   h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Nome</th><th>Papel</th><th style="width:220px">Email (opcional)</th><th style="width:70px"></th></tr></thead><tbody>';
   lista.forEach((p)=>{
     h+='<tr data-id="'+esc(String(p.db_id))+'">'+
-      '<td><input type="text" data-f="nome" value="'+esc(p.nome)+'"'+dis+'></td>'+
+      '<td>'+selectPessoaUrcHtml(p.pessoa_id,p.nome,dis)+'</td>'+
       '<td><input type="text" data-f="papel" value="'+esc(p.papel||"")+'"'+dis+'></td>'+
       '<td><input type="text" data-f="email" value="'+esc(p.email||"")+'" placeholder="nome@sebrae.com.br"'+dis+'></td>'+
       '<td><span class="ed-row-status" aria-live="polite"></span></td></tr>';
   });
   area.innerHTML=h+'</tbody></table></div>';
 
-  area.querySelectorAll("tbody input[data-f]").forEach(el=>el.addEventListener("change",async e=>{
+  area.querySelectorAll("tbody select[data-f],tbody input[data-f]").forEach(el=>el.addEventListener("change",async e=>{
     const t=e.target, tr=t.closest("tr"), id=tr.dataset.id, campo=t.dataset.f;
-    const valor = campo==="email" && t.value.trim()==="" ? null : t.value;
     const p = lista.find(x=>String(x.db_id)===id);
-    if(p) p[campo]=valor;
+    if(!p) return;
+    let patch;
+    if(campo==="pessoa_id"){
+      // trocar a pessoa grava as duas colunas juntas: pessoa_id (FK nova) e nome (texto
+      // legado que participantes.html/o guardrail de liderança ainda leem) — mesmo
+      // padrão de sincronia best-effort do item 4.1, só que num único UPDATE porque as
+      // duas colunas vivem na mesma linha (não numa junção à parte).
+      const pessoaId = t.value ? Number(t.value) : null;
+      const pessoa = pessoaId ? (pessoasAtual||[]).find(ps=>ps.db_id===pessoaId) : null;
+      patch = { pessoa_id: pessoaId, nome: pessoa ? pessoa.nome : p.nome };
+    } else {
+      const valor = campo==="email" && t.value.trim()==="" ? null : t.value;
+      patch = { [campo]: valor };
+    }
     marcarLinhaStatus(tr,"salvando");
     try {
-      await DB_URC.salvarLideranca(p.db_id, { [campo]: valor }, EDITOR_ATUAL.nomeAtual());
+      const salvo = await DB_URC.salvarLideranca(p.db_id, patch, EDITOR_ATUAL.nomeAtual());
+      Object.assign(p, salvo);
       marcarLinhaStatus(tr,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar liderança da URC",err);
@@ -1047,12 +1112,28 @@ async function renderUrcCanais(){
   const linhas = urcAtual.canaisFlat;
   const dis = urcFallback ? " disabled" : "";
   let h = urcFallback ? avisoFallback("data/urc.js") : "";
-  h+='<div class="ed-topo" style="margin-bottom:12px"><button type="button" id="ed-add-resp" class="ed-btn"'+dis+'>+ Adicionar responsável</button></div>';
+  // item 4.2 — "+ Adicionar responsável" trocou o prompt() de texto livre por dois
+  // <select> (canal + pessoa golden). A LISTA de canais continua sendo
+  // DB_URC.CANAIS_FIXOS (os 8 de sempre), não os 10 do catálogo inteiro
+  // (meta_inovacao_canais) — "Sebrae na sua empresa"/"Contabilizações e instrumentos"
+  // ainda não têm responsável indicado (ver tools/sql/2026-08_urc_canais_fk.sql) e
+  // agruparPorCanal() (js/db-urc.js), que participantes.html lê pra montar o card de
+  // cada canal, só conhece esses 8; abrir a lista pros 10 sem tocar naquela função faria
+  // um responsável cadastrado num canal novo desaparecer silenciosamente de lá.
+  const disAdd = (dis || !((pessoasAtual||[]).some(ps=>ps.ativo!==false))) ? " disabled" : "";
+  const pessoasParaAdd = (pessoasAtual||[]).filter(ps=>ps.ativo!==false).slice().sort((a,b)=>nomeExibicaoPessoa(a).localeCompare(nomeExibicaoPessoa(b),"pt-BR"));
+  h+='<div class="ed-topo" style="margin-bottom:12px">'+
+    '<select id="ed-novo-resp-canal"'+disAdd+'>'+opts(DB_URC.CANAIS_FIXOS,DB_URC.CANAIS_FIXOS[0])+'</select> '+
+    '<select id="ed-novo-resp-pessoa"'+disAdd+'><option value="">— selecionar pessoa —</option>'+
+      pessoasParaAdd.map(ps=>'<option value="'+esc(String(ps.db_id))+'">'+esc(nomeExibicaoPessoa(ps))+'</option>').join("")+
+    '</select> '+
+    '<button type="button" id="ed-add-resp" class="ed-btn"'+disAdd+'>+ Adicionar responsável</button>'+
+  '</div>';
   h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:200px">Canal</th><th>Nome *</th><th style="width:220px">Email (opcional)</th><th style="width:70px"></th><th style="width:36px"></th></tr></thead><tbody>';
   linhas.forEach((l)=>{
     h+='<tr data-id="'+esc(String(l.db_id))+'">'+
       '<td><select data-f="canal"'+dis+'>'+opts(DB_URC.CANAIS_FIXOS,l.canal)+'</select></td>'+
-      '<td><input type="text" data-f="nome" value="'+esc(l.nome)+'"'+dis+'></td>'+
+      '<td>'+selectPessoaUrcHtml(l.pessoa_id,l.nome,dis)+'</td>'+
       '<td><input type="text" data-f="email" value="'+esc(l.email||"")+'" placeholder="nome@sebrae.com.br"'+dis+'></td>'+
       '<td><span class="ed-row-status" aria-live="polite"></span></td>'+
       '<td><button type="button" class="ed-btn sec" data-del="'+esc(String(l.db_id))+'" style="padding:4px 8px"'+dis+' title="Remover">×</button></td></tr>';
@@ -1065,12 +1146,29 @@ async function renderUrcCanais(){
   // mostrar direto no indicador da linha, sem precisar traduzir aqui.
   area.querySelectorAll("tbody select[data-f],tbody input[data-f]").forEach(el=>el.addEventListener("change",async e=>{
     const t=e.target, tr=t.closest("tr"), id=tr.dataset.id, campo=t.dataset.f;
-    const valor = campo==="email" && t.value.trim()==="" ? null : t.value;
     const linha = linhas.find(x=>String(x.db_id)===id);
-    if(linha) linha[campo]=valor;
+    if(!linha) return;
+    let patch;
+    if(campo==="pessoa_id"){
+      // mesmo par pessoa_id+nome (texto legado) da liderança, ver renderUrcLideranca —
+      // só que aqui vai pelo caminho de salvarResponsavel, que checa o guardrail contra
+      // o `nome` do patch antes de gravar.
+      const pessoaId = t.value ? Number(t.value) : null;
+      const pessoa = pessoaId ? (pessoasAtual||[]).find(ps=>ps.db_id===pessoaId) : null;
+      patch = { pessoa_id: pessoaId, nome: pessoa ? pessoa.nome : linha.nome };
+    } else if(campo==="canal"){
+      // trocar o canal atualiza canal_id junto (mesma régua de igualdade exata da
+      // migração 2026-08_urc_canais_fk.sql) — sem isso o <select> mudaria o texto mas a
+      // FK ficaria presa no canal antigo.
+      patch = { canal: t.value, canal_id: canalIdPorNome(t.value) };
+    } else {
+      const valor = campo==="email" && t.value.trim()==="" ? null : t.value;
+      patch = { [campo]: valor };
+    }
     marcarLinhaStatus(tr,"salvando");
     try {
-      await DB_URC.salvarResponsavel(linha.db_id, { [campo]: valor }, EDITOR_ATUAL.nomeAtual(), urcAtual.lideranca);
+      const salvo = await DB_URC.salvarResponsavel(linha.db_id, patch, EDITOR_ATUAL.nomeAtual(), urcAtual.lideranca);
+      Object.assign(linha, salvo);
       marcarLinhaStatus(tr,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar responsável de canal",err);
@@ -1089,16 +1187,29 @@ async function renderUrcCanais(){
       window.alert((window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || (err&&err.message) || "Não consegui remover.");
     }
   }));
+  // item 4.2 — trocou o prompt() de nome livre pelos dois <select> do topo (canal +
+  // pessoa golden, montados acima). email sai vazio (quem quiser, edita na própria
+  // linha depois de criada, mesmo fluxo de sempre); ordem é a próxima dentro do canal
+  // escolhido, igual ao que já era antes.
   const btnAdd = document.getElementById("ed-add-resp");
   if(btnAdd) btnAdd.addEventListener("click",async ()=>{
-    const nome = (window.prompt("Nome do novo responsável:") || "").trim();
-    if(!nome) return;
+    const canalSel = document.getElementById("ed-novo-resp-canal");
+    const pessoaSel = document.getElementById("ed-novo-resp-pessoa");
+    const canalNome = canalSel ? canalSel.value : DB_URC.CANAIS_FIXOS[0];
+    const pessoaId = pessoaSel && pessoaSel.value ? Number(pessoaSel.value) : null;
+    if(!pessoaId){ window.alert("Escolha uma pessoa antes de adicionar."); return; }
+    const pessoa = (pessoasAtual||[]).find(ps=>ps.db_id===pessoaId);
+    if(!pessoa) return;
+    const doCanal = (urcAtual.canaisFlat||[]).filter(l=>l.canal===canalNome);
+    const proximaOrdem = doCanal.length ? Math.max.apply(null,doCanal.map(l=>l.ordem||0))+1 : 1;
+    btnAdd.disabled = true;
     try {
-      const nova = await DB_URC.criarResponsavel({ canal: DB_URC.CANAIS_FIXOS[0], nome: nome, email: null, ordem: 1 }, EDITOR_ATUAL.nomeAtual(), urcAtual.lideranca);
+      const nova = await DB_URC.criarResponsavel({ canal: canalNome, canal_id: canalIdPorNome(canalNome), nome: pessoa.nome, pessoa_id: pessoaId, email: pessoa.email||null, ordem: proximaOrdem }, EDITOR_ATUAL.nomeAtual(), urcAtual.lideranca);
       urcAtual.canaisFlat.push(nova);
       renderUrcCanais();
     } catch(err){
       console.error("editor: falha ao criar responsável",err);
+      btnAdd.disabled = false;
       window.alert((window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || (err&&err.message) || "Não consegui criar.");
     }
   });
