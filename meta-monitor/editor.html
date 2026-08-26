@@ -227,7 +227,9 @@ let projetosAtual = null, projetosFallback = false, projetosCarregando = false;
 // que "Projetos & Representantes" é aberto. É a fonte do seletor de pessoa que
 // substituiu o campo de texto livre; representantes[] (text[]) continua sendo
 // gravado em paralelo (Camada 5 decide se algum dia é aposentado), pra não quebrar
-// projetos.html/index.html/js/drawer.js/js/busca.js, que ainda leem só o array.
+// projetos.html/index.html/js/busca.js, que ainda leem só o array — js/drawer.js
+// passou a ler a junção quando a página carrega os módulos certos (item 4.4;
+// editor.html não carrega js/drawer.js, então não é afetado por isso).
 let projRepresentantesAtual = null, formNovoProjRepresentantesSelecionados = [];
 // URC: liderança e canais compartilham uma única carga (DB_URC.carregar() busca as duas
 // tabelas juntas) porque o guardrail de "responsável de canal não pode ter nome de

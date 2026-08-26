@@ -5,11 +5,20 @@
  * Roteamento leve por hash (#iniciativa=<slug> / #pessoa=<id>) — link direto
  * compartilhável; fechar limpa o hash.
  *
- * Fonte dos dados: window.DB (local) pras partes síncronas (nome/núcleo/representantes/
- * ações/nós), REST puro no Supabase (fetch cru, mesmo padrão de corsario.html — sem SDK)
- * pras partes assíncronas (régua do Corsário, atividades por iniciativa/pessoa, linha da
- * Matriz de demandas). Cada bloco assíncrono renderiza seu próprio "carregando…" e depois
- * se preenche sozinho — o resto do painel não espera por ele.
+ * Fonte dos dados: window.DB (local) pras partes síncronas (nome/núcleo/ações/nós), REST
+ * puro no Supabase (fetch cru, mesmo padrão de corsario.html — sem SDK) pras partes
+ * assíncronas (régua do Corsário, atividades por iniciativa/pessoa, linha da Matriz de
+ * demandas). Cada bloco assíncrono renderiza seu próprio "carregando…" e depois se
+ * preenche sozinho — o resto do painel não espera por ele.
+ *
+ * "Núcleo e representante(s)" (painel de INICIATIVA) também virou bloco assíncrono no
+ * item 4.4 (Camada 4 do golden record): quando a página carrega js/db-projeto-
+ * representantes.js + js/db-pessoas.js (hoje: participantes.html), lê a junção
+ * meta_inovacao_projeto_representantes (item 2.2) em vez do texto livre
+ * `proj.representantes` (text[]) — sem os dois módulos carregados (plano.html,
+ * demandas.html, corsario.html, projetos.html...) ou sem vínculo ainda pra este projeto,
+ * cai pro texto livre de sempre, sem quebrar. Ver representantesHtml()/
+ * carregarJuncaoRepresentantes() abaixo.
  */
 (function (root) {
   "use strict";
@@ -75,6 +84,57 @@
     return { pct: pct, patente: patente };
   }
   function fmtPct(pct) { return pct == null ? "—" : (pct * 100).toFixed(1).replace(".", ",") + "%"; }
+
+  /* ---- junção PROJETO×PESSOA (Camada 2, item 2.2 — meta_inovacao_projeto_representantes)
+     — item 4.4: "Núcleo e representante(s)" deixa de ler só `proj.representantes` (texto
+     livre) quando a junção estiver disponível nesta página (js/db-projeto-representantes.js
+     + js/db-pessoas.js carregados — hoje: só participantes.html; editor.html carrega os
+     dois módulos mas não js/drawer.js, então não é afetado). Memoizada (uma carga só,
+     reaproveitada por toda navegação do drawer nesta página) — mesmo princípio de
+     `promessa` em cada módulo js/db-*.js. Páginas que não carregam os dois módulos (ex.:
+     plano.html, demandas.html, corsario.html — cobertas por tools/testar_drawer_headless.js
+     com ?semrede=1) continuam no texto livre de sempre, sem quebrar nada: "convivendo", não
+     substituindo, como o resto da Camada 2/4. */
+  let promessaJuncaoRepresentantes = null;
+  function carregarJuncaoRepresentantes() {
+    if (!root.DB_PROJETO_REPRESENTANTES || !root.DB_PESSOAS) return Promise.resolve(null);
+    if (promessaJuncaoRepresentantes) return promessaJuncaoRepresentantes;
+    promessaJuncaoRepresentantes = Promise.all([
+      root.DB_PROJETO_REPRESENTANTES.carregar(),
+      root.DB_PESSOAS.carregar(),
+    ]).then(([repr, pessoas]) => ({
+      porProjeto: root.DB_PROJETO_REPRESENTANTES.porProjeto(repr.lista),
+      pessoasPorDbId: new Map(pessoas.lista.map((p) => [p.db_id, p])),
+    })).catch((err) => {
+      console.error("drawer: falha ao carregar a junção projeto×pessoa (item 2.2), caindo pro texto livre", err);
+      return null;
+    });
+    return promessaJuncaoRepresentantes;
+  }
+
+  // pessoa golden (meta_inovacao_pessoas) virando span clicável: reaproveita o id LEGADO
+  // de 32 curados quando o nome bate (é o caso comum — o grupo "Projetos" do golden record
+  // nasceu exatamente desses nomes, ver js/db-responsaveis.js.LEGADO); sem bater, cai pra
+  // texto plano, mesmo comportamento de sempre de spanPessoa() pra um nome sem id conhecido.
+  function spanPessoaGolden(g) {
+    const rotulo = g.nome_exibicao || g.nome;
+    const legado = idsDeTexto(rotulo)[0];
+    return legado ? spanPessoa(legado, true) : esc(rotulo);
+  }
+
+  async function representantesHtml(proj) {
+    const junc = await carregarJuncaoRepresentantes();
+    if (junc && proj.db_id != null) {
+      const vinculos = junc.porProjeto[proj.db_id] || [];
+      const golden = vinculos.map((v) => junc.pessoasPorDbId.get(v.pessoa_id)).filter(Boolean);
+      if (golden.length) {
+        return esc(proj.nucleo || "—") + '<div style="margin-top:6px">' + golden.map(spanPessoaGolden).join(" · ") + "</div>";
+      }
+      // projeto sem vínculo nesta tabela ainda (não migrado, ou placeholder tipo "Núcleo de
+      // Startups" — item 2.2/4.1): cai pro texto livre abaixo, igual sempre foi.
+    }
+    return esc(proj.nucleo || "—") + '<div style="margin-top:6px">' + (proj.representantes || []).map((r) => spanPessoa(r)).join(" · ") + "</div>";
+  }
 
   const STATUS_ATIVIDADE_CLASSE = { nao_iniciado: "atividade_nao_iniciado", em_execucao: "atividade_em_execucao", atrasado: "atividade_atrasado" };
   function badgeAtividade(statusBruto) {
@@ -167,11 +227,9 @@
     const nome = proj.iniciativa;
     mostrar(nome);
 
-    const idRegua = "drawer-regua", idAtividades = "drawer-ativ-ini", idMatriz = "drawer-matriz-ini";
+    const idRepr = "drawer-repr-ini", idRegua = "drawer-regua", idAtividades = "drawer-ativ-ini", idMatriz = "drawer-matriz-ini";
     elCorpo.innerHTML =
-      bloco("Núcleo e representante(s)",
-        esc(proj.nucleo || "—") + '<div style="margin-top:6px">' +
-        proj.representantes.map((r) => spanPessoa(r)).join(" · ") + "</div>") +
+      blocoAsync("Núcleo e representante(s)", idRepr) +
       blocoAsync("Posição na régua do Corsário", idRegua) +
       blocoAsync("Atividades da iniciativa", idAtividades) +
       blocoAsync("Matriz de demandas", idMatriz) +
@@ -179,6 +237,7 @@
         '<p class="drawer-nota">Agenda geral dos ciclos — não há vínculo direto encontro↔iniciativa nos dados.</p>' +
         verMais("agenda.html", "Ver agenda completa"));
 
+    preencherBlocoAsync(idRepr, representantesHtml(proj), (h) => h);
     preencherBlocoAsync(idRegua, buscarRegua(nome), (r) => reguaHtml(nome, r));
     preencherBlocoAsync(idAtividades, supaBuscar("plano_acao_atividades", "iniciativa=eq." + encodeURIComponent(nome) + "&deleted_at=is.null"), (linhas) => atividadesIniciativaHtml(linhas));
     preencherBlocoAsync(idMatriz, supaBuscar("meta_inovacao_matriz_demandas", "iniciativa=eq." + encodeURIComponent(nome) + "&limit=1"), (linhas) => matrizHtml(linhas));
@@ -279,6 +338,17 @@
     preencherBlocoAsync(idAtividades, supaBuscar("plano_acao_atividades", "responsavel=eq." + encodeURIComponent(id) + "&deleted_at=is.null"), (linhas) => atividadesIniciativaHtml(linhas));
   }
 
+  // "Representante de X" aqui embaixo continua casando por TEXTO (idsDeTexto), não pela
+  // junção do item 2.2 — decisão de escopo do item 4.4, não esquecimento: a direção
+  // pessoa→projetos exigiria uma segunda tradução (id LEGADO de 32 curados → pessoa_id
+  // golden, hoje só resolvida por js/db-responsaveis.js.LEGADO, item 4.3 — não carregado
+  // nas páginas que abrem este painel) só pra alimentar um casamento que, no fim, ainda
+  // seria por nome dos dois lados. O ganho de correção do item 4.4 é o sentido
+  // projeto→representante (representantesHtml() acima, painel de INICIATIVA) — é ali que
+  // o texto livre podia divergir da FK (alias, nome duplicado); a lista abaixo raramente
+  // é alcançada a partir de participantes.html (grupo "Projetos" não ganha card próprio
+  // lá, ver comentário em participantes.html) e nunca teve esse risco de ambiguidade
+  // maior que o resto do texto livre que este item não tocou (ex.: data/pessoas.js).
   function papeisHtml(p, id) {
     const linhas = [];
     ((root.DB && root.DB.pessoas) || []).forEach((raw) => {
@@ -287,7 +357,7 @@
       }
     });
     ((root.DB && root.DB.projetos) || []).forEach((proj) => {
-      proj.representantes.forEach((r) => {
+      (proj.representantes || []).forEach((r) => {
         if (idsDeTexto(r).includes(id)) linhas.push("Representante de " + esc(proj.iniciativa) + " (" + esc(proj.nucleo) + ")");
       });
     });

@@ -21,12 +21,14 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > **STATUS GERAL (atualizado 26/08/2026): Camadas 0, 1 e 2 concluídas e verificadas em
 > produção, incluindo o item 2.5 (rodado por José em 23/08/2026 — ver nota da Camada 2);
 > Camada 3 quase concluída — 3.1, 3.2, 3.3 e 3.4
-> já em `main` e validados, falta só o 3.5 (validação humana, em curso); Camada 4 em
-> andamento — os itens 4.1 (`editor.html` "Projetos & Representantes" vira seletor de
-> pessoa), 4.2 (`editor.html` "URC — Liderança"/"URC — Responsáveis por canal" viram
-> seletor de pessoa/canal) e 4.3 (`plano-acao.html`/`minhas-acoes.html`: select de
+> já em `main` e validados, falta só o 3.5 (validação humana, em curso); **Camada 4
+> CONCLUÍDA (26/08/2026)** — os itens 4.1 (`editor.html` "Projetos & Representantes" vira
+> seletor de pessoa), 4.2 (`editor.html` "URC — Liderança"/"URC — Responsáveis por canal"
+> viram seletor de pessoa/canal), 4.3 (`plano-acao.html`/`minhas-acoes.html`: select de
 > "Responsável"/"Ver como" passa a ler pessoas+coletivos do golden record, sem migração —
-> ver `js/db-responsaveis.js`) já estão em `main`, falta 4.4.** Camada 5 ainda não
+> ver `js/db-responsaveis.js`) e 4.4 (`js/drawer.js`: painel de iniciativa lê a junção
+> `meta_inovacao_projeto_representantes` quando a página carrega os módulos certos, texto
+> livre como fallback — ver "Como o 4.4 ficou") estão em `main`. Camada 5 ainda não
 > iniciada. Se você está retomando este trabalho numa sessão nova: leia a seção "Status
 > por camada" no fim primeiro — ela lista o que já existe no banco e no repositório, pra
 > não repetir trabalho nem presumir algo que ainda não foi feito.
@@ -296,14 +298,14 @@ tela.
 
 ---
 
-## Camada 4 — Telas migram pra seletor — ⏳ EM ANDAMENTO (4.1, 4.2 e 4.3 concluídos)
+## Camada 4 — Telas migram pra seletor — ✅ CONCLUÍDA (26/08/2026)
 
 | # | Atividade | Arquivo(s) | Status |
 |---|---|---|---|
 | 4.1 | `editor.html` "Projetos & Representantes": campo vira seletor de pessoa | `editor.html`, `js/db-projeto-representantes.js` | ✅ em `main` — chip removível (junção `meta_inovacao_projeto_representantes`, item 2.2) + `<select>` de pessoas ativas, no lugar do texto livre "Representantes (vírgula)". Detalhe abaixo. |
 | 4.2 | `editor.html` "URC — Liderança" / "URC — Responsáveis por canal": seletor de pessoa/canal | `editor.html`, `js/db-urc.js` | ✅ em `main` — "Nome" (nas duas abas) virou `<select>` de pessoa (golden record, `pessoa_id` dos itens 2.3/2.4), pré-selecionado por FK; o `<select>` de canal (já existia, sobre `CANAIS_FIXOS`) passou a manter `canal_id` em sincronia; "+ Adicionar responsável" trocou o `prompt()` de nome livre por 2 `<select>` (canal + pessoa). Detalhe abaixo. |
 | 4.3 | `plano-acao.html` / `minhas-acoes.html`: select de responsável lê pessoas + coletivos, aposenta parsing de `js/responsaveis.js` | `plano-acao.html`, `minhas-acoes.html`, `js/db-responsaveis.js` (novo) | ✅ em `main` — o `<select>` de "Responsável"/"Ver como" agora é montado a partir de `DB_PESSOAS`+`DB_COLETIVOS` (golden record), não mais da lista estática `window.DB.responsaveis`; os ~32 ids já gravados no Supabase são preservados exatamente, sem migração. Detalhe abaixo. |
-| 4.4 | `participantes.html` / `js/drawer.js`: exibição via join, não mais array de string | `participantes.html`, `js/drawer.js` | ⏳ NÃO INICIADO (Sonnet, médio) |
+| 4.4 | `participantes.html` / `js/drawer.js`: exibição via join, não mais array de string | `participantes.html`, `js/drawer.js` | ✅ em `main` — o painel de INICIATIVA do drawer ("Núcleo e representante(s)") passa a ler `meta_inovacao_projeto_representantes` (item 2.2) + `meta_inovacao_pessoas`, com `proj.representantes` (text[]) só como fallback. Detalhe abaixo. |
 
 ### Como o 4.1 ficou
 
@@ -434,28 +436,55 @@ tela.
   `tools/testar_minhas_acoes_headless.js` (já existente, sem alterações) continua verde —
   confere que a contagem de nós/ações da pessoa "sandra" não mudou com a troca de fonte.
 
-**Notas pra quando chegar no resto da camada (4.4):**
+**Pendência não bloqueante aberta pelo 4.2, ainda válida:** o `<select>` de canal de
+"URC — Responsáveis por canal" continua restrito aos 8 `CANAIS_FIXOS`, não aos 10 canais
+do catálogo golden — cobrir "Sebrae na sua empresa"/"Contabilizações e instrumentos"
+exige primeiro ajustar `agruparPorCanal()` (`js/db-urc.js`) pra não depender de uma lista
+fixa, senão um responsável cadastrado num canal novo sumiria de `participantes.html` sem
+ninguém perceber.
 
-- O item 2.5 (FKs de `meta_inovacao_canva_demandas`) já foi rodado em produção
-  (23/08/2026, ver nota da Camada 2) — não precisa ser revisitado aqui.
-- `tools/testar_drawer_headless.js` foi consertado em 22/08 (PR #10) e é a rede de
-  proteção do 4.4, que mexe justamente em `js/drawer.js` — rode ANTES e DEPOIS de tocar
-  nesse arquivo. Só lembre que 2 asserções dele precisam de rede real pro Supabase: num
-  ambiente sem esse acesso elas falham sozinhas, e isso não é regressão sua.
-- **Pendência não bloqueante aberta pelo 4.2:** o `<select>` de canal de "URC —
-  Responsáveis por canal" continua restrito aos 8 `CANAIS_FIXOS`, não aos 10 canais do
-  catálogo golden — cobrir "Sebrae na sua empresa"/"Contabilizações e instrumentos" exige
-  primeiro ajustar `agruparPorCanal()` (`js/db-urc.js`) pra não depender de uma lista
-  fixa, senão um responsável cadastrado num canal novo sumiria de `participantes.html`
-  sem ninguém perceber.
+### Como o 4.4 ficou
 
-**Teste de aceite:** nenhuma das 4 telas tem mais campo de texto livre pra nome de
-pessoa; os testes headless existentes (`testar_participantes_headless.js`,
+- O bloco "Núcleo e representante(s)" do painel de **iniciativa** (`js/drawer.js`,
+  `abrirIniciativa`) virou bloco assíncrono (mesmo padrão de "Posição na régua do
+  Corsário"): `representantesHtml(proj)` tenta primeiro a junção
+  `meta_inovacao_projeto_representantes` (item 2.2) + `meta_inovacao_pessoas` — via
+  `carregarJuncaoRepresentantes()`, memoizada, só ativa quando a página carrega os dois
+  módulos (`js/db-projeto-representantes.js` + `js/db-pessoas.js`; hoje só
+  `participantes.html`, que ganhou o primeiro script nesta rodada — o segundo já estava
+  lá desde a Camada 1). Cada pessoa do vínculo vira `spanPessoaGolden()`: span clicável
+  com o id LEGADO de 32 curados quando o nome bate (é o caso comum — o grupo "Projetos"
+  do golden record nasceu exatamente desses nomes), texto plano sem bater, igual
+  `spanPessoa()` sempre fez pra nome sem id conhecido.
+- **Convivendo, não substituindo** (mesmo espírito do 2.5/4.1/4.2): sem os dois módulos
+  carregados (`plano.html`, `demandas.html`, `corsario.html`, `projetos.html`, `index.html`
+  — nenhum tocado por este item) ou sem vínculo ainda pra aquele projeto (não migrado, ou
+  placeholder tipo "Núcleo de Startups"), cai pro texto livre `proj.representantes` de
+  sempre — nunca quebra, nunca mostra painel vazio.
+- **Fora do escopo, de propósito:** a lista "Representante de X" no painel de **pessoa**
+  (`papeisHtml`, direção pessoa→projetos) continua casando por texto — ver o comentário
+  no próprio `js/drawer.js` pra por quê (a tradução id LEGADO→`pessoa_id` golden exigiria
+  carregar `js/db-responsaveis.js`/`js/db-coletivos.js` também, só pra alimentar um
+  casamento que ainda seria por nome nos dois lados; o ganho de correção do 2.2 está no
+  sentido projeto→representante, que é o que este item resolve). `projetos.html`,
+  `index.html` e `js/busca.js` também ficam de fora — nenhum foi citado no item 4.4.
+- Testado offline (`?semrede=1`, `tools/testar_drawer_headless.js` — nenhum dos dois
+  módulos novos carrega em `plano.html`, então exercita o fallback de texto de sempre;
+  os 3 cenários sem dependência de rede real continuam verdes, sem regressão) e o
+  `tools/testar_participantes_headless.js` (não toca no drawer, mas confirma que o
+  script novo não quebrou o carregamento da página).
+
+**Teste de aceite:** nenhuma das 4 telas do 4.1–4.3 tem mais campo de texto livre pra
+nome de pessoa; os testes headless existentes (`testar_participantes_headless.js`,
 `testar_drawer_headless.js`, `testar_minhas_acoes_headless.js`) continuam verdes. Os
 itens 4.1, 4.2 e 4.3 já passam nesse critério —
 `testar_projetos_editor_representantes_headless.js`, `testar_urc_editor_headless.js`,
 `testar_responsaveis.js` e `testar_plano_acao_responsavel_headless.js` são a rede de
-proteção nova de cada um.
+proteção nova de cada um. O 4.4 (painel de iniciativa via junção, com fallback de texto)
+passa nos mesmos dois testes headless — sem asserção nova, porque o comportamento visível
+não muda quando os dois módulos não estão carregados (a maioria das páginas), e
+`participantes.html` (a única que ganhou o módulo novo) não abre painel de iniciativa
+hoje.
 
 ---
 
@@ -512,19 +541,21 @@ precisa saber sem reler tudo acima:
    mesmo modelo de `demandas.html`) e 3.4 (testes headless) estão em `main` e validados.
    **Falta só o 3.5**, que é validação humana em andamento por José — ver "Como está a
    validação do 3.5" na seção da Camada 3.
-3. **Camada 4 em andamento:** o item 4.1 (`editor.html` "Projetos & Representantes" —
+3. **Camada 4 concluída (26/08/2026):** o item 4.1 (`editor.html` "Projetos & Representantes" —
    texto livre virou seletor de pessoa, chip + `<select>`, sobre a junção
    `meta_inovacao_projeto_representantes` do item 2.2), o item 4.2 (`editor.html`
    "URC — Liderança"/"URC — Responsáveis por canal" — texto livre virou `<select>` de
    pessoa golden, `pessoa_id` dos itens 2.3/2.4, e o `<select>` de canal já existente
-   passou a manter `canal_id` em sincronia) e o item 4.3 (`plano-acao.html`/
+   passou a manter `canal_id` em sincronia), o item 4.3 (`plano-acao.html`/
    `minhas-acoes.html` — select de "Responsável"/"Ver como" passa a ler
    `DB_PESSOAS`+`DB_COLETIVOS`, `js/db-responsaveis.js` novo, sem migração — os ~32 ids já
-   gravados no Supabase são preservados exatamente) estão em `main`. Falta só 4.4
-   (participantes/drawer) — ver "Como o 4.1 ficou", "Como o 4.2 ficou" e "Como o 4.3
-   ficou" na seção da Camada 4 antes de mexer nele, os padrões de chip+select,
-   select-com-sincronia-de-texto e lista-derivada-do-golden-record criados ali servem de
-   referência.
+   gravados no Supabase são preservados exatamente) e o item 4.4 (`js/drawer.js`: painel de
+   iniciativa lê a mesma junção do 2.2 em vez de `proj.representantes` (text[]) quando a
+   página carrega os módulos certos — hoje só `participantes.html`; nas demais páginas cai
+   pro texto livre de sempre, sem quebrar) estão em `main`. Ver "Como o 4.1 ficou", "Como o
+   4.2 ficou", "Como o 4.3 ficou" e "Como o 4.4 ficou" na seção da Camada 4 — os padrões de
+   chip+select, select-com-sincronia-de-texto, lista-derivada-do-golden-record e
+   bloco-assíncrono-com-fallback-de-texto criados ali servem de referência pra Camada 5.
 4. Documentos de apoio já existentes, não precisam ser refeitos:
    - `docs/CAMADA1_DEDUPE_PESSOAS.md` — decisões de identidade de pessoas.
    - `docs/CAMADA2_COBERTURA_FK.md` — cobertura real de cada FK da Camada 2.
