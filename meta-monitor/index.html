@@ -86,6 +86,8 @@
 <script src="data/nos.js"></script>
 <script src="data/projetos.js"></script>
 <script src="js/db-projetos.js"></script>
+<script src="js/db-nucleos.js"></script>
+<script src="data/nucleos.js"></script>
 <script src="js/portfolio.js"></script>
 <script src="data/canais.js"></script>
 <script src="data/agenda.js"></script>
@@ -226,7 +228,22 @@
   // data/projetos.js é só o fallback offline). Ver docs/GOVERNANCA_GOLDEN_RECORD.md.
   if (window.PORTFOLIO) { try { await window.PORTFOLIO.pronto; } catch (e) { /* mantém seed */ } }
   const projetos = DB.projetos || [];
-  const nucleosProj = [...new Set(projetos.map(p => p.nucleo))];
+
+  // Camada 5, item 5.9 (parte 3) — núcleo passa a ler pela FK/golden record
+  // (DB_NUCLEOS + DB_PROJETOS.nucleo_id, item 5.5) em vez do texto legado `p.nucleo`,
+  // mesma migração da parte 2 (projetos.html). Só o núcleo entra aqui — representantes
+  // (usado abaixo só pra "Gestores"/pendências) fica de fora deste item, por decisão de
+  // escopo já registrada no plano. Cai pro texto quando a FK não resolve.
+  const nucleosRes = window.DB_NUCLEOS
+    ? await DB_NUCLEOS.carregar().catch((err) => { console.error("index.html: falha ao carregar núcleos golden, caindo pro texto legado", err); return null; })
+    : null;
+  const nucleosPorDbId = new Map((nucleosRes ? nucleosRes.lista : []).map(n => [n.db_id, n]));
+  function nucleoNome(p) {
+    const n = p.nucleo_id != null && nucleosPorDbId.get(p.nucleo_id);
+    return (n && n.nome) || p.nucleo;
+  }
+
+  const nucleosProj = [...new Set(projetos.map(nucleoNome))];
   const PLACEHOLDER_RE = /^núcleo de/i; // representante que não é pessoa física (pendência de indicação)
   const gestores = new Set();
   const iniciativasPendentes = [];
@@ -244,7 +261,7 @@
   // mini-breakdown só mostra núcleo com projeto — "Gestão do Conhecimento e Processos" é
   // núcleo válido no whitelist (editor.html/validar_dados.py), mas sem portfólio hoje, então
   // não entra aqui (0 é ruído visual, não informação)
-  const porNucleo = nucleosProj.map(n => [n, projetos.filter(p => p.nucleo === n).length]).filter(([, c]) => c > 0);
+  const porNucleo = nucleosProj.map(n => [n, projetos.filter(p => nucleoNome(p) === n).length]).filter(([, c]) => c > 0);
 
   // item 2.3: composição do portfólio virou seção própria (6ª, depois dos KPIs numéricos),
   // não mais anexada ao mesmo grid dos 6 cards de status — mesmos dois cards de antes,

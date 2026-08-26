@@ -522,7 +522,7 @@ hoje.
 | 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | — | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
 | 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | — | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
 | 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
-| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`) | ver quebra por parte abaixo (Haiku/baixo a Sonnet/alto, + 2 partes sem classificação até decisão de escopo) | 🔄 **EM ANDAMENTO** — partes 1 (guardrail `nomeEhLideranca()`, `js/db-urc.js`) e 2 (`projetos.html`) ✅ em 26/08/2026, as demais partes (3–7 da quebra abaixo) seguem `⏳ NÃO FEITO` |
+| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`) | ver quebra por parte abaixo (Haiku/baixo a Sonnet/alto, + 2 partes sem classificação até decisão de escopo) | 🔄 **EM ANDAMENTO** — partes 1 (guardrail `nomeEhLideranca()`, `js/db-urc.js`), 2 (`projetos.html`) e 3 (`index.html`) ✅ em 26/08/2026, as demais partes (4–7 da quebra abaixo) seguem `⏳ NÃO FEITO` |
 
 ### Como o 5.5 ficou
 
@@ -663,7 +663,21 @@ mesma régua da legenda do topo do documento):**
 3. **`index.html`** — `Sonnet / médio` (tende a ser mais raso que a parte 2 — só núcleo,
    não representantes — mas fica no mesmo grupo por semelhança de trabalho). KPIs/
    agrupamentos que citam núcleo por projeto; mesma migração do item 2 acima, olhando
-   onde ele lê `projetos.js`/`window.DB.projetos`.
+   onde ele lê `projetos.js`/`window.DB.projetos`. **✅ em 26/08/2026** — `index.html`
+   ganhou `js/db-nucleos.js` e `data/nucleos.js` (nenhum carregado antes nesta tela).
+   A seção "Composição do portfólio" (`nucleosProj`/`porNucleo`, mini-breakdown "núcleo
+   — N projetos") passa a usar `nucleoNome(p)` (mesma função de `projetos.html`, parte
+   2: resolve `p.nucleo_id` em `meta_inovacao_nucleos` via `DB_NUCLEOS`, cai pro texto
+   `p.nucleo` quando a FK não resolve) em vez de ler `p.nucleo` direto — escopo
+   deliberadamente menor que a parte 2: representantes/"Gestores de projetos"/
+   pendências (que também leem `p.representantes`) ficam de fora, como já registrado
+   acima. Testado: `tools/testar_dashboard_headless.js` (cenário offline, sem
+   regressão — o seed local não tem `nucleo_id`) e o novo
+   `tools/testar_dashboard_golden_headless.js` (cenário online com dublê de Supabase:
+   projeto com `nucleo_id` mostra o núcleo golden na composição do portfólio, não o
+   texto legado propositalmente diferente do cenário; projeto sem `nucleo_id` continua
+   no texto legado) verdes; `tools/auditoria_fk_final.js` continua `OK`, zero lacuna
+   nova.
 4. **`js/drawer.js` fora de `participantes.html`** — `Haiku / baixo`. O item 4.4 só
    carregou os módulos novos nessa página; os demais lugares que abrem o painel de
    iniciativa (`plano.html`, `demandas.html`, `corsario.html`, `projetos.html`)
