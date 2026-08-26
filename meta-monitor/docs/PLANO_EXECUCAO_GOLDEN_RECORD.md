@@ -34,8 +34,11 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > nenhuma tela, então derivam a cada linha nova. O 5.2 (decisão humana de dropar ou
 > manter cada coluna de texto) fica esperando esses três, porque hoje nenhuma coluna de
 > texto está pronta pro `DROP`. A rodada em produção (26/08) deu 12 de 13 `OK` na
-> cobertura, com um `DIVERGE`: `corsario_status.nucleo_id` está `0/4` — item 5.8,
-> script de recuperação pronto. Ver `docs/CAMADA5_AUDITORIA_FK.md`. Se você está
+> cobertura, com um `DIVERGE`: `corsario_status.nucleo_id` estava `0/4` — item **5.8,
+> RESOLVIDO em produção em 26/08/2026** (José rodou SEÇÃO 1→2→3 de
+> `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql`: os 4 núcleos casaram por
+> igualdade normalizada, SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente). Ver
+> `docs/CAMADA5_AUDITORIA_FK.md`. Se você está
 > retomando este trabalho numa sessão nova: leia a seção "Status
 > por camada" no fim primeiro — ela lista o que já existe no banco e no repositório, pra
 > não repetir trabalho nem presumir algo que ainda não foi feito.
@@ -506,7 +509,7 @@ hoje.
 | 5.5 | **Fechar a porta de escrita do 2.1:** `editor.html`/`js/db-projetos.js` gravam `nucleo_id` junto com `nucleo` (projeto novo e troca de núcleo na grade) | `editor.html`, `js/db-projetos.js` | Sonnet / baixo | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
 | 5.6 | **Fechar a porta de escrita do 2.6:** as 3 telas de ação gravam `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `plano-acao.html`, `minhas-acoes.html`, `editor.html`, `js/db-plano.js` | Sonnet / médio | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
 | 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | Sonnet / baixo | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
-| 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (está `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ⏳ **NÃO FEITO** — aberto pelo 5.1; script pronto e testado, SEÇÃO 1 (diagnóstico, só leitura) antes da SEÇÃO 2 |
+| 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
 
 A aposentadoria de `meta_inovacao_matriz_demandas` (decidida no 3.5) entra aqui.
 
@@ -584,7 +587,10 @@ José rodou as 4 consultas no SQL Editor no mesmo dia. Números completos em
   colunas tenham vindo do mesmo `ALTER TABLE`. É a única linha hedgeada de
   `CAMADA2_COBERTURA_FK.md` cobrando o hedge: a verificação (b) do script original
   devolvia "vazio" ambíguo (uma linha com célula em branco lê-se como nenhuma
-  linha). Virou o item **5.8**, com script de recuperação pronto e testado.
+  linha). Virou o item **5.8**, com script de recuperação pronto e testado — **rodado
+  em produção no mesmo dia (26/08/2026): SEÇÃO 1 achou os 4 núcleos por igualdade
+  normalizada (nenhum "SEM CORRESPONDENTE", não era cadastro faltando), SEÇÃO 2/3
+  confirmaram 4/4.** Item fechado, ver a linha do 5.8 na tabela da Camada 5.
 - **CONSULTA B: 10/10 `OK`** — nenhuma FK apontando pra linha soft-deleted, nenhum
   texto discordando da FK.
 
