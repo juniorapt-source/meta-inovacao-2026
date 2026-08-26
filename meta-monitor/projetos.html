@@ -45,7 +45,11 @@
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/db-projetos.js"></script>
+<script src="js/db-nucleos.js"></script>
+<script src="js/db-projeto-representantes.js"></script>
+<script src="js/db-pessoas.js"></script>
 <script src="data/projetos.js"></script>
+<script src="data/nucleos.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/canais.js"></script>
@@ -64,13 +68,52 @@
 
   // "Correções v0.18.x" — projetos agora vem do Supabase (meta_inovacao_projetos), com
   // data/projetos.js como seed/fallback se a rede falhar (mesmo padrão do P10).
-  const { lista: projetos, usandoFallback } = await DB_PROJETOS.carregar();
+  //
+  // Camada 5, item 5.9 (parte 2) — núcleo e representantes passam a ler pela FK/golden
+  // record (DB_NUCLEOS + DB_PROJETOS.nucleo_id, item 5.5; DB_PROJETO_REPRESENTANTES +
+  // DB_PESSOAS, item 2.2/4.1) em vez do texto legado `p.nucleo`/`p.representantes` —
+  // mesma junção que editor.html/js/drawer.js já usam desde 4.1/4.4/5.5, não inventa
+  // nada novo. Cai pro texto quando a FK não resolve (projeto sem `nucleo_id`/vínculo
+  // ainda, ou o módulo golden falhou ao carregar) — "convivendo", não substituindo,
+  // mesmo princípio do resto da Camada 4/5.
+  const [{ lista: projetos, usandoFallback }, nucleosRes, reprRes, pessoasRes] = await Promise.all([
+    DB_PROJETOS.carregar(),
+    DB_NUCLEOS.carregar().catch((err) => { console.error("projetos.html: falha ao carregar núcleos golden, caindo pro texto legado", err); return null; }),
+    DB_PROJETO_REPRESENTANTES.carregar().catch((err) => { console.error("projetos.html: falha ao carregar a junção projeto×pessoa, caindo pro texto legado", err); return null; }),
+    DB_PESSOAS.carregar().catch((err) => { console.error("projetos.html: falha ao carregar pessoas golden, caindo pro texto legado", err); return null; }),
+  ]);
   if (usandoFallback) document.getElementById("aviso-fallback").hidden = false;
+
+  const nucleosPorDbId = new Map((nucleosRes ? nucleosRes.lista : []).map(n => [n.db_id, n]));
+  const porProjetoRepr = reprRes ? DB_PROJETO_REPRESENTANTES.porProjeto(reprRes.lista) : {};
+  const pessoasPorDbId = new Map((pessoasRes ? pessoasRes.lista : []).map(p => [p.db_id, p]));
+
+  // nome do núcleo: prioriza a FK (nucleo_id → meta_inovacao_nucleos), cai pro texto
+  // legado (p.nucleo) quando a FK não resolve.
+  function nucleoNome(p) {
+    const n = p.nucleo_id != null && nucleosPorDbId.get(p.nucleo_id);
+    return (n && n.nome) || p.nucleo;
+  }
+
+  // nomes dos representantes: prioriza a junção (meta_inovacao_projeto_representantes →
+  // meta_inovacao_pessoas), cai pro texto legado (p.representantes) quando não há
+  // vínculo ainda (projeto não migrado) ou nenhuma pessoa vinculada resolveu no golden
+  // record (mesma régua de "convivendo" de representantesHtml() em js/drawer.js).
+  function representantesDoProjeto(p) {
+    if (p.db_id != null) {
+      const golden = (porProjetoRepr[p.db_id] || [])
+        .map(v => pessoasPorDbId.get(v.pessoa_id))
+        .filter(Boolean)
+        .map(ps => ps.nome_exibicao || ps.nome);
+      if (golden.length) return golden;
+    }
+    return p.representantes || [];
+  }
 
   const selN = document.getElementById("f-nucleo"), busca = document.getElementById("f-busca"),
         secoes = document.getElementById("secoes");
 
-  const nucleos = [...new Set(projetos.map(p => p.nucleo))];
+  const nucleos = [...new Set(projetos.map(nucleoNome))];
   selN.innerHTML = '<option value="">Todos os núcleos</option>' + nucleos.map(n => "<option>" + esc(n) + "</option>").join("");
 
   // pessoas distintas por núcleo, considerando TODAS as iniciativas do núcleo (não só as que
@@ -79,7 +122,7 @@
   const PLACEHOLDER_RE = /^núcleo de/i;
   const pessoasPorNucleo = new Map(nucleos.map(n => {
     const distintos = new Set();
-    projetos.filter(p => p.nucleo === n).forEach(p => p.representantes.forEach(r => {
+    projetos.filter(p => nucleoNome(p) === n).forEach(p => representantesDoProjeto(p).forEach(r => {
       const nome = r.trim();
       if (nome && !PLACEHOLDER_RE.test(nome)) distintos.add(nome);
     }));
@@ -98,8 +141,8 @@
 
     for (const nucleo of nucleos) {
       if (nv && nucleo !== nv) continue;
-      const itens = projetos.filter(p => p.nucleo === nucleo).filter(p =>
-        !q || (p.iniciativa + " " + p.representantes.join(" ")).toLowerCase().includes(q)
+      const itens = projetos.filter(p => nucleoNome(p) === nucleo).filter(p =>
+        !q || (p.iniciativa + " " + representantesDoProjeto(p).join(" ")).toLowerCase().includes(q)
       );
       if (!itens.length) continue;
       visTotal += itens.length;
@@ -112,8 +155,8 @@
         "</span>" +
         "</summary>" +
         '<div class="tab-wrap"><table><thead><tr><th>Iniciativa</th><th>Representante(s)</th><th style="width:40px"></th></tr></thead><tbody>' +
-        itens.map(p => "<tr><td>" + DRAWER.spanIniciativa(p.iniciativa) + "</td><td>" + repsHtml(p.representantes) + "</td>" +
-          '<td class="proj-num">' + p.representantes.length + "</td></tr>").join("") +
+        itens.map(p => { const reps = representantesDoProjeto(p); return "<tr><td>" + DRAWER.spanIniciativa(p.iniciativa) + "</td><td>" + repsHtml(reps) + "</td>" +
+          '<td class="proj-num">' + reps.length + "</td></tr>"; }).join("") +
         "</tbody></table></div></details>";
     }
 
