@@ -116,6 +116,9 @@
   // de 32 curados quando o nome bate (é o caso comum — o grupo "Projetos" do golden record
   // nasceu exatamente desses nomes, ver js/db-responsaveis.js.LEGADO); sem bater, cai pra
   // texto plano, mesmo comportamento de sempre de spanPessoa() pra um nome sem id conhecido.
+  // Exportada em DRAWER (abaixo) desde o item 5.9 parte 5 — canva-consolidado.html reusa
+  // pra virar facilitador_pessoa_id/responsavel_pessoa_id (item 2.5) em span clicável,
+  // em vez de reimplementar o mesmo casamento nome→id LEGADO.
   function spanPessoaGolden(g) {
     const rotulo = g.nome_exibicao || g.nome;
     const legado = idsDeTexto(rotulo)[0];
@@ -426,6 +429,7 @@
     fechar: fechar,
     spanIniciativa: spanIniciativa,
     spanPessoa: spanPessoa,
+    spanPessoaGolden: spanPessoaGolden,
     spanPessoasEmTexto: spanPessoasEmTexto,
     slugify: slugify,
   };

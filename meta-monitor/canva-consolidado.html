@@ -42,6 +42,8 @@
 .cvc-projeto-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;
   margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--linha)}
 .cvc-projeto-titulo{font-family:var(--font-sans);font-weight:400;font-size:18px;color:var(--tinta)}
+.cvc-projeto-nucleo{font-family:'DM Sans',sans-serif;font-weight:600;font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--grafite)}
 .cvc-projeto-acoes{display:flex;gap:8px;flex-wrap:wrap}
 .cvc-canal-grupo{margin-bottom:16px}
 .cvc-canal-grupo h3{font-family:'DM Sans',sans-serif;font-weight:700;font-size:11px;text-transform:uppercase;
@@ -131,6 +133,7 @@
 <script src="js/csv-export.js"></script>
 <script src="js/db-canva-consolidado.js"></script>
 <script src="data/canais.js"></script>
+<script src="data/nucleos.js"></script>
 <script src="data/agenda.js"></script>
 <script src="data/projetos.js"></script>
 <script src="data/plano.js"></script>
@@ -139,6 +142,9 @@
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
 <script src="js/db-projetos.js"></script>
+<script src="js/db-nucleos.js"></script>
+<script src="js/db-canais.js"></script>
+<script src="js/db-pessoas.js"></script>
 <script src="js/responsaveis.js"></script>
 <script src="js/busca.js"></script>
 <script src="js/drawer.js"></script>
@@ -222,6 +228,58 @@
     return partes.join(" · ");
   }
 
+  /* -------------------------------------------------------------------------
+   * Camada 5, item 5.9 (parte 5) — as 4 FKs do item 2.5 (nucleo_id, canal_id,
+   * facilitador_pessoa_id, responsavel_pessoa_id) já são gravadas por
+   * cc_canva_gravar/cc_canva_editar desde a Camada 2; até aqui ninguém lia. Esta tela é
+   * a única que LÊ meta_inovacao_canva_demandas por SELECT direto (canva.html só grava,
+   * via RPC, sem leitura nenhuma — não há o que migrar lá), então é aqui que a leitura
+   * golden entra: mesmo princípio "convivendo" das partes 2/3 (nucleoNome() de
+   * projetos.html/index.html) — prioriza a FK, cai pro texto legado (nucleo/canal/
+   * facilitador/responsavel, que a RPC continua gravando por decisão do 5.2) quando ela
+   * não resolve. Os 3 mapas abaixo (por db_id) são populados em carregarDados().
+   * ------------------------------------------------------------------------- */
+  let nucleosPorDbId = new Map();
+  let canaisPorDbId = new Map();
+  let canaisPorSlug = new Map();     // reaproveitado pro rótulo do grupo por canal e do CSV
+  let pessoasPorDbId = new Map();
+
+  // núcleo: prioriza nucleo_id (FK) sobre o texto legado d.nucleo — mesma régua de
+  // nucleoNome() em projetos.html/index.html (item 5.9, partes 2/3).
+  function nucleoNome(d) {
+    const n = d.nucleo_id != null ? nucleosPorDbId.get(d.nucleo_id) : null;
+    return (n && n.nome) || d.nucleo || null;
+  }
+
+  // rótulo completo do canal: prioriza o catálogo golden (canal_id, ou o slug quando a FK
+  // ainda não resolveu numa linha antiga) sobre `CANAIS` (data/canais.js) — o slug já bate
+  // 1:1 com meta_inovacao_canais.slug hoje (cc_canva_gravar grava o mesmo slug do
+  // catálogo), então o ganho real é não depender de um redeploy pra refletir canal
+  // renomeado/adicionado depois no golden record.
+  function canalNomeCompleto(canalId, canalSlug) {
+    const golden = (canalId != null && canaisPorDbId.get(canalId)) || canaisPorSlug.get(canalSlug);
+    if (golden) return golden.nome_completo;
+    const legado = CANAIS.find((x) => x.id === canalSlug);
+    return legado ? legado.completo : canalSlug;
+  }
+
+  // facilitador/responsável: pessoa golden (facilitador_pessoa_id/responsavel_pessoa_id)
+  // vira span clicável via DRAWER.spanPessoaGolden() (mesmo padrão de representantesHtml()
+  // em js/drawer.js, item 4.4) quando a FK resolve; cai pro texto livre digitado na
+  // oficina quando não (nome fora do golden record, ou campo vazio).
+  function spanPessoaOuTexto(pessoaId, textoLegado) {
+    const p = pessoaId != null ? pessoasPorDbId.get(pessoaId) : null;
+    if (p) return window.DRAWER ? DRAWER.spanPessoaGolden(p) : esc(p.nome_exibicao || p.nome);
+    return esc(textoLegado || "—");
+  }
+
+  // mesma prioridade golden-antes-do-texto de spanPessoaOuTexto(), só que devolvendo texto
+  // puro (sem span/HTML) — usado no .csv exportado, que não tem como carregar um clicável.
+  function nomePessoaOuTexto(pessoaId, textoLegado) {
+    const p = pessoaId != null ? pessoasPorDbId.get(pessoaId) : null;
+    return (p && (p.nome_exibicao || p.nome)) || textoLegado || "";
+  }
+
   /* ------------------------------------------------------------------ refs */
   const contadoresEl = document.getElementById("cvc-contadores");
   const filaEl = document.getElementById("cvc-fila-novos");
@@ -256,13 +314,23 @@
     erroCarregar = null;
     render();
     try {
-      const [linhas, proj] = await Promise.all([
+      const [linhas, proj, nucleosRes, canaisRes, pessoasRes] = await Promise.all([
         DB_CANVA_CONSOLIDADO.carregar(),
         DB_PROJETOS.carregar(),
+        // os 3 catálogos golden das FKs do item 2.5 — falha em qualquer um deles não
+        // derruba a tela, só faz nucleoNome()/canalNomeCompleto()/spanPessoaOuTexto()
+        // caírem pro texto legado pra TODA linha (mesmo "convivendo" de sempre).
+        DB_NUCLEOS.carregar().catch((err) => { console.error("canva-consolidado: falha ao carregar núcleos golden, caindo pro texto legado", err); return null; }),
+        DB_CANAIS.carregar().catch((err) => { console.error("canva-consolidado: falha ao carregar canais golden, caindo pro catálogo estático", err); return null; }),
+        DB_PESSOAS.carregar().catch((err) => { console.error("canva-consolidado: falha ao carregar pessoas golden, caindo pro texto legado", err); return null; }),
       ]);
       demandas = linhas;
       projetosGolden = proj.lista || [];
       usandoFallbackProj = !!proj.usandoFallback;
+      nucleosPorDbId = new Map((nucleosRes ? nucleosRes.lista : []).map((n) => [n.db_id, n]));
+      canaisPorDbId = new Map((canaisRes ? canaisRes.lista : []).map((c) => [c.db_id, c]));
+      canaisPorSlug = new Map((canaisRes ? canaisRes.lista : []).map((c) => [c.slug, c]));
+      pessoasPorDbId = new Map((pessoasRes ? pessoasRes.lista : []).map((p) => [p.db_id, p]));
       carregando = false;
     } catch (err) {
       console.error("canva-consolidado: falha ao carregar", err);
@@ -482,10 +550,17 @@
       const secao = document.createElement("section");
       secao.className = "cvc-projeto";
       const temRascunho = linhas.some((d) => d.status === "rascunho");
+      // núcleo: todas as linhas do mesmo `projeto` (texto) compartilham o mesmo
+      // nucleo/nucleo_id (a RPC resolve os dois a partir do MESMO projeto casado, item
+      // 2.5) — basta olhar a primeira linha do grupo. FK quando resolve, texto legado
+      // quando não; sem nenhum dos dois, o badge nem aparece (grupo "projeto_novo" já
+      // fica de fora daqui, na fila — ver renderLista acima).
+      const nucleo = nucleoNome(linhas[0]);
       secao.innerHTML =
         '<div class="cvc-projeto-topo">' +
           '<span class="cvc-projeto-titulo">' + (window.DRAWER ? DRAWER.spanIniciativa(projeto) : esc(projeto)) +
-            " · " + linhas.length + (linhas.length === 1 ? " demanda" : " demandas") + "</span>" +
+            " · " + linhas.length + (linhas.length === 1 ? " demanda" : " demandas") +
+            (nucleo ? ' <span class="cvc-projeto-nucleo">· ' + esc(nucleo) + "</span>" : "") + "</span>" +
           '<span class="cvc-projeto-acoes">' +
             (temRascunho ? '<button type="button" class="btn sec" data-lote="' + esc(projeto) + '">Validar pendentes deste projeto</button>' : "") +
             '<button type="button" class="btn sec" data-exportar-projeto="' + esc(projeto) + '">Exportar .csv</button>' +
@@ -496,7 +571,11 @@
         const grupo = document.createElement("div");
         grupo.className = "cvc-canal-grupo";
         const h3 = document.createElement("h3");
-        h3.textContent = c.completo;
+        // rótulo do canal: prioriza o golden record (canal_id da 1ª linha do grupo, ou o
+        // slug quando a FK ainda não resolveu) sobre `CANAIS` (data/canais.js) —
+        // canalNomeCompleto() cai pro estático sozinho quando nada bate.
+        const primeiraDoCanal = linhas.find((d) => d.canal === c.id);
+        h3.textContent = canalNomeCompleto(primeiraDoCanal && primeiraDoCanal.canal_id, c.id);
         grupo.appendChild(h3);
         linhas.filter((d) => d.canal === c.id).forEach((d) => grupo.appendChild(garantirLinhaEl(d)));
         secao.appendChild(grupo);
@@ -563,6 +642,7 @@
       '<p class="cvc-linha-campo"><b>Dor que endereça</b> <span data-problema></span></p>' +
       '<p class="cvc-linha-campo" data-bloqueio-wrap><b>Por que não funcionaria</b> <span data-bloqueio></span></p>' +
       '<p class="cvc-linha-campo"><b>Canal próprio</b> <span data-canalproprio></span></p>' +
+      '<p class="cvc-linha-campo" data-facilitador-wrap><b>Facilitador</b> <span data-facilitador></span></p>' +
       '<p class="cvc-linha-campo"><b>Responsável</b> <span data-responsavel></span> · <b>Prazo</b> <span data-prazo></span></p>' +
       '<p class="cvc-linha-erro" data-erro hidden></p>' +
       '<details class="cvc-editar"><summary>Editar / corrigir</summary>' + formularioEdicaoHtml(d) + "</details>";
@@ -582,7 +662,13 @@
     bloqueioWrap.hidden = !d.bloqueio;
     el.querySelector("[data-bloqueio]").textContent = d.bloqueio || "";
     el.querySelector("[data-canalproprio]").textContent = rotuloCanalProprio(d);
-    el.querySelector("[data-responsavel]").textContent = d.responsavel;
+    // facilitador/responsável: pessoa golden (facilitador_pessoa_id/responsavel_pessoa_id,
+    // item 2.5) vira span clicável quando a FK resolve, cai pro texto livre digitado na
+    // oficina quando não — mesmo "convivendo" do resto da Camada 5.
+    const facilWrap = el.querySelector("[data-facilitador-wrap]");
+    facilWrap.hidden = !d.facilitador && d.facilitador_pessoa_id == null;
+    el.querySelector("[data-facilitador]").innerHTML = spanPessoaOuTexto(d.facilitador_pessoa_id, d.facilitador);
+    el.querySelector("[data-responsavel]").innerHTML = spanPessoaOuTexto(d.responsavel_pessoa_id, d.responsavel);
     el.querySelector("[data-prazo]").textContent = fmtData(d.prazo);
     el.querySelector("[data-acoes]").innerHTML = acoesDisponiveis(d.status)
       .map((a) => '<button type="button" class="btn sec" data-acao="' + a + '">' + ROTULO_ACAO[a] + "</button>").join("");
@@ -705,13 +791,15 @@
   /* -------------------------------------------------------------------- csv */
   function exportarCsv(lista, nomeArquivo) {
     if (!lista.length) { alert("Nenhuma demanda pra exportar com os filtros atuais."); return; }
-    const cabecalho = ["Projeto", "Canal", "Serviço apresentado", "Problema", "Por que não funcionaria",
-      "Canal próprio", "Qual", "Responsável", "Prazo", "Status", "Ciclo", "Autor", "Criado em"];
-    const canalNome = (id) => { const c = CANAIS.find((x) => x.id === id); return c ? c.completo : id; };
+    const cabecalho = ["Projeto", "Núcleo", "Canal", "Serviço apresentado", "Problema", "Por que não funcionaria",
+      "Canal próprio", "Qual", "Facilitador", "Responsável", "Prazo", "Status", "Ciclo", "Autor", "Criado em"];
+    // mesma prioridade golden-antes-do-texto da tela (canalNomeCompleto/nomePessoaOuTexto),
+    // só que em texto puro — o .csv não tem como carregar um span clicável.
     const linhas = lista.map((d) => [
-      d.projeto, canalNome(d.canal), d.servico, d.problema, d.bloqueio || "",
-      d.canal_proprio || "", d.canal_proprio_qual || "", d.responsavel, d.prazo,
-      ROTULO_STATUS_CSV[d.status] || d.status, d.ciclo || "", d.autor_nome || "", d.criado_em || "",
+      d.projeto, nucleoNome(d) || "", canalNomeCompleto(d.canal_id, d.canal), d.servico, d.problema, d.bloqueio || "",
+      d.canal_proprio || "", d.canal_proprio_qual || "",
+      nomePessoaOuTexto(d.facilitador_pessoa_id, d.facilitador), nomePessoaOuTexto(d.responsavel_pessoa_id, d.responsavel),
+      d.prazo, ROTULO_STATUS_CSV[d.status] || d.status, d.ciclo || "", d.autor_nome || "", d.criado_em || "",
     ]);
     CSV_EXPORT.baixar(nomeArquivo, CSV_EXPORT.montar(cabecalho, linhas));
   }

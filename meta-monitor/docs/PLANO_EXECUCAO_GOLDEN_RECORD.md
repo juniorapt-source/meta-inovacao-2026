@@ -522,7 +522,7 @@ hoje.
 | 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | — | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
 | 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | — | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
 | 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
-| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`) | ver quebra por parte abaixo (Haiku/baixo a Sonnet/alto, + 2 partes sem classificação até decisão de escopo) | 🔄 **EM ANDAMENTO** — partes 1 (guardrail `nomeEhLideranca()`, `js/db-urc.js`), 2 (`projetos.html`) e 3 (`index.html`) ✅ em 26/08/2026, as demais partes (4–7 da quebra abaixo) seguem `⏳ NÃO FEITO` |
+| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`) | ver quebra por parte abaixo (Haiku/baixo a Sonnet/alto, + 2 partes sem classificação até decisão de escopo) | 🔄 **EM ANDAMENTO** — partes 1 (guardrail `nomeEhLideranca()`, `js/db-urc.js`), 2 (`projetos.html`), 3 (`index.html`), 4 (`js/drawer.js` fora de `participantes.html`) e 5 (telas do canva) ✅ em 26/08/2026, as partes 6 e 7 seguem `⏳ NÃO FEITO` (esforço não classificado, decisão de escopo primeiro) |
 
 ### Como o 5.5 ficou
 
@@ -691,7 +691,50 @@ mesma régua da legenda do topo do documento):**
 5. **Telas do canva (`canva-*.html`)** — `Sonnet / alto`. As 4 FKs do item 2.5
    (`nucleo_id`, `canal_id`, `facilitador_pessoa_id`, `responsavel_pessoa_id`) já são
    gravadas pelas RPCs desde a Camada 2, só não são lidas por ninguém ainda — maior
-   escopo desta lista, telas inteiras de exibição pra revisar.
+   escopo desta lista, telas inteiras de exibição pra revisar. **✅ em 26/08/2026** —
+   escopo real era **uma tela só**: `canva.html` (`js/db-canva.js`) não tem NENHUMA
+   leitura da tabela — nem SELECT nem GRANT pro `anon` (só a RPC `cc_canva_gravar`/
+   `cc_canva_editar`, ver o comentário no topo do arquivo), então não havia o que migrar
+   lá. `canva-consolidado.html` (`js/db-canva-consolidado.js`, `select("*")` direto) é a
+   ÚNICA tela que lê `meta_inovacao_canva_demandas` — é onde as 4 FKs entram, mesmo
+   "convivendo" das partes 2/3/4: FK primeiro, texto legado só quando ela não resolve.
+   - **Núcleo** (`nucleo_id` → `meta_inovacao_nucleos`, `js/db-nucleos.js`, já carregado
+     por `projetos.html`/`index.html` desde as partes 2/3): novo badge no cabeçalho de
+     cada grupo de projeto (`nucleoNome()`, mesma função/mesma régua de
+     `projetos.html`/`index.html` — as duas linhas do mesmo `projeto` compartilham
+     `nucleo`/`nucleo_id`, então basta olhar a 1ª linha do grupo). Núcleo não aparecia
+     nesta tela antes deste item.
+   - **Canal** (`canal_id` → `meta_inovacao_canais`, `js/db-canais.js`): o rótulo do
+     grupo por canal (`<h3>`) e a coluna "Canal" do `.csv` exportado passam a priorizar
+     o catálogo golden sobre `CANAIS` (`data/canais.js`, estático) — o slug já bate 1:1
+     hoje (`cc_canva_gravar` grava o mesmo slug do catálogo golden), então o ganho real
+     é não depender de um redeploy pra refletir canal renomeado/adicionado depois no
+     banco. O filtro `<select>` de canal continua no catálogo estático de propósito:
+     ele compara contra `d.canal` (slug, sempre preenchido), e usar `canal_id` excluiria
+     do filtro qualquer linha antiga sem a FK ainda resolvida.
+   - **Facilitador/Responsável** (`facilitador_pessoa_id`/`responsavel_pessoa_id` →
+     `meta_inovacao_pessoas`, `js/db-pessoas.js`): o span de leitura de cada linha passa
+     a mostrar a pessoa golden (`DRAWER.spanPessoaGolden()`, item 4.4 — **exportada em
+     `DRAWER` nesta rodada** especificamente pra esta tela reusar, em vez de
+     reimplementar o mesmo casamento nome→id LEGADO) quando a FK resolve, span clicável
+     inclusive; cai pro texto livre digitado na oficina quando não. O bloco
+     "Facilitador" (opcional, não existia como linha de leitura nesta tela antes) só
+     aparece quando há FK ou texto. O `<input>` do formulário "Editar/corrigir" continua
+     mostrando o texto legado de propósito — é o que o gestor corrige, e a RPC
+     `cc_canva_editar` re-resolve a FK sozinha ao salvar; não é regressão.
+   - O `.csv` exportado ganhou colunas "Núcleo" e "Facilitador" (não existiam) e passou
+     a resolver "Canal"/"Responsável" pelo mesmo princípio golden-antes-do-texto, em
+     texto puro (sem span clicável, que o `.csv` não suporta).
+   - Testado: `tools/testar_canva_consolidado_golden_headless.js` (novo — dublê de
+     Supabase, sem rede real: núcleo/canal/facilitador/responsável com FK resolvida
+     mostram o golden record e NÃO o texto legado propositalmente diferente do cenário;
+     canal sem entrada no catálogo golden mocado cai pro rótulo estático de
+     `data/canais.js`; demanda sem `responsavel_pessoa_id`/facilitador nenhum continua
+     no texto livre, e o bloco "Facilitador" fica oculto quando não há o que mostrar).
+     `tools/testar_canva.js`/`tools/testar_canva_oficina.js` (não tocam
+     `canva-consolidado.html`) continuam verdes, sem regressão — confirma que a escrita
+     de `canva.html` não foi afetada. `tools/auditoria_fk_final.js` — item 2.5 passou a
+     listar `canva-consolidado.html` como leitor (antes: "NINGUÉM"); zero lacuna nova.
 6. **`js/busca.js`** — esforço **não classificado, decisão primeiro**. Cuidado com este:
    busca é inerentemente sobre TEXTO (o usuário digita caracteres, não um id) — migrar
    pra FK aqui não é "trocar a fonte", é decidir se a busca deveria resolver o texto
@@ -875,12 +918,21 @@ precisa saber sem reler tudo acima:
    rodado por José em 26/08/2026, SEÇÃO 3 confirmou 4/4).
    **O que falta pra Camada 5:** 5.2 continua travado, agora esperando o item **5.9**
    (novo, aberto 26/08/2026) — fechar a porta de ESCRITA (5.5/5.6/5.7, já feitos) não é o
-   mesmo que a LEITURA já ter migrado nas outras telas (`participantes.html`,
-   `projetos.html`, `index.html`, `js/busca.js`, o guardrail `nomeEhLideranca()`, as telas
-   do canva — ver o "Veredito por coluna de texto" em `docs/CAMADA5_AUDITORIA_FK.md`, que
-   ainda reflete o estado de ANTES do 5.5/5.6/5.7). Uma nova rodada da CONSULTA A/C em
-   produção (pedida ao José pra confirmar que a escrita fechada não deixou nada pra trás)
-   também está pendente — ver checklist enviado a ele em 26/08/2026.
+   mesmo que a LEITURA já ter migrado nas outras telas. Das 7 partes da quebra do 5.9
+   (ver "Quebra recomendada do 5.9" na seção da Camada 5), **5 já estão feitas** — parte 1
+   (guardrail `nomeEhLideranca()`, `js/db-urc.js`), parte 2 (`projetos.html`), parte 3
+   (`index.html`), parte 4 (`js/drawer.js` fora de `participantes.html`) e parte 5 (telas
+   do canva — na prática só `canva-consolidado.html`, a única que LÊ
+   `meta_inovacao_canva_demandas`; `canva.html` só grava, via RPC) — todas com "convivendo,
+   não substituindo": FK primeiro, texto legado como fallback, nunca quebra. Faltam as
+   partes 6 (`js/busca.js`) e 7 (`meta_inovacao_plano_responsaveis`), as duas com esforço
+   **não classificado de propósito** — decisão de escopo antes de estimar (ver os itens 6
+   e 7 da quebra). `docs/CAMADA5_AUDITORIA_FK.md` ainda reflete o estado de ANTES do
+   5.5/5.6/5.7/5.9 (documento histórico, não atualizado a cada parte — ver nota no topo
+   dele); quem quiser o estado atual usa `tools/auditoria_fk_final.js` (offline, sempre
+   ao vivo) e esta seção. Uma nova rodada da CONSULTA A/C em produção (pedida ao José pra
+   confirmar que a escrita fechada não deixou nada pra trás) também está pendente — ver
+   checklist enviado a ele em 26/08/2026.
 5. Documentos de apoio já existentes, não precisam ser refeitos:
    - `docs/CAMADA1_DEDUPE_PESSOAS.md` — decisões de identidade de pessoas.
    - `docs/CAMADA2_COBERTURA_FK.md` — cobertura real de cada FK da Camada 2.

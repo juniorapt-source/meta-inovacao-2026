@@ -69,6 +69,7 @@ const FONTES = {
   "participantes.html": null,
   "projetos.html": null,
   "index.html": null,
+  "canva-consolidado.html": null,
   "tools/sql/2026-08_canva_demandas_fk.sql": null,
 };
 Object.keys(FONTES).forEach((f) => { FONTES[f] = ler(f); });
@@ -245,9 +246,16 @@ const ITENS = [
     textoLegado: "meta_inovacao_canva_demandas.nucleo + .canal + .facilitador + .responsavel (text)",
     leitura: [
       {
-        arquivo: "js/db-canva.js",
-        como: "a leitura da demanda expõe as 4 FKs pra tela do canva",
-        ok: () => tem(FONTES["js/db-canva.js"], /facilitador_pessoa_id|responsavel_pessoa_id/),
+        // canva.html (js/db-canva.js) só GRAVA, via RPC (nem SELECT nem GRANT de leitura
+        // pro anon nesta tabela — ver o comentário no topo de js/db-canva.js) — não há o
+        // que ler lá. canva-consolidado.html (js/db-canva-consolidado.js) é a ÚNICA tela
+        // com leitura direta (select("*")) desta tabela, e é onde o item 5.9 (parte 5)
+        // fez as 4 FKs entrarem: núcleo/canal/facilitador/responsável resolvidos por
+        // FK primeiro, texto legado só como fallback (mesmo "convivendo" das partes 2/3).
+        arquivo: "canva-consolidado.html",
+        como: "núcleo/canal/facilitador/responsável resolvidos pelas 4 FKs (item 5.9, parte 5), texto legado só como fallback",
+        ok: () => ["nucleo_id", "canal_id", "facilitador_pessoa_id", "responsavel_pessoa_id"]
+          .every((col) => tem(FONTES["canva-consolidado.html"], new RegExp(col))),
       },
     ],
     portas: [
