@@ -62,16 +62,19 @@
 <script src="js/db-projetos.js"></script>
 <script src="js/portfolio.js"></script>
 <script src="data/pessoas.js"></script>
+<script src="data/coletivos.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/canais.js"></script>
 <script src="data/agenda.js"></script>
+<script src="js/db-pessoas.js"></script>
+<script src="js/db-coletivos.js"></script>
+<script src="js/db-responsaveis.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/status.js"></script>
 <script src="js/core.js"></script>
 <script src="js/busca.js"></script>
 <script src="js/drawer.js"></script>
-<script src="js/responsaveis.js"></script>
 <script src="js/config.js"></script>
 <script src="js/editor_atual.js"></script>
 <script>
@@ -91,24 +94,33 @@
     return CC_STATUS.rotulo(CC_STATUS.chaveDeEntrada("atividade", valorBruto));
   }
 
-  // BACKLOG #004 — campo livre "Responsável" virou select alimentado pela lista canônica
-  // (data/pessoas.js.responsaveis). Atividades gravadas antes desta mudança guardam texto
-  // livre no Supabase (ex.: "Fulano"); se esse texto não bate com nenhum id canônico, a opção
-  // "legada" é montada na hora, marcada visualmente (.pa-legado) — sem apagar nada. Ao trocar
-  // pra uma opção real, a próxima gravação já sai com o id canônico (conversão silenciosa,
-  // só quando alguém mexe na linha).
-  const RESPONSAVEIS = (window.DB && window.DB.responsaveis) || [];
+  // item 4.3 do golden record — campo "Responsável" virou select alimentado pelo golden
+  // record (DB_PESSOAS + DB_COLETIVOS, js/db-responsaveis.js), no lugar da lista estática
+  // window.DB.responsaveis (data/pessoas.js) e do casamento de texto de js/responsaveis.js
+  // (BACKLOG #004, deixado pra trás por este item): cadastrar uma pessoa/coletivo novo no
+  // editor.html faz ele aparecer aqui sozinho, sem editar este arquivo. RESPONSAVEIS é
+  // preenchida uma vez no bootstrap (ver final do arquivo), antes do 1º render de qualquer
+  // linha — as ~32 respostas já gravadas no Supabase antes deste item guardam os ids
+  // antigos ("jr", "comite"...), preservados EXATAMENTE em js/db-responsaveis.js.LEGADO,
+  // então continuam pré-selecionando certo sem precisar migrar nada.
+  //
+  // Atividades gravadas antes de existir ESTE OU o item anterior guardam texto livre no
+  // Supabase (ex.: "Fulano") que não bate com nenhum id conhecido; a opção "legada" é
+  // montada na hora, marcada visualmente (.pa-legado) — sem apagar nada. Ao trocar pra uma
+  // opção real, a próxima gravação já sai com o id canônico (conversão silenciosa, só
+  // quando alguém mexe na linha).
+  let RESPONSAVEIS = [];
   function opcoesResponsavel(valorAtual) {
     let html = '<option value="">— sem responsável —</option>';
-    const ehCanonico = valorAtual && RESPONSAVEIS.some((p) => p.id === valorAtual);
-    if (valorAtual && !ehCanonico) {
+    const encontrado = DB_RESPONSAVEIS.encontrar(RESPONSAVEIS, valorAtual);
+    if (valorAtual && !encontrado) {
       html += '<option class="pa-legado" value="' + esc(valorAtual) + '" selected>⚠ legado: "' + esc(valorAtual) + '"</option>';
     }
-    const grupos = [...new Set(RESPONSAVEIS.map((p) => p.grupo))];
+    const grupos = DB_RESPONSAVEIS.ORDEM_GRUPOS.filter((g) => RESPONSAVEIS.some((p) => p.grupo === g));
     grupos.forEach((g) => {
       html += '<optgroup label="' + esc(g) + '">';
       html += RESPONSAVEIS.filter((p) => p.grupo === g)
-        .map((p) => '<option value="' + esc(p.id) + '"' + (p.id === valorAtual ? " selected" : "") + ">" + esc(p.nome) + "</option>")
+        .map((p) => '<option value="' + esc(p.id) + '"' + (p === encontrado ? " selected" : "") + ">" + esc(p.nome) + "</option>")
         .join("");
       html += "</optgroup>";
     });
@@ -305,6 +317,15 @@
   // GOVERNANÇA (camada 2): hidrata DB.projetos do golden record antes de montar o nav de
   // iniciativas (o seed data/projetos.js é só o fallback). Ver docs/GOVERNANCA_GOLDEN_RECORD.md.
   if (window.PORTFOLIO) { try { await window.PORTFOLIO.pronto; } catch (e) { /* mantém seed */ } }
+  // item 4.3 — carrega pessoas + coletivos do golden record antes do 1º render de
+  // qualquer linha (a lista de "Responsável" depende disso). Cada DB_*.carregar() já cai
+  // sozinho pro seed local se a rede falhar, então isto nunca trava a tela.
+  try {
+    const [pessoasRes, coletivosRes] = await Promise.all([DB_PESSOAS.carregar(), DB_COLETIVOS.carregar()]);
+    RESPONSAVEIS = DB_RESPONSAVEIS.montar(pessoasRes.lista, coletivosRes.lista);
+  } catch (err) {
+    console.error("plano-acao: falha ao montar a lista de responsáveis (golden record)", err);
+  }
   renderNav();
   try {
     supa = await CC_SUPABASE.obterClienteEsm();

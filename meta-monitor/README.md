@@ -144,6 +144,22 @@ node tools/testar_urc_editor_headless.js # abas "URC — Liderança"/"URC —
                                         # de liderança, agora pelo <select>; "+ Adicionar
                                         # responsável" grava canal_id+pessoa_id+nome a
                                         # partir dos 2 <select> do topo
+node tools/testar_responsaveis.js      # item 4.3: js/db-responsaveis.js (puro, sem DOM) —
+                                        # monta a lista de responsáveis (pessoa OU coletivo)
+                                        # a partir do golden record; ids antigos ("jr",
+                                        # "sandra"...) preservados exatamente (LEGADO),
+                                        # jr/jose_mendes_junior e sandra/sandra_chaves_paraiso
+                                        # colapsam numa única opção, pessoa/coletivo golden
+                                        # fora do LEGADO ganha id novo ("cadastra e aparece
+                                        # sozinho") — seed local + fixture fabricada
+node tools/testar_plano_acao_responsavel_headless.js # plano-acao.html (item 4.3): <select>
+                                        # de "Responsável" lê pessoas+coletivos do golden
+                                        # record; id antigo pré-seleciona certo, apelido
+                                        # antigo (jose_mendes_junior) cai na MESMA opção de
+                                        # "JR." sem duplicar, texto sem tradução vira opção
+                                        # "legado", pessoa golden fora da lista estática de
+                                        # 32 ids aparece (grupo URC), trocar grava o id
+                                        # golden novo — dublê de Supabase, sem rede real
 ```
 
 Dois relatórios leem **produção** (só leitura, anon key de `js/config.js`) — não entram na

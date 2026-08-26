@@ -94,11 +94,15 @@
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/pessoas.js"></script>
+<script src="data/coletivos.js"></script>
 <script src="data/canais.js"></script>
 <script src="data/agenda.js"></script>
 <script src="data/projetos.js"></script>
 <script src="js/db-projetos.js"></script>
 <script src="js/portfolio.js"></script>
+<script src="js/db-pessoas.js"></script>
+<script src="js/db-coletivos.js"></script>
+<script src="js/db-responsaveis.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/status.js"></script>
 <script src="js/core.js"></script>
@@ -118,7 +122,12 @@
   if (usandoFallback) document.getElementById("aviso-fallback").hidden = false;
 
   const TABELA = "plano_acao_atividades";
-  const RESPONSAVEIS = (window.DB && window.DB.responsaveis) || [];
+  // item 4.3 do golden record — RESPONSAVEIS (base do select "Ver como" e do filtro de
+  // nós/ações/atividades desta página) passa a vir do golden record (DB_PESSOAS +
+  // DB_COLETIVOS, js/db-responsaveis.js), no lugar da lista estática window.DB.responsaveis
+  // — mesma fonte e mesmas regras de compatibilidade de plano-acao.html (ver comentário lá).
+  // Populada no bootstrap, antes de montarSelect()/render() (final do arquivo).
+  let RESPONSAVEIS = [];
   const selVerComo = document.getElementById("ver-como");
   const resumoEl = document.getElementById("resumo-cabecalho");
   const vazioEl = document.getElementById("ma-vazio");
@@ -131,10 +140,10 @@
   // "no_critico") — fonte única do rótulo/cor, não duplica o dicionário local de novo.
   const CHAVE_NO = { ok: "no_cumprido", hoje: "no_vence_hoje", risco: "no_venceu_sem_concluir", atencao: "no_em_andamento", futuro: "no_a_frente" };
 
-  // select "Ver como" — agrupado por grupo (Coordenação/Coletivo/Núcleos/Projetos), mesma
-  // fonte canônica do select de Responsável em plano-acao.html.
+  // select "Ver como" — agrupado por grupo (Coordenação/Coletivo/Núcleos/URC/Projetos),
+  // mesma fonte canônica do select de Responsável em plano-acao.html.
   function montarSelect() {
-    const grupos = [...new Set(RESPONSAVEIS.map((p) => p.grupo))];
+    const grupos = DB_RESPONSAVEIS.ORDEM_GRUPOS.filter((g) => RESPONSAVEIS.some((p) => p.grupo === g));
     let html = '<option value="">— selecione —</option>';
     grupos.forEach((g) => {
       html += '<optgroup label="' + esc(g) + '">';
@@ -150,12 +159,23 @@
     return id && RESPONSAVEIS.some((p) => p.id === id) ? id : "";
   }
 
+  // n.guardiao (data/nos.js) é texto livre de verdade ("JR. e gestores + Comitê") — fora
+  // do escopo deste item (não é um campo de sistema com FK, é mais narrativo, ver
+  // docs/PROPOSTA_ESQUEMA_CADASTROS_REFERENCIA.md), então continua resolvido por
+  // RESP.mapearTexto (js/responsaveis.js) — só que agora contra a lista golden, não mais
+  // contra a estática, o que também é o motivo de pessoas do grupo URC (que nunca
+  // estiveram na lista estática) já poderem ser reconhecidas aqui se um dia entrarem numa
+  // frase de guardião.
   function nosDaPessoa(id) {
     return DB.nos.nos.filter((n) => RESP.mapearTexto(RESPONSAVEIS, n.guardiao).ids.includes(id));
   }
 
+  // idsEquivalentes cobre o id canônico + o apelido antigo (ex.: "jr" também bate
+  // "jose_mendes_junior") — sem isso, uma ação/atividade gravada ANTES deste item com o id
+  // "extra" sumiria da guarda dessa pessoa só por causa da unificação da Camada 4.
   function acoesDaPessoa(id) {
-    const lista = plano.filter((a) => Array.isArray(a.responsavel_id) && a.responsavel_id.includes(id));
+    const idsEquiv = DB_RESPONSAVEIS.idsEquivalentes(RESPONSAVEIS, id);
+    const lista = plano.filter((a) => Array.isArray(a.responsavel_id) && a.responsavel_id.some((rid) => idsEquiv.includes(rid)));
     // atrasadas primeiro (dentro delas: nó crítico primeiro, depois mais antiga primeiro —
     // CALC.comparadorAtrasadas, mesmo comparador de index.html "Atrasadas agora",
     // "Dashboard orientado à decisão" item 3) · depois quem tem prazo (por prazo crescente,
@@ -170,7 +190,11 @@
 
   async function atividadesDaPessoa(id) {
     const supa = await CC_SUPABASE.obterClienteEsm();
-    const { data, error } = await supa.from(TABELA).select("*").eq("responsavel", id).is("deleted_at", null);
+    // .in(...) em vez de .eq(id) — mesma razão de acoesDaPessoa: uma atividade gravada com
+    // o id "extra" antes da unificação da Camada 4 (ex. "jose_mendes_junior") continua
+    // aparecendo aqui embaixo de "JR.".
+    const idsEquiv = DB_RESPONSAVEIS.idsEquivalentes(RESPONSAVEIS, id);
+    const { data, error } = await supa.from(TABELA).select("*").in("responsavel", idsEquiv).is("deleted_at", null);
     if (error) throw error;
     return data || [];
   }
@@ -395,6 +419,16 @@
     salvarAtividade(row, row.dataset.atividadeId, sel.dataset.campo, sel.value);
   });
 
+  // item 4.3 — carrega pessoas + coletivos do golden record antes de montar o select "Ver
+  // como" (RESPONSAVEIS precisa estar pronta pra montarSelect()/pessoaDaQuerystring() já
+  // reconhecerem a pessoa certa). Cada DB_*.carregar() cai sozinho pro seed local se a
+  // rede falhar, então isto nunca deixa a tela sem responsáveis pra escolher.
+  try {
+    const [pessoasRes, coletivosRes] = await Promise.all([DB_PESSOAS.carregar(), DB_COLETIVOS.carregar()]);
+    RESPONSAVEIS = DB_RESPONSAVEIS.montar(pessoasRes.lista, coletivosRes.lista);
+  } catch (err) {
+    console.error("minhas-acoes: falha ao montar a lista de responsáveis (golden record)", err);
+  }
   montarSelect();
   const inicial = pessoaDaQuerystring() || localStorage.getItem("cc_ver_como") || "";
   if (inicial) selVerComo.value = inicial;
