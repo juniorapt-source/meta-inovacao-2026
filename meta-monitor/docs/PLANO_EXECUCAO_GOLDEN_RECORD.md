@@ -522,7 +522,7 @@ hoje.
 | 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | — | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
 | 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | — | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
 | 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
-| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). Ver quebra por tela abaixo. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`) | Sonnet / alto — recomendado quebrar em sessões separadas, uma tela por vez (mesmo padrão dos itens 4.1–4.4) | ⏳ **NÃO FEITO** — aberto em 26/08/2026 |
+| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). Ver quebra por tela abaixo. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`) | Sonnet / alto — recomendado quebrar em sessões separadas, uma tela por vez (mesmo padrão dos itens 4.1–4.4) | 🔄 **EM ANDAMENTO** — parte 1 (guardrail `nomeEhLideranca()`, `js/db-urc.js`) ✅ em 26/08/2026, as demais partes (2–7 da quebra abaixo) seguem `⏳ NÃO FEITO` |
 
 ### Como o 5.5 ficou
 
@@ -613,7 +613,19 @@ do mais contido pro mais espalhado:
 
 1. **Guardrail `nomeEhLideranca()` (`js/db-urc.js`, item 2.3/2.4)** — hoje compara nome
    de texto contra a lista de liderança; trocar pra comparar `pessoa_id` fecha a última
-   ponta solta que o item 4.2 deixou registrada. Menor escopo, 1 arquivo.
+   ponta solta que o item 4.2 deixou registrada. Menor escopo, 1 arquivo. **✅ em
+   26/08/2026** — `nomeEhLideranca(campos, liderancaAtual)` agora recebe o objeto de
+   campos inteiro (não só `nome`) e compara `pessoa_id` quando os dois lados (o patch e
+   a linha de liderança) têm a FK preenchida; só cai pro texto (`nome`) quando falta
+   `pessoa_id` de um dos lados (cadastro antigo sem vínculo, ou o seed local de
+   `data/urc.js`, que nunca teve `pessoa_id`) — assim o guardrail não deixa passar o
+   caso de nome curto/completo divergirem pra mesma pessoa (`nome` da liderança vs.
+   `nome` do responsável de canal podem ser textos diferentes mesmo sendo o mesmo
+   `pessoa_id`). `salvarResponsavel`/`criarResponsavel` (ambos em `js/db-urc.js`)
+   passaram a chamar `nomeEhLideranca` com `campos`/`rParcial` inteiro em vez de só
+   `.nome`. Testado: `node --check js/db-urc.js`; `tools/testar_urc_editor_headless.js`
+   (guardrail continua bloqueando, cenário 4) e `tools/auditoria_fk_final.js` (2.3/2.4
+   continuam `OK`, zero lacuna nova) verdes.
 2. **`projetos.html`** — hoje mostra núcleo e representantes de cada projeto lendo só
    `p.nucleo`/`p.representantes` (texto). Passa a ler `DB_PROJETOS` (já expõe
    `nucleo_id` desde o 5.5) + `DB_PROJETO_REPRESENTANTES`/`DB_PESSOAS` (mesma junção que

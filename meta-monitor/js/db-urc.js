@@ -130,13 +130,25 @@
     if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
   }
 
-  // guardrail (item 4.4, herdado de tools/validar_dados.py) — nome de responsável de
-  // canal não pode bater com nome de liderança (liderança é transversal, não entra em
-  // canal específico). Checado no client ANTES de mandar pro Supabase — mais rápido
-  // pro usuário do que esperar a volta de uma escrita que ia falhar por outro motivo
-  // (aqui não tem RLS nem CHECK constraint impedindo isso — ver comentário no SQL).
-  function nomeEhLideranca(nome, liderancaAtual) {
-    return (liderancaAtual || []).some((p) => p.nome === nome);
+  // guardrail (item 4.4, herdado de tools/validar_dados.py; item 5.9-1 trocou a régua de
+  // comparação de nome/texto pra pessoa_id/FK) — responsável de canal não pode ser a
+  // MESMA PESSOA de algum líder (liderança é transversal, não entra em canal
+  // específico). Checado no client ANTES de mandar pro Supabase — mais rápido pro
+  // usuário do que esperar a volta de uma escrita que ia falhar por outro motivo (aqui
+  // não tem RLS nem CHECK constraint impedindo isso — ver comentário no SQL).
+  //
+  // Compara por pessoa_id quando os dois lados têm a FK preenchida — é a fonte de
+  // verdade desde o item 4.2, e o texto sozinho pode divergir sem ser a mesma pessoa
+  // (nome curto vs. nome completo, por exemplo). Só cai pro texto (`nome`) quando falta
+  // pessoa_id de um dos lados — cadastro antigo sem vínculo, ou seed local
+  // (data/urc.js) que nunca teve pessoa_id — pra não perder o guardrail nesses casos.
+  function nomeEhLideranca(campos, liderancaAtual) {
+    const pessoaId = campos && campos.pessoa_id;
+    const nome = campos && campos.nome;
+    return (liderancaAtual || []).some((p) => {
+      if (pessoaId && p.pessoa_id) return p.pessoa_id === pessoaId;
+      return p.nome === nome;
+    });
   }
   const MSG_GUARDRAIL_LIDERANCA = "é liderança da URC — liderança é transversal, não entra em canal.";
 
@@ -166,7 +178,7 @@
 
   async function salvarResponsavel(id, campos, usuario, liderancaAtual) {
     bloquearEscritaEmTeste();
-    if (campos.nome && nomeEhLideranca(campos.nome, liderancaAtual)) {
+    if ((campos.nome || campos.pessoa_id) && nomeEhLideranca(campos, liderancaAtual)) {
       throw new Error('"' + campos.nome + '" ' + MSG_GUARDRAIL_LIDERANCA);
     }
     const supa = await root.CC_SUPABASE.obterClienteEsm();
@@ -177,7 +189,7 @@
   }
   async function criarResponsavel(rParcial, usuario, liderancaAtual) {
     bloquearEscritaEmTeste();
-    if (nomeEhLideranca(rParcial.nome, liderancaAtual)) {
+    if (nomeEhLideranca(rParcial, liderancaAtual)) {
       throw new Error('"' + rParcial.nome + '" ' + MSG_GUARDRAIL_LIDERANCA);
     }
     const supa = await root.CC_SUPABASE.obterClienteEsm();
