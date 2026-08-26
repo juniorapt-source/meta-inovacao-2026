@@ -9,6 +9,12 @@
  * (data/projetos.js), pessoas (a lista canônica de data/pessoas.js.responsaveis — não a
  * window.DB.pessoas "crua", que repete nome em papéis diferentes sem id estável pra
  * linkar), nós do caminho crítico, encontros da agenda.
+ *
+ * O MATCH da busca é sempre por texto (chave normalizada) — item 5.9 parte 6/Opção A
+ * (decidido por José, 26/08/2026) deixou isso explícito: só o LINK do resultado muda
+ * quando há FK/golden record disponível pro item encontrado (hoje: iniciativa com
+ * p.db_id, que aponta pro hash #iniciativa= de js/drawer.js em vez do link só-texto de
+ * sempre) — ver construirIndice abaixo.
  */
 (function (root) {
   "use strict";
@@ -28,6 +34,14 @@
     if (root.CALC && root.CALC.fmtBR) return root.CALC.fmtBR(iso);
     const [, m, d] = String(iso).split("-");
     return d + "/" + m;
+  }
+
+  // mesmo slugify de js/drawer.js (duplicado aqui pela mesma razão de normalizar() acima) —
+  // usado só pra montar o hash #iniciativa= quando o resultado tem FK golden (ver
+  // construirIndice abaixo, item 5.9 parte 6/Opção A): precisa bater com o slug que
+  // DRAWER.abrirIniciativa() compara.
+  function slugify(s) {
+    return normalizar(s).replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "");
   }
 
   // constrói o índice em memória a partir de window.DB — chamar de novo sempre que
@@ -52,9 +66,19 @@
         tipo: "iniciativa",
         rotulo: p.iniciativa,
         sub: p.nucleo || "",
-        // visão CARDS do Corsário (pedido explícito) com a busca preenchida — corsario.html
-        // lê ?q= e prefixa elBusca.value antes do primeiro render (ver aplicarHash lá)
-        href: "corsario.html?q=" + encodeURIComponent(p.iniciativa) + "#cards",
+        // Opção A do item 5.9 parte 6 (decidido por José, 26/08/2026): a BUSCA continua
+        // comparando texto (chave abaixo não muda) — só o link do resultado muda. Com
+        // golden record disponível pra este projeto (p.db_id, item 5.5/js/portfolio.js),
+        // aponta pelo hash #iniciativa= que js/drawer.js já resolve (item 3.2): o painel
+        // de iniciativa aberto lá já prioriza núcleo/representante golden sobre o texto
+        // livre sozinho (representantesHtml()/spanPessoaGolden(), item 4.4) — reaproveita
+        // esse mecanismo pronto em vez de duplicar a resolução de FK aqui. Sem golden
+        // record ainda (offline/seed local, sem db_id), mantém o link de sempre: visão
+        // CARDS do Corsário (pedido explícito) com a busca preenchida — corsario.html lê
+        // ?q= e prefixa elBusca.value antes do primeiro render (ver aplicarHash lá).
+        href: p.db_id != null
+          ? "corsario.html#iniciativa=" + encodeURIComponent(slugify(p.iniciativa))
+          : "corsario.html?q=" + encodeURIComponent(p.iniciativa) + "#cards",
         chave: normalizar(p.iniciativa + " " + (p.nucleo || "") + " " + (p.representantes || []).join(" ")),
       });
     });
