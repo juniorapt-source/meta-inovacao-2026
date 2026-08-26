@@ -30,10 +30,14 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > `meta_inovacao_projeto_representantes` quando a página carrega os módulos certos, texto
 > livre como fallback — ver "Como o 4.4 ficou") estão em `main`. **Camada 5 iniciada
 > (26/08/2026)** — o item 5.1 (auditoria final de FK, ponta a ponta) está feito e abriu
-> três itens novos, 5.5/5.6/5.7: as FKs dos itens 2.1, 2.6 e 2.7 não são gravadas por
-> nenhuma tela, então derivam a cada linha nova. O 5.2 (decisão humana de dropar ou
-> manter cada coluna de texto) fica esperando esses três, porque hoje nenhuma coluna de
-> texto está pronta pro `DROP`. A rodada em produção (26/08) deu 12 de 13 `OK` na
+> três itens novos, **5.5/5.6/5.7, todos RESOLVIDOS em `main` no mesmo dia:** as 3 FKs
+> dos itens 2.1, 2.6 e 2.7 agora são gravadas nas portas de entrada que existem
+> (`editor.html`, único lugar que cria projeto/ação/iniciativa nova) — ver "Como o
+> 5.5/5.6/5.7 ficaram". O 5.2 (decisão humana de dropar ou manter cada coluna de texto)
+> ainda não está maduro — fechar a porta de escrita não é o mesmo que a LEITURA já ter
+> migrado nas outras telas (ver o "Veredito por coluna de texto" em
+> `docs/CAMADA5_AUDITORIA_FK.md`, que precisa de uma nova rodada de auditoria — 5.1 não
+> foi re-executado — antes do 5.2 avançar). A rodada em produção (26/08) deu 12 de 13 `OK` na
 > cobertura, com um `DIVERGE`: `corsario_status.nucleo_id` estava `0/4` — item **5.8,
 > RESOLVIDO em produção em 26/08/2026** (José rodou SEÇÃO 1→2→3 de
 > `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql`: os 4 núcleos casaram por
@@ -506,10 +510,91 @@ hoje.
 | 5.2 | **[humano]** Decidir, tabela a tabela, se dropa a coluna de texto ou mantém como cache | — | José | ⏸️ **esperando 5.5–5.7** — a auditoria concluiu que nenhuma coluna de texto está pronta pro `DROP` hoje; decidir agora seria decidir sobre um dado que ainda deriva |
 | 5.3 | Migrações de `DROP COLUMN` onde decidido em 5.2 | sql | Sonnet / baixo | ⏳ não feito (depende do 5.2) |
 | 5.4 | Atualizar `PADRAO_TABELA.md`/`GOVERNANCA_GOLDEN_RECORD.md` com o novo estado; aposentar `js/responsaveis.js` se não sobrar uso | docs, js | Haiku / baixo | ⏳ não feito |
-| 5.5 | **Fechar a porta de escrita do 2.1:** `editor.html`/`js/db-projetos.js` gravam `nucleo_id` junto com `nucleo` (projeto novo e troca de núcleo na grade) | `editor.html`, `js/db-projetos.js` | Sonnet / baixo | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
-| 5.6 | **Fechar a porta de escrita do 2.6:** as 3 telas de ação gravam `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `plano-acao.html`, `minhas-acoes.html`, `editor.html`, `js/db-plano.js` | Sonnet / médio | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
-| 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | Sonnet / baixo | ⏳ **NÃO FEITO** — aberto pelo 5.1 |
+| 5.5 | **Fechar a porta de escrita do 2.1:** `editor.html`/`js/db-projetos.js` gravam `nucleo_id` junto com `nucleo` (projeto novo e troca de núcleo na grade) | `editor.html`, `js/db-projetos.js` | ✅ em `main` — trocar núcleo na grade e "+ Novo projeto" gravam `nucleo_id` (resolvido pelo golden record `meta_inovacao_nucleos`, item 0.5) junto com o texto. Detalhe abaixo. |
+| 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
+| 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
 | 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
+
+### Como o 5.5 ficou
+
+- `js/db-projetos.js`: `linhaParaProjeto`/`projetoParaLinha` passam a carregar/gravar
+  `nucleo_id`, mesmo padrão de passthrough dos demais módulos `js/db-*.js` com FK
+  (`pessoa_id` em `js/db-urc.js`, item 4.2).
+- `editor.html` ganhou `js/db-nucleos.js` (não estava carregado antes — `NUCLEOS_VALIDOS`
+  era só um array de texto fixo, sem tabela por trás nesta tela) e um helper
+  `nucleosPorNome()`, memoizado, reaproveitado pelo 5.7 também. Trocar o `<select>` de
+  núcleo de um projeto existente grava `nucleo`+`nucleo_id` no mesmo patch (padrão
+  "select-com-sincronia-de-texto" do item 4.2); "+ Novo projeto" grava os dois desde a
+  criação.
+- Como `NUCLEOS_VALIDOS` é o mesmo texto exato de `meta_inovacao_nucleos.nome`
+  (confirmado pela CONSULTA 0 do 5.1 — nenhuma migração ficou pra trás), a resolução é
+  igualdade simples, sem régua de normalização.
+
+### Como o 5.7 ficou
+
+- `js/db-corsario.js`: `linhaParaStatus` passa a ler `projeto_id`/`nucleo_id`; `criar()`
+  e `criarIniciativa()` ganham os dois campos no payload, ambos OPCIONAIS de propósito —
+  nem toda linha de `corsario_status` corresponde a um projeto do golden record (o botão
+  "+ Nova iniciativa" do próprio conjunto Corsário cria iniciativa livre, sem exigir
+  vínculo com `meta_inovacao_projetos`), então uma FK não resolvida nasce `null`, nunca
+  errada.
+- `editor.html` ganhou `projetoIdPorIniciativa()` (resolve por igualdade exata de
+  `iniciativa`, mesma régua do `UPDATE` original de
+  `tools/sql/2026-08_corsario_status_fk.sql`, reaproveitando o MESMO cache global
+  `projetosAtual` que a aba "Projetos & Representantes" usa) — as 3 portas de escrita do
+  Corsário passam a resolver as 2 FKs antes de gravar:
+  1. "+ Nova iniciativa" (conjunto Corsário) — resolve por nome, pode dar `null` se a
+     iniciativa não existir no golden record.
+  2. Criar linha de status faltante (1ª avaliação de um critério numa iniciativa já
+     existente) — mesma resolução por nome; a iniciativa já existe no Corsário, então
+     tende a bater com o golden record (era 27/27 na CONSULTA A do 5.1).
+  3. A semeadura automática que "+ Novo projeto" dispara (`criarProjeto()`, já existia
+     desde antes do 4.1) — não precisa resolver nada por nome: o projeto acabou de
+     nascer, `criado.db_id`/`criado.nucleo_id` (este já gravado pelo 5.5) vão direto.
+
+### Como o 5.6 ficou — escopo menor que o listado originalmente
+
+A auditoria do 5.1 registrou 4 arquivos (`plano-acao.html`, `minhas-acoes.html`,
+`editor.html`, `js/db-plano.js`). Investigando pra implementar, nenhum dos dois
+primeiros GRAVA `responsavel_id` — o `<select>` de "Responsável" de `plano-acao.html`
+escreve em `plano_acao_atividades.responsavel` (texto, outra tabela, atividades DENTRO
+de uma iniciativa) e `minhas-acoes.html` é só leitura ("Ver como"). A única porta de
+escrita de `meta_inovacao_plano_acoes.responsavel_id` no site inteiro é "Nova atividade"
+em `editor.html` — e ela gravava `responsavel_id: []` fixo, **mesmo quando o campo
+"Responsável" (texto livre) vinha preenchido**: os dois já nasciam desacoplados antes
+mesmo de chegar em `meta_inovacao_plano_responsaveis`. Fechar essa porta é o que o 5.6
+resolve; não existe "troca de responsável" pra fechar nas outras telas porque essa
+funcionalidade não existe hoje (fica pra quando/se for criada).
+
+- `js/db-plano-responsaveis.js` (novo) — CRUD da junção `meta_inovacao_plano_responsaveis`
+  (item 2.6), mesmo padrão de `js/db-projeto-representantes.js`: `carregar`/`criar`/
+  `removerSoft`/`porPlanoAcao`, sem seed local (a tabela nasceu na Camada 2).
+- `editor.html`: "Nova atividade" resolve o texto digitado em "Responsável" contra
+  `window.DB.responsaveis` via `RESP.mapearTexto()` (mesma função que `js/drawer.js` já
+  usa) e grava o resultado em `responsavel_id` — antes disto ficava sempre `[]`. Depois
+  de criar a ação, `gravarPlanoResponsaveis()` traduz cada id (antigo OU
+  `pessoa:<id>`/`coletivo:<id>`, os dois já resolvem desde o item 4.3) pro par
+  pessoa_id/coletivo_id via `DB_RESPONSAVEIS.encontrar()` (`js/db-responsaveis.js`, que
+  "já sabe traduzir id antigo → pessoa/coletivo golden" — não precisou de lógica nova) e
+  grava um vínculo por responsável, best-effort por id (mesmo padrão de sincronia dos
+  itens 4.1/4.2: uma falha num vínculo não desfaz a ação já criada).
+- `editor.html` ganhou `js/db-coletivos.js` e `js/db-responsaveis.js` (não estavam
+  carregados antes nesta tela).
+- `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` **não precisaram de nenhuma
+  mudança** — `js/db-plano.js` já lia/gravava `responsavel_id` como passthrough desde
+  antes (o campo nunca foi removido do payload, só nascia vazio no único lugar que cria
+  ação nova).
+
+Testado: `node --check` nos 3 arquivos `.js` tocados/novos; smoke test num Chromium
+headless local (`editor.html?semrede=1`, alterna entre os conjuntos "projetos",
+"corsario" e "plano", abre "Nova atividade" e preenche) sem exceção JS nenhuma; suíte
+existente que toca `editor.html` continua verde
+(`testar_editor.js`, `testar_projetos_editor_representantes_headless.js`,
+`testar_urc_editor_headless.js`, `testar_drawer_headless.js` — mesmos 2 cenários de
+rede real já documentados como falha esperada sem egress). **Não existe teste headless
+dedicado pras abas "Projetos"/"Corsário"/"Nova atividade" do editor.html** (era lacuna
+antes deste item também) — ponta solta não bloqueante, mesmo padrão de outras já
+registradas neste plano.
 
 A aposentadoria de `meta_inovacao_matriz_demandas` (decidida no 3.5) entra aqui.
 
@@ -657,20 +742,33 @@ precisa saber sem reler tudo acima:
    4.2 ficou", "Como o 4.3 ficou" e "Como o 4.4 ficou" na seção da Camada 4 — os padrões de
    chip+select, select-com-sincronia-de-texto, lista-derivada-do-golden-record e
    bloco-assíncrono-com-fallback-de-texto criados ali servem de referência pra Camada 5.
-4. **Camada 5 iniciada (26/08/2026):** o item 5.1 (auditoria final) está feito —
+4. **Camada 5 em andamento (26/08/2026) — 5.1, 5.5, 5.6, 5.7 e 5.8 feitos, 5.2 ainda
+   não maduro:** o item 5.1 (auditoria final) está feito —
    `tools/auditoria_fk_final.js` (caminho de escrita + leitores, offline),
    `tools/sql/2026-08_auditoria_fk_final.sql` (cobertura real, pra José rodar no SQL
-   Editor) e `docs/CAMADA5_AUDITORIA_FK.md` (o relatório). O que ele achou muda a ordem
-   do resto da camada: as FKs de `meta_inovacao_projetos.nucleo_id` (2.1),
-   `meta_inovacao_plano_responsaveis` (2.6) e `corsario_status` (2.7) **não são gravadas
-   por nenhuma tela** — cada projeto/ação/iniciativa nova desde 22/08 nasceu sem elas.
-   Fechar essas três portas virou os itens 5.5, 5.6 e 5.7, e o 5.2 espera por eles.
-   A auditoria já rodou em produção (26/08): 12 de 13 checagens de cobertura `OK` —
-   os números de 22–23/08 se sustentaram, porque nenhuma linha nova entrou nessas
-   tabelas desde então — e um `DIVERGE`: `corsario_status.nucleo_id` está `0/4`,
-   que virou o item 5.8 (`tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql`,
-   pronto e testado, esperando José rodar).
-   Não refaça a auditoria do zero: rode `node tools/auditoria_fk_final.js`.
+   Editor) e `docs/CAMADA5_AUDITORIA_FK.md` (o relatório, com o veredito de 26/08 — não
+   inclui os itens 5.5/5.6/5.7 já fechados depois, então uma releitura literal do
+   relatório soa mais pessimista do que o estado atual). O que ele achou: as FKs de
+   `meta_inovacao_projetos.nucleo_id` (2.1), `meta_inovacao_plano_responsaveis` (2.6) e
+   `corsario_status` (2.7) não eram gravadas por nenhuma tela — cada projeto/ação/
+   iniciativa nova desde 22/08 nascia sem elas. Fechar essas três portas virou os itens
+   **5.5, 5.6 e 5.7, todos RESOLVIDOS em `main` no mesmo dia** (ver "Como o 5.5 ficou",
+   "Como o 5.7 ficou" e "Como o 5.6 ficou" na seção da Camada 5) — `editor.html` agora
+   grava `nucleo_id` (projeto novo/troca de núcleo), `projeto_id`/`nucleo_id`
+   (Corsário: 3 portas de escrita) e `meta_inovacao_plano_responsaveis` (ação nova).
+   O `DIVERGE` que a rodada em produção achou (`corsario_status.nucleo_id` `0/4`) virou
+   o item **5.8, também RESOLVIDO** (`tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql`,
+   rodado por José em 26/08/2026, SEÇÃO 3 confirmou 4/4).
+   **O que falta pra Camada 5:** 5.2 continua travado — fechar a porta de ESCRITA não é o
+   mesmo que a LEITURA já ter migrado nas outras telas (`participantes.html`,
+   `projetos.html`, `index.html`, `js/busca.js`, o guardrail `nomeEhLideranca()`, as telas
+   do canva — ver o "Veredito por coluna de texto" em `docs/CAMADA5_AUDITORIA_FK.md`, que
+   ainda reflete o estado de ANTES do 5.5/5.6/5.7). Antes de decidir o 5.2, vale rodar
+   `node tools/auditoria_fk_final.js` de novo (ele tem `--check` contra
+   `LACUNAS_REGISTRADAS` — as 6 lacunas antigas devem ter sumido, e se sumiram sem
+   atualizar o baseline do script, `--check` vai acusar "lacuna que sumiu sem dar baixa",
+   que é o comportamento esperado, não bug) e atualizar `docs/CAMADA5_AUDITORIA_FK.md`
+   com o novo retrato — não foi feito ainda.
 5. Documentos de apoio já existentes, não precisam ser refeitos:
    - `docs/CAMADA1_DEDUPE_PESSOAS.md` — decisões de identidade de pessoas.
    - `docs/CAMADA2_COBERTURA_FK.md` — cobertura real de cada FK da Camada 2.

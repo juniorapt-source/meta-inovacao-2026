@@ -145,10 +145,14 @@
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/db-plano.js"></script>
+<script src="js/db-plano-responsaveis.js"></script>
 <script src="js/db-agenda.js"></script>
 <script src="js/db-pessoas.js"></script>
+<script src="js/db-coletivos.js"></script>
+<script src="js/db-responsaveis.js"></script>
 <script src="js/db-projetos.js"></script>
 <script src="js/db-projeto-representantes.js"></script>
+<script src="js/db-nucleos.js"></script>
 <script src="js/db-canais.js"></script>
 <script src="js/db-urc.js"></script>
 <script src="js/db-corsario.js"></script>
@@ -215,6 +219,11 @@ const ROTULO_ENC  = Object.fromEntries(STATUS_ENC.map((k)=>[k, CC_STATUS.rotulo(
 let planoAtual = null, planoFallback = false, planoCarregando = false;
 let agendaAtual = null, agendaFallback = false, agendaCarregando = false;
 let pessoasAtual = null, pessoasFallback = false, pessoasCarregando = false;
+// item 5.6 do plano — golden record de coletivos (Camada 0), só pra alimentar
+// js/db-responsaveis.js (tradução id do plano de ação -> pessoa/coletivo, ver
+// planoResponsaveisPorId() mais abaixo); nenhuma tela deste arquivo edita coletivos
+// diretamente, então não precisa do padrão fallback/carregando dos outros globais.
+let coletivosAtual = null;
 // item 4.2 do plano — catálogo golden de canais (meta_inovacao_canais, Camada 0), pra
 // resolver canal_id no seletor de "URC — Responsáveis por canal"; mesmo cache
 // carregado-sob-demanda de pessoasAtual, reaproveitado se a aba "matriz" já carregou
@@ -255,6 +264,98 @@ const area = document.getElementById("ed-area");
 const saida = document.getElementById("ed-saida");
 /* precisa bater exatamente com NUCLEOS_VALIDOS de tools/validar_dados.py */
 const NUCLEOS_VALIDOS = ["Inovação para Competitividade","Inovação Territorial","Startups","Tecnologias Portadoras de Futuro","Gestão do Conhecimento e Processos"];
+
+// itens 5.5/5.7 do plano — mapa nome→nucleo_id do golden record (meta_inovacao_nucleos,
+// Camada 0), carregado sob demanda e reaproveitado pelas duas portas de escrita que o
+// item 5.1 achou em deriva: "Projetos & Representantes" (5.5, projeto novo/troca de
+// núcleo) e "O Caminho para o Corsário" (5.7, iniciativa nova/linha de status nova).
+// NUCLEOS_VALIDOS é o mesmo texto exato de meta_inovacao_nucleos.nome (conferido pela
+// CONSULTA 0 da auditoria do 5.1 — nenhuma migração ficou pra trás), então casar por
+// igualdade simples é seguro, sem precisar de régua de normalização.
+let nucleosAtual = null;
+async function nucleosPorNome(){
+  if(!nucleosAtual){
+    try { nucleosAtual = (await DB_NUCLEOS.carregar()).lista; }
+    catch(err){
+      console.error("editor: falha ao carregar núcleos (golden record) — nucleo_id não será gravado nesta sessão, texto continua indo normal",err);
+      nucleosAtual = [];
+    }
+  }
+  const m = {};
+  nucleosAtual.forEach(n=>{ m[n.nome]=n.db_id; });
+  return m;
+}
+
+// item 5.7 — projeto_id pro Corsário, resolvido por igualdade exata de `iniciativa`
+// contra o golden record (mesma régua do UPDATE original de
+// tools/sql/2026-08_corsario_status_fk.sql). Reaproveita o MESMO cache global
+// (projetosAtual) que a aba "Projetos & Representantes" usa — se ela já carregou antes
+// nesta sessão, não busca de novo; se o Corsário é a primeira aba aberta, carrega aqui
+// e a aba "Projetos" reaproveita depois. Iniciativa sem projeto golden correspondente
+// (ex.: criada solta por aqui mesmo, sem passar por "+ Novo projeto") devolve null —
+// nasce sem FK em vez de nascer com FK errada, mesmo princípio de criar()/criarIniciativa().
+async function projetoIdPorIniciativa(nome){
+  if(!projetosAtual && !projetosCarregando){
+    projetosCarregando = true;
+    try {
+      const r = await DB_PROJETOS.carregar();
+      projetosAtual = r.lista; projetosFallback = r.usandoFallback;
+    } catch(err){
+      console.error("editor: falha ao carregar projetos (golden record) — projeto_id não será gravado nesta sessão",err);
+      projetosAtual = [];
+    }
+    projetosCarregando = false;
+  }
+  const p = (projetosAtual||[]).find(x=>x.iniciativa===nome);
+  return p ? p.db_id : null;
+}
+
+// item 5.6 — lista "montada" de DB_RESPONSAVEIS (pessoa OU coletivo do golden record,
+// ids antigos preservados — mesma função que plano-acao.html/minhas-acoes.html usam
+// desde o item 4.3), carregada sob demanda e reaproveitando pessoasAtual se a aba
+// "Projetos" ou "Pessoas" já carregou antes nesta sessão (mesmo princípio de
+// nucleosPorNome/projetoIdPorIniciativa acima).
+let listaResponsaveisMontada = null;
+async function listaResponsaveis(){
+  if(!listaResponsaveisMontada){
+    try {
+      if(!pessoasAtual){ const r = await DB_PESSOAS.carregar(); pessoasAtual = r.lista; pessoasFallback = r.usandoFallback; }
+      if(!coletivosAtual){ const r = await DB_COLETIVOS.carregar(); coletivosAtual = r.lista; }
+      listaResponsaveisMontada = DB_RESPONSAVEIS.montar(pessoasAtual, coletivosAtual);
+    } catch(err){
+      console.error("editor: falha ao montar a lista golden de responsáveis — vínculos de meta_inovacao_plano_responsaveis não serão gravados nesta sessão",err);
+      listaResponsaveisMontada = [];
+    }
+  }
+  return listaResponsaveisMontada;
+}
+
+// item 5.6 — grava, em meta_inovacao_plano_responsaveis, um vínculo por id resolvido
+// de responsavel_id[] (a MESMA lista, agora traduzida pessoa/coletivo pelo golden
+// record via DB_RESPONSAVEIS.encontrar — id antigo ou "pessoa:<id>"/"coletivo:<id>",
+// os dois já resolvem desde o item 4.3). Best-effort por id, mesmo padrão de
+// sincronia de 4.1/4.2: uma falha num vínculo não desfaz a ação já criada, só avisa
+// no console. Id que não resolve pra nada no golden record (não deveria acontecer —
+// são os mesmos ~32 ids do LEGADO) é pulado silenciosamente, não é erro.
+async function gravarPlanoResponsaveis(planoAcaoId, responsavelIds, usuario){
+  if(!responsavelIds || !responsavelIds.length) return;
+  const lista = await listaResponsaveis();
+  if(!lista.length) return;
+  for(let i=0;i<responsavelIds.length;i++){
+    const entrada = DB_RESPONSAVEIS.encontrar(lista, responsavelIds[i]);
+    if(!entrada) continue;
+    try {
+      await DB_PLANO_RESPONSAVEIS.criar({
+        plano_acao_id: planoAcaoId,
+        pessoa_id: entrada.tipo==="pessoa" ? Number(entrada.dbId) : null,
+        coletivo_id: entrada.tipo==="coletivo" ? Number(entrada.dbId) : null,
+        ordem: i+1,
+      }, usuario);
+    } catch(err){
+      console.error('editor: ação criada, mas falhou ao vincular responsável "'+responsavelIds[i]+'" em meta_inovacao_plano_responsaveis',err);
+    }
+  }
+}
 
 /* vocabulário do conjunto "corsario" — mesma régua de corsario.html (não mexer sem
    revalidar contra o card da ALI Ecossistema, mesmo aviso que corsario.html tem sobre
@@ -463,13 +564,21 @@ async function adicionarAtividade(){
 
   const frente = campo("nv-frente").value;
   const dep = campo("nv-dep").value.split(",").map(s=>s.trim()).filter(Boolean);
+  const respTexto = campo("nv-resp").value.trim();
+  // item 5.6 — resolve o texto livre digitado em "Responsável" contra a lista canônica
+  // de sempre (window.DB.responsaveis, os ~32 ids), mesma função (RESP.mapearTexto) que
+  // js/drawer.js já usa pra marcar nome como clicável. Antes deste item, `responsavel_id`
+  // nascia sempre `[]` aqui — o texto e o array já estavam desacoplados NA CRIAÇÃO, antes
+  // mesmo de chegar em meta_inovacao_plano_responsaveis (é o que o 5.1 achou).
+  const responsavelIds = (window.RESP && window.DB && window.DB.responsaveis)
+    ? RESP.mapearTexto(window.DB.responsaveis, respTexto).ids : [];
   const nova = {
     id: proximoId(frente),
     frente: frente || "Sem frente",
     sub: campo("nv-sub").value.trim(),
     atividade: obrigatorios.atividade,
-    resp: campo("nv-resp").value.trim(),
-    responsavel_id: [],
+    resp: respTexto,
+    responsavel_id: responsavelIds,
     prazo: obrigatorios.prazo,
     prazo_iso: obrigatorios.prazo_iso,
     status: campo("nv-status").value,
@@ -483,8 +592,12 @@ async function adicionarAtividade(){
   const btn = document.getElementById("ed-confirmar-nova");
   btn.disabled = true;
   try {
-    const criada = await DB_PLANO.criar(nova, EDITOR_ATUAL.nomeAtual());
+    const usuario = EDITOR_ATUAL.nomeAtual();
+    const criada = await DB_PLANO.criar(nova, usuario);
     planoAtual.push(criada);
+    // item 5.6 — a ação já está criada (sucesso garantido); os vínculos da junção são
+    // best-effort a partir daqui, mesmo padrão de 4.1 (adicionar representante).
+    await gravarPlanoResponsaveis(criada.db_id, responsavelIds, usuario);
     formNovaAberto = false;
     render();
   } catch(err){
@@ -808,7 +921,16 @@ async function renderProjetos(){
     if(p) p[campo]=valor;
     marcarLinhaStatus(tr,"salvando");
     try {
-      await DB_PROJETOS.salvar(p.db_id, { [campo]: valor }, EDITOR_ATUAL.nomeAtual());
+      // item 5.5 — trocar o núcleo grava nucleo_id junto com o texto, mesmo padrão de
+      // sincronia dos itens 4.1/4.2 (a FK anda junto do campo que o <select> já mostra,
+      // sem virar um segundo controle na tela).
+      const patch = { [campo]: valor };
+      if(campo==="nucleo"){
+        const porNome = await nucleosPorNome();
+        patch.nucleo_id = porNome[valor] || null;
+        if(p) p.nucleo_id = patch.nucleo_id;
+      }
+      await DB_PROJETOS.salvar(p.db_id, patch, EDITOR_ATUAL.nomeAtual());
       marcarLinhaStatus(tr,"salvo");
     } catch(err){
       console.error("editor: falha ao salvar projeto",err);
@@ -937,8 +1059,12 @@ async function criarProjeto(){
     return;
   }
   const representantesTexto = selecionados.map(ps=>ps.nome).concat(placeholderTexto ? [placeholderTexto] : []);
+  const nucleoEscolhido = campo("nvp-nucleo").value;
+  // item 5.5 — projeto novo já nasce com nucleo_id, não só o texto.
+  const porNome = await nucleosPorNome();
   const nova = {
-    nucleo: campo("nvp-nucleo").value,
+    nucleo: nucleoEscolhido,
+    nucleo_id: porNome[nucleoEscolhido] || null,
     iniciativa: iniciativa,
     representantes: representantesTexto,
     ordem: (projetosAtual||[]).length + 1
@@ -974,7 +1100,10 @@ async function criarProjeto(){
       } else {
         const jaNoCorsario = (corsario.statusRows||[]).some(r=>String(r.iniciativa).toLowerCase()===criado.iniciativa.toLowerCase());
         if(!jaNoCorsario){
-          const criadas = await DB_CORSARIO.criarIniciativa(criado.iniciativa, criado.nucleo, corsario.criterios, EDITOR_ATUAL.nomeAtual());
+          // item 5.7 — as duas FKs já estão em mãos (o projeto acabou de nascer): não
+          // precisa da régua de nome de projetoIdPorIniciativa/nucleosPorNome, é o
+          // db_id/nucleo_id do próprio `criado`.
+          const criadas = await DB_CORSARIO.criarIniciativa(criado.iniciativa, criado.nucleo, corsario.criterios, EDITOR_ATUAL.nomeAtual(), { projetoId: criado.db_id, nucleoId: criado.nucleo_id });
           corsario.statusRows.push(...criadas); // mantém o cache do DB_CORSARIO em dia, pra o próximo render do conjunto já mostrar a iniciativa nova
         }
       }
@@ -1302,7 +1431,10 @@ async function renderCorsario(){
       if(t.dataset.id){
         await DB_CORSARIO.salvar(t.dataset.id, { status:t.value }, usuario);
       } else {
-        const criado = await DB_CORSARIO.criar({ iniciativa:t.dataset.ini, nucleo:t.dataset.nucleo, criterio:t.dataset.crit, status:t.value }, usuario);
+        // item 5.7 — iniciativa já existente no Corsário (só faltava linha pra este
+        // critério): resolve as duas FKs pela régua de nome de sempre.
+        const [projetoId, porNucleo] = await Promise.all([projetoIdPorIniciativa(t.dataset.ini), nucleosPorNome()]);
+        const criado = await DB_CORSARIO.criar({ iniciativa:t.dataset.ini, nucleo:t.dataset.nucleo, projeto_id:projetoId, nucleo_id:porNucleo[t.dataset.nucleo]||null, criterio:t.dataset.crit, status:t.value }, usuario);
         t.dataset.id = String(criado.db_id);
         statusRows.push(criado); // mantém a cópia local em sincronia — evita duplicar a linha se o conjunto for re-renderizado sem recarregar
       }
@@ -1326,7 +1458,9 @@ async function renderCorsario(){
       if(select.dataset.id){
         await DB_CORSARIO.salvar(select.dataset.id, { observacao: nova||null }, usuario);
       } else {
-        const criado = await DB_CORSARIO.criar({ iniciativa:select.dataset.ini, nucleo:select.dataset.nucleo, criterio:select.dataset.crit, status:select.value, observacao: nova||null }, usuario);
+        // item 5.7 — mesma régua da outra porta de escrita, acima.
+        const [projetoId, porNucleo] = await Promise.all([projetoIdPorIniciativa(select.dataset.ini), nucleosPorNome()]);
+        const criado = await DB_CORSARIO.criar({ iniciativa:select.dataset.ini, nucleo:select.dataset.nucleo, projeto_id:projetoId, nucleo_id:porNucleo[select.dataset.nucleo]||null, criterio:select.dataset.crit, status:select.value, observacao: nova||null }, usuario);
         select.dataset.id = String(criado.db_id);
         statusRows.push(criado);
       }
@@ -1365,7 +1499,12 @@ async function criarIniciativaCorsario(){
   const btn = document.getElementById("ed-confirmar-nova-ini");
   btn.disabled = true;
   try {
-    const criadas = await DB_CORSARIO.criarIniciativa(nome, nucleo, corsarioAtual.criterios, EDITOR_ATUAL.nomeAtual());
+    // item 5.7 — esta iniciativa nasce direto aqui no Corsário, sem passar por "+ Novo
+    // projeto"; pode ou não já existir em meta_inovacao_projetos com o mesmo nome
+    // (coincidência de texto) — projetoIdPorIniciativa() resolve se existir, e devolve
+    // null honestamente se não existir (a linha nasce sem projeto_id, não com um errado).
+    const [projetoId, porNucleo] = await Promise.all([projetoIdPorIniciativa(nome), nucleosPorNome()]);
+    const criadas = await DB_CORSARIO.criarIniciativa(nome, nucleo, corsarioAtual.criterios, EDITOR_ATUAL.nomeAtual(), { projetoId: projetoId, nucleoId: porNucleo[nucleo]||null });
     corsarioAtual.statusRows.push(...criadas);
     formNovaIniciativaAberto = false;
     renderCorsario();

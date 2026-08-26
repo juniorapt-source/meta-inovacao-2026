@@ -19,6 +19,11 @@
       db_id: r.id,
       iniciativa: r.iniciativa,
       nucleo: r.nucleo,
+      // projeto_id/nucleo_id (Camada 2, item 2.7) — lidos desde sempre, mas só
+      // passaram a ser GRAVADOS por criar()/criarIniciativa() no item 5.7; até lá
+      // toda iniciativa/linha nova nascia sem as duas FKs (é o que o 5.1 achou).
+      projeto_id: r.projeto_id || null,
+      nucleo_id: r.nucleo_id || null,
       criterio: r.criterio,
       status: r.status,
       observacao: r.observacao,
@@ -82,12 +87,20 @@
     return linhaParaStatus(data);
   }
 
+  // item 5.7 — projeto_id/nucleo_id são OPCIONAIS aqui de propósito: nem toda linha
+  // nova de corsario_status corresponde a um projeto do golden record (o botão
+  // "+ Nova iniciativa" deste próprio conjunto cria iniciativa livre, sem exigir que
+  // ela exista em meta_inovacao_projetos — é o chamador (editor.html) quem resolve as
+  // FKs quando tem de onde tirar, e passa `undefined`/omite quando não tem; a coluna
+  // continua nullable, então a linha nasce sem FK em vez de nascer com FK errada.
   async function criar(linhaParcial, usuario) {
     bloquearEscritaEmTeste();
     const supa = await root.CC_SUPABASE.obterClienteEsm();
     const payload = {
       iniciativa: linhaParcial.iniciativa,
       nucleo: linhaParcial.nucleo || null,
+      projeto_id: linhaParcial.projeto_id || null,
+      nucleo_id: linhaParcial.nucleo_id || null,
       criterio: linhaParcial.criterio,
       status: linhaParcial.status,
       observacao: linhaParcial.observacao || null,
@@ -102,13 +115,17 @@
   // cria uma iniciativa nova: 1 linha por critério informado, todas como "não se aplica"
   // (default honesto pra algo ainda não avaliado — ver corsario.html: todo "não se
   // aplica" fica fora da régua, então a iniciativa nasce "não avaliada", não "reprovada
-  // em tudo") — usado pelo botão "+ Nova iniciativa" do editor.
-  async function criarIniciativa(nome, nucleo, criterios, usuario) {
+  // em tudo") — usado pelo botão "+ Nova iniciativa" do editor. `fks` é opcional (item
+  // 5.7) — { projetoId, nucleoId }, omitido quando o chamador não tem de onde tirar
+  // (mesma nota de criar() acima).
+  async function criarIniciativa(nome, nucleo, criterios, usuario, fks) {
     bloquearEscritaEmTeste();
     const supa = await root.CC_SUPABASE.obterClienteEsm();
     const agora = new Date().toISOString();
     const payload = criterios.map((c) => ({
-      iniciativa: nome, nucleo: nucleo || null, criterio: c.chave,
+      iniciativa: nome, nucleo: nucleo || null,
+      projeto_id: (fks && fks.projetoId) || null, nucleo_id: (fks && fks.nucleoId) || null,
+      criterio: c.chave,
       status: "não se aplica", observacao: null, updated_by: usuario || null, atualizado_em: agora,
     }));
     const { data, error } = await supa.from(TABELA_STATUS).insert(payload).select();

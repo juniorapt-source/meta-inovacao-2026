@@ -11,6 +11,12 @@
   function linhaParaProjeto(r) {
     return {
       nucleo: r.nucleo,
+      // nucleo_id (Camada 2, item 2.1) — lido desde sempre (a migração já populava),
+      // mas só passou a ser GRAVADO por este módulo no item 5.5; até lá só
+      // sobrevivia por causa do UPDATE original, e uma troca de núcleo feita pelo
+      // <select> de editor.html derivava (texto mudava, FK ficava presa no valor
+      // antigo) — é o que o 5.1 achou.
+      nucleo_id: r.nucleo_id || null,
       iniciativa: r.iniciativa,
       representantes: r.representantes || [],
       ordem: r.ordem,
@@ -21,6 +27,7 @@
   function projetoParaLinha(p) {
     return {
       nucleo: p.nucleo,
+      nucleo_id: p.nucleo_id || null,
       iniciativa: p.iniciativa,
       representantes: p.representantes || [],
       ordem: p.ordem,

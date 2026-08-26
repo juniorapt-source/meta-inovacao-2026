@@ -3,6 +3,18 @@
 **Rodada em 26/08/2026.** Entrada do item 5.2 (a decisão humana, tabela a tabela,
 de dropar ou manter cada coluna de texto).
 
+> **Atualização (26/08/2026, mesmo dia):** as 6 lacunas de escrita da seção B abaixo
+> (itens 5.5, 5.6, 5.7) e o achado de dado da seção seguinte (item 5.8) **foram
+> resolvidos** — `node tools/auditoria_fk_final.js --check` já roda limpo (0 lacunas
+> registradas, 0 encontradas). O relatório abaixo não foi reescrito porque documenta
+> um retrato histórico válido (o que a auditoria encontrou e por quê); o estado atual
+> está em `docs/PLANO_EXECUCAO_GOLDEN_RECORD.md`, seção da Camada 5 ("Como o 5.5/5.6/5.7
+> ficaram"). **O veredito do 5.2 abaixo ("nenhuma coluna pronta pro DROP") ainda vale**
+> — fechar a porta de ESCRITA não resolve a ponta da LEITURA (seção C/veredito abaixo),
+> que continua sem migrar nas telas fora do escopo dos itens 4.1–4.4/5.5–5.7. Uma nova
+> rodada da CONSULTA A/C em produção ainda não foi pedida — os números de cobertura
+> abaixo são de ANTES do 5.5/5.6/5.7 fecharem a escrita.
+
 > **Veredito em uma linha: nenhuma coluna de texto legado está pronta pro `DROP`
 > hoje.** Não por falta de cobertura — a CONSULTA A rodada em produção em
 > 26/08/2026 deu `OK` em 12 das 13 checagens. É por causa das outras duas pontas:

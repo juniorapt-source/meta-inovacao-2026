@@ -353,14 +353,13 @@ const ITENS = [
  * Lacunas já conhecidas e registradas em docs/CAMADA5_AUDITORIA_FK.md e na
  * tabela da Camada 5 do plano. Chave: "<item> :: <nome da porta>".
  * ------------------------------------------------------------------------- */
-const LACUNAS_REGISTRADAS = [
-  "2.1 :: projeto novo (editor.html → DB_PROJETOS.criar)",
-  "2.1 :: trocar o núcleo na grade (editor.html → DB_PROJETOS.salvar)",
-  "2.6 :: ação nova (editor.html → DB_PLANO.criar)",
-  "2.6 :: trocar responsável (plano-acao.html / minhas-acoes.html / editor.html → DB_PLANO.salvar)",
-  "2.7 :: primeira avaliação de um critério (editor.html → DB_CORSARIO.criar)",
-  "2.7 :: + Nova iniciativa (editor.html → DB_CORSARIO.criarIniciativa)",
-];
+// vazio desde 26/08/2026 — as 6 lacunas achadas pelo item 5.1 foram fechadas pelos
+// itens 5.5 (2.1), 5.6 (2.6) e 5.7 (2.7) no mesmo dia. Histórico completo (o que cada
+// uma era e como foi resolvida) em docs/PLANO_EXECUCAO_GOLDEN_RECORD.md, seção da
+// Camada 5, "Como o 5.5/5.6/5.7 ficaram" — não repetido aqui pra não ter duas fontes
+// da mesma informação. Corolário do 2.5: item resolvido esvazia a lista, nunca é a
+// lista que é apagada.
+const LACUNAS_REGISTRADAS = [];
 
 /* Quem lê a FK hoje — probe por arquivo, não grep de token solto: `pessoa_id`
  * aparece em meia dúzia de tabelas diferentes, e contar isso como leitura daria
