@@ -18,9 +18,9 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > da raiz foi apagada. **Não recrie a segunda cópia** — se precisar de uma visão de
 > acompanhamento, ela mora neste arquivo, na seção "Status por camada" no fim.
 
-> **STATUS GERAL (atualizado 23/08/2026): Camadas 0 e 1 concluídas e verificadas em
-> produção; Camada 2 concluída, incluindo o item 2.5 — script escrito e testado em
-> 23/08/2026, falta José rodar no SQL Editor (ver nota da Camada 2); Camada 3 quase concluída — 3.1, 3.2, 3.3 e 3.4
+> **STATUS GERAL (atualizado 23/08/2026): Camadas 0, 1 e 2 concluídas e verificadas em
+> produção, incluindo o item 2.5 (rodado por José em 23/08/2026 — ver nota da Camada 2);
+> Camada 3 quase concluída — 3.1, 3.2, 3.3 e 3.4
 > já em `main` e validados, falta só o 3.5 (validação humana, em curso).** Camadas 4 e 5
 > ainda não iniciadas. Se você está retomando este trabalho numa sessão nova: leia a
 > seção "Status por camada" no fim primeiro — ela lista o que já existe no banco e no
@@ -126,7 +126,7 @@ necessário antes da Camada 4, é item novo, não coberto por este plano.
 
 ---
 
-## Camada 2 — FK pontual, convivendo com o texto — ✅ CONCLUÍDA (22/08/2026); 2.5 escrito e testado em 23/08/2026, falta José rodar em produção
+## Camada 2 — FK pontual, convivendo com o texto — ✅ CONCLUÍDA (23/08/2026, com o 2.5)
 
 | # | Atividade | Arquivo(s) | Status | Cobertura real |
 |---|---|---|---|---|
@@ -134,10 +134,10 @@ necessário antes da Camada 4, é item novo, não coberto por este plano.
 | 2.2 | `CREATE meta_inovacao_projeto_representantes`, popular (resolução de alias) | `tools/sql/2026-08_projeto_representantes.sql` | ✅ | 34/35 |
 | 2.3 | `ALTER meta_inovacao_urc_lideranca` (+ `pessoa_id`), popular | `tools/sql/2026-08_urc_lideranca_pessoa_id.sql` | ✅ | 3/3 |
 | 2.4 | Evoluir `meta_inovacao_urc_canais_responsaveis` (+ `canal_id`, `pessoa_id`), popular | `tools/sql/2026-08_urc_canais_fk.sql` | ✅ | 11/11 nos dois FKs |
-| 2.5 | `ALTER meta_inovacao_canva_demandas` (+ 4 FK: núcleo, canal, facilitador, responsável), popular, e `cc_canva_gravar`/`cc_canva_editar` passam a gravar as 4 FKs em toda demanda nova | `tools/sql/2026-08_canva_demandas_fk.sql` | ✅ script pronto, testado num Postgres local (schema simulado + dados realistas) — **falta José rodar no SQL Editor** (mesmo passo do 2.8 pras outras) | ver nota — números são do teste local, não de produção |
+| 2.5 | `ALTER meta_inovacao_canva_demandas` (+ 4 FK: núcleo, canal, facilitador, responsável), popular, e `cc_canva_gravar`/`cc_canva_editar` passam a gravar as 4 FKs em toda demanda nova | `tools/sql/2026-08_canva_demandas_fk.sql` | ✅ **rodado por José em produção em 23/08/2026** | 1 linha existente ("Embrapii"): `nucleo_id`/`canal_id`/`responsavel_pessoa_id` 3/3 do que tinha texto; `facilitador_pessoa_id` sem texto pra casar (campo nunca preenchido nessa linha) — ver nota |
 | 2.6 | `CREATE meta_inovacao_plano_responsaveis`, popular (resolução de alias) | `tools/sql/2026-08_plano_responsaveis.sql` | ✅ | 61/61 |
 | 2.7 | `ALTER corsario_status` (+ `projeto_id`, `nucleo_id`), popular | `tools/sql/2026-08_corsario_status_fk.sql` | ✅ | 27/27, zero órfãos |
-| 2.8 | **[humano]** Rodar as migrações | — | ✅ feito por José, uma por uma, cada uma conferida antes da próxima (2.5 ficou de fora dessa rodada — ver linha acima) | — |
+| 2.8 | **[humano]** Rodar as migrações | — | ✅ feito por José, uma por uma, cada uma conferida antes da próxima (2.5 rodou depois, em 23/08/2026, mesmo processo) | — |
 | 2.9 | Auditoria de cobertura: % de FK NULL por tabela | `docs/CAMADA2_COBERTURA_FK.md`, `tools/relatorio_cobertura_fk.js` | ✅ relatório com números reais de produção; 2.5 entrou no relatório em 23/08/2026 (ver nota) | — |
 
 **Sobre o 2.5 — histórico:** achado em 22/08/2026, ao consolidar os dois planos, que o
@@ -154,19 +154,25 @@ parecer 100% fechada. Ficou registrado como `⏳ NÃO FEITO` até ser endereçad
   (`CREATE OR REPLACE`, mesma assinatura) pra que **toda demanda nova já nasça com as 4
   FKs preenchidas** — sem isso a cobertura cairia sozinha a cada oficina, e o 2.5 viraria
   um retrato que envelhece.
-- Testado num Postgres local simulando produção (schema mínimo + dados realistas de
-  `data/projetos.js`/`data/canais.js`, com nomes que casam exatamente, com acento/caixa
-  diferente, por `nome_completo` em vez do nome curto, e nomes de propósito fora do
-  golden record): das 5 linhas semeadas, `canal_id` e `nucleo_id` bateram 100% do que
-  tinha texto (5/5 e 4/4), `facilitador_pessoa_id` bateu 2/3 (o nome fora do golden record
-  ficou `NULL`, como esperado) e `responsavel_pessoa_id` bateu 4/5 (mesma razão). Rodado
-  duas vezes seguidas para confirmar idempotência (segunda rodada: `UPDATE 0` nas 4
-  populações). `cc_canva_gravar` testada gravando uma demanda nova com as 4 FKs saindo
+- Testado antes num Postgres local simulando produção (schema mínimo + dados realistas
+  de `data/projetos.js`/`data/canais.js`, com nomes que casam exatamente, com
+  acento/caixa diferente, por `nome_completo` em vez do nome curto, e nomes de propósito
+  fora do golden record): das 5 linhas semeadas, `canal_id` e `nucleo_id` bateram 100% do
+  que tinha texto (5/5 e 4/4), `facilitador_pessoa_id` bateu 2/3 (o nome fora do golden
+  record ficou `NULL`, como esperado) e `responsavel_pessoa_id` bateu 4/5 (mesma razão).
+  Rodado duas vezes seguidas para confirmar idempotência (segunda rodada: `UPDATE 0` nas
+  4 populações). `cc_canva_gravar` testada gravando uma demanda nova com as 4 FKs saindo
   preenchidas; `cc_canva_editar` testada trocando `responsavel`/`facilitador` e
   confirmando que as duas FKs de pessoa são recalculadas (canal/núcleo não mudam, porque
-  `canal`/`projeto` continuam imutáveis nessa função). **Números são do ambiente local,
-  não de produção** — como sempre nesta frente, José roda o script no SQL Editor e
-  confere as consultas de verificação no final dele.
+  `canal`/`projeto` continuam imutáveis nessa função).
+- **Rodado por José em produção em 23/08/2026.** `meta_inovacao_canva_demandas` tinha só
+  1 linha até então (a demanda de teste da "Embrapii", canal "empresa"). Conferência da
+  consulta (f) do script: `nucleo_id` casou com "Tecnologias Portadoras de Futuro",
+  `canal_id` casou com "empresa", `responsavel_pessoa_id` casou com "Agnaldo" — as 3 FKs
+  que tinham texto pra casar bateram 100%. `facilitador_pessoa_id` saiu `NULL`, mas
+  porque `facilitador` também é `NULL` nessa linha (campo nunca preenchido nela) — não é
+  uma falha de casamento, é ausência de texto. Cobertura real: 3/3 das FKs com texto,
+  0 órfãos.
 - `tools/relatorio_cobertura_fk.js` ganhou a entrada do 2.5 — com uma ressalva que não
   existe nas outras: a leitura de `meta_inovacao_canva_demandas` não é pública (só
   `authenticated` + `cc_eh_editor()`), então a anon key deste script não mede cobertura
@@ -299,7 +305,7 @@ tela.
 - É o momento certo de decidir a UX dos ids duplicados `jr`/`jose_mendes_junior` e
   `sandra`/`sandra_chaves_paraiso` em `window.DB.responsaveis` (ver Camada 1) — hoje
   resolvem pro mesmo `pessoa_id`, mas a lista ainda mostra 2 entradas pro mesmo humano.
-- O item 2.5 (FKs de `meta_inovacao_canva_demandas`) já foi escrito e testado
+- O item 2.5 (FKs de `meta_inovacao_canva_demandas`) já foi rodado em produção
   (23/08/2026, ver nota da Camada 2) — não precisa ser revisitado aqui.
 - `tools/testar_drawer_headless.js` foi consertado em 22/08 (PR #10) e é a rede de
   proteção do 4.4, que mexe justamente em `js/drawer.js` — rode ANTES e DEPOIS de tocar
@@ -356,12 +362,10 @@ delicada.
 Se você está começando uma sessão nova pra continuar este trabalho, isto é o que
 precisa saber sem reler tudo acima:
 
-1. **Camadas 0 e 1 estão 100% em produção**, testadas e confirmadas linha a linha por
-   José no SQL Editor. **Camada 2 idem, exceto o item 2.5**: escrito e testado num
-   Postgres local em 23/08/2026 (`tools/sql/2026-08_canva_demandas_fk.sql`), mas ainda
-   NÃO rodou em produção — ver nota na Camada 2 pros números do teste local. Todos os
-   outros scripts SQL estão em `meta-monitor/tools/sql/2026-08_*.sql` e não precisam
-   rodar de novo.
+1. **Camadas 0, 1 e 2 estão 100% em produção**, testadas e confirmadas linha a linha por
+   José no SQL Editor — incluindo o item 2.5 (`tools/sql/2026-08_canva_demandas_fk.sql`),
+   rodado em 23/08/2026, ver nota na Camada 2 pros números reais. Todos os scripts SQL
+   estão em `meta-monitor/tools/sql/2026-08_*.sql` e não precisam rodar de novo.
 2. **Camada 3 está quase concluída:** 3.1 (tabela + migração), 3.2 (grade dinâmica), 3.3
    (aba "matriz" do `editor.html` lendo ao vivo, só leitura, com snapshot gerado do
    mesmo modelo de `demandas.html`) e 3.4 (testes headless) estão em `main` e validados.
@@ -383,8 +387,7 @@ precisa saber sem reler tudo acima:
      carrega ao vivo, coluna por `ordem`, canal novo, só leitura, e o snapshot batendo
      chave a chave com o de `demandas.html`.
 5. **Pendências não bloqueantes acumuladas:** UI de múltiplos papéis por pessoa em
-   `editor.html` (Camada 1); item 2.5 rodar em produção (Camada 2 — script pronto,
-   é só faltar José executar no SQL Editor); "Oficina confirmada"/"Não se aplica o
+   `editor.html` (Camada 1); "Oficina confirmada"/"Não se aplica o
    uso" fora do `CHECK` (Camada 3). **As duas falhas antigas da suíte
    (`testar_status_badges_headless.js` e `testar_drawer_headless.js`) foram corrigidas em
    22/08 (PR #10)** — a suíte do README está verde. Num ambiente sem rede de saída pro
