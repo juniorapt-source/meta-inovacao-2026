@@ -120,9 +120,13 @@
     </div>
   </section>
 
+  <p class="cv-nota" id="cv-projetos-feitos" hidden>Já respondeu por: <span id="cv-lista-projetos-feitos"></span> —
+    pode escolher outro projeto acima quando quiser, o que já foi preenchido continua salvo.</p>
+
   <p class="aviso" id="cv-aviso-escolha" style="margin-top:16px">Escolha o seu projeto acima pra ver os 10 canais e começar a preencher.</p>
 
   <section id="cv-passo2" hidden style="margin-top:22px">
+    <button type="button" class="cv-link-escape" id="cv-trocar-projeto" style="margin:0 0 8px">‹ Trocar de projeto</button>
     <h2 class="secao-titulo" style="font-family:var(--font-sans);font-weight:300;font-size:18px;margin-bottom:4px">
       Sua linha na matriz — <span id="cv-projeto-nome"></span>
     </h2>
@@ -238,6 +242,10 @@
   const inputNome = document.getElementById("cv-nome");
   const avisoEscolha = document.getElementById("cv-aviso-escolha");
   const passo2 = document.getElementById("cv-passo2");
+  const passo1 = document.getElementById("cv-passo1");
+  const btnTrocarProjeto = document.getElementById("cv-trocar-projeto");
+  const projetosFeitosEl = document.getElementById("cv-projetos-feitos");
+  const listaProjetosFeitosEl = document.getElementById("cv-lista-projetos-feitos");
   const projetoNomeEl = document.getElementById("cv-projeto-nome");
   const notaProjetoNovo = document.getElementById("cv-nota-projeto-novo");
   const miniMatrizEl = document.getElementById("cv-mini-matriz");
@@ -291,6 +299,28 @@
     inputEscape.value = "";
   }
 
+  // item 2 do plano de melhorias de navegação (26/08) — depois de rolar pra baixo pra
+  // preencher, nada na tela lembrava que dava pra voltar e escolher outro projeto (o
+  // <select> de #cv-passo1 nunca fica escondido, só passa despercebido). Rola de volta
+  // e devolve o foco pro <select> — sem esconder/mostrar seções nem duplicar estado.
+  btnTrocarProjeto.addEventListener("click", () => {
+    passo1.scrollIntoView({ behavior: "smooth", block: "start" });
+    selProjeto.focus();
+  });
+
+  // item 3 — "responder por mais de um projeto": a lista de baixo é só visibilidade
+  // (ver js/db-canva.js: cada projeto já tinha sua própria sessão local, sem perder
+  // nada ao trocar). Recalcula sempre que algo pode ter mudado — trocar de projeto ou
+  // uma demanda salvar — pra continuar refletindo o que está de fato no navegador.
+  function renderProjetosRespondidos() {
+    const feitos = (DB_CANVA.projetosRespondidosLocalmente ? DB_CANVA.projetosRespondidosLocalmente() : [])
+      .filter((p) => normalizarLeve(p.projeto) !== normalizarLeve(caderno ? caderno.projeto : ""));
+    if (!feitos.length) { projetosFeitosEl.hidden = true; return; }
+    listaProjetosFeitosEl.textContent = feitos.map((p) => p.projeto).join(", ");
+    projetosFeitosEl.hidden = false;
+  }
+  renderProjetosRespondidos();
+
   btnEscape.addEventListener("click", () => ativarEscape(""));
   btnVoltarEscape.addEventListener("click", () => {
     desativarEscape();
@@ -313,7 +343,7 @@
   /* ------------------------------------------------------- carregar caderno */
   function escolherProjeto(nomeProjeto) {
     nomeProjeto = String(nomeProjeto || "").trim();
-    if (!nomeProjeto) { caderno = null; passo2.hidden = true; avisoEscolha.hidden = false; return; }
+    if (!nomeProjeto) { caderno = null; passo2.hidden = true; avisoEscolha.hidden = false; renderProjetosRespondidos(); return; }
 
     caderno = DB_CANVA.carregarCaderno(nomeProjeto);
     if (!caderno.autor_nome && inputNome.value.trim()) DB_CANVA.definirAutor(caderno, inputNome.value.trim());
@@ -350,6 +380,7 @@
     renderLinhasCanal();
     paineisAbertos.forEach(sincronizarPainel);
     renderResumo();
+    renderProjetosRespondidos();
   }
 
   function contagemTexto(n) {
