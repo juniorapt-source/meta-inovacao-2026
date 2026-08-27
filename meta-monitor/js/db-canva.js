@@ -281,8 +281,8 @@
   // uma fila por caderno, serial: duas gravações simultâneas da mesma sessão poderiam
   // furar o teto de 20 do banco por corrida, e o gestor não ganha nada com paralelismo
   // (ele preenche um cartão por vez).
-  const timers = {};      // chave_local -> handle do debounce
-  let rodando = false;
+  const timers = {};        // chave_local -> handle do debounce (uuid, já único entre projetos)
+  const rodando = new Set();  // cadernos com fila em voo AGORA
 
   function pendentes(caderno) {
     return caderno.demandas.filter(function (d) {
@@ -318,8 +318,16 @@
   // unhandledrejection sem ninguém pra tratar. O resultado aparece no estado das
   // demandas e chega na tela pelos ouvintes.
   async function processarFila(caderno) {
-    if (rodando) return caderno;
-    rodando = true;
+    // serial POR CADERNO, não por página: até 27/08/2026 a tela só segurava um caderno
+    // por vez, então um único `rodando` global bastava. Com o checklist do item 3 do
+    // plano de melhorias de navegação o gestor responde por N projetos ao mesmo tempo —
+    // e um flag global faria a fila do projeto B voltar caladinha enquanto a do A
+    // estivesse em voo, deixando demanda "pendente" pra sempre sem ninguém reagendar.
+    // O motivo original de ser serial continua valendo dentro de cada caderno: duas
+    // gravações simultâneas da MESMA sessão furariam o teto de 20 do banco por corrida.
+    // Sessões diferentes (uma por projeto) não disputam nada entre si.
+    if (rodando.has(caderno)) return caderno;
+    rodando.add(caderno);
     try {
       if (forcarFallback()) {
         // modo de teste: marca como salva sem tocar a rede, pra ensaiar a oficina
@@ -386,17 +394,20 @@
       }
       return caderno;
     } finally {
-      rodando = false;
+      rodando.delete(caderno);
     }
   }
 
-  let timerRetentativa = null;
+  // mesma razão do `rodando` acima: um timer só, global, agendaria a retentativa de um
+  // caderno e engoliria a dos outros — o projeto B ficaria offline pra sempre porque o
+  // A já tinha marcado o timer.
+  const timersRetentativa = new Map();
   function agendarRetentativa(caderno) {
-    if (timerRetentativa) return;
-    timerRetentativa = setTimeout(function () {
-      timerRetentativa = null;
+    if (timersRetentativa.has(caderno)) return;
+    timersRetentativa.set(caderno, setTimeout(function () {
+      timersRetentativa.delete(caderno);
       processarFila(caderno);
-    }, ESPERA_RETENTATIVA_MS);
+    }, ESPERA_RETENTATIVA_MS));
   }
 
   /* --------------------------------------------------------------- API da tela */
@@ -453,7 +464,12 @@
   // "tentar de novo" do cartão em erro, e o botão de reenviar tudo. Força a fila agora,
   // sem esperar o debounce.
   function enviarAgora(caderno) {
-    Object.keys(timers).forEach(function (k) { clearTimeout(timers[k]); delete timers[k]; });
+    // só os debounces DESTE caderno: varrer o objeto inteiro cancelaria a digitação que
+    // o gestor acabou de fazer em outro projeto marcado no checklist (item 3), e aquela
+    // demanda ficaria pendente sem nada pra reagendar o envio.
+    caderno.demandas.forEach(function (d) {
+      if (timers[d.chave_local]) { clearTimeout(timers[d.chave_local]); delete timers[d.chave_local]; }
+    });
     caderno.demandas.forEach(function (d) {
       if (d.estado === "erro" && podeEnviar(d)) d.estado = "pendente";
     });

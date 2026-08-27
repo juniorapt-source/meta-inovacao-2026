@@ -78,8 +78,19 @@
 .cv-canal-botoes{display:flex;gap:6px;flex-shrink:0}
 .cv-canal-botoes .btn,.cv-canal-botoes .btn.sec{padding:6px 12px;font-size:11px}
 
+/* ---- passo 2: um bloco por projeto marcado (item 3 redesenho — sub-itens 3.3/3.4) ----
+   Antes existia UMA seção #cv-passo2 com ids fixos (#cv-mini-matriz, #cv-paineis,
+   #cv-resumo). Com o checklist são N blocos simultâneos, então tudo que era id virou
+   classe + data-projeto: dois projetos marcados = dois .cv-bloco irmãos dentro de
+   #cv-blocos, cada um com a sua matriz, os seus painéis e o seu resumo. */
+#cv-blocos{display:flex;flex-direction:column;gap:34px}
+.cv-bloco{min-width:0}
+.cv-bloco+.cv-bloco{padding-top:26px;border-top:2px solid var(--linha)}
+.cv-bloco-titulo{font-family:var(--font-sans);font-weight:300;font-size:18px;margin-bottom:4px}
+.cv-voltar-lista{margin:0 0 8px}
+
 /* ---- painéis de demanda ---- */
-#cv-paineis{margin-top:16px;display:flex;flex-direction:column;gap:14px}
+.cv-paineis{margin-top:16px;display:flex;flex-direction:column;gap:14px}
 .cv-painel h3{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
   font-family:var(--font-sans);font-weight:400;font-size:17px;color:var(--tinta);margin-bottom:12px}
 .cv-fechar-painel{background:none;border:0;padding:0;font-family:'DM Sans',sans-serif;font-size:11px;
@@ -164,22 +175,13 @@
   <p class="cv-nota" id="cv-projetos-feitos" hidden>Já respondeu por: <span id="cv-lista-projetos-feitos"></span> —
     pode escolher outro projeto acima quando quiser, o que já foi preenchido continua salvo.</p>
 
-  <p class="aviso" id="cv-aviso-escolha" style="margin-top:16px">Escolha o seu projeto acima pra ver os 10 canais e começar a preencher.</p>
+  <p class="aviso" id="cv-aviso-escolha" style="margin-top:16px">Marque acima o(s) seu(s) projeto(s) pra ver os 10 canais de cada um e começar a preencher.</p>
 
+  <!-- Um bloco por projeto marcado no checklist acima — o conteúdo de cada um
+       (título, mini-matriz, painéis, resumo, botão de .csv) é montado em JS por
+       montarBlocoProjeto(), sub-item 3.4. Aqui só o container. -->
   <section id="cv-passo2" hidden style="margin-top:22px">
-    <button type="button" class="cv-link-escape" id="cv-trocar-projeto" style="margin:0 0 8px">‹ Trocar de projeto</button>
-    <h2 class="secao-titulo" style="font-family:var(--font-sans);font-weight:300;font-size:18px;margin-bottom:4px">
-      Sua linha na matriz — <span id="cv-projeto-nome"></span>
-    </h2>
-    <p class="cv-nota cv-nota-projeto-novo" id="cv-nota-projeto-novo" hidden>Projeto novo — a equipe cadastra no golden record depois. Seu preenchimento já está guardado.</p>
-    <p class="pagina-sub" style="margin:6px 0 14px">Um projeto pode ter várias demandas pro mesmo canal — preencha quantas fizerem sentido, em quantos canais enxergar oportunidade.</p>
-    <div class="cv-mini-matriz" id="cv-mini-matriz"></div>
-    <div id="cv-paineis"></div>
-
-    <div class="cv-rodape-resumo">
-      <span class="cv-resumo-texto" id="cv-resumo" aria-live="polite"></span>
-      <button type="button" class="btn sec" id="cv-baixar">Baixar minha cópia (.csv)</button>
-    </div>
+    <div id="cv-blocos"></div>
   </section>
 
   <p class="cv-rodape-marca" id="cv-rodape-marca"></p>
@@ -275,213 +277,250 @@
     (cfg.projeto || "Carta de Corso") + " · v" + (cfg.versao || "dev") + " · sem login, sem senha — preenchimento entra como rascunho até a equipe validar";
 
   /* ------------------------------------------------------------------- refs */
-  const selProjeto = document.getElementById("cv-projeto");
+  const listaEl = document.getElementById("cv-projeto");
   const btnEscape = document.getElementById("cv-escape-btn");
   const wrapEscape = document.getElementById("cv-escape-wrap");
   const inputEscape = document.getElementById("cv-projeto-livre");
-  const btnVoltarEscape = document.getElementById("cv-escape-voltar");
+  const btnEscapeAdicionar = document.getElementById("cv-escape-adicionar");
   const inputNome = document.getElementById("cv-nome");
   const avisoEscolha = document.getElementById("cv-aviso-escolha");
-  const passo2 = document.getElementById("cv-passo2");
   const passo1 = document.getElementById("cv-passo1");
-  const btnTrocarProjeto = document.getElementById("cv-trocar-projeto");
-  const projetosFeitosEl = document.getElementById("cv-projetos-feitos");
-  const listaProjetosFeitosEl = document.getElementById("cv-lista-projetos-feitos");
-  const projetoNomeEl = document.getElementById("cv-projeto-nome");
-  const notaProjetoNovo = document.getElementById("cv-nota-projeto-novo");
-  const miniMatrizEl = document.getElementById("cv-mini-matriz");
-  const paineisEl = document.getElementById("cv-paineis");
-  const resumoEl = document.getElementById("cv-resumo");
-  const btnBaixar = document.getElementById("cv-baixar");
+  const passo2 = document.getElementById("cv-passo2");
+  const blocosEl = document.getElementById("cv-blocos");
 
   /* --------------------------------------------------------- estado da tela */
-  let caderno = null;
-  const paineisAbertos = new Set();
+  // item 3 do plano de melhorias de navegação, redesenho de 27/08 (sub-item 3.3): não
+  // existe mais "o caderno ATIVO". O gestor marca N projetos no checklist e responde
+  // por todos na mesma visita, então o estado é N cadernos simultâneos e N blocos de
+  // tela — um por projeto marcado.
+  //
+  // Isto NÃO exigiu mudança no armazenamento: js/db-canva.js já guardava um caderno por
+  // projeto, com sessão própria por projeto ("Uma sessão por projeto" lá). O que muda é
+  // só quantos deles a tela segura ao mesmo tempo.
+  //
+  // DESMARCAR TIRA DA TELA, NUNCA DO NAVEGADOR: o bloco sai do DOM e o caderno sai
+  // destes Maps, mas a chave do localStorage continua lá — remarcar chama
+  // carregarCaderno() de novo e devolve tudo o que tinha sido preenchido. É por isso
+  // que aqui não existe nenhuma chamada de "apagar caderno".
+  const cadernos = new Map();   // nome do projeto -> caderno (js/db-canva.js)
+  const blocos = new Map();     // nome do projeto -> { el, render, destruir }
+  let selecao = [];             // nomes marcados, na ordem em que aparecem no checklist
 
-  /* ------------------------------------------------------- passo 1: projeto */
-  async function montarSelectProjetos() {
+  // chave dos dois Maps acima e do que a RPC vai receber: o nome com trim, igual ao que
+  // DB_CANVA.carregarCaderno() grava em caderno.projeto (texto()). Sem isto, um espaço
+  // sobrando no value do checkbox faria blocos.get(caderno.projeto) devolver undefined e
+  // o bloco pararia de re-renderizar sozinho — a regressão silenciosa clássica deste item.
+  function chaveProjeto(nome) { return String(nome == null ? "" : nome).trim(); }
+
+  /* ------------------------------------------- passo 1: checklist de projetos */
+  function itemProjetoHtml(nome) {
+    return '<label class="cv-projeto-item"><input type="checkbox" class="cv-chk-projeto" value="' +
+      esc(nome) + '"><span>' + esc(nome) + "</span></label>";
+  }
+
+  // substitui montarSelectProjetos(): mesmo agrupamento por núcleo que o <optgroup>
+  // fazia, agora como <fieldset> com um "selecionar todos" no <legend> (estrutura
+  // descrita no comentário do <style>, escrita pelo sub-item 3.2).
+  async function montarListaProjetos() {
     const { lista: projetos, usandoFallback } = await DB_PROJETOS.carregar();
     if (usandoFallback) document.getElementById("cv-aviso-fallback").hidden = false;
 
     const nucleos = [...new Set(projetos.map((p) => p.nucleo))];
-    let html = '<option value="">— selecione —</option>';
-    nucleos.forEach((nu) => {
-      html += '<optgroup label="' + esc(nu) + '">';
-      html += projetos.filter((p) => p.nucleo === nu)
-        .map((p) => '<option value="' + esc(p.iniciativa) + '">' + esc(p.iniciativa) + "</option>").join("");
-      html += "</optgroup>";
-    });
-    selProjeto.innerHTML = html;
+    listaEl.innerHTML = nucleos.map((nu) => {
+      const doNucleo = projetos.filter((p) => p.nucleo === nu);
+      return '<fieldset class="cv-projeto-grupo" data-nucleo="' + esc(nu) + '">' +
+        '<legend><label class="cv-projeto-item cv-projeto-todos">' +
+          '<input type="checkbox" class="cv-chk-todos-grupo" data-nucleo="' + esc(nu) + '">' +
+          "<span>" + esc(nu) + "</span></label></legend>" +
+        (doNucleo.length
+          ? doNucleo.map((p) => itemProjetoHtml(p.iniciativa)).join("")
+          : '<p class="cv-projeto-grupo-vazio">Nenhum projeto neste núcleo.</p>') +
+        "</fieldset>";
+    }).join("");
 
-    // ?projeto=embrapii já abre na linha do projeto (§7 do plano) — casamento normalizado
-    // igual ao da função SQL (cc_canva_normalizar), só pra pré-selecionar aqui; quem decide
-    // de verdade se o projeto casa com o golden record é sempre a RPC.
+    // seleção inicial = o que ficou marcado da última visita (3.1: F5 não perde a
+    // seleção) UNIDO ao ?projeto= do QR. União, não substituição: quem chega por um QR
+    // de projeto continua com os outros projetos que já tinha marcado.
+    const inicial = [];
+    const juntar = (n) => {
+      n = chaveProjeto(n);
+      if (n && !inicial.some((x) => normalizarLeve(x) === normalizarLeve(n))) inicial.push(n);
+    };
+    (DB_CANVA.carregarSelecaoProjetos() || []).forEach(juntar);
     if (projetoParam) {
+      // casamento normalizado igual ao da função SQL (cc_canva_normalizar), só pra
+      // pré-marcar aqui; quem decide se o projeto casa com o golden record é a RPC.
       const achado = projetos.find((p) => normalizarLeve(p.iniciativa) === normalizarLeve(projetoParam));
-      if (achado) {
-        selProjeto.value = achado.iniciativa;
-        escolherProjeto(achado.iniciativa);
-      } else {
-        ativarEscape(projetoParam);
-      }
+      juntar(achado ? achado.iniciativa : projetoParam);
     }
+    inicial.forEach(marcarProjeto);
+    aoMudarSelecao();
   }
 
-  function ativarEscape(valorInicial) {
-    wrapEscape.hidden = false;
-    selProjeto.disabled = true;
-    if (valorInicial) inputEscape.value = valorInicial;
-    inputEscape.focus();
-    if (valorInicial) escolherProjeto(valorInicial);
+  function checkboxDoProjeto(nome) {
+    const alvo = normalizarLeve(nome);
+    return Array.from(listaEl.querySelectorAll(".cv-chk-projeto"))
+      .find((c) => normalizarLeve(c.value) === alvo) || null;
   }
-  function desativarEscape() {
-    wrapEscape.hidden = true;
-    selProjeto.disabled = false;
+
+  // projeto que não está no golden record (o escape "não encontrei o meu", e o
+  // ?projeto= que não casou com nada) entra num grupo à parte no fim da lista, com o
+  // mesmo checkbox dos outros — daí pra frente ele é um item marcável como qualquer um.
+  function adicionarProjetoLivre(nome) {
+    nome = chaveProjeto(nome);
+    if (!nome) return null;
+    const jaTem = checkboxDoProjeto(nome);
+    if (jaTem) return jaTem;
+    let grupo = document.getElementById("cv-projeto-livres");
+    if (!grupo) {
+      grupo = document.createElement("fieldset");
+      grupo.className = "cv-projeto-grupo";
+      grupo.id = "cv-projeto-livres";
+      grupo.innerHTML = '<p class="cv-projeto-grupo-titulo">Projetos que você adicionou</p>';
+      listaEl.appendChild(grupo);
+    }
+    const wrap = document.createElement("div");
+    wrap.innerHTML = itemProjetoHtml(nome);
+    const label = wrap.firstElementChild;
+    grupo.appendChild(label);
+    return label.querySelector(".cv-chk-projeto");
+  }
+
+  function marcarProjeto(nome) {
+    const chk = checkboxDoProjeto(nome) || adicionarProjetoLivre(nome);
+    if (chk) chk.checked = true;
+    return chk;
+  }
+
+  // "selecionar todos" de cada núcleo reflete o estado do grupo: marcado (todos),
+  // vazio (nenhum) ou indeterminate (parcial). O grupo dos projetos livres não tem
+  // cabeçalho de seleção — ele tem só o título, por isso o early return.
+  function sincronizarCabecalhosDeGrupo() {
+    Array.from(listaEl.querySelectorAll(".cv-projeto-grupo")).forEach((grupo) => {
+      const todos = grupo.querySelector(".cv-chk-todos-grupo");
+      if (!todos) return;
+      const itens = Array.from(grupo.querySelectorAll(".cv-chk-projeto"));
+      const marcados = itens.filter((c) => c.checked).length;
+      todos.checked = itens.length > 0 && marcados === itens.length;
+      todos.indeterminate = marcados > 0 && marcados < itens.length;
+    });
+  }
+
+  // ponto único por onde a seleção muda: lê o DOM, persiste (3.1) e reconcilia os
+  // blocos. Toda interação do checklist termina aqui — assim não existe caminho em que
+  // a tela mostra um bloco que não está marcado, ou vice-versa.
+  function aoMudarSelecao() {
+    // dedupe por nome: nada impede a seed de ter o mesmo nome de projeto em dois
+    // núcleos, e aí o nome entraria duas vezes na seleção (e na chave persistida) pra
+    // um caderno só — os dois Maps são chaveados por nome.
+    selecao = [...new Set(
+      Array.from(listaEl.querySelectorAll(".cv-chk-projeto"))
+        .filter((c) => c.checked)
+        .map((c) => chaveProjeto(c.value))
+        .filter(Boolean)
+    )];
+    sincronizarCabecalhosDeGrupo();
+    DB_CANVA.salvarSelecaoProjetos(selecao);
+    renderBlocosProjetos();
+  }
+
+  listaEl.addEventListener("change", (e) => {
+    const todos = e.target.closest(".cv-chk-todos-grupo");
+    if (todos) {
+      // "Selecionar todos" do núcleo: marca/desmarca o grupo inteiro de uma vez. O
+      // indeterminate é limpo aqui e recalculado por sincronizarCabecalhosDeGrupo() —
+      // o navegador não desfaz isso sozinho ao clicar.
+      const grupo = todos.closest(".cv-projeto-grupo");
+      todos.indeterminate = false;
+      Array.from(grupo.querySelectorAll(".cv-chk-projeto")).forEach((c) => { c.checked = todos.checked; });
+      aoMudarSelecao();
+      return;
+    }
+    if (e.target.closest(".cv-chk-projeto")) aoMudarSelecao();
+  });
+
+  /* ------------------------------------------- escape "não achei meu projeto" */
+  btnEscape.addEventListener("click", () => {
+    wrapEscape.hidden = !wrapEscape.hidden;
+    if (!wrapEscape.hidden) inputEscape.focus();
+  });
+
+  function adicionarDaCaixaLivre() {
+    const nome = chaveProjeto(inputEscape.value);
+    if (!nome) return;
+    const chk = marcarProjeto(nome);
     inputEscape.value = "";
+    aoMudarSelecao();
+    if (chk) chk.closest(".cv-projeto-item").scrollIntoView({ block: "nearest" });
   }
-
-  // item 2 do plano de melhorias de navegação (26/08) — depois de rolar pra baixo pra
-  // preencher, nada na tela lembrava que dava pra voltar e escolher outro projeto (o
-  // <select> de #cv-passo1 nunca fica escondido, só passa despercebido). Rola de volta
-  // e devolve o foco pro <select> — sem esconder/mostrar seções nem duplicar estado.
-  btnTrocarProjeto.addEventListener("click", () => {
-    passo1.scrollIntoView({ behavior: "smooth", block: "start" });
-    selProjeto.focus();
-  });
-
-  // item 3 — "responder por mais de um projeto": a lista de baixo é só visibilidade
-  // (ver js/db-canva.js: cada projeto já tinha sua própria sessão local, sem perder
-  // nada ao trocar). Recalcula sempre que algo pode ter mudado — trocar de projeto ou
-  // uma demanda salvar — pra continuar refletindo o que está de fato no navegador.
-  function renderProjetosRespondidos() {
-    const feitos = (DB_CANVA.projetosRespondidosLocalmente ? DB_CANVA.projetosRespondidosLocalmente() : [])
-      .filter((p) => normalizarLeve(p.projeto) !== normalizarLeve(caderno ? caderno.projeto : ""));
-    if (!feitos.length) { projetosFeitosEl.hidden = true; return; }
-    listaProjetosFeitosEl.textContent = feitos.map((p) => p.projeto).join(", ");
-    projetosFeitosEl.hidden = false;
-  }
-  renderProjetosRespondidos();
-
-  btnEscape.addEventListener("click", () => ativarEscape(""));
-  btnVoltarEscape.addEventListener("click", () => {
-    desativarEscape();
-    if (selProjeto.value) escolherProjeto(selProjeto.value);
-    else { caderno = null; passo2.hidden = true; avisoEscolha.hidden = false; }
-  });
-  selProjeto.addEventListener("change", () => {
-    if (selProjeto.value) escolherProjeto(selProjeto.value);
-  });
-  inputEscape.addEventListener("change", () => {
-    if (inputEscape.value.trim()) escolherProjeto(inputEscape.value.trim());
-  });
+  btnEscapeAdicionar.addEventListener("click", adicionarDaCaixaLivre);
   inputEscape.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); if (inputEscape.value.trim()) escolherProjeto(inputEscape.value.trim()); }
+    if (e.key === "Enter") { e.preventDefault(); adicionarDaCaixaLivre(); }
   });
+
+  /* --------------------------------------------------------- nome do gestor */
+  // um nome só pra todos os projetos da visita: quem responde por três projetos é a
+  // mesma pessoa, e digitar o nome três vezes seria o tipo de atrito que faz o gestor
+  // desistir do terceiro.
   inputNome.addEventListener("change", () => {
-    if (caderno) DB_CANVA.definirAutor(caderno, inputNome.value);
+    const nome = inputNome.value.trim();
+    cadernos.forEach((c) => DB_CANVA.definirAutor(c, nome));
   });
 
-  /* ------------------------------------------------------- carregar caderno */
-  function escolherProjeto(nomeProjeto) {
-    nomeProjeto = String(nomeProjeto || "").trim();
-    if (!nomeProjeto) { caderno = null; passo2.hidden = true; avisoEscolha.hidden = false; renderProjetosRespondidos(); return; }
+  /* ------------------------------------------------- blocos (um por projeto) */
+  function renderBlocosProjetos() {
+    // desmarcados: some o bloco da tela e o caderno da memória. O localStorage fica.
+    Array.from(blocos.keys()).forEach((nome) => {
+      if (selecao.indexOf(nome) !== -1) return;
+      blocos.get(nome).destruir();
+      blocos.delete(nome);
+      cadernos.delete(nome);
+    });
 
-    caderno = DB_CANVA.carregarCaderno(nomeProjeto);
-    if (!caderno.autor_nome && inputNome.value.trim()) DB_CANVA.definirAutor(caderno, inputNome.value.trim());
-    inputNome.value = caderno.autor_nome || inputNome.value || "";
+    // marcados que ainda não têm bloco: carrega o caderno (volta com tudo o que já
+    // tinha sido preenchido, se o projeto já foi marcado antes) e monta o bloco.
+    selecao.forEach((nome) => {
+      if (blocos.has(nome)) return;
+      const caderno = DB_CANVA.carregarCaderno(nome);
+      cadernos.set(nome, caderno);
+      if (!caderno.autor_nome && inputNome.value.trim()) DB_CANVA.definirAutor(caderno, inputNome.value.trim());
+      if (caderno.autor_nome && !inputNome.value.trim()) inputNome.value = caderno.autor_nome;
+      blocos.set(nome, montarBlocoProjeto(nome, caderno));
+    });
 
-    avisoEscolha.hidden = true;
-    passo2.hidden = false;
-    projetoNomeEl.textContent = caderno.projeto;
+    // reordena pra bater com a ordem do checklist (appendChild de um nó que já está no
+    // DOM move, não duplica) — sem isto, remarcar um projeto jogaria o bloco dele pro
+    // fim da página mesmo ele estando no primeiro núcleo da lista.
+    selecao.forEach((nome) => blocosEl.appendChild(blocos.get(nome).el));
 
-    // painéis abertos por padrão: os que já têm demanda (retomando depois de um F5) + o
-    // canal desta oficina, se vier na querystring — mesmo sem demanda ainda, pronto pra
-    // preencher (§10 do plano: o gestor cai direto pronto pra escrever).
-    paineisAbertos.clear();
-    caderno.demandas.forEach((d) => paineisAbertos.add(d.canal));
-    if (canalDestaque) {
-      const temAlguma = caderno.demandas.some((d) => d.canal === canalDestaque);
-      paineisAbertos.add(canalDestaque);
-      garantirPainelDom(canalDestaque);
-      if (!temAlguma) adicionarCartao(canalDestaque, false);
-    }
-    paineisAbertos.forEach(garantirPainelDom);
-
-    render();
+    passo2.hidden = selecao.length === 0;
+    avisoEscolha.hidden = selecao.length > 0;
+    blocos.forEach((b) => b.render());
   }
 
-  // um único ouvinte global — checa se o caderno que mudou é o que está na tela agora,
-  // pra uma resposta de rede atrasada de um projeto que o gestor já trocou não pisar na UI.
-  DB_CANVA.assinar(function (c) { if (c === caderno) render(); });
+  // um único ouvinte global — acha o bloco do caderno que mudou dentro do Map, em vez
+  // de comparar com "o caderno ativo" (que não existe mais). Resposta de rede atrasada
+  // de um projeto que o gestor já desmarcou simplesmente não encontra bloco e não mexe
+  // em nada na tela.
+  DB_CANVA.assinar(function (c) {
+    if (!c) return;
+    const bloco = blocos.get(chaveProjeto(c.projeto));
+    if (bloco) bloco.render();
+  });
 
-  /* --------------------------------------------------------------- render() */
-  function render() {
-    if (!caderno) return;
-    notaProjetoNovo.hidden = !caderno.projeto_novo;
-    renderLinhasCanal();
-    paineisAbertos.forEach(sincronizarPainel);
-    renderResumo();
-    renderProjetosRespondidos();
-  }
+  /* ------------------------------------------------------------------- csv */
+  // mecânica de escapar/montar/baixar vem de js/csv-export.js (item 4 do plano do canvas
+  // das oficinas extraiu pra canva-consolidado.html reaproveitar, em vez de duplicar) —
+  // aqui fica só o que é específico desta tela: as colunas e o nome do arquivo.
+  const ROTULO_ESTADO = {
+    incompleta: "incompleta", pendente: "aguardando envio", salvando: "enviando",
+    salva: "enviada", erro: "erro ao enviar",
+  };
 
   function contagemTexto(n) {
     if (n === 0) return "nenhuma demanda";
     if (n === 1) return "1 demanda";
     return n + " demandas";
-  }
-
-  // linhas da mini-matriz: sem campo de texto nenhum, então reescrever o innerHTML inteiro a
-  // cada render() é seguro (não existe foco de digitação pra perder aqui).
-  function renderLinhasCanal() {
-    const contagens = DB_CANVA.contarPorCanal(caderno);
-    miniMatrizEl.innerHTML = CANAIS.map((c) => {
-      const n = contagens[c.id] || 0;
-      const aberto = paineisAbertos.has(c.id);
-      const estrela = c.id === canalDestaque ? ' <span class="cv-estrela" title="canal desta oficina">★</span>' : "";
-      return '<div class="cv-linha-canal" data-canal="' + esc(c.id) + '">' +
-        '<span class="cv-canal-nome">' + esc(c.nome) + estrela + '</span>' +
-        '<span class="cv-canal-contagem' + (n ? " cv-tem-demanda" : "") + '">' + contagemTexto(n) + '</span>' +
-        '<span class="cv-canal-botoes">' +
-          '<button type="button" class="btn sec cv-btn-mais" data-canal="' + esc(c.id) + '">+ demanda</button>' +
-          (n || aberto
-            ? '<button type="button" class="btn sec cv-btn-ver" data-canal="' + esc(c.id) + '">' + (aberto ? "ocultar" : "ver") + "</button>"
-            : "") +
-        "</span></div>";
-    }).join("");
-  }
-
-  /* -------------------------------------------------------------- painéis */
-  function painelHtml(canal) {
-    return '<section class="card cv-painel" id="cv-painel-' + esc(canal.id) + '">' +
-      "<h3>" + esc(canal.completo) +
-        '<button type="button" class="cv-fechar-painel" data-canal="' + esc(canal.id) + '">fechar ▲</button></h3>' +
-      '<div class="cv-lista-cartoes" data-canal="' + esc(canal.id) + '"></div>' +
-      '<button type="button" class="btn sec cv-btn-outra" data-canal="' + esc(canal.id) + '">+ outra demanda para este canal</button>' +
-      "</section>";
-  }
-
-  function garantirPainelDom(canalId) {
-    if (document.getElementById("cv-painel-" + canalId)) return;
-    const canal = CANAIS.find((c) => c.id === canalId);
-    if (!canal) return;
-    const wrap = document.createElement("div");
-    wrap.innerHTML = painelHtml(canal);
-    paineisEl.appendChild(wrap.firstElementChild);
-  }
-
-  function abrirPainel(canalId, comCartaoNovo) {
-    paineisAbertos.add(canalId);
-    garantirPainelDom(canalId);
-    if (comCartaoNovo) adicionarCartao(canalId, true);
-    else sincronizarPainel(canalId);
-    renderLinhasCanal();
-    document.getElementById("cv-painel-" + canalId).scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
-  function fecharPainel(canalId) {
-    paineisAbertos.delete(canalId);
-    const painel = document.getElementById("cv-painel-" + canalId);
-    if (painel) painel.remove();
-    renderLinhasCanal();
   }
 
   function badgeDe(d) {
@@ -493,201 +532,330 @@
     return ["cv-badge-pendente", "rascunho local"];
   }
 
-  // cria o CARTÃO uma única vez (valores iniciais lidos de d — importa pra quando o caderno
-  // volta do localStorage num F5); depois disso, quem mantém d.* atualizado é a própria
-  // digitação do gestor (ver salvarCampoDoCartao), então o cartão nunca mais escreve de volta
-  // no <input>/<textarea> — é assim que um render() no meio da digitação não rouba o cursor.
-  function criarCartaoEl(d) {
-    const chave = d.chave_local;
-    const [classeBadge] = badgeDe(d);
-    const marcado = (v) => (d.canal_proprio === v ? " checked" : "");
-    const wrap = document.createElement("div");
-    wrap.innerHTML =
-      '<div class="cv-cartao" data-chave="' + esc(chave) + '" data-canal="' + esc(d.canal) + '">' +
-        '<div class="cv-cartao-topo">' +
-          '<span class="cv-badge ' + classeBadge + '" data-badge aria-live="polite"></span>' +
-          '<span class="cv-cartao-acoes">' +
-            '<button type="button" class="cv-tentar" data-tentar hidden>tentar de novo</button>' +
-            '<button type="button" class="cv-remover" data-remover aria-label="Remover esta demanda">remover</button>' +
-          "</span>" +
-        "</div>" +
-        '<div class="cv-campo"><label for="sv-' + esc(chave) + '">Serviço apresentado</label>' +
-          '<input type="text" id="sv-' + esc(chave) + '" class="cv-f-servico" maxlength="2000" value="' + esc(d.servico) + '"></div>' +
-        '<div class="cv-campo"><label for="pb-' + esc(chave) + '">Que dor esse serviço endereça hoje</label>' +
-          '<textarea id="pb-' + esc(chave) + '" class="cv-f-problema" maxlength="2000" rows="2">' + esc(d.problema) + "</textarea></div>" +
-        '<div class="cv-campo"><label for="bq-' + esc(chave) + '">Por que não funcionaria <span class="cv-opcional">(opcional)</span></label>' +
-          '<textarea id="bq-' + esc(chave) + '" class="cv-f-bloqueio" maxlength="2000" rows="2">' + esc(d.bloqueio) + "</textarea></div>" +
-        '<fieldset class="cv-campo cv-radios"><legend>Já existe em canal próprio (pirata)?</legend>' +
-          '<div class="cv-opcoes">' +
-            '<label><input type="radio" name="cp-' + esc(chave) + '" class="cv-f-cproprio" value="sim"' + marcado("sim") + "> Sim</label>" +
-            '<label><input type="radio" name="cp-' + esc(chave) + '" class="cv-f-cproprio" value="nao"' + marcado("nao") + "> Não</label>" +
-            '<label><input type="radio" name="cp-' + esc(chave) + '" class="cv-f-cproprio" value="nao_sei"' + marcado("nao_sei") + "> Não sei</label>" +
-          "</div></fieldset>" +
-        '<div class="cv-campo" data-qual-wrap' + (d.canal_proprio === "sim" ? "" : " hidden") + '>' +
-          '<label for="ql-' + esc(chave) + '">Qual canal próprio?</label>' +
-          '<input type="text" id="ql-' + esc(chave) + '" class="cv-f-qual" maxlength="2000" value="' + esc(d.canal_proprio_qual) + '"></div>' +
-        '<div class="cv-campo"><label for="rs-' + esc(chave) + '">Responsável</label>' +
-          '<input type="text" id="rs-' + esc(chave) + '" class="cv-f-responsavel" maxlength="2000" value="' + esc(d.responsavel) + '"></div>' +
-        '<div class="cv-campo"><label for="pz-' + esc(chave) + '">Prazo</label>' +
-          '<input type="date" id="pz-' + esc(chave) + '" class="cv-f-prazo" min="' + PRAZO_MIN + '" max="' + PRAZO_MAX + '" value="' + esc(d.prazo || "") + '"></div>' +
-        '<p class="cv-estado-erro" data-erro hidden></p>' +
-        '<div class="cv-hp" aria-hidden="true">' +
-          '<label for="hp-' + esc(chave) + '">Deixe este campo em branco</label>' +
-          '<input type="text" id="hp-' + esc(chave) + '" class="cv-f-honeypot" tabindex="-1" autocomplete="off">' +
-        "</div>" +
+  /* ------------------------------------------------ fábrica do bloco de projeto */
+  // sub-item 3.4: tudo o que antes eram funções globais sobre ids fixos
+  // (#cv-mini-matriz, #cv-paineis, #cv-resumo, #cv-painel-<canal>) mora aqui dentro,
+  // fechado sobre O caderno e OS elementos deste projeto. Dois projetos marcados são
+  // duas chamadas desta função, com dois closures independentes — é isso que impede
+  // demanda de um projeto de aparecer na matriz do outro.
+  //
+  // Nenhum id novo é gerado por bloco: dentro do bloco a busca é sempre por
+  // data-canal/classe, e o único id que sobrou nos cartões (sv-<uuid>, pz-<uuid>, o
+  // name dos radios) já era único por demanda, não por projeto.
+  function montarBlocoProjeto(nomeProjeto, caderno) {
+    const paineisAbertos = new Set();
+
+    const el = document.createElement("section");
+    el.className = "cv-bloco";
+    el.dataset.projeto = nomeProjeto;
+    el.innerHTML =
+      '<button type="button" class="cv-link-escape cv-voltar-lista">‹ Voltar para a lista de projetos</button>' +
+      '<h2 class="secao-titulo cv-bloco-titulo">Sua linha na matriz — <span class="cv-bloco-nome">' +
+        esc(nomeProjeto) + "</span></h2>" +
+      '<p class="cv-nota cv-nota-projeto-novo" data-nota-novo hidden>Projeto novo — a equipe cadastra no golden record depois. Seu preenchimento já está guardado.</p>' +
+      '<p class="pagina-sub" style="margin:6px 0 14px">Um projeto pode ter várias demandas pro mesmo canal — preencha quantas fizerem sentido, em quantos canais enxergar oportunidade.</p>' +
+      '<div class="cv-mini-matriz" data-mini></div>' +
+      '<div class="cv-paineis" data-paineis></div>' +
+      '<div class="cv-rodape-resumo">' +
+        '<span class="cv-resumo-texto" data-resumo aria-live="polite"></span>' +
+        '<button type="button" class="btn sec" data-baixar>Baixar minha cópia (.csv)</button>' +
       "</div>";
-    return wrap.firstElementChild;
-  }
 
-  // atualiza só o que PODE mudar sem o gestor ter mexido no campo: o selo de estado e a
-  // frase de erro — nunca o value de um input, nunca reordena/recria um cartão que já
-  // existia. É essa a peça que deixa digitar com o banco respondendo ao fundo.
-  // (a visibilidade do "qual" NÃO entra aqui: ela só muda quando o próprio gestor troca o
-  // radio, e quem cuida disso é o ouvinte de change — mexer nela a cada render seria
-  // reintroduzir pela porta dos fundos o problema que esta função existe pra evitar.)
-  function patchCartaoEl(el, d) {
-    const [classeBadge, rotulo] = badgeDe(d);
-    const badge = el.querySelector("[data-badge]");
-    badge.className = "cv-badge " + classeBadge;
-    badge.textContent = rotulo;
-    const erroEl = el.querySelector("[data-erro]");
-    if (d.estado === "erro" && d.erro) { erroEl.hidden = false; erroEl.textContent = d.erro; }
-    else if (d.estado === "incompleta" && d.erro) { erroEl.hidden = false; erroEl.textContent = d.erro; }
-    else { erroEl.hidden = true; erroEl.textContent = ""; }
-    el.querySelector("[data-tentar]").hidden = d.estado !== "erro";
-  }
+    const miniMatrizEl = el.querySelector("[data-mini]");
+    const paineisEl = el.querySelector("[data-paineis]");
+    const resumoEl = el.querySelector("[data-resumo]");
+    const notaProjetoNovo = el.querySelector("[data-nota-novo]");
 
-  function sincronizarPainel(canalId) {
-    const painel = document.getElementById("cv-painel-" + canalId);
-    if (!painel) return;
-    const lista = painel.querySelector(".cv-lista-cartoes");
-    const demandas = caderno.demandas.filter((d) => d.canal === canalId);
-    const chavesAtuais = new Set(demandas.map((d) => d.chave_local));
-    Array.from(lista.children).forEach((el) => { if (!chavesAtuais.has(el.dataset.chave)) el.remove(); });
-    demandas.forEach((d) => {
-      let el = lista.querySelector('[data-chave="' + d.chave_local + '"]');
-      if (!el) { el = criarCartaoEl(d); lista.appendChild(el); }
-      patchCartaoEl(el, d);
+    // item 2 do plano de melhorias de navegação: depois de rolar pra baixo pra
+    // preencher, nada lembrava que dava pra voltar e mexer na escolha de projeto. Com N
+    // blocos o botão passa a ser um por bloco, e devolve o foco no checkbox DESTE
+    // projeto — que é onde o gestor vai querer mexer (desmarcar, ou marcar mais um).
+    el.querySelector(".cv-voltar-lista").addEventListener("click", () => {
+      passo1.scrollIntoView({ behavior: "smooth", block: "start" });
+      const chk = checkboxDoProjeto(nomeProjeto);
+      if (chk) chk.focus();
     });
-  }
 
-  function adicionarCartao(canalId, focar) {
-    const chave = DB_CANVA.novoUuid();
-    DB_CANVA.salvarDemanda(caderno, {
-      chave_local: chave, canal: canalId, servico: "", problema: "", bloqueio: "",
-      canal_proprio: "", canal_proprio_qual: "", responsavel: "", prazo: "", empresa_site: "",
-    });
-    if (focar) {
-      requestAnimationFrame(() => {
-        const el = document.querySelector('[data-chave="' + chave + '"] .cv-f-servico');
-        if (el) el.focus();
+    /* ---- mini-matriz ---- */
+    // linhas da mini-matriz: sem campo de texto nenhum, então reescrever o innerHTML inteiro a
+    // cada render() é seguro (não existe foco de digitação pra perder aqui).
+    function renderLinhasCanal() {
+      const contagens = DB_CANVA.contarPorCanal(caderno);
+      miniMatrizEl.innerHTML = CANAIS.map((c) => {
+        const n = contagens[c.id] || 0;
+        const aberto = paineisAbertos.has(c.id);
+        const estrela = c.id === canalDestaque ? ' <span class="cv-estrela" title="canal desta oficina">★</span>' : "";
+        return '<div class="cv-linha-canal" data-canal="' + esc(c.id) + '">' +
+          '<span class="cv-canal-nome">' + esc(c.nome) + estrela + "</span>" +
+          '<span class="cv-canal-contagem' + (n ? " cv-tem-demanda" : "") + '">' + contagemTexto(n) + "</span>" +
+          '<span class="cv-canal-botoes">' +
+            '<button type="button" class="btn sec cv-btn-mais" data-canal="' + esc(c.id) + '">+ demanda</button>' +
+            (n || aberto
+              ? '<button type="button" class="btn sec cv-btn-ver" data-canal="' + esc(c.id) + '">' + (aberto ? "ocultar" : "ver") + "</button>"
+              : "") +
+          "</span></div>";
+      }).join("");
+    }
+
+    /* ---- painéis ---- */
+    // id fixo #cv-painel-<canal> não serve mais (dois projetos teriam o mesmo id): o
+    // painel é achado DENTRO do bloco, por data-canal. canalId vem sempre da whitelist
+    // de DB_CANVA.CANAIS, então usar direto no seletor é seguro.
+    function painelDe(canalId) {
+      return paineisEl.querySelector('.cv-painel[data-canal="' + canalId + '"]');
+    }
+
+    function painelHtml(canal) {
+      return '<section class="card cv-painel" data-canal="' + esc(canal.id) + '">' +
+        "<h3>" + esc(canal.completo) +
+          '<button type="button" class="cv-fechar-painel" data-canal="' + esc(canal.id) + '">fechar ▲</button></h3>' +
+        '<div class="cv-lista-cartoes" data-canal="' + esc(canal.id) + '"></div>' +
+        '<button type="button" class="btn sec cv-btn-outra" data-canal="' + esc(canal.id) + '">+ outra demanda para este canal</button>' +
+        "</section>";
+    }
+
+    function garantirPainelDom(canalId) {
+      if (painelDe(canalId)) return;
+      const canal = CANAIS.find((c) => c.id === canalId);
+      if (!canal) return;
+      const wrap = document.createElement("div");
+      wrap.innerHTML = painelHtml(canal);
+      paineisEl.appendChild(wrap.firstElementChild);
+    }
+
+    function abrirPainel(canalId, comCartaoNovo) {
+      paineisAbertos.add(canalId);
+      garantirPainelDom(canalId);
+      if (comCartaoNovo) adicionarCartao(canalId, true);
+      else sincronizarPainel(canalId);
+      renderLinhasCanal();
+      const painel = painelDe(canalId);
+      if (painel) painel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+    function fecharPainel(canalId) {
+      paineisAbertos.delete(canalId);
+      const painel = painelDe(canalId);
+      if (painel) painel.remove();
+      renderLinhasCanal();
+    }
+
+    // cria o CARTÃO uma única vez (valores iniciais lidos de d — importa pra quando o caderno
+    // volta do localStorage num F5); depois disso, quem mantém d.* atualizado é a própria
+    // digitação do gestor (ver salvarCampoDoCartao), então o cartão nunca mais escreve de volta
+    // no <input>/<textarea> — é assim que um render() no meio da digitação não rouba o cursor.
+    function criarCartaoEl(d) {
+      const chave = d.chave_local;
+      const [classeBadge] = badgeDe(d);
+      const marcado = (v) => (d.canal_proprio === v ? " checked" : "");
+      const wrap = document.createElement("div");
+      wrap.innerHTML =
+        '<div class="cv-cartao" data-chave="' + esc(chave) + '" data-canal="' + esc(d.canal) + '">' +
+          '<div class="cv-cartao-topo">' +
+            '<span class="cv-badge ' + classeBadge + '" data-badge aria-live="polite"></span>' +
+            '<span class="cv-cartao-acoes">' +
+              '<button type="button" class="cv-tentar" data-tentar hidden>tentar de novo</button>' +
+              '<button type="button" class="cv-remover" data-remover aria-label="Remover esta demanda">remover</button>' +
+            "</span>" +
+          "</div>" +
+          '<div class="cv-campo"><label for="sv-' + esc(chave) + '">Serviço apresentado</label>' +
+            '<input type="text" id="sv-' + esc(chave) + '" class="cv-f-servico" maxlength="2000" value="' + esc(d.servico) + '"></div>' +
+          '<div class="cv-campo"><label for="pb-' + esc(chave) + '">Que dor esse serviço endereça hoje</label>' +
+            '<textarea id="pb-' + esc(chave) + '" class="cv-f-problema" maxlength="2000" rows="2">' + esc(d.problema) + "</textarea></div>" +
+          '<div class="cv-campo"><label for="bq-' + esc(chave) + '">Por que não funcionaria <span class="cv-opcional">(opcional)</span></label>' +
+            '<textarea id="bq-' + esc(chave) + '" class="cv-f-bloqueio" maxlength="2000" rows="2">' + esc(d.bloqueio) + "</textarea></div>" +
+          '<fieldset class="cv-campo cv-radios"><legend>Já existe em canal próprio (pirata)?</legend>' +
+            '<div class="cv-opcoes">' +
+              '<label><input type="radio" name="cp-' + esc(chave) + '" class="cv-f-cproprio" value="sim"' + marcado("sim") + "> Sim</label>" +
+              '<label><input type="radio" name="cp-' + esc(chave) + '" class="cv-f-cproprio" value="nao"' + marcado("nao") + "> Não</label>" +
+              '<label><input type="radio" name="cp-' + esc(chave) + '" class="cv-f-cproprio" value="nao_sei"' + marcado("nao_sei") + "> Não sei</label>" +
+            "</div></fieldset>" +
+          '<div class="cv-campo" data-qual-wrap' + (d.canal_proprio === "sim" ? "" : " hidden") + ">" +
+            '<label for="ql-' + esc(chave) + '">Qual canal próprio?</label>' +
+            '<input type="text" id="ql-' + esc(chave) + '" class="cv-f-qual" maxlength="2000" value="' + esc(d.canal_proprio_qual) + '"></div>' +
+          '<div class="cv-campo"><label for="rs-' + esc(chave) + '">Responsável</label>' +
+            '<input type="text" id="rs-' + esc(chave) + '" class="cv-f-responsavel" maxlength="2000" value="' + esc(d.responsavel) + '"></div>' +
+          '<div class="cv-campo"><label for="pz-' + esc(chave) + '">Prazo</label>' +
+            '<input type="date" id="pz-' + esc(chave) + '" class="cv-f-prazo" min="' + PRAZO_MIN + '" max="' + PRAZO_MAX + '" value="' + esc(d.prazo || "") + '"></div>' +
+          '<p class="cv-estado-erro" data-erro hidden></p>' +
+          '<div class="cv-hp" aria-hidden="true">' +
+            '<label for="hp-' + esc(chave) + '">Deixe este campo em branco</label>' +
+            '<input type="text" id="hp-' + esc(chave) + '" class="cv-f-honeypot" tabindex="-1" autocomplete="off">' +
+          "</div>" +
+        "</div>";
+      return wrap.firstElementChild;
+    }
+
+    // atualiza só o que PODE mudar sem o gestor ter mexido no campo: o selo de estado e a
+    // frase de erro — nunca o value de um input, nunca reordena/recria um cartão que já
+    // existia. É essa a peça que deixa digitar com o banco respondendo ao fundo.
+    // (a visibilidade do "qual" NÃO entra aqui: ela só muda quando o próprio gestor troca o
+    // radio, e quem cuida disso é o ouvinte de change — mexer nela a cada render seria
+    // reintroduzir pela porta dos fundos o problema que esta função existe pra evitar.)
+    function patchCartaoEl(cartaoEl, d) {
+      const [classeBadge, rotulo] = badgeDe(d);
+      const badge = cartaoEl.querySelector("[data-badge]");
+      badge.className = "cv-badge " + classeBadge;
+      badge.textContent = rotulo;
+      const erroEl = cartaoEl.querySelector("[data-erro]");
+      if (d.estado === "erro" && d.erro) { erroEl.hidden = false; erroEl.textContent = d.erro; }
+      else if (d.estado === "incompleta" && d.erro) { erroEl.hidden = false; erroEl.textContent = d.erro; }
+      else { erroEl.hidden = true; erroEl.textContent = ""; }
+      cartaoEl.querySelector("[data-tentar]").hidden = d.estado !== "erro";
+    }
+
+    function sincronizarPainel(canalId) {
+      const painel = painelDe(canalId);
+      if (!painel) return;
+      const lista = painel.querySelector(".cv-lista-cartoes");
+      const demandas = caderno.demandas.filter((d) => d.canal === canalId);
+      const chavesAtuais = new Set(demandas.map((d) => d.chave_local));
+      Array.from(lista.children).forEach((filho) => { if (!chavesAtuais.has(filho.dataset.chave)) filho.remove(); });
+      demandas.forEach((d) => {
+        let cartaoEl = lista.querySelector('[data-chave="' + d.chave_local + '"]');
+        if (!cartaoEl) { cartaoEl = criarCartaoEl(d); lista.appendChild(cartaoEl); }
+        patchCartaoEl(cartaoEl, d);
       });
     }
-  }
 
-  function coletarCampos(cartaoEl) {
-    const $ = (sel) => cartaoEl.querySelector(sel);
-    const radio = cartaoEl.querySelector(".cv-f-cproprio:checked");
+    function adicionarCartao(canalId, focar) {
+      const chave = DB_CANVA.novoUuid();
+      DB_CANVA.salvarDemanda(caderno, {
+        chave_local: chave, canal: canalId, servico: "", problema: "", bloqueio: "",
+        canal_proprio: "", canal_proprio_qual: "", responsavel: "", prazo: "", empresa_site: "",
+      });
+      if (focar) {
+        requestAnimationFrame(() => {
+          const campo = el.querySelector('[data-chave="' + chave + '"] .cv-f-servico');
+          if (campo) campo.focus();
+        });
+      }
+    }
+
+    function coletarCampos(cartaoEl) {
+      const $ = (sel) => cartaoEl.querySelector(sel);
+      const radio = cartaoEl.querySelector(".cv-f-cproprio:checked");
+      return {
+        chave_local: cartaoEl.dataset.chave,
+        canal: cartaoEl.dataset.canal,
+        servico: $(".cv-f-servico").value,
+        problema: $(".cv-f-problema").value,
+        bloqueio: $(".cv-f-bloqueio").value,
+        canal_proprio: radio ? radio.value : "",
+        canal_proprio_qual: $(".cv-f-qual").value,
+        responsavel: $(".cv-f-responsavel").value,
+        prazo: $(".cv-f-prazo").value,
+        facilitador: OFICINA.facilitador,
+        ciclo: OFICINA.ciclo,
+        encontro_id: OFICINA.encontro_id,
+        empresa_site: $(".cv-f-honeypot").value,
+      };
+    }
+
+    function salvarCampoDoCartao(cartaoEl) {
+      DB_CANVA.salvarDemanda(caderno, coletarCampos(cartaoEl));
+    }
+
+    /* ---- delegação de eventos: presa ao bloco, não ao document ---- */
+    // cada bloco escuta só os próprios filhos; ao desmarcar o projeto o <section> sai do
+    // DOM e leva os ouvintes junto — não sobra ouvinte órfão empurrando demanda pro
+    // caderno de um projeto que não está mais na tela.
+    miniMatrizEl.addEventListener("click", (e) => {
+      const mais = e.target.closest(".cv-btn-mais");
+      if (mais) { abrirPainel(mais.dataset.canal, true); return; }
+      const ver = e.target.closest(".cv-btn-ver");
+      if (ver) {
+        const id = ver.dataset.canal;
+        if (paineisAbertos.has(id)) fecharPainel(id); else abrirPainel(id, false);
+      }
+    });
+
+    paineisEl.addEventListener("click", (e) => {
+      const fechar = e.target.closest(".cv-fechar-painel");
+      if (fechar) { fecharPainel(fechar.dataset.canal); return; }
+      const outra = e.target.closest(".cv-btn-outra");
+      if (outra) { adicionarCartao(outra.dataset.canal, true); return; }
+      const remover = e.target.closest("[data-remover]");
+      if (remover) {
+        const cartaoEl = remover.closest(".cv-cartao");
+        if (confirm("Remover esta demanda? Não é possível desfazer.")) {
+          DB_CANVA.removerDemanda(caderno, cartaoEl.dataset.chave);
+        }
+        return;
+      }
+      const tentar = e.target.closest("[data-tentar]");
+      if (tentar) { DB_CANVA.enviarAgora(caderno); return; }
+    });
+    paineisEl.addEventListener("input", (e) => {
+      const cartaoEl = e.target.closest(".cv-cartao");
+      if (cartaoEl && !e.target.classList.contains("cv-f-cproprio")) salvarCampoDoCartao(cartaoEl);
+    });
+    paineisEl.addEventListener("change", (e) => {
+      const cartaoEl = e.target.closest(".cv-cartao");
+      if (!cartaoEl) return;
+      if (e.target.classList.contains("cv-f-cproprio")) {
+        cartaoEl.querySelector("[data-qual-wrap]").hidden = e.target.value !== "sim";
+      }
+      salvarCampoDoCartao(cartaoEl);
+    });
+
+    /* ---- resumo + csv, deste projeto ---- */
+    function renderResumo() {
+      const r = DB_CANVA.resumo(caderno);
+      if (r.total === 0) { resumoEl.textContent = "Nenhuma demanda registrada ainda nesta sessão."; return; }
+      let txt = r.total + (r.total === 1 ? " demanda" : " demandas") + " nesta sessão · " +
+        r.salvas + " salva" + (r.salvas === 1 ? "" : "s");
+      if (r.pendentes) txt += " · " + r.pendentes + " aguardando envio";
+      if (r.incompletas) txt += " · " + r.incompletas + " incompleta" + (r.incompletas === 1 ? "" : "s");
+      if (r.erros) txt += " · " + r.erros + " com erro";
+      if (r.offline) txt += " · sem conexão agora, tentando de novo sozinho";
+      resumoEl.textContent = txt;
+    }
+
+    el.querySelector("[data-baixar]").addEventListener("click", () => {
+      if (!caderno.demandas.length) { alert("Ainda não há nenhuma demanda preenchida pra baixar em " + caderno.projeto + "."); return; }
+      const cabecalho = ["Projeto", "Canal", "Serviço apresentado", "Problema", "Por que não funcionaria",
+        "Canal próprio", "Qual", "Responsável", "Prazo", "Status"];
+      const canalNome = (id) => { const c = CANAIS.find((x) => x.id === id); return c ? c.completo : id; };
+      const linhas = CANAIS.map((c) => c.id).reduce((acc, id) => acc.concat(caderno.demandas.filter((d) => d.canal === id)), [])
+        .map((d) => [
+          caderno.projeto, canalNome(d.canal), d.servico, d.problema, d.bloqueio || "",
+          d.canal_proprio || "", d.canal_proprio_qual || "", d.responsavel, d.prazo,
+          ROTULO_ESTADO[d.estado] || d.estado,
+        ]);
+      CSV_EXPORT.baixar("canvas-" + DB_CANVA.slug(caderno.projeto) + "-" + hojeISO() + ".csv",
+        CSV_EXPORT.montar(cabecalho, linhas));
+    });
+
+    /* ---- estado inicial dos painéis deste bloco ---- */
+    // painéis abertos por padrão: os que já têm demanda (retomando depois de um F5) + o
+    // canal desta oficina, se vier na querystring — mesmo sem demanda ainda, pronto pra
+    // preencher (§10 do plano: o gestor cai direto pronto pra escrever). Como isto roda
+    // DENTRO da fábrica, o canal do QR abre em TODO bloco marcado, não só no primeiro.
+    caderno.demandas.forEach((d) => paineisAbertos.add(d.canal));
+    if (canalDestaque) {
+      const temAlguma = caderno.demandas.some((d) => d.canal === canalDestaque);
+      paineisAbertos.add(canalDestaque);
+      garantirPainelDom(canalDestaque);
+      if (!temAlguma) adicionarCartao(canalDestaque, false);
+    }
+    paineisAbertos.forEach(garantirPainelDom);
+
+    function render() {
+      notaProjetoNovo.hidden = !caderno.projeto_novo;
+      renderLinhasCanal();
+      paineisAbertos.forEach(sincronizarPainel);
+      renderResumo();
+    }
+
     return {
-      chave_local: cartaoEl.dataset.chave,
-      canal: cartaoEl.dataset.canal,
-      servico: $(".cv-f-servico").value,
-      problema: $(".cv-f-problema").value,
-      bloqueio: $(".cv-f-bloqueio").value,
-      canal_proprio: radio ? radio.value : "",
-      canal_proprio_qual: $(".cv-f-qual").value,
-      responsavel: $(".cv-f-responsavel").value,
-      prazo: $(".cv-f-prazo").value,
-      facilitador: OFICINA.facilitador,
-      ciclo: OFICINA.ciclo,
-      encontro_id: OFICINA.encontro_id,
-      empresa_site: $(".cv-f-honeypot").value,
+      el: el,
+      projeto: nomeProjeto,
+      render: render,
+      destruir: function () { el.remove(); },
     };
   }
 
-  function salvarCampoDoCartao(cartaoEl) {
-    if (!caderno) return;
-    DB_CANVA.salvarDemanda(caderno, coletarCampos(cartaoEl));
-  }
-
-  /* ---- delegação de eventos: linhas da matriz ---- */
-  miniMatrizEl.addEventListener("click", (e) => {
-    const mais = e.target.closest(".cv-btn-mais");
-    if (mais) { abrirPainel(mais.dataset.canal, true); return; }
-    const ver = e.target.closest(".cv-btn-ver");
-    if (ver) {
-      const id = ver.dataset.canal;
-      if (paineisAbertos.has(id)) fecharPainel(id); else abrirPainel(id, false);
-    }
-  });
-
-  /* ---- delegação de eventos: painéis (cartões) ---- */
-  paineisEl.addEventListener("click", (e) => {
-    const fechar = e.target.closest(".cv-fechar-painel");
-    if (fechar) { fecharPainel(fechar.dataset.canal); return; }
-    const outra = e.target.closest(".cv-btn-outra");
-    if (outra) { adicionarCartao(outra.dataset.canal, true); return; }
-    const remover = e.target.closest("[data-remover]");
-    if (remover) {
-      const cartaoEl = remover.closest(".cv-cartao");
-      if (confirm("Remover esta demanda? Não é possível desfazer.")) {
-        DB_CANVA.removerDemanda(caderno, cartaoEl.dataset.chave);
-      }
-      return;
-    }
-    const tentar = e.target.closest("[data-tentar]");
-    if (tentar) { DB_CANVA.enviarAgora(caderno); return; }
-  });
-  paineisEl.addEventListener("input", (e) => {
-    const cartaoEl = e.target.closest(".cv-cartao");
-    if (cartaoEl && !e.target.classList.contains("cv-f-cproprio")) salvarCampoDoCartao(cartaoEl);
-  });
-  paineisEl.addEventListener("change", (e) => {
-    const cartaoEl = e.target.closest(".cv-cartao");
-    if (!cartaoEl) return;
-    if (e.target.classList.contains("cv-f-cproprio")) {
-      cartaoEl.querySelector("[data-qual-wrap]").hidden = e.target.value !== "sim";
-    }
-    salvarCampoDoCartao(cartaoEl);
-  });
-
-  /* ------------------------------------------------------------------ resumo */
-  function renderResumo() {
-    const r = DB_CANVA.resumo(caderno);
-    if (r.total === 0) { resumoEl.textContent = "Nenhuma demanda registrada ainda nesta sessão."; return; }
-    let txt = r.total + (r.total === 1 ? " demanda" : " demandas") + " nesta sessão · " +
-      r.salvas + " salva" + (r.salvas === 1 ? "" : "s");
-    if (r.pendentes) txt += " · " + r.pendentes + " aguardando envio";
-    if (r.incompletas) txt += " · " + r.incompletas + " incompleta" + (r.incompletas === 1 ? "" : "s");
-    if (r.erros) txt += " · " + r.erros + " com erro";
-    if (r.offline) txt += " · sem conexão agora, tentando de novo sozinho";
-    resumoEl.textContent = txt;
-  }
-
-  /* ------------------------------------------------------------------- csv */
-  // mecânica de escapar/montar/baixar vem de js/csv-export.js (item 4 do plano do canvas
-  // das oficinas extraiu pra canva-consolidado.html reaproveitar, em vez de duplicar) —
-  // aqui fica só o que é específico desta tela: as colunas e o nome do arquivo.
-  const ROTULO_ESTADO = {
-    incompleta: "incompleta", pendente: "aguardando envio", salvando: "enviando",
-    salva: "enviada", erro: "erro ao enviar",
-  };
-  btnBaixar.addEventListener("click", () => {
-    if (!caderno || !caderno.demandas.length) { alert("Ainda não há nenhuma demanda preenchida pra baixar."); return; }
-    const cabecalho = ["Projeto", "Canal", "Serviço apresentado", "Problema", "Por que não funcionaria",
-      "Canal próprio", "Qual", "Responsável", "Prazo", "Status"];
-    const canalNome = (id) => { const c = CANAIS.find((x) => x.id === id); return c ? c.completo : id; };
-    const linhas = CANAIS.map((c) => c.id).reduce((acc, id) => acc.concat(caderno.demandas.filter((d) => d.canal === id)), [])
-      .map((d) => [
-        caderno.projeto, canalNome(d.canal), d.servico, d.problema, d.bloqueio || "",
-        d.canal_proprio || "", d.canal_proprio_qual || "", d.responsavel, d.prazo,
-        ROTULO_ESTADO[d.estado] || d.estado,
-      ]);
-    CSV_EXPORT.baixar("canvas-" + DB_CANVA.slug(caderno.projeto) + "-" + hojeISO() + ".csv",
-      CSV_EXPORT.montar(cabecalho, linhas));
-  });
-
-  montarSelectProjetos();
+  montarListaProjetos();
 })();
 </script>
 </body>

@@ -22,7 +22,12 @@ OBRIG = {
     # canva.html não tem menu lateral (é destino de QR), mas entra aqui como qualquer outra:
     # são ~450 linhas de JS embutido, e é o `node --check` de _checar_inline abaixo que
     # impede um erro de sintaxe de chegar na sala de oficina.
-    "canva.html": ["cv-passo1", "cv-projeto", "cv-nome", "cv-passo2", "cv-mini-matriz", "cv-paineis", "cv-resumo"],
+    # 27/08/2026 (item 3 do plano de melhorias de navegação, sub-itens 3.3/3.4): o gestor
+    # passou a responder por N projetos de uma vez, então #cv-mini-matriz/#cv-paineis/
+    # #cv-resumo deixaram de ser ids fixos (seriam duplicados com 2 projetos marcados) e
+    # viraram classe + data-projeto dentro de cada .cv-bloco. #cv-blocos é o container
+    # que os recebe — é ele que precisa existir no HTML estático.
+    "canva.html": ["cv-passo1", "cv-projeto", "cv-nome", "cv-passo2", "cv-blocos"],
     # canva-consolidado.html (item 4 do plano do canvas das oficinas) ENTRA no menu — ao
     # contrário de canva.html, que dispensa isso de propósito (§12 item 4 do plano).
     "canva-consolidado.html": ["cvc-contadores", "cvc-fila-novos", "cvc-filtros", "cvc-estado", "cvc-lista"],

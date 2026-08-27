@@ -123,12 +123,14 @@ function ok(cond, msg, extra) {
 
     console.log("2) preenche uma demanda no canal da oficina");
     await avaliar(`(function(){
-      const s = document.getElementById("cv-projeto");
-      s.value = s.querySelector("optgroup option").value;
-      s.dispatchEvent(new Event("change"));
+      // 27/08/2026 (item 3 do plano de melhorias de navegação): a escolha do projeto
+      // deixou de ser um <select> e virou checklist — marcar o primeiro checkbox é o
+      // equivalente ao antigo "escolher a primeira <option> do primeiro <optgroup>".
+      const c = document.querySelector("#cv-projeto .cv-chk-projeto");
+      c.checked = true; c.dispatchEvent(new Event("change", { bubbles: true }));
       const n = document.getElementById("cv-nome");
       n.value = "Teste Oficina"; n.dispatchEvent(new Event("change"));
-      return s.value;
+      return c.value;
     })()`);
     await new Promise((r) => setTimeout(r, 300));
     ok(await avaliar('!!document.querySelector(\'.cv-cartao[data-canal="empresa"]\')'),
@@ -167,7 +169,8 @@ function ok(cond, msg, extra) {
 
     console.log("4) demanda pra OUTRO canal na mesma oficina herda o mesmo ciclo");
     await avaliar(`(function(){
-      document.querySelector('.cv-linha-canal[data-canal="portal"] .cv-btn-mais').click();
+      // ancorado no bloco do projeto (existe uma linha "portal" por projeto marcado)
+      document.querySelector('.cv-bloco .cv-linha-canal[data-canal="portal"] .cv-btn-mais').click();
       return true;
     })()`);
     await new Promise((r) => setTimeout(r, 300));
@@ -200,8 +203,8 @@ function ok(cond, msg, extra) {
     await cdp.enviar("Page.navigate", { url: `http://127.0.0.1:${port}/canva.html?semrede=1&nada=1` }, sessionId);
     await esperarCarregar();
     const d2 = await avaliar(`(function(){
-      const s = document.getElementById("cv-projeto");
-      s.value = s.querySelector("optgroup option").value; s.dispatchEvent(new Event("change"));
+      const c = document.querySelector("#cv-projeto .cv-chk-projeto");
+      c.checked = true; c.dispatchEvent(new Event("change", { bubbles: true }));
       const k = Object.keys(localStorage).filter(x => x.indexOf("cc_canva_") === 0);
       for (const chave of k) {
         let v; try { v = JSON.parse(localStorage.getItem(chave)); } catch (e) { continue; }
