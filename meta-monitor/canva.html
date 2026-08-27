@@ -33,6 +33,21 @@
 .cv-escape-wrap{margin-top:10px;padding-top:10px;border-top:1px dashed var(--linha)}
 .cv-nota{font-size:12px;color:var(--grafite);font-style:italic;margin-top:5px}
 
+/* ---- combobox de "pessoas do projeto" (Meu nome / Responsável) ----
+   <input list="..."> nativo foi descartado: Safari não desenha indicador nenhum de
+   que o campo tem sugestões, e em navegação privada muitas vezes nem abre a lista —
+   quem usa esse navegador (comum em campo, celular) não via sugestão nenhuma. Lista
+   construída na mão, mesmo texto de qualquer input: digitar sem escolher continua
+   funcionando (não é <select>, é sugestão). */
+.cv-combo-wrap{position:relative}
+.cv-combo-lista{position:absolute;left:0;right:0;top:100%;z-index:5;margin-top:-1px;
+  background:var(--branco);border:1px solid var(--linha);max-height:220px;overflow-y:auto;
+  box-shadow:0 6px 14px rgba(0,0,0,.12)}
+.cv-combo-opcao{display:block;width:100%;text-align:left;padding:8px 10px;font-family:var(--font-sans);
+  font-size:14px;color:var(--tinta);background:none;border:0;cursor:pointer}
+.cv-combo-opcao:hover,.cv-combo-opcao.cv-combo-ativa{background:var(--surface)}
+.cv-combo-vazia{padding:8px 10px;font-size:12.5px;color:var(--grafite);font-style:italic}
+
 /* ---- passo 1: checklist de projetos (item 3 redesenho — sub-item 3.2) ----
    Substitui o <select id="cv-projeto"> por uma lista de checkboxes agrupada por
    núcleo, cada grupo com seu "selecionar todos". O CONTEÚDO (fieldset por núcleo,
@@ -172,14 +187,13 @@
     </div>
     <div class="cv-campo">
       <label for="cv-nome">Meu nome</label>
-      <input type="text" id="cv-nome" maxlength="2000" placeholder="Como você quer ser identificado" list="cv-lista-pessoas">
+      <div class="cv-combo-wrap">
+        <input type="text" id="cv-nome" maxlength="2000" placeholder="Como você quer ser identificado" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="cv-nome-combo-lista">
+        <div class="cv-combo-lista" id="cv-nome-combo-lista" hidden></div>
+      </div>
       <p class="cv-nota">Escolha da lista pra não digitar errado — se não encontrar, é só digitar.</p>
     </div>
   </section>
-  <!-- Opções compartilhadas por "Meu nome" e por "Responsável" de cada cartão — montada em
-       JS por montarListaPessoas(), a partir do golden record de pessoas (js/db-pessoas.js).
-       <input list="..."> continua editável: quem não está na lista digita normalmente. -->
-  <datalist id="cv-lista-pessoas"></datalist>
 
   <p class="aviso" id="cv-aviso-escolha" style="margin-top:16px">Marque acima o(s) seu(s) projeto(s) pra ver os 10 canais de cada um e começar a preencher.</p>
 
@@ -300,6 +314,7 @@
   const inputEscape = document.getElementById("cv-projeto-livre");
   const btnEscapeAdicionar = document.getElementById("cv-escape-adicionar");
   const inputNome = document.getElementById("cv-nome");
+  ativarCombo(inputNome, document.getElementById("cv-nome-combo-lista"));
   const avisoEscolha = document.getElementById("cv-aviso-escolha");
   const passo1 = document.getElementById("cv-passo1");
   const passo2 = document.getElementById("cv-passo2");
@@ -383,19 +398,68 @@
 
   // Opções de "Meu nome" e "Responsável": pessoas ATIVAS do golden record
   // (js/db-pessoas.js), pra sugerir e evitar erro de digitação, sem travar quem não
-  // está cadastrado — <input list="cv-lista-pessoas"> continua aceitando texto livre.
-  // Não filtra por projeto marcado de propósito (decisão de 27/08/2026): a lista de
-  // pessoas do golden record inteira é mais útil aqui do que só representantes
-  // cadastrados, que hoje cobrem só parte dos projetos.
+  // está cadastrado. Não filtra por projeto marcado de propósito (decisão de
+  // 27/08/2026): a lista de pessoas do golden record inteira é mais útil aqui do que
+  // só representantes cadastrados, que hoje cobrem só parte dos projetos.
+  //
+  // Combobox feito à mão (não <input list=...>): Safari não desenha indicador nenhum
+  // de que o campo tem sugestões e, em navegação privada, muitas vezes nem abre a
+  // lista nativa — quem usa esse navegador (comum em campo, celular) não via sugestão
+  // nenhuma (achado do José em produção, 28/08/2026). `PESSOAS_NOMES` é lido por
+  // referência dentro de `pessoasFiltradas`, então um cartão criado antes da resposta
+  // do Supabase (ativarCombo chamado cedo) ainda enxerga a lista assim que ela chega —
+  // não precisa recriar o combo depois de montarListaPessoas() terminar.
+  let PESSOAS_NOMES = [];
   async function montarListaPessoas() {
     const { lista: pessoas } = await DB_PESSOAS.carregar();
-    const nomes = [...new Set(
+    PESSOAS_NOMES = [...new Set(
       (pessoas || [])
         .filter((p) => p.ativo !== false && (p.nome_exibicao || p.nome_completo || p.nome))
         .map((p) => p.nome_exibicao || p.nome_completo || p.nome)
     )].sort((a, b) => a.localeCompare(b, "pt-BR"));
-    document.getElementById("cv-lista-pessoas").innerHTML =
-      nomes.map((n) => '<option value="' + esc(n) + '">').join("");
+  }
+
+  const LIMITE_COMBO = 20;
+  function pessoasFiltradas(termo) {
+    const alvo = normalizarLeve(termo);
+    const base = alvo ? PESSOAS_NOMES.filter((n) => normalizarLeve(n).includes(alvo)) : PESSOAS_NOMES;
+    return base.slice(0, LIMITE_COMBO);
+  }
+
+  function fecharCombo(inputEl, listaEl) {
+    listaEl.hidden = true;
+    listaEl.innerHTML = "";
+    inputEl.setAttribute("aria-expanded", "false");
+  }
+
+  function abrirCombo(inputEl, listaEl) {
+    const nomes = pessoasFiltradas(inputEl.value);
+    listaEl.innerHTML = nomes.length
+      ? nomes.map((n) => '<button type="button" class="cv-combo-opcao">' + esc(n) + "</button>").join("")
+      : '<p class="cv-combo-vazia">Nenhum nome encontrado — pode digitar do jeito que for.</p>';
+    listaEl.hidden = false;
+    inputEl.setAttribute("aria-expanded", "true");
+  }
+
+  // liga um <input> de texto livre à sua lista de sugestões (o par vem sempre junto no
+  // HTML: <div class="cv-combo-wrap"><input>...<div class="cv-combo-lista">). Escolher
+  // uma opção dispara "change" no input — quem já escuta "change" (ex. cv-nome) não
+  // precisa saber que a escolha veio de um clique, não de digitação.
+  function ativarCombo(inputEl, listaEl) {
+    inputEl.addEventListener("focus", () => abrirCombo(inputEl, listaEl));
+    inputEl.addEventListener("input", () => abrirCombo(inputEl, listaEl));
+    inputEl.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharCombo(inputEl, listaEl); });
+    // mousedown (não click) — dispara ANTES do blur do input, senão a lista já teria
+    // fechado e sumido do DOM quando o click chegasse.
+    listaEl.addEventListener("mousedown", (e) => {
+      const opcao = e.target.closest(".cv-combo-opcao");
+      if (!opcao) return;
+      e.preventDefault();
+      inputEl.value = opcao.textContent;
+      fecharCombo(inputEl, listaEl);
+      inputEl.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    inputEl.addEventListener("blur", () => { setTimeout(() => fecharCombo(inputEl, listaEl), 150); });
   }
 
   function checkboxDoProjeto(nome) {
@@ -862,7 +926,8 @@
           '<label for="ql-' + esc(id) + '">Qual canal próprio?</label>' +
           '<input type="text" id="ql-' + esc(id) + '" class="cv-f-qual" maxlength="2000" value="' + esc(d.canal_proprio_qual) + '"></div>' +
         '<div class="cv-campo"><label for="rs-' + esc(id) + '">Responsável</label>' +
-          '<input type="text" id="rs-' + esc(id) + '" class="cv-f-responsavel" maxlength="2000" value="' + esc(d.responsavel) + '" list="cv-lista-pessoas"></div>' +
+          '<div class="cv-combo-wrap"><input type="text" id="rs-' + esc(id) + '" class="cv-f-responsavel" maxlength="2000" value="' + esc(d.responsavel) + '" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list">' +
+          '<div class="cv-combo-lista" data-combo-lista hidden></div></div></div>' +
         '<div class="cv-campo"><label for="pz-' + esc(id) + '">Prazo</label>' +
           '<input type="date" id="pz-' + esc(id) + '" class="cv-f-prazo" min="' + PRAZO_MIN + '" max="' + PRAZO_MAX + '" value="' + esc(d.prazo || "") + '"></div>' +
         '<p class="cv-estado-erro" data-erro hidden></p>' +
@@ -875,7 +940,11 @@
           '<input type="text" id="hp-' + esc(id) + '" class="cv-f-honeypot" tabindex="-1" autocomplete="off">' +
         "</div>" +
       "</div>";
-    return wrap.firstElementChild;
+    const cartaoEl = wrap.firstElementChild;
+    const respInput = cartaoEl.querySelector(".cv-f-responsavel");
+    const respLista = cartaoEl.querySelector("[data-combo-lista]");
+    if (respInput && respLista) ativarCombo(respInput, respLista);
+    return cartaoEl;
   }
 
   // atualiza só o que PODE mudar sem o gestor ter mexido no campo: o selo de estado, a
