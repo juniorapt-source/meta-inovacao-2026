@@ -61,7 +61,7 @@ a{color:inherit;text-decoration:none} a:hover{color:var(--accent);text-decoratio
 /* ---- casca: nav lateral + conteúdo ---- */
 .shell{display:grid;grid-template-columns:var(--nav-w) 1fr;min-height:100vh}
 .nav{background:var(--ink);color:#d9d0bd;padding:22px 16px;position:sticky;top:0;height:100vh;
-  display:flex;flex-direction:column;gap:3px}
+  display:flex;flex-direction:column;gap:3px;overflow-y:auto;overflow-x:hidden}
 .nav .marca{font-family:var(--font-sans);font-weight:600;font-size:20px;color:#f4efe4;line-height:1.25;margin-bottom:6px}
 .nav .marca small{display:block;font-family:'DM Sans';font-weight:500;font-size:10.5px;text-transform:uppercase;
   letter-spacing:.13em;color:rgba(244,239,228,.5);margin-top:7px;line-height:1.5}
