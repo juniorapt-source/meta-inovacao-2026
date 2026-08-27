@@ -188,6 +188,36 @@ function ok(cond, msg, extra) {
       return c.querySelector(".cv-f-servico").value === "Consumo da base filtrada";
     })()`), "cartão de \"empresa\" no bloco A com o texto preenchido");
 
+    // As três checagens acima olham só o DOM, e isso NÃO basta pra provar isolamento:
+    // patchCartaoEl() nunca reescreve o value de um input depois de criar o cartão (é de
+    // propósito — é o que impede um render() no meio da digitação de roubar o cursor).
+    // Consequência: se os dois blocos passassem a compartilhar UM caderno, o cartão do
+    // bloco B continuaria mostrando os campos vazios com que nasceu e as checagens de
+    // cima passariam iguais, com o dado dos dois projetos indo pro caderno de um só.
+    // Conferido na prática: com essa regressão injetada, o localStorage guarda UM caderno
+    // ("ALI Academy") em vez de dois, e o DOM não denuncia nada.
+    // Por isso a checagem que vale é no ARMAZENAMENTO, não na tela — é ele que vira linha
+    // no banco, e "dado do projeto errado no lugar errado" é o bug que o plano nomeia
+    // como o mais provável deste item.
+    const cadernosGravados = await avaliar(`(function(){
+      return Object.keys(localStorage)
+        .filter((k) => k.indexOf("cc_canva_") === 0 && k !== "cc_canva_sessoes" && k !== "cc_canva_selecao")
+        .map((k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } })
+        .filter((v) => v && v.projeto)
+        .map((v) => ({ projeto: v.projeto, servicos: (v.demandas || []).map((d) => d.servico || "") }));
+    })()`);
+    const nomesBlocos = await avaliar('JSON.stringify(Array.from(document.querySelectorAll(".cv-bloco")).map((b) => b.dataset.projeto))');
+    const [nomeA, nomeB] = JSON.parse(nomesBlocos);
+    ok(cadernosGravados.length === 2, "dois cadernos gravados, um por projeto marcado (não um só compartilhado)",
+      "gravados=" + JSON.stringify(cadernosGravados.map((c) => c.projeto)));
+    const gravadoA = cadernosGravados.find((c) => c.projeto === nomeA);
+    const gravadoB = cadernosGravados.find((c) => c.projeto === nomeB);
+    ok(!!gravadoA && gravadoA.servicos.indexOf("Consumo da base filtrada") !== -1,
+      "o caderno gravado do projeto A tem a demanda que foi digitada nele");
+    ok(!!gravadoB && gravadoB.servicos.every((sv) => sv === ""),
+      "o caderno gravado do projeto B não recebeu nada do A",
+      gravadoB ? JSON.stringify(gravadoB.servicos) : "sem caderno pro projeto B");
+
     console.log("5) \"Selecionar Todos\" do 1º núcleo marca o grupo inteiro");
     const nDoPrimeiroGrupo = await avaliar(`document.querySelectorAll("#cv-projeto .cv-projeto-grupo[data-nucleo]")[0].querySelectorAll(".cv-chk-projeto").length`);
     await avaliar(`(function(){
