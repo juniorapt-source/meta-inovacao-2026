@@ -135,6 +135,19 @@ matriz na tela**. Rode em **plan mode** antes de codar.
     `#cv-projetos-feitos` e a frase fixa abaixo do `<select>` (das PRs #20/#21) ficam
     obsoletos.
 
+  - **HTML do 3.2 já feito — ids novos que o 3.3 precisa usar:** `#cv-projeto` deixou de
+    ser `<select>` e virou `<div role="group">` vazio (container que
+    `montarListaProjetos()` preenche — ver comentário no `<style>` de `canva.html` pra
+    estrutura exata de cada grupo: `fieldset.cv-projeto-grupo[data-nucleo]` › `legend >
+    label.cv-projeto-item.cv-projeto-todos > input.cv-chk-todos-grupo[data-nucleo]`, e um
+    `label.cv-projeto-item > input.cv-chk-projeto[value=nomeDoProjeto]` por projeto).
+    Projetos de texto livre (escape) entram num grupo à parte, `#cv-projeto-livres`
+    (ainda não existe no DOM — o 3.3 cria ao adicionar o primeiro). O botão
+    `#cv-escape-voltar` ("Voltar para a lista") foi REMOVIDO — o fluxo novo não substitui
+    mais o campo, só adiciona; no lugar tem `#cv-escape-adicionar` ("Adicionar à
+    seleção"), que deve criar/marcar o checkbox livre e limpar o campo de texto (não
+    existe mais "desativar o select", porque não tem select).
+
 - `js/db-canva.js` (`window.DB_CANVA`): NÃO faz SELECT/INSERT direto na tabela (só RPCs
   `cc_canva_gravar`/`cc_canva_editar` — anon sem GRANT na tabela). Fonte da verdade da
   TELA é o localStorage (chave `cc_canva_<slug_do_projeto>_<sessao_id>`), banco é o
@@ -158,7 +171,7 @@ matriz na tela**. Rode em **plan mode** antes de codar.
 | # | Atividade | Arquivo(s) | Modelo/Esforço | Status |
 |---|---|---|---|---|
 | 3.1 | `js/db-canva.js`: nova chave de persistência (padrão de `CHAVE_SESSOES`) + `salvarSelecaoProjetos(lista)`/`carregarSelecaoProjetos()`, exportadas em `DB_CANVA` | `js/db-canva.js` | Sonnet / baixo | ✅ feito — branch `claude/plano-execucao-item-3-1-8redft`, `tools/testar_canva.js`/`tools/validar_site.py` verdes |
-| 3.2 | HTML de `canva.html`: troca `<select id="cv-projeto">` por checklist agrupado por núcleo, com "Selecionar todos" por grupo (indeterminate quando parcial); "Não encontrei meu projeto" passa a ADICIONAR um checkbox de texto livre à seleção em vez de substituir o campo | `canva.html` | Sonnet / médio | ⏳ não iniciado |
+| 3.2 | HTML de `canva.html`: troca `<select id="cv-projeto">` por checklist agrupado por núcleo, com "Selecionar todos" por grupo (indeterminate quando parcial); "Não encontrei meu projeto" passa a ADICIONAR um checkbox de texto livre à seleção em vez de substituir o campo | `canva.html` | Sonnet / médio | ✅ feito — branch `claude/plano-execucao-item-3-1-8redft`, só HTML/CSS (o `#cv-projeto` virou `<div>` container vazio, `role="group"`; conteúdo — fieldset por núcleo + "selecionar todos" — é montado em JS pelo 3.3); `tools/validar_site.py canva.html` verde. **JS ainda não foi atualizado (3.3) — a tela FICA QUEBRADA no navegador até o 3.3 rodar** (script referencia `selProjeto.value`/`.disabled` que não existem mais no `<div>`); é esperado nesta ordem, não faz sentido testar no navegador antes do 3.3+3.4. |
 | 3.3 | JS de `canva.html`: `montarListaProjetos()` substitui `montarSelectProjetos()`; `const cadernos = new Map()` substitui `let caderno`; toggle de checkbox atualiza seleção, persiste (3.1), chama `renderBlocosProjetos()` (cria/remove blocos sem apagar dado local ao desmarcar); `DB_CANVA.assinar()` passa a procurar o caderno certo dentro do Map | `canva.html` | **Opus / alto** — é o núcleo da reescrita de estado, maior risco de regressão sutil | ⏳ não iniciado |
 | 3.4 | `montarBlocoProjeto(nomeProjeto)`: fábrica que parametriza por projeto o que hoje são funções globais sobre ids fixos (`renderLinhasCanal`, `sincronizarPainel`, `garantirPainelDom`, `painelHtml`, `adicionarCartao`, `coletarCampos`, `renderResumo`) — cada bloco tem seu próprio `<section>` com heading "Sua linha na matriz — X" e ids/`data-projeto` escopados | `canva.html` | **Opus / alto** — mesma razão do 3.3, é a mesma reescrita | ⏳ não iniciado |
 | 3.5 | `canalDestaque` (contexto do QR de oficina) abre o painel daquele canal em TODOS os blocos criados a partir de agora, não só o primeiro | `canva.html` | Sonnet / baixo (depende do 3.3/3.4 prontos) | ⏳ não iniciado |
