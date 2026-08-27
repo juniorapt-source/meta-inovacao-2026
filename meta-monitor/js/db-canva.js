@@ -135,6 +135,26 @@
     return PREFIXO_CHAVE + slug(projeto) + "_" + sessaoId;
   }
 
+  // item 3.1 (redesenho checklist) do plano de melhorias de navegação — hoje não existe
+  // nenhuma chave persistindo "quais projetos o gestor marcou" (só existe "qual caderno
+  // cada projeto tem", em CHAVE_SESSOES). Chave nova, mesmo padrão de PREFIXO_CHAVE.
+  // Guarda a lista de NOMES de projeto (não slugs) que estão marcados no checklist,
+  // pra F5 restaurar a seleção antes de a tela decidir quais cadernos carregar.
+  const CHAVE_SELECAO = PREFIXO_CHAVE + "selecao";
+
+  function salvarSelecaoProjetos(lista) {
+    const nomes = (Array.isArray(lista) ? lista : [])
+      .map(function (p) { return texto(p); })
+      .filter(function (p) { return p.length > 0; });
+    gravarChave(CHAVE_SELECAO, nomes);
+    return nomes;
+  }
+
+  function carregarSelecaoProjetos() {
+    const guardado = lerChave(CHAVE_SELECAO);
+    return Array.isArray(guardado) ? guardado : [];
+  }
+
   // item 3 do plano de melhorias de navegação (26/08) — "responder por mais de um
   // projeto": a tela já suportava trocar de projeto sem perder nada (sessão é por
   // PROJETO, comentário acima), só faltava mostrar isso. CHAVE_SESSOES já lista todo
@@ -505,6 +525,8 @@
     sessaoDoProjeto: sessaoDoProjeto,
     chaveDoCaderno: chaveDoCaderno,
     projetosRespondidosLocalmente: projetosRespondidosLocalmente,
+    salvarSelecaoProjetos: salvarSelecaoProjetos,
+    carregarSelecaoProjetos: carregarSelecaoProjetos,
 
     carregarCaderno: carregarCaderno,
     salvarCaderno: salvarCaderno,
