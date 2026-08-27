@@ -9,7 +9,10 @@
  * Formato do objeto "ação" devolvido é o MESMO de sempre (id/frente/sub/atividade/resp/
  * responsavel_id/prazo/prazo_iso/status/dep/cc/como/monitor/ferramenta) — o resto do
  * código (js/core.js stClass, js/calc.js, filtros de plano.html...) não precisa saber
- * de onde os dados vieram.
+ * de onde os dados vieram. Item 5.9 (parte 7) acrescenta um campo, só quando lido do
+ * Supabase: responsaveis_golden (vínculos crus de meta_inovacao_plano_responsaveis, item
+ * 2.6 — ver anexarResponsaveisGolden abaixo); no seed local (data/plano.js) fica sempre
+ * [], porque o seed nunca teve essa junção.
  *
  * ?semrede=1 na URL (ou window.CC_FORCAR_FALLBACK = true antes deste script carregar)
  * força o fallback local sem tentar rede — usado pelos testes headless (item 3.1 pede
@@ -73,11 +76,40 @@
     const supa = await root.CC_SUPABASE.obterClienteEsm();
     const { data, error } = await supa.from(TABELA).select("*").is("deleted_at", null).order("ordem", { ascending: true });
     if (error) throw error;
-    return (data || []).map(linhaParaAcao);
+    const lista = (data || []).map(linhaParaAcao);
+    await anexarResponsaveisGolden(lista);
+    return lista;
+  }
+
+  // item 5.9 (parte 7) — anexa, em cada ação, os vínculos golden de
+  // meta_inovacao_plano_responsaveis (item 2.6: pessoa_id/coletivo_id, "convivendo" com o
+  // texto legado responsavel_id[], nunca substituindo) em a.responsaveis_golden — cru
+  // (pessoa_id/coletivo_id/ordem), sem resolver nome: quem consome (ex.: minhas-acoes.html)
+  // decide como casar contra a pessoa/coletivo selecionada. Best-effort de propósito: se a
+  // página não carregou js/db-plano-responsaveis.js (script tag ausente) ou a busca falha,
+  // cada ação fica com responsaveis_golden:[] — nunca impede a leitura das ações por isso,
+  // mesmo espírito de "cai pro texto legado" das outras partes do 5.9.
+  async function anexarResponsaveisGolden(lista) {
+    if (!root.DB_PLANO_RESPONSAVEIS) {
+      lista.forEach((a) => { a.responsaveis_golden = []; });
+      return;
+    }
+    try {
+      const { lista: vinculos } = await root.DB_PLANO_RESPONSAVEIS.carregar();
+      const idx = root.DB_PLANO_RESPONSAVEIS.porPlanoAcao(vinculos);
+      lista.forEach((a) => {
+        a.responsaveis_golden = (idx[a.id] || []).map((v) => ({ pessoa_id: v.pessoa_id, coletivo_id: v.coletivo_id, ordem: v.ordem }));
+      });
+    } catch (err) {
+      console.error("db-plano: falha ao carregar vínculos golden (meta_inovacao_plano_responsaveis), ações ficam sem responsaveis_golden", err);
+      lista.forEach((a) => { a.responsaveis_golden = []; });
+    }
   }
 
   function seedLocal() {
-    return ((root.DB && root.DB.plano) || []).slice();
+    // sem golden record no seed local — cada ação sai com responsaveis_golden:[] pra quem
+    // consome (minhas-acoes.html) não precisar de "|| []" espalhado pelo código.
+    return ((root.DB && root.DB.plano) || []).map((a) => Object.assign({ responsaveis_golden: [] }, a));
   }
 
   let promessa = null;

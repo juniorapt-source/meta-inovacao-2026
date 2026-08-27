@@ -91,6 +91,7 @@
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/db-plano.js"></script>
+<script src="js/db-plano-responsaveis.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/pessoas.js"></script>
@@ -173,9 +174,27 @@
   // idsEquivalentes cobre o id canônico + o apelido antigo (ex.: "jr" também bate
   // "jose_mendes_junior") — sem isso, uma ação/atividade gravada ANTES deste item com o id
   // "extra" sumiria da guarda dessa pessoa só por causa da unificação da Camada 4.
+  //
+  // item 5.9 (parte 7) — além do texto legado (responsavel_id[]), uma ação também conta
+  // pra esta pessoa/coletivo quando há vínculo golden em meta_inovacao_plano_responsaveis
+  // (item 2.6: js/db-plano.js anexa a.responsaveis_golden, cru — pessoa_id/coletivo_id) que
+  // resolve pro dbId da entrada golden selecionada. "Convivendo": uma ação golden aparece
+  // mesmo sem o id legado no array; uma ação só-texto continua aparecendo do jeito de
+  // sempre — nenhum dos dois caminhos substitui o outro.
+  function acaoTemVinculoGolden(a, entrada) {
+    if (!entrada || !entrada.dbId) return false;
+    return (a.responsaveis_golden || []).some((v) =>
+      entrada.tipo === "pessoa" ? String(v.pessoa_id) === String(entrada.dbId) : String(v.coletivo_id) === String(entrada.dbId)
+    );
+  }
+
   function acoesDaPessoa(id) {
     const idsEquiv = DB_RESPONSAVEIS.idsEquivalentes(RESPONSAVEIS, id);
-    const lista = plano.filter((a) => Array.isArray(a.responsavel_id) && a.responsavel_id.some((rid) => idsEquiv.includes(rid)));
+    const entrada = DB_RESPONSAVEIS.encontrar(RESPONSAVEIS, id);
+    const lista = plano.filter((a) =>
+      (Array.isArray(a.responsavel_id) && a.responsavel_id.some((rid) => idsEquiv.includes(rid))) ||
+      acaoTemVinculoGolden(a, entrada)
+    );
     // atrasadas primeiro (dentro delas: nó crítico primeiro, depois mais antiga primeiro —
     // CALC.comparadorAtrasadas, mesmo comparador de index.html "Atrasadas agora",
     // "Dashboard orientado à decisão" item 3) · depois quem tem prazo (por prazo crescente,

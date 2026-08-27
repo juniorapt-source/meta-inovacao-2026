@@ -522,7 +522,7 @@ hoje.
 | 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | — | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
 | 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | — | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
 | 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
-| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`), tela(s) a definir pro item 7 | ver quebra por parte abaixo — as 7 partes já têm Modelo/Esforço definido (26/08/2026); só o escopo exato da parte 7 (qual tela) ainda falta confirmar antes de codar | 🔄 **EM ANDAMENTO** — partes 1 (guardrail `nomeEhLideranca()`), 2 (`projetos.html`), 3 (`index.html`), 4 (`js/drawer.js` nas demais páginas), 5 (telas do canva) e 6 (`js/busca.js`, Opção A) ✅ em 26/08/2026; parte 7 (`plano_responsaveis`, construir) **decidida** mas ainda `⏳ NÃO CODADA` |
+| 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`), `js/db-plano.js`/`minhas-acoes.html` (parte 7) | ver quebra por parte abaixo — as 7 partes têm Modelo/Esforço definido (26/08/2026) | ✅ **7 DE 7 PARTES FEITAS (27/08/2026)** — partes 1 (guardrail `nomeEhLideranca()`), 2 (`projetos.html`), 3 (`index.html`), 4 (`js/drawer.js` nas demais páginas), 5 (telas do canva) e 6 (`js/busca.js`, Opção A) ✅ em 26/08/2026; parte 7 (`plano_responsaveis`, `js/db-plano.js` + `minhas-acoes.html`) ✅ em 27/08/2026 — ver detalhe na "Quebra recomendada do 5.9" abaixo. A aposentadoria de `meta_inovacao_matriz_demandas` (ficou colada ao item 7 antes do escopo ser confirmado) segue **⏳ pendente**, registrada como tarefa própria, fora das 7 partes |
 
 ### Como o 5.5 ficou
 
@@ -760,20 +760,55 @@ mesma régua da legenda do topo do documento):**
    `corsario.html?q=Sebraetec#cards`); `tools/auditoria_fk_final.js` continua `OK`,
    zero lacuna nova.
 7. **`meta_inovacao_plano_responsaveis` (2.6)** — `Sonnet / médio`. **Decidido por José
-   (26/08/2026): construir.** Escopo exato (que tela mostra o quê, a partir da junção)
-   ainda não foi definido em detalhe — próxima sessão que pegar este item deve validar
-   com José o que exibir antes de codar, não presumir. Ver "Nota de escopo — item 7"
-   logo abaixo de propósito, pra registro do que ficou combinado até aqui.
+   (26/08/2026): construir.** Escopo confirmado com José em 27/08/2026: Opção A da "Nota
+   de escopo" abaixo — migrar tela existente, sem tela nova. **✅ em 27/08/2026** — a
+   junção (item 2.6, gravada desde o 5.6) já existia no banco mas ninguém lia; agora
+   `js/db-plano.js` carrega os vínculos junto com as ações (`DB_PLANO_RESPONSAVEIS.carregar()`
+   + `porPlanoAcao()`, best-effort: sem `js/db-plano-responsaveis.js` carregado na página ou
+   com falha de rede, cada ação fica com `responsaveis_golden:[]`, nunca quebra a leitura) e
+   anexa o vínculo cru (`pessoa_id`/`coletivo_id`/`ordem`) em `a.responsaveis_golden` — sem
+   resolver nome, isso fica por conta de quem consome. `minhas-acoes.html` (a única tela que
+   de fato lê `responsavel_id` como fonte de decisão — ver "correção" abaixo) ganhou
+   `js/db-plano-responsaveis.js` e a seção "Ações do plano" (`acoesDaPessoa()`) passa a casar
+   também por `acaoTemVinculoGolden()`: uma ação entra na lista da pessoa/coletivo
+   selecionada em "Ver como" se o texto legado (`responsavel_id[]`, via `idsEquivalentes`)
+   OU o vínculo golden (`responsaveis_golden`, comparando `pessoa_id`/`coletivo_id` contra o
+   `dbId` da entrada golden selecionada) bater — "convivendo", mesmo princípio das partes
+   2/3/5: nenhum caminho substitui o outro. Testado:
+   `tools/testar_minhas_acoes_headless.js` (cenário offline de sempre, sem regressão — o
+   seed local nunca teve vínculo golden) e o novo
+   `tools/testar_minhas_acoes_golden_headless.js` (dublê de Supabase: pessoa com id do
+   LEGADO — "jr" — continua vendo só a ação ligada por texto; pessoa golden pura — sem id do
+   LEGADO — só vê a ação ligada pelo vínculo de `meta_inovacao_plano_responsaveis`, prova que
+   a junção foi lida de verdade) verdes; `tools/auditoria_fk_final.js` — item 2.6 passou a
+   listar `js/db-plano.js`/`minhas-acoes.html` como leitores (antes: nenhum probe de leitura
+   batia com um arquivo real), zero lacuna nova de escrita.
 
-**Nota de escopo — item 7 (aberta em 26/08/2026):** José decidiu construir a leitura de
-`meta_inovacao_plano_responsaveis`, mas ainda não definiu ONDE/O QUÊ mostrar. Antes de
-codar, a sessão que pegar este item deve confirmar com José algo do tipo: "qual tela e
-qual mudança visível" — por exemplo, `plano-acao.html`/`minhas-acoes.html` passarem a
-ler a junção em vez do texto `responsavel_id` (mesmo requisito de leitura-pela-FK dos
-outros itens do 5.9, sem tela nova) OU uma visão nova (ex. "carga por responsável golden"
-em `minhas-acoes.html`/`index.html`). Não presumir qual das duas.
+   **Correção de uma imprecisão do próprio 5.1:** a "Nota de escopo" original (abaixo) e o
+   probe de leitura do item 2.6 em `tools/auditoria_fk_final.js` citavam `plano-acao.html`
+   como candidata a ler a junção — não fazia sentido: aquela tela edita
+   `plano_acao_atividades` (Atividades por iniciativa), uma tabela sem `plano_acao_id` e sem
+   ligação nenhuma com `meta_inovacao_plano_responsaveis` (que referencia
+   `meta_inovacao_plano_acoes`, a tabela por trás de `minhas-acoes.html`/`plano.html`/
+   `editor.html`). O probe foi corrigido pra apontar pro leitor real
+   (`minhas-acoes.html`) — registrado aqui pra não vir como surpresa numa auditoria futura.
 
-A aposentadoria de `meta_inovacao_matriz_demandas` (decidida no 3.5) entra aqui.
+**Nota de escopo — item 7 (aberta em 26/08/2026, fechada em 27/08/2026):** José decidiu
+construir a leitura de `meta_inovacao_plano_responsaveis`, mas ainda não tinha definido
+ONDE/O QUÊ mostrar. Confirmado com José em 27/08/2026: Opção A — migrar tela existente
+(`minhas-acoes.html`) pra ler a junção em vez de só o texto `responsavel_id` (mesmo
+requisito de leitura-pela-FK dos outros itens do 5.9, sem tela nova), **não** a Opção B
+(visão nova tipo "carga por responsável golden"). Ver o item ✅ acima pro que foi feito.
+
+**Pendência que ficou aberta, fora do escopo confirmado com José:** a aposentadoria de
+`meta_inovacao_matriz_demandas` (decidida no 3.5, "entra na Camada 5") tinha sido
+provisoriamente colada neste item 7 antes do escopo ser confirmado — mas é uma frente
+própria (a tabela antiga ainda é lida por `editor.html`/`demandas.html`/`js/drawer.js`/
+`js/matriz-store.js` e por 3 testes headless, pra comparação/histórico/fallback; "aposentar"
+aqui significa parar de LER, nunca `DROP` — decisão do 5.2) e não fazia parte da pergunta
+que José respondeu ("qual tela lê `plano_responsaveis`"). Fica registrada aqui, sem item
+numerado ainda, pra não se perder — próxima sessão que for tocar nisso deve tratar como
+tarefa própria (levantar cada leitor, decidir o que cada um vira), não como parte do 5.9.
 
 **Teste de aceite:** suíte de testes headless inteira verde; nenhuma tela lê mais
 texto legado como fonte de verdade — a coluna continua existindo (decisão do 5.2:
@@ -941,19 +976,22 @@ precisa saber sem reler tudo acima:
    **O que falta pra Camada 5:** 5.2 continua travado, agora esperando o item **5.9**
    (novo, aberto 26/08/2026) — fechar a porta de ESCRITA (5.5/5.6/5.7, já feitos) não é o
    mesmo que a LEITURA já ter migrado nas outras telas. Das 7 partes da quebra do 5.9
-   (ver "Quebra recomendada do 5.9" na seção da Camada 5), **6 já estão feitas** — parte 1
-   (guardrail `nomeEhLideranca()`, `js/db-urc.js`), parte 2 (`projetos.html`), parte 3
+   (ver "Quebra recomendada do 5.9" na seção da Camada 5), **as 7 estão feitas (27/08/2026)** —
+   parte 1 (guardrail `nomeEhLideranca()`, `js/db-urc.js`), parte 2 (`projetos.html`), parte 3
    (`index.html`), parte 4 (`js/drawer.js` fora de `participantes.html`), parte 5 (telas
    do canva — na prática só `canva-consolidado.html`, a única que LÊ
-   `meta_inovacao_canva_demandas`; `canva.html` só grava, via RPC) e parte 6 (`js/busca.js`
+   `meta_inovacao_canva_demandas`; `canva.html` só grava, via RPC), parte 6 (`js/busca.js`
    — Opção A decidida por José em 26/08/2026: só o link do resultado de iniciativa passa a
    apontar pelo hash `#iniciativa=` do `js/drawer.js` quando há `db_id`, a lógica de busca
-   em si não mudou) — todas com "convivendo, não substituindo": FK primeiro, texto legado
-   como fallback, nunca quebra. Falta a parte 7
-   (`meta_inovacao_plano_responsaveis` — José decidiu construir em 26/08/2026, mas o
-   escopo exato — qual tela, qual mudança visível — ainda não foi definido; confirmar
-   com ele antes de codar, ver "Nota de escopo — item 7"), já **decidida** mas
-   ainda `⏳ NÃO CODADA`. `docs/CAMADA5_AUDITORIA_FK.md` ainda reflete o estado de ANTES do
+   em si não mudou) e parte 7 (`meta_inovacao_plano_responsaveis` — José confirmou em
+   27/08/2026 migrar tela existente, não visão nova: `js/db-plano.js` carrega a junção e
+   anexa o vínculo cru em `a.responsaveis_golden`, `minhas-acoes.html` casa por ele além do
+   texto legado) — todas com "convivendo, não substituindo": FK primeiro, texto legado
+   como fallback, nunca quebra. **Pendência à parte, fora das 7 partes:** a aposentadoria de
+   `meta_inovacao_matriz_demandas` (decidida no 3.5) tinha sido colada provisoriamente ao
+   item 7 antes do escopo ser confirmado — não fazia parte da pergunta que José respondeu,
+   fica registrada como tarefa própria pra uma sessão futura (ver nota no fim da "Quebra
+   recomendada do 5.9"). `docs/CAMADA5_AUDITORIA_FK.md` ainda reflete o estado de ANTES do
    5.5/5.6/5.7/5.9 (documento histórico, não atualizado a cada parte — ver nota no topo
    dele); quem quiser o estado atual usa `tools/auditoria_fk_final.js` (offline, sempre
    ao vivo) e esta seção. Uma nova rodada da CONSULTA A/C em produção (pedida ao José pra

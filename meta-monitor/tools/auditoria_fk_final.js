@@ -295,13 +295,18 @@ const ITENS = [
     leitura: [
       {
         arquivo: "js/db-plano.js",
-        como: "carrega a junção junto com as ações",
+        como: "carrega a junção junto com as ações (a.responsaveis_golden)",
         ok: () => FONTES["js/db-plano.js"].includes("meta_inovacao_plano_responsaveis"),
       },
       {
-        arquivo: "plano-acao.html",
-        como: "coluna \"Responsável\" renderizada a partir da junção",
-        ok: () => FONTES["plano-acao.html"].includes("meta_inovacao_plano_responsaveis"),
+        // 5.9 (parte 7, 26/08/2026): a entrada original desta leitura apontava pra
+        // "plano-acao.html" — não fazia sentido (aquela tela edita plano_acao_atividades,
+        // uma tabela SEM ligação com plano_acao_id; a junção referencia
+        // meta_inovacao_plano_acoes, a tabela por trás de minhas-acoes.html/plano.html/
+        // editor.html). Corrigido pra apontar pra quem de fato passou a ler a junção.
+        arquivo: "minhas-acoes.html",
+        como: "seção \"Ações do plano\" casa por vínculo golden além do texto legado (acaoTemVinculoGolden)",
+        ok: () => FONTES["minhas-acoes.html"].includes("meta_inovacao_plano_responsaveis") || FONTES["minhas-acoes.html"].includes("responsaveis_golden"),
       },
     ],
     portas: [
