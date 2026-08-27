@@ -155,24 +155,6 @@
     return Array.isArray(guardado) ? guardado : [];
   }
 
-  // item 3 do plano de melhorias de navegação (26/08) — "responder por mais de um
-  // projeto": a tela já suportava trocar de projeto sem perder nada (sessão é por
-  // PROJETO, comentário acima), só faltava mostrar isso. CHAVE_SESSOES já lista todo
-  // projeto com sessão neste navegador; aqui só junta com o caderno de cada um e devolve
-  // os que têm pelo menos 1 demanda — projeto aberto mas nunca preenchido não entra.
-  function projetosRespondidosLocalmente() {
-    const mapa = lerChave(CHAVE_SESSOES) || {};
-    const resultado = [];
-    Object.keys(mapa).forEach((slugProjeto) => {
-      const sessaoId = mapa[slugProjeto] && mapa[slugProjeto].sessao_id;
-      if (!sessaoId) return;
-      const caderno = lerChave(PREFIXO_CHAVE + slugProjeto + "_" + sessaoId);
-      const qtd = caderno && Array.isArray(caderno.demandas) ? caderno.demandas.length : 0;
-      if (qtd > 0) resultado.push({ projeto: caderno.projeto, quantidade: qtd });
-    });
-    return resultado;
-  }
-
   /* ------------------------------------------------------- caderno local (estado) */
 
   // "caderno" = tudo que este gestor preencheu neste projeto nesta sessão. É a fonte da
@@ -540,7 +522,6 @@
     novoUuid: novoUuid,
     sessaoDoProjeto: sessaoDoProjeto,
     chaveDoCaderno: chaveDoCaderno,
-    projetosRespondidosLocalmente: projetosRespondidosLocalmente,
     salvarSelecaoProjetos: salvarSelecaoProjetos,
     carregarSelecaoProjetos: carregarSelecaoProjetos,
 
