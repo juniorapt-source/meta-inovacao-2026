@@ -7,7 +7,7 @@
  *
  * Fonte dos dados: window.DB (local) pras partes síncronas (nome/núcleo/ações/nós), REST
  * puro no Supabase (fetch cru, mesmo padrão de corsario.html — sem SDK) pras partes
- * assíncronas (régua do Corsário, atividades por iniciativa/pessoa, linha da Matriz de
+ * assíncronas (régua do Corsário, atividades por iniciativa/pessoa, células da Matriz de
  * demandas). Cada bloco assíncrono renderiza seu próprio "carregando…" e depois se
  * preenche sozinho — o resto do painel não espera por ele.
  *
@@ -19,6 +19,12 @@
  * demandas.html, corsario.html, projetos.html...) ou sem vínculo ainda pra este projeto,
  * cai pro texto livre de sempre, sem quebrar. Ver representantesHtml()/
  * carregarJuncaoRepresentantes() abaixo.
+ *
+ * "Matriz de demandas" (painel de INICIATIVA) passou a ler meta_inovacao_matriz_celulas
+ * (tabela nova do item 3.1) em vez de meta_inovacao_matriz_demandas (a antiga, CONGELADA
+ * desde a virada do item 3.2 — não recebe mais escrita) — aposentadoria da tabela antiga,
+ * frente própria aberta 27/08/2026 (ver docs/PLANO_EXECUCAO_GOLDEN_RECORD.md). Ver
+ * matrizHtml()/QUERY_MATRIZ_CELULAS abaixo.
  */
 (function (root) {
   "use strict";
@@ -243,7 +249,7 @@
     preencherBlocoAsync(idRepr, representantesHtml(proj), (h) => h);
     preencherBlocoAsync(idRegua, buscarRegua(nome), (r) => reguaHtml(nome, r));
     preencherBlocoAsync(idAtividades, supaBuscar("plano_acao_atividades", "iniciativa=eq." + encodeURIComponent(nome) + "&deleted_at=is.null"), (linhas) => atividadesIniciativaHtml(linhas));
-    preencherBlocoAsync(idMatriz, supaBuscar("meta_inovacao_matriz_demandas", "iniciativa=eq." + encodeURIComponent(nome) + "&limit=1"), (linhas) => matrizHtml(linhas));
+    preencherBlocoAsync(idMatriz, supaBuscar("meta_inovacao_matriz_celulas", QUERY_MATRIZ_CELULAS), (linhas) => matrizHtml(linhas, nome));
   }
 
   async function buscarRegua(nomeIniciativa) {
@@ -279,17 +285,29 @@
       verMais("plano-acao.html", "Ver em Atividades por iniciativa");
   }
 
-  function matrizHtml(linhas) {
-    const linha = linhas[0];
-    if (!linha) return vazio("Iniciativa ainda não tem linha na Matriz.");
-    const canais = (root.DB && root.DB.canais) || [];
-    const preenchidas = canais
-      .map((c) => ({ canal: c, valor: linha[c.id] }))
-      .filter((x) => x.valor);
-    if (!preenchidas.length) return vazio("Todas as células desta iniciativa ainda estão vazias.");
+  // Aposentadoria de meta_inovacao_matriz_demandas (docs/PLANO_EXECUCAO_GOLDEN_RECORD.md,
+  // frente própria aberta 27/08/2026): este bloco lia direto da tabela antiga
+  // (meta_inovacao_matriz_demandas, wide-format, uma coluna física por canal) — que
+  // CONGELOU na virada do item 3.2 e não recebe mais escrita. Ou seja, toda edição feita
+  // na grade nova (demandas.html) desde então ficava invisível aqui: o painel de
+  // iniciativa mostrava o estado de ANTES da virada, não o atual. Passa a ler
+  // meta_inovacao_matriz_celulas (tabela nova do item 3.1, uma linha por
+  // projeto_id+canal_id) — mesma tabela que demandas.html/a aba "matriz" do editor.html
+  // já usam. Busca a tabela inteira (pequena: no máx. 27 projetos × 10 canais) com o
+  // embed de projeto/canal, mesmo formato já comprovado em produção por
+  // js/matriz-store.js (SELECT_COM_NOMES) — e casa client-side pelo NOME da iniciativa,
+  // não por projeto_id: assim continua funcionando mesmo em páginas/estados onde
+  // proj.db_id não veio hidratado (ex.: portfólio ainda no seed local), do mesmo jeito
+  // que o bloco sempre dependeu só do nome, nunca de um id.
+  const QUERY_MATRIZ_CELULAS = "select=estado,deleted_at,canal:meta_inovacao_canais(nome),projeto:meta_inovacao_projetos(iniciativa)";
+  function matrizHtml(linhas, nomeIniciativa) {
+    const preenchidas = (linhas || [])
+      .filter((r) => !r.deleted_at && r.estado && r.projeto && r.projeto.iniciativa === nomeIniciativa)
+      .map((r) => ({ nome: (r.canal && r.canal.nome) || "canal", valor: r.estado }));
+    if (!preenchidas.length) return vazio("Iniciativa ainda não tem célula preenchida na Matriz.");
     return preenchidas.map((x) => {
       const chave = root.CC_STATUS ? CC_STATUS.chaveDeEntrada("celula_matriz", x.valor) : x.valor;
-      return '<div class="drawer-linha"><span>' + esc(x.canal.nome) + "</span>" + (root.CC_STATUS ? CC_STATUS.badge(chave) : esc(x.valor)) + "</div>";
+      return '<div class="drawer-linha"><span>' + esc(x.nome) + "</span>" + (root.CC_STATUS ? CC_STATUS.badge(chave) : esc(x.valor)) + "</div>";
     }).join("") + verMais("demandas.html", "Ver Matriz de demandas completa");
   }
 

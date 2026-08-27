@@ -852,6 +852,61 @@ tarefa própria (levantar cada leitor, decidir o que cada um vira), não como pa
 texto legado como fonte de verdade — a coluna continua existindo (decisão do 5.2:
 manter como cópia, nunca `DROP`), só não é mais consultada por código nenhum.
 
+### Aposentadoria de `meta_inovacao_matriz_demandas` — frente própria (aberta 27/08/2026)
+
+Não é item numerado do 5.9 (ver nota acima) — é a tarefa que ficou registrada como
+"levantar cada leitor, decidir o que cada um vira". Levantamento feito em 27/08/2026:
+4 lugares no código citam a tabela antiga, mas só 1 de fato **lê o dado dela pra decidir
+o que mostrar**; os outros 3 são auditoria/comparação — usos legítimos de uma tabela
+congelada, não migração pendente.
+
+| Leitor | O que faz | Decisão |
+|---|---|---|
+| **`js/drawer.js`** — bloco "Matriz de demandas" do painel de INICIATIVA | Buscava direto `meta_inovacao_matriz_demandas` (linha 246, antes desta mudança) pra montar a lista de canais preenchidos. Único dos 4 que **lê pra decidir comportamento visível** — e a tabela está CONGELADA desde a virada do item 3.2, então mostrava o estado de ANTES da virada, nunca o atual. | ✅ **MIGRADO em 27/08/2026** — passa a ler `meta_inovacao_matriz_celulas` (a tabela nova). Ver "Como ficou a migração do drawer" abaixo. |
+| **`js/matriz-store.js`** — `carregarLegado()`/`TABELA_LEGADA` | Só alimenta a conferência célula a célula que `demandas.html` mostra (linha abaixo). Não decide nada sozinho. | ⏳ Decisão em aberto — atrelada à de `demandas.html`, mesmo mecanismo. |
+| **`demandas.html`** — painel `<details id="mz-conferencia">` "Conferência com a tabela antiga" | Comparação célula a célula, ao vivo, contra a tabela antiga. O próprio comentário no HTML diz o motivo de existir: "é o teste de aceite da Camada 3 rodando na própria tela, **durante toda a janela de validação do item 3.5**". O 3.5 **já concluiu** (José validou em produção, sem divergência, 26/08/2026) — a partir daí toda edição nova diverge da tabela congelada por definição (o próprio 3.5 já dizia isso é o esperado), então o painel deixou de ser um sinal de migração e virou um contador que só cresce. | ⏳ **Decisão de José pendente** — ver pergunta abaixo. |
+| **`editor.html`** — aba "Histórico", opção "Matriz de demandas (histórico anterior ao 3.2)" | **Não lê a tabela `meta_inovacao_matriz_demandas` em nenhum momento** — lê `cc_audit_log` (linhas de auditoria já gravadas) e só usa o nome da tabela como rótulo pra exibir registros antigos. Existe pra edições gravadas ANTES da virada não sumirem do histórico. | ✅ **Não é candidato — fica como está, pra sempre.** Não é "leitura da tabela antiga" no sentido que motivou este levantamento; é rótulo de auditoria já gravada, permanente por desenho (mesmo espírito do "nunca `DROP`" do 5.2). |
+
+**Pergunta pra José:** com o item 3.5 concluído, o painel "Conferência com a tabela
+antiga" de `demandas.html` (e o `carregarLegado()` que o alimenta) continuam fazendo
+sentido como rede de segurança permanente, ou já cumpriram o papel (validar a migração
+durante a janela de transição) e podem ser retirados agora? Nenhum dos dois lados
+implica em SQL — só decide se o painel/a função somem do código ou ficam.
+
+### Como ficou a migração do drawer (`js/drawer.js`, 27/08/2026)
+
+- O bloco "Matriz de demandas" do painel de INICIATIVA passa a buscar
+  `meta_inovacao_matriz_celulas` (tabela nova do item 3.1) com o mesmo formato de embed
+  já comprovado em produção por `js/matriz-store.js` (`select=estado,deleted_at,canal:
+  meta_inovacao_canais(nome),projeto:meta_inovacao_projetos(iniciativa)`), busca a tabela
+  inteira (pequena: no máx. 27×10) e casa **pelo NOME da iniciativa** no client, não por
+  `projeto_id` — de propósito: `js/drawer.js` não depende de `js/matriz-store.js` nem de
+  `proj.db_id` estar hidratado (algumas páginas/estados ainda caem pro seed local sem
+  `db_id` — filtrar por FK quebraria exatamente nesses casos), então manteve a mesma
+  dependência que o bloco sempre teve (nome da iniciativa), só trocando qual tabela
+  responde por trás.
+- `meta_inovacao_matriz_celulas` não tem coluna `deleted_at` garantida (mesma ressalva
+  de `js/matriz-store.js`) — por isso o filtro de linha viva é client-side
+  (`!r.deleted_at`), nunca `deleted_at=is.null` na query (isso derrubaria a consulta
+  inteira com `42703` se a coluna não existir).
+- **Teste de aceite:** `tools/testar_drawer_headless.js` continua na mesma baseline
+  conhecida — só as 2 asserções que sempre precisaram de rede real pro Supabase (régua
+  do Corsário e cards do Corsário) falham num sandbox sem egress, exatamente como já
+  documentado no item 7 da seção "Status por camada"; nenhuma falha nova. Rodada também a
+  suíte inteira de testes headless com dublê de Supabase (offline, sem rede real:
+  `testar_matriz_headless.js`, `testar_matriz_editor_headless.js`,
+  `testar_status_badges_headless.js`, `testar_mobile_headless.js`,
+  `testar_busca_headless.js`, `testar_minhas_acoes_headless.js`,
+  `testar_minhas_acoes_golden_headless.js`, `testar_timeline_headless.js`,
+  `testar_dashboard_headless.js`, `testar_urc_editor_headless.js`,
+  `testar_projetos_editor_representantes_headless.js`) — todas verdes, sem regressão.
+  **Não existe hoje um dublê de Supabase pro fetch cru de `js/drawer.js`** (as buscas de
+  régua/atividades/matriz sempre foram só-em-rede-real, ver a nota no topo de
+  `tools/testar_drawer_headless.js`) — então a confirmação de que os cartões renderizam
+  os valores CERTOS (não só "sem erro") depende de José abrir o drawer de uma iniciativa
+  em produção depois do deploy e comparar com `demandas.html`, mesmo processo humano do
+  3.5.
+
 ### Como o 5.1 ficou
 
 Relatório completo em `docs/CAMADA5_AUDITORIA_FK.md`. O resumo:
@@ -1032,9 +1087,18 @@ precisa saber sem reler tudo acima:
    texto legado) — todas com "convivendo, não substituindo": FK primeiro, texto legado
    como fallback, nunca quebra. **Pendência à parte, fora das 7 partes:** a aposentadoria de
    `meta_inovacao_matriz_demandas` (decidida no 3.5) tinha sido colada provisoriamente ao
-   item 7 antes do escopo ser confirmado — não fazia parte da pergunta que José respondeu,
-   fica registrada como tarefa própria pra uma sessão futura (ver nota no fim da "Quebra
-   recomendada do 5.9"). `docs/CAMADA5_AUDITORIA_FK.md` ainda reflete o estado de ANTES do
+   item 7 antes do escopo ser confirmado — não fazia parte da pergunta que José respondeu.
+   **Virou frente própria, iniciada em 27/08/2026** (ver "Aposentadoria de
+   `meta_inovacao_matriz_demandas`" na seção da Camada 5): levantados os 4 lugares que
+   citam a tabela antiga, só 1 (`js/drawer.js`, bloco "Matriz de demandas" do painel de
+   iniciativa) de fato lia dela pra decidir o que mostrar — **migrado** pra
+   `meta_inovacao_matriz_celulas`, a tabela nova. `editor.html` (aba Histórico) não é
+   candidato — não lê a tabela, só rotula auditoria já gravada, fica pra sempre.
+   `demandas.html` (painel "Conferência com a tabela antiga") e `js/matriz-store.js`
+   (`carregarLegado()`, que o alimenta) ficam com **decisão de José pendente**: o painel
+   nasceu pra validar a migração durante a janela do 3.5, que já concluiu — continua como
+   rede de segurança permanente ou é retirado agora? `docs/CAMADA5_AUDITORIA_FK.md` ainda
+   reflete o estado de ANTES do
    5.5/5.6/5.7/5.9 (documento histórico, não atualizado a cada parte — ver nota no topo
    dele); quem quiser o estado atual usa `tools/auditoria_fk_final.js` (offline, sempre
    ao vivo) e esta seção. Uma nova rodada da CONSULTA A/C em produção (pedida ao José pra
