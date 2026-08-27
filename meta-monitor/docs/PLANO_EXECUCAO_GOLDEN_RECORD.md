@@ -34,12 +34,19 @@ documento não redesenha nada — só quebra a implementação em atividades exe
 > dos itens 2.1, 2.6 e 2.7 agora são gravadas nas portas de entrada que existem
 > (`editor.html`, único lugar que cria projeto/ação/iniciativa nova) — ver "Como o
 > 5.5/5.6/5.7 ficaram". O 5.2 (decisão humana de dropar ou manter cada coluna de texto)
-> ainda não está maduro — fechar a porta de escrita não é o mesmo que a LEITURA já ter
-> migrado nas outras telas, o que virou o item novo **5.9** (formalizado a pedido de José
-> em 26/08/2026, ver a tabela da Camada 5), pré-requisito real do 5.2 (ver o "Veredito por
-> coluna de texto" em `docs/CAMADA5_AUDITORIA_FK.md`, que precisa de uma nova rodada de
-> auditoria — 5.1 não foi re-executado — antes do 5.2 avançar). A rodada em produção
-> (26/08) deu 12 de 13 `OK` na
+> foi **DECIDIDO em 26/08/2026 (manter, nunca `DROP`)** sob uma condição explícita: o
+> site tem que rodar 100% pela estrutura nova (FK), a coluna de texto virando histórico
+> congelado. Essa condição virou o item **5.9** (formalizado a pedido de José em
+> 26/08/2026) — migrar toda leitura que ainda decidia por texto pra ler pela FK/golden
+> record. **As 7 partes do 5.9 foram fechadas em 27/08/2026**, o que cumpre a condição
+> do 5.2 do lado do código; o item **5.4** (docs + checagem de `js/responsaveis.js`,
+> que continua em uso — ver "Como o 5.4 ficou") também foi fechado no mesmo dia. O que
+> falta pra Camada 5 estar 100% fechada não é mais decisão nem código: é uma nova
+> rodada da CONSULTA A/C em produção (pra confirmar que a leitura migrada não deixou
+> nada pra trás — José ainda precisa rodar) e a aposentadoria de
+> `meta_inovacao_matriz_demandas`, registrada como tarefa própria fora do escopo do
+> 5.9. A rodada em produção
+> (26/08, antes do 5.9 fechar) deu 12 de 13 `OK` na
 > cobertura, com um `DIVERGE`: `corsario_status.nucleo_id` estava `0/4` — item **5.8,
 > RESOLVIDO em produção em 26/08/2026** (José rodou SEÇÃO 1→2→3 de
 > `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql`: os 4 núcleos casaram por
@@ -517,12 +524,43 @@ hoje.
 | 5.1 | Auditoria final: confirmar cobertura de FK das Camadas 2 e 4, ponta a ponta | `tools/auditoria_fk_final.js`, `tools/sql/2026-08_auditoria_fk_final.sql`, `docs/CAMADA5_AUDITORIA_FK.md` | Opus / alto | ✅ **feita em 26/08/2026** — achou 6 lacunas de caminho de escrita em 3 das 7 FKs; ver "Como o 5.1 ficou" |
 | 5.2 | **[humano]** Decidir, tabela a tabela, se dropa a coluna de texto ou mantém como cache | — | José | ✅ **DECIDIDO em 26/08/2026: manter as 7 colunas como cópia, nenhum `DROP`.** Condição explícita: o site deve funcionar 100% pela estrutura nova (FK) — a coluna de texto vira histórico congelado, nunca mais fonte de verdade. Confirmado com a CONSULTA 0/A/B/C rodada em produção depois do 5.5/5.6/5.7: 13/13, 13/13, 0 órfãos, só o placeholder já conhecido. Ver nota no topo de `docs/CAMADA5_AUDITORIA_FK.md`. |
 | 5.3 | Migrações de `DROP COLUMN` onde decidido em 5.2 | sql | — | ⛔ **SEM EFEITO — decisão do 5.2 foi manter, não dropar.** Não é "adiado", não vai acontecer (a menos que uma decisão nova troque a de 26/08/2026). |
-| 5.4 | Atualizar `PADRAO_TABELA.md`/`GOVERNANCA_GOLDEN_RECORD.md` com o novo estado; aposentar `js/responsaveis.js` se não sobrar uso | docs, js | Haiku / baixo | ⏳ não feito — depende do 5.9 fechar primeiro (é só depois que dá pra dizer se `js/responsaveis.js` ainda tem uso: `minhas-acoes.html` ainda usa `RESP.mapearTexto` pro texto livre de `n.guardiao`, fora do escopo de qualquer item numerado até aqui) |
+| 5.4 | Atualizar `PADRAO_TABELA.md`/`GOVERNANCA_GOLDEN_RECORD.md` com o novo estado; aposentar `js/responsaveis.js` se não sobrar uso | docs, js | Haiku / baixo | ✅ **feita em 27/08/2026** — `tools/sql/PADRAO_TABELA.md` ganhou a seção "Padrão de convivência FK + texto legado", documentando o padrão dos itens 4.1–4.4/5.5–5.9 pra tabela nova que substitua texto por FK; `docs/GOVERNANCA_GOLDEN_RECORD.md` ganhou uma nota no topo apontando pra esta frente (irmã) e o mesmo padrão. `js/responsaveis.js` **NÃO foi aposentado** — continua em uso ativo: chamada direta em `editor.html:574` (`respTexto`) e `minhas-acoes.html:171` (`n.guardiao`), e é o fallback de `idsDeTexto()` em `js/drawer.js` (carregado em `participantes.html`/`plano.html`/`demandas.html`/`projetos.html`/`corsario.html`/`canva-consolidado.html`) quando o vínculo golden não resolve — ver detalhe abaixo. |
 | 5.5 | **Fechar a porta de escrita do 2.1:** `editor.html`/`js/db-projetos.js` gravam `nucleo_id` junto com `nucleo` (projeto novo e troca de núcleo na grade) | `editor.html`, `js/db-projetos.js` | — | ✅ em `main` — trocar núcleo na grade e "+ Novo projeto" gravam `nucleo_id` (resolvido pelo golden record `meta_inovacao_nucleos`, item 0.5) junto com o texto. Detalhe abaixo. |
 | 5.6 | **Fechar a porta de escrita do 2.6:** ação nova em `editor.html` grava `meta_inovacao_plano_responsaveis` junto com `responsavel_id` (`text[]`) | `editor.html`, `js/db-plano-responsaveis.js` (novo) | — | ✅ em `main` — escopo real era menor que os 4 arquivos listados originalmente (ver nota abaixo); `responsavel_id` nascia sempre `[]` em "Nova atividade", agora resolve o texto digitado contra a lista canônica e grava a junção. `plano-acao.html`/`minhas-acoes.html`/`js/db-plano.js` não tinham porta de escrita pra fechar. |
 | 5.7 | **Fechar a porta de escrita do 2.7:** `js/db-corsario.js` grava `projeto_id`/`nucleo_id` em `criar()` e `criarIniciativa()` | `js/db-corsario.js`, `editor.html` | — | ✅ em `main` — as 3 portas de escrita do Corsário ("+ Nova iniciativa" própria, criar linha de status faltante, e a semeadura automática que "+ Novo projeto" dispara) agora resolvem e gravam as duas FKs. Detalhe abaixo. |
 | 5.8 | **[humano]** Rodar a recuperação de `corsario_status.nucleo_id` (estava `0/4` em produção) | `tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql` | José | ✅ **RODADO em produção em 26/08/2026** — SEÇÃO 1 (diagnóstico): os 4 núcleos do corsário casaram por igualdade normalizada (acento/caixa — ex. "startups" → "Startups"), nenhum "SEM CORRESPONDENTE"; SEÇÃO 2 populou; SEÇÃO 3 confirmou 4/4, zero linhas sem correspondente no catálogo. Ver nota abaixo. |
 | 5.9 | **Migrar TODA a leitura que ainda decide por texto pra ler pela FK/golden record** — deixou de ser "pré-requisito do 5.2" e virou o objetivo real da Camada 5, por decisão do 5.2 (26/08/2026: nunca dropar, mas o site tem que rodar 100% pela estrutura nova). 7 partes, Modelo/Esforço PRÓPRIO de cada uma — ver "Quebra recomendada do 5.9" abaixo, não é um item único. | `js/db-urc.js` (guardrail), `projetos.html`, `index.html`, `js/busca.js`, `js/drawer.js` (fora de `participantes.html`), telas do canva (`canva-*.html`), `js/db-plano.js`/`minhas-acoes.html` (parte 7) | ver quebra por parte abaixo — as 7 partes têm Modelo/Esforço definido (26/08/2026) | ✅ **7 DE 7 PARTES FEITAS (27/08/2026)** — partes 1 (guardrail `nomeEhLideranca()`), 2 (`projetos.html`), 3 (`index.html`), 4 (`js/drawer.js` nas demais páginas), 5 (telas do canva) e 6 (`js/busca.js`, Opção A) ✅ em 26/08/2026; parte 7 (`plano_responsaveis`, `js/db-plano.js` + `minhas-acoes.html`) ✅ em 27/08/2026 — ver detalhe na "Quebra recomendada do 5.9" abaixo. A aposentadoria de `meta_inovacao_matriz_demandas` (ficou colada ao item 7 antes do escopo ser confirmado) segue **⏳ pendente**, registrada como tarefa própria, fora das 7 partes |
+
+### Como o 5.4 ficou
+
+Com as 7 partes do 5.9 fechadas (27/08/2026), a condição explícita anexada à decisão
+do 5.2 ("o site deve funcionar 100% pela estrutura nova") está cumprida pras telas —
+o que sobrou pro 5.4 foi documentação e uma checagem de uso, não código de produto:
+
+- **`tools/sql/PADRAO_TABELA.md`** ganhou a seção "Padrão de convivência FK + texto
+  legado (golden record de cadastros de referência)": registra o padrão
+  escrita-grava-os-dois / leitura-prefere-FK-cai-pro-texto / nunca-`DROP` usado em todos
+  os itens 4.1–4.4 e 5.5–5.9, pra quem for desenhar a próxima tabela que substitui
+  texto livre por FK não reinventar.
+- **`docs/GOVERNANCA_GOLDEN_RECORD.md`** (a frente irmã, golden record de *projetos*,
+  já concluída antes desta) ganhou uma nota no topo apontando pra esta frente e pro
+  mesmo padrão — evita que quem achar aquele doc primeiro pense que é a única frente
+  de golden record do projeto.
+- **`js/responsaveis.js`: checado, NÃO aposentado.** `RESP.mapearTexto` ainda é
+  chamado direto em `editor.html:574` (resolve `respTexto` livre em "Nova atividade"
+  antes de casar contra a lista canônica) e `minhas-acoes.html:171` (`n.guardiao`,
+  fora do escopo de qualquer item numerado da Camada 4/5 — não é FK em lugar nenhum,
+  é texto livre puro sobre `data/nos.js`). Além disso é o fallback de `idsDeTexto()`
+  em `js/drawer.js` (linha 41–45): quando o vínculo golden não carrega ou não resolve
+  o texto de um responsável, o drawer cai pro casamento por texto do `RESP` — e
+  `js/drawer.js` está carregado em `participantes.html`, `plano.html`, `demandas.html`,
+  `projetos.html`, `corsario.html` e `canva-consolidado.html`. Aposentar o módulo
+  quebraria esse fallback nas 6 telas. Reavaliar só se um dia `n.guardiao` e o
+  fallback do drawer também migrarem pra FK — não está em nenhum item aberto hoje.
+
+**Teste de aceite:** nenhum teste headless quebrou (mudança é só documentação — `git
+diff` toca só `.md`, nenhum `.js`/`.html` de produto); `js/responsaveis.js` continua
+exportando `RESP` normalmente (`node -e "require('./js/responsaveis.js')"`).
 
 ### Como o 5.5 ficou
 
@@ -956,8 +994,9 @@ precisa saber sem reler tudo acima:
    4.2 ficou", "Como o 4.3 ficou" e "Como o 4.4 ficou" na seção da Camada 4 — os padrões de
    chip+select, select-com-sincronia-de-texto, lista-derivada-do-golden-record e
    bloco-assíncrono-com-fallback-de-texto criados ali servem de referência pra Camada 5.
-4. **Camada 5 em andamento (26/08/2026) — 5.1, 5.5, 5.6, 5.7 e 5.8 feitos, 5.2 ainda
-   não maduro:** o item 5.1 (auditoria final) está feito —
+4. **Camada 5 quase concluída (27/08/2026) — 5.1, 5.2, 5.4, 5.5, 5.6, 5.7, 5.8 e 5.9
+   (7/7 partes) feitos; só faltam duas pendências não-de-código, descritas no fim
+   deste bullet:** o item 5.1 (auditoria final) está feito —
    `tools/auditoria_fk_final.js` (caminho de escrita + leitores, offline),
    `tools/sql/2026-08_auditoria_fk_final.sql` (cobertura real, pra José rodar no SQL
    Editor) e `docs/CAMADA5_AUDITORIA_FK.md` (o relatório, com o veredito de 26/08 — não
@@ -973,10 +1012,14 @@ precisa saber sem reler tudo acima:
    O `DIVERGE` que a rodada em produção achou (`corsario_status.nucleo_id` `0/4`) virou
    o item **5.8, também RESOLVIDO** (`tools/sql/2026-08_corsario_status_nucleo_id_recuperacao.sql`,
    rodado por José em 26/08/2026, SEÇÃO 3 confirmou 4/4).
-   **O que falta pra Camada 5:** 5.2 continua travado, agora esperando o item **5.9**
-   (novo, aberto 26/08/2026) — fechar a porta de ESCRITA (5.5/5.6/5.7, já feitos) não é o
-   mesmo que a LEITURA já ter migrado nas outras telas. Das 7 partes da quebra do 5.9
-   (ver "Quebra recomendada do 5.9" na seção da Camada 5), **as 7 estão feitas (27/08/2026)** —
+   **5.2 já não está mais travado:** José confirmou a decisão (manter, nunca `DROP`)
+   em 26/08/2026 sob a condição de a leitura migrar 100% pra FK — condição que era o
+   item **5.9** (aberto 26/08/2026) — fechar a porta de ESCRITA (5.5/5.6/5.7, já feitos)
+   não é o mesmo que a LEITURA já ter migrado nas outras telas. Das 7 partes da quebra do 5.9
+   (ver "Quebra recomendada do 5.9" na seção da Camada 5), **as 7 estão feitas (27/08/2026)**,
+   o que cumpre a condição do 5.2 do lado do código — e o item **5.4** (docs +
+   checagem de `js/responsaveis.js`, mantido — ver "Como o 5.4 ficou") também foi
+   fechado no mesmo dia. Detalhe das 7 partes do 5.9 —
    parte 1 (guardrail `nomeEhLideranca()`, `js/db-urc.js`), parte 2 (`projetos.html`), parte 3
    (`index.html`), parte 4 (`js/drawer.js` fora de `participantes.html`), parte 5 (telas
    do canva — na prática só `canva-consolidado.html`, a única que LÊ

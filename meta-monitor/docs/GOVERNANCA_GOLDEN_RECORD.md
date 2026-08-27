@@ -1,5 +1,14 @@
 # Governança do portfólio — Golden Record de Projetos & Iniciativas
 
+> **Frente irmã:** este documento cobre só o golden record da *lista de
+> iniciativas/projetos* (abaixo), concluído antes da frente seguinte. O golden record
+> dos demais *cadastros de referência* (pessoas, núcleos, canais, plano de
+> responsáveis) é uma frente separada, com plano próprio em
+> `docs/PLANO_EXECUCAO_GOLDEN_RECORD.md` — Camada 5 dela quase concluída em
+> 27/08/2026. O padrão de convivência FK + texto legado usado lá (nunca `DROP`, FK
+> primeiro na leitura, texto como fallback) segue o mesmo espírito da "leitura ao vivo
+> em tudo" decidida aqui; ver `tools/sql/PADRAO_TABELA.md` pro padrão documentado.
+
 ## Decisão
 
 **Golden record (fonte única da verdade) da lista de iniciativas/projetos:**

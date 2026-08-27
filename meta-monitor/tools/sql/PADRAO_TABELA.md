@@ -142,3 +142,25 @@ Placeholders a substituir: `<TABELA>` (nome real, com o prefixo `meta_inovacao_`
 `<sufixo>` (nome curto pro trigger, ex.: `plano`, `agenda`, `audit`) e
 `SUBSTITUIR_PELO_TOKEN_UUID` (token real de `data/config.js.tokenEscrita` — mesmo token
 em todas as tabelas, não gerar um novo).
+
+## Padrão de convivência FK + texto legado (golden record de cadastros de referência)
+
+Quando uma coluna nova de FK substitui um texto livre já em produção numa tabela
+existente (ex.: `nucleo_id` ao lado de `nucleo`, `pessoa_id` ao lado de `responsavel`),
+o padrão adotado pela frente "golden record de cadastros de referência"
+(`docs/PLANO_EXECUCAO_GOLDEN_RECORD.md`) é **"convivendo, nunca substituindo"**:
+
+1. **Escrita:** toda porta de entrada que grava o texto passa a resolver e gravar a FK
+   junto, no mesmo `INSERT`/`UPDATE` — nunca só a FK sozinha.
+2. **Leitura:** telas passam a preferir a FK quando ela existe e resolve; sem FK
+   (linha antiga) ou sem o vínculo carregado (script/módulo ausente na página), cai pro
+   texto legado de sempre — a leitura **nunca quebra** por falta do dado novo.
+3. **A coluna de texto nunca é `DROP`ada.** Decisão humana registrada no item 5.2 do
+   plano: vira cópia/histórico congelado, mantida pra sempre — mesmo depois de nenhuma
+   tela mais consultá-la como fonte de verdade. `DROP COLUMN` não é "adiado" nesse
+   padrão, é decisão de nunca acontecer, a menos que uma decisão nova troque a de
+   26/08/2026.
+
+Ver os itens 4.1–4.4 e 5.5–5.9 de `docs/PLANO_EXECUCAO_GOLDEN_RECORD.md` pros exemplos
+reais desse padrão aplicado (chip+select, select-com-sincronia-de-texto,
+lista-derivada-do-golden-record, bloco-assíncrono-com-fallback-de-texto).
