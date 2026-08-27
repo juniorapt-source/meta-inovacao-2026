@@ -172,9 +172,14 @@
     </div>
     <div class="cv-campo">
       <label for="cv-nome">Meu nome</label>
-      <input type="text" id="cv-nome" maxlength="2000" placeholder="Como você quer ser identificado">
+      <input type="text" id="cv-nome" maxlength="2000" placeholder="Como você quer ser identificado" list="cv-lista-pessoas">
+      <p class="cv-nota">Escolha da lista pra não digitar errado — se não encontrar, é só digitar.</p>
     </div>
   </section>
+  <!-- Opções compartilhadas por "Meu nome" e por "Responsável" de cada cartão — montada em
+       JS por montarListaPessoas(), a partir do golden record de pessoas (js/db-pessoas.js).
+       <input list="..."> continua editável: quem não está na lista digita normalmente. -->
+  <datalist id="cv-lista-pessoas"></datalist>
 
   <p class="aviso" id="cv-aviso-escolha" style="margin-top:16px">Marque acima o(s) seu(s) projeto(s) pra ver os 10 canais de cada um e começar a preencher.</p>
 
@@ -207,6 +212,8 @@
 <script src="data/agenda.js"></script>
 <script src="data/projetos.js"></script>
 <script src="js/db-projetos.js"></script>
+<script src="data/pessoas.js"></script>
+<script src="js/db-pessoas.js"></script>
 <script src="js/core.js"></script>
 <script>
 (function () {
@@ -372,6 +379,23 @@
     }
     inicial.forEach(marcarProjeto);
     aoMudarSelecao();
+  }
+
+  // Opções de "Meu nome" e "Responsável": pessoas ATIVAS do golden record
+  // (js/db-pessoas.js), pra sugerir e evitar erro de digitação, sem travar quem não
+  // está cadastrado — <input list="cv-lista-pessoas"> continua aceitando texto livre.
+  // Não filtra por projeto marcado de propósito (decisão de 27/08/2026): a lista de
+  // pessoas do golden record inteira é mais útil aqui do que só representantes
+  // cadastrados, que hoje cobrem só parte dos projetos.
+  async function montarListaPessoas() {
+    const { lista: pessoas } = await DB_PESSOAS.carregar();
+    const nomes = [...new Set(
+      (pessoas || [])
+        .filter((p) => p.ativo !== false && (p.nome_exibicao || p.nome_completo || p.nome))
+        .map((p) => p.nome_exibicao || p.nome_completo || p.nome)
+    )].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    document.getElementById("cv-lista-pessoas").innerHTML =
+      nomes.map((n) => '<option value="' + esc(n) + '">').join("");
   }
 
   function checkboxDoProjeto(nome) {
@@ -838,7 +862,7 @@
           '<label for="ql-' + esc(id) + '">Qual canal próprio?</label>' +
           '<input type="text" id="ql-' + esc(id) + '" class="cv-f-qual" maxlength="2000" value="' + esc(d.canal_proprio_qual) + '"></div>' +
         '<div class="cv-campo"><label for="rs-' + esc(id) + '">Responsável</label>' +
-          '<input type="text" id="rs-' + esc(id) + '" class="cv-f-responsavel" maxlength="2000" value="' + esc(d.responsavel) + '"></div>' +
+          '<input type="text" id="rs-' + esc(id) + '" class="cv-f-responsavel" maxlength="2000" value="' + esc(d.responsavel) + '" list="cv-lista-pessoas"></div>' +
         '<div class="cv-campo"><label for="pz-' + esc(id) + '">Prazo</label>' +
           '<input type="date" id="pz-' + esc(id) + '" class="cv-f-prazo" min="' + PRAZO_MIN + '" max="' + PRAZO_MAX + '" value="' + esc(d.prazo || "") + '"></div>' +
         '<p class="cv-estado-erro" data-erro hidden></p>' +
@@ -1056,6 +1080,7 @@
   });
 
   montarListaProjetos();
+  montarListaPessoas();
 })();
 </script>
 </body>
