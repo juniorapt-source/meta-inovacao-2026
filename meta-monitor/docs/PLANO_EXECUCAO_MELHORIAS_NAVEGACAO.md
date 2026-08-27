@@ -19,9 +19,10 @@ conferida no código antes de cada correção.
 > José testar em produção e pedir um modelo diferente do que tinha sido entregue
 > (checklist de múltipla escolha em vez de "trocar de um projeto pro outro"). Item 3
 > (versão nova, checklist) **EM ANDAMENTO na branch, fora da `main`** — sub-itens 3.1 a
-> 3.6 feitos (o checklist já funciona ponta a ponta em Chrome headless); faltam a limpeza
-> (3.7), o teste headless novo (3.8) e o teste do José em produção (3.9). **Nada do item
-> 3 foi pra `main` ainda** — o merge é um só, depois do 3.8. Item 5
+> 3.8 feitos (o checklist já funciona ponta a ponta em Chrome headless, com os dois
+> testes headless verdes); falta só o teste do José em produção (3.9). **Nada do item
+> 3 foi pra `main` ainda** — o merge é um só, depois do José validar em produção (3.9).
+> Item 5
 > **NÃO INICIADO** — uma das duas decisões que travava o desenho já foi tomada
 > (descartar a apresentação atual), falta a segunda (link varia por ciclo/oficina?).
 > Se você está retomando este trabalho numa sessão nova: leia a seção "Status por item —
@@ -84,7 +85,7 @@ o projeto é que muda (select único → checklist, ver Item 3 abaixo).
 
 ---
 
-## Item 3 — Canvas de demandas: responder por mais de um projeto — 🔄 REDESENHO EM ANDAMENTO (3.1–3.6 feitos)
+## Item 3 — Canvas de demandas: responder por mais de um projeto — 🔄 REDESENHO EM ANDAMENTO (3.1–3.8 feitos, falta 3.9 [humano])
 
 ### Histórico (por que este item foi reaberto)
 
@@ -180,7 +181,7 @@ matriz na tela**. Rode em **plan mode** antes de codar.
 | 3.5 | `canalDestaque` (contexto do QR de oficina) abre o painel daquele canal em TODOS os blocos criados a partir de agora, não só o primeiro | `canva.html` | Sonnet / baixo (depende do 3.3/3.4 prontos) | ✅ atendido por construção no 3.4 — o trecho que abre `canalDestaque` mora DENTRO da fábrica, então roda uma vez por bloco. Conferido em Chrome headless (2 projetos marcados com `?canal=empresa` → cartão de `empresa` aberto nos dois). Falta só virar teste permanente, no 3.8. |
 | 3.6 | `#cv-resumo`/"Baixar minha cópia (.csv)" passam a ser por bloco/projeto (confirmar antes se `csv-export.js` já exporta 1 caderno por vez — deveria, caderno já é escopado a 1 projeto) | `canva.html`, conferir `js/csv-export.js` | Sonnet / baixo | ✅ atendido por construção no 3.4 — resumo e botão de .csv são gerados dentro de cada bloco e fecham sobre o caderno daquele projeto. `js/csv-export.js` não precisou de mudança nenhuma (a suspeita do plano estava certa: ele já recebia cabeçalho+linhas prontos). |
 | 3.7 | Limpeza: remover `#cv-projetos-feitos`, a frase fixa do PR #21, e `projetosRespondidosLocalmente()` (`js/db-canva.js`) se não sobrar uso — código morto, não código escondido | `canva.html`, `js/db-canva.js` | Sonnet / baixo | ✅ feito (27/08/2026) — removidos `#cv-projetos-feitos`/`#cv-lista-projetos-feitos` (e a frase fixa) de `canva.html`, e `projetosRespondidosLocalmente()` (função + export em `DB_CANVA`) de `js/db-canva.js`. Conferido que não sobrou referência em nenhum `.js`/`.html`/`.css` do repo. `tools/testar_canva.js`, `tools/testar_canva_oficina.js` e `tools/validar_site.py` verdes. |
-| 3.8 | Ajustar `tools/testar_canva_oficina.js` + novo `tools/testar_canva_multiprojeto_headless.js` (mesmo padrão CDP cru dos outros testes headless do repo): marcar 2+ checkboxes de núcleos diferentes → 2+ blocos; "Selecionar Todos" marca o grupo inteiro; desmarcar não apaga dado (remarcar devolve); F5 restaura seleção; `?projeto=` pré-marca | `tools/testar_canva_oficina.js`, `tools/testar_canva_multiprojeto_headless.js` (novo) | Sonnet / médio | ⏳ parcialmente feito — `testar_canva_oficina.js` **já foi adaptado e está verde** (marcar o 1º checkbox no lugar da 1ª `<option>`; a linha da mini-matriz agora é buscada dentro de `.cv-bloco`), pra não deixar teste vermelho na branch. Falta o arquivo NOVO — ver "Roteiro já validado pro 3.8" abaixo, que é exatamente o que rodou em headless durante o 3.3/3.4 e passou. Vale também endurecer a checagem 5 do `testar_canva_oficina.js`: com a seleção agora persistida, ela pode estar lendo um caderno de uma etapa anterior em vez de um recém-criado. |
+| 3.8 | Ajustar `tools/testar_canva_oficina.js` + novo `tools/testar_canva_multiprojeto_headless.js` (mesmo padrão CDP cru dos outros testes headless do repo): marcar 2+ checkboxes de núcleos diferentes → 2+ blocos; "Selecionar Todos" marca o grupo inteiro; desmarcar não apaga dado (remarcar devolve); F5 restaura seleção; `?projeto=` pré-marca | `tools/testar_canva_oficina.js`, `tools/testar_canva_multiprojeto_headless.js` (novo) | Sonnet / médio | ✅ feito (27/08/2026) — `tools/testar_canva_multiprojeto_headless.js` criado, transcrevendo o "Roteiro já validado pro 3.8" abaixo (10 passos, seed atual de 4 núcleos/27 projetos), verde. A checagem 5 do `testar_canva_oficina.js` foi endurecida como o plano avisava: agora marca um projeto NOVO e cria a demanda num canal escolhido manualmente, em vez de reler o caderno já conferido no passo 3 (a seleção persistida fazia o checkbox do passo 2 chegar marcado de novo). `tools/testar_canva.js`, `tools/testar_canva_oficina.js`, `tools/testar_canva_multiprojeto_headless.js` e `tools/validar_site.py` todos verdes. |
 | 3.9 | **[humano]** José testa em produção (mobile e desktop) antes de considerar o item fechado | — | José | ⏳ não iniciado |
 
 ### O que a reescrita 3.3/3.4 mudou (27/08/2026) — leia antes de mexer em `canva.html`
@@ -275,21 +276,24 @@ produção — é página pública, sem login, usada ao vivo em oficina via QR C
 deploy automático a cada push. Por isso:
 - **Todos os sub-itens 3.1–3.8 vivem na MESMA branch** — não crie uma branch nova a
   partir da `main` a cada sessão/sub-item.
-- **Branch em uso hoje (27/08/2026): `claude/plano-execucao-item-3-1-8redft-4u70k2`.**
-  Existem DUAS branches com nome parecido, e isso já confundiu uma sessão: o 3.1 saiu na
-  `claude/plano-execucao-item-3-1-8redft` (e acabou mesclado na `main` sozinho, antes do
-  combinado), o 3.2 ficou só nessa mesma branch, e o ambiente das sessões novas cria o
-  nome com sufixo (`-4u70k2`). A sessão do 3.3 mesclou a `...-8redft` dentro da
-  `...-8redft-4u70k2`, então **é a com sufixo que tem tudo (3.1→3.6)** — continue nela
-  até o 3.8. A `...-8redft` sem sufixo está desatualizada; não trabalhe nela.
+- **Branch em uso hoje (27/08/2026): `claude/plano-execucao-item-3-8-mtsarn`.**
+  Existem VÁRIAS branches com nome parecido, e isso já confundiu mais de uma sessão: o
+  3.1 saiu na `claude/plano-execucao-item-3-1-8redft` (e acabou mesclado na `main`
+  sozinho, antes do combinado), o 3.2 ficou só nessa mesma branch, a sessão do 3.3
+  mesclou a `...-8redft` dentro da `...-8redft-4u70k2` (que reuniu 3.1→3.6), e a sessão
+  do 3.7 mesclou a `...-8redft-4u70k2` dentro da `...-8redft-4u70k2-f7fpvq` (que reuniu
+  3.1→3.7). A sessão do 3.8 mesclou a `...-f7fpvq` (fast-forward) dentro da
+  `claude/plano-execucao-item-3-8-mtsarn`, então **é esta que tem tudo (3.1→3.8)** —
+  continue nela até o 3.9/merge. As branches anteriores da lista estão desatualizadas;
+  não trabalhe nelas.
 - **Só mescla com a `main` depois do 3.8** (todos os sub-itens prontos + os testes
   headless novos verdes) — nunca no meio do caminho. O merge é 1 só pro item inteiro,
   não 1 por sub-item.
 - Comando sugerido pra abrir a sessão de cada sub-item (troque só o número):
   > Leia meta-monitor/docs/PLANO_EXECUCAO_MELHORIAS_NAVEGACAO.md, continue na
-  > branch `claude/plano-execucao-item-3-1-8redft-4u70k2` (não crie uma branch nova a
-  > partir da main) e execute o item 3.X. Não dê merge com a main — só depois do
-  > 3.8, com o item inteiro testado.
+  > branch `claude/plano-execucao-item-3-8-mtsarn` (não crie uma branch nova a
+  > partir da main) e execute o item 3.X. Não dê merge com a main — José revisa o
+  > item inteiro (3.1→3.8 testados) antes do merge.
 
 **Teste de aceite:**
 - Marcar 2 projetos de núcleos diferentes mostra 2 seções de matriz, cada uma com seus
@@ -366,14 +370,14 @@ precisa saber sem reler tudo acima:
 2. **Item 3 foi implementado duas vezes (PRs #20 e #21) e REABERTO em 27/08/2026** —
    José quer um modelo diferente (checklist multi-seleção, não "trocar de um projeto
    pro outro"). O redesenho está **em andamento na branch
-   `claude/plano-execucao-item-3-1-8redft-4u70k2`, fora da `main`**: 3.1 a 3.6 feitos,
-   o núcleo (3.3+3.4, a reescrita de `let caderno` → `Map` de cadernos + fábrica de
-   bloco por projeto) já roda verde em Chrome headless. **Faltam 3.7 (apagar o código
-   morto que a reescrita deixou), 3.8 (o headless novo — o roteiro já validado está
-   escrito no plano, é só transcrever) e 3.9 (José em produção).** Antes de mexer em
+   `claude/plano-execucao-item-3-8-mtsarn`, fora da `main`**: 3.1 a 3.8 feitos — o
+   núcleo (3.3+3.4, a reescrita de `let caderno` → `Map` de cadernos + fábrica de
+   bloco por projeto), a limpeza do código morto (3.7) e os dois testes headless
+   (3.8: `tools/testar_canva_oficina.js` adaptado + `tools/testar_canva_multiprojeto_headless.js`
+   novo) todos verdes. **Falta só 3.9 (José testa em produção).** Antes de mexer em
    `canva.html`, leia a seção "O que a reescrita 3.3/3.4 mudou" — ela lista os ids que
    deixaram de existir e as três correções que o multiprojeto obrigou em
-   `js/db-canva.js`. O merge com a `main` continua sendo UM só, depois do 3.8.
+   `js/db-canva.js`. O merge com a `main` é UM só, depois do José validar em produção.
 3. **Item 5 tem 1 de 2 decisões tomadas** (descartar a apresentação atual) — falta só
    a segunda (link fixo por canal vs. variável por ciclo) antes de começar qualquer
    código. Não inicie o 5.2 em diante sem essa resposta.

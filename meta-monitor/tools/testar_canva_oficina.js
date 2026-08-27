@@ -202,17 +202,49 @@ function ok(cond, msg, extra) {
     console.log("5) sem ?canal= (link nu), ainda assim grava o ciclo do dia");
     await cdp.enviar("Page.navigate", { url: `http://127.0.0.1:${port}/canva.html?semrede=1&nada=1` }, sessionId);
     await esperarCarregar();
+    // a seleção de projetos agora é persistida (item 3.1): sem cuidado aqui, o
+    // checkbox marcado no passo 2 já chega marcado de novo (persistência de F5), e o
+    // scan por "a 1ª demanda que achar" acaba relendo o MESMO caderno/demanda já
+    // conferido no passo 3, em vez de provar algo novo sobre este passo. Pra isolar,
+    // marca um projeto NOVO (ainda não usado nesta sessão) e cria a demanda ali, num
+    // canal escolhido manualmente (não há canalDestaque nesta URL, sem ?canal=).
     const d2 = await avaliar(`(function(){
-      const c = document.querySelector("#cv-projeto .cv-chk-projeto");
+      const c = Array.from(document.querySelectorAll("#cv-projeto .cv-chk-projeto")).find((x) => !x.checked);
+      const nomeProjetoNovo = c.value;
       c.checked = true; c.dispatchEvent(new Event("change", { bubbles: true }));
+      return nomeProjetoNovo;
+    })()`);
+    await new Promise((r) => setTimeout(r, 300));
+    await avaliar(`(function(){
+      const bloco = Array.from(document.querySelectorAll(".cv-bloco")).find((b) => b.dataset.projeto === ${JSON.stringify(d2)});
+      bloco.querySelector('.cv-linha-canal[data-canal="portal"] .cv-btn-mais').click();
+      return true;
+    })()`);
+    await new Promise((r) => setTimeout(r, 300));
+    await avaliar(`(function(){
+      const bloco = Array.from(document.querySelectorAll(".cv-bloco")).find((b) => b.dataset.projeto === ${JSON.stringify(d2)});
+      const c = bloco.querySelector('.cv-cartao[data-canal="portal"]');
+      const set = (sel, v) => { const el = c.querySelector(sel); el.value = v; el.dispatchEvent(new Event("input", {bubbles:true})); };
+      set(".cv-f-servico", "Teste sem canal de QR");
+      set(".cv-f-responsavel", "Bia");
+      return true;
+    })()`);
+    await new Promise((r) => setTimeout(r, 2600));
+    const demandaProjetoNovo = await avaliar(`(function(){
       const k = Object.keys(localStorage).filter(x => x.indexOf("cc_canva_") === 0);
       for (const chave of k) {
         let v; try { v = JSON.parse(localStorage.getItem(chave)); } catch (e) { continue; }
-        if (v && v.demandas && v.demandas.length) return v.demandas[0];
+        if (!v || v.projeto !== ${JSON.stringify(d2)} || !v.demandas) continue;
+        const achada = v.demandas.filter(x => x.canal === "portal")[0];
+        if (achada) return achada;
       }
       return null;
     })()`);
-    ok(!!d2 && d2.ciclo === "c1", "ciclo do dia continua vindo, sem encontro_id", d2 ? "ciclo=" + d2.ciclo : "sem demanda");
+    ok(!!demandaProjetoNovo, "achou a demanda do projeto marcado neste passo (não a de um passo anterior)");
+    if (demandaProjetoNovo) {
+      ok(demandaProjetoNovo.ciclo === "c1", "ciclo do dia continua vindo, sem encontro_id", "ciclo=" + JSON.stringify(demandaProjetoNovo.ciclo));
+      ok(demandaProjetoNovo.encontro_id === null, "sem canalDestaque nesta URL, encontro_id fica nulo (não herda o de outro passo)", "encontro_id=" + JSON.stringify(demandaProjetoNovo.encontro_id));
+    }
   } finally {
     cdp.fechar();
     server.close();
