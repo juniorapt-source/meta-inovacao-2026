@@ -288,6 +288,13 @@
       encontro_id: d.encontro_id || null,
       autor_nome: caderno.autor_nome,
       sessao_id: caderno.sessao_id,
+      // item 3, rodada 3 (28/08/2026): uma demanda digitada uma vez vira uma linha por
+      // projeto marcado. grupo_local é o que amarra essas linhas irmãs — "estas nasceram
+      // do mesmo pedido". Vai no payload desde já: enquanto a coluna não existir no
+      // banco, a função simplesmente ignora a chave (jsonb extra não quebra nada), e no
+      // dia em que a migração tools/sql/2026-08_canva_grupo_local.sql for rodada, começa
+      // a gravar sozinho — sem precisar mexer aqui de novo.
+      grupo_local: d.grupo_local || null,
       // honeypot (§6.6): a tela mantém um campo escondido por CSS chamado empresa_site.
       // Humano nunca preenche. Vai vazio daqui; se um bot preencher o input, a tela
       // passa o valor e a função responde "ok" sem gravar nada.
@@ -405,7 +412,8 @@
       caderno.demandas.push(d);
     }
     ["canal", "servico", "problema", "bloqueio", "canal_proprio", "canal_proprio_qual",
-     "responsavel", "prazo", "facilitador", "ciclo", "encontro_id", "empresa_site"].forEach(function (c) {
+     "responsavel", "prazo", "facilitador", "ciclo", "encontro_id", "empresa_site",
+     "grupo_local"].forEach(function (c) {
       if (Object.prototype.hasOwnProperty.call(dados, c)) d[c] = dados[c];
     });
 

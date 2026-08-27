@@ -18,7 +18,10 @@ conferida no código antes de cada correção.
 > **fica mantida** — o item 3 foi redesenhado (ver "Item 3 — redesenho" abaixo) depois de
 > José testar em produção e pedir um modelo diferente do que tinha sido entregue
 > (checklist de múltipla escolha em vez de "trocar de um projeto pro outro"). Item 3
-> (versão nova, checklist) **CÓDIGO COMPLETO — sub-itens 3.1 a 3.8 feitos e testados**
+> (versão nova, checklist) **rodadas 1 e 2 EM PRODUÇÃO; RODADA 3 na branch, aguardando
+> merge** — o teste do José em produção (3.9) derrubou o desenho de "um formulário por
+> projeto" e pediu o inverso: uma matriz, um registro por projeto. Ver "Rodada 3" no item
+> 3. O texto abaixo descreve o estado ANTES desse teste: **sub-itens 3.1 a 3.8 feitos e testados**
 > (checklist ponta a ponta em Chrome headless, dois testes headless verdes, incluindo o
 > isolamento entre projetos conferido no armazenamento e não só no DOM). Falta só o 3.9,
 > o teste do José em produção — e ele só é possível DEPOIS do merge, porque produção é o
@@ -87,7 +90,7 @@ o projeto é que muda (select único → checklist, ver Item 3 abaixo).
 
 ---
 
-## Item 3 — Canvas de demandas: responder por mais de um projeto — 🔄 REDESENHO EM ANDAMENTO (3.1–3.8 feitos, falta 3.9 [humano])
+## Item 3 — Canvas de demandas: responder por mais de um projeto — 🔄 RODADA 3 (3.1–3.8 em produção; rodada 3 na branch, aguardando merge)
 
 ### Histórico (por que este item foi reaberto)
 
@@ -184,7 +187,7 @@ matriz na tela**. Rode em **plan mode** antes de codar.
 | 3.6 | `#cv-resumo`/"Baixar minha cópia (.csv)" passam a ser por bloco/projeto (confirmar antes se `csv-export.js` já exporta 1 caderno por vez — deveria, caderno já é escopado a 1 projeto) | `canva.html`, conferir `js/csv-export.js` | Sonnet / baixo | ✅ atendido por construção no 3.4 — resumo e botão de .csv são gerados dentro de cada bloco e fecham sobre o caderno daquele projeto. `js/csv-export.js` não precisou de mudança nenhuma (a suspeita do plano estava certa: ele já recebia cabeçalho+linhas prontos). |
 | 3.7 | Limpeza: remover `#cv-projetos-feitos`, a frase fixa do PR #21, e `projetosRespondidosLocalmente()` (`js/db-canva.js`) se não sobrar uso — código morto, não código escondido | `canva.html`, `js/db-canva.js` | Sonnet / baixo | ✅ feito (27/08/2026) — removidos `#cv-projetos-feitos`/`#cv-lista-projetos-feitos` (e a frase fixa) de `canva.html`, e `projetosRespondidosLocalmente()` (função + export em `DB_CANVA`) de `js/db-canva.js`. Conferido que não sobrou referência em nenhum `.js`/`.html`/`.css` do repo. `tools/testar_canva.js`, `tools/testar_canva_oficina.js` e `tools/validar_site.py` verdes. |
 | 3.8 | Ajustar `tools/testar_canva_oficina.js` + novo `tools/testar_canva_multiprojeto_headless.js` (mesmo padrão CDP cru dos outros testes headless do repo): marcar 2+ checkboxes de núcleos diferentes → 2+ blocos; "Selecionar Todos" marca o grupo inteiro; desmarcar não apaga dado (remarcar devolve); F5 restaura seleção; `?projeto=` pré-marca | `tools/testar_canva_oficina.js`, `tools/testar_canva_multiprojeto_headless.js` (novo) | Sonnet / médio | ✅ feito (27/08/2026) — `tools/testar_canva_multiprojeto_headless.js` criado, transcrevendo o "Roteiro já validado pro 3.8" abaixo (10 passos, seed atual de 4 núcleos/27 projetos), verde. A checagem 5 do `testar_canva_oficina.js` foi endurecida como o plano avisava: agora marca um projeto NOVO e cria a demanda num canal escolhido manualmente, em vez de reler o caderno já conferido no passo 3 (a seleção persistida fazia o checkbox do passo 2 chegar marcado de novo). `tools/testar_canva.js`, `tools/testar_canva_oficina.js`, `tools/testar_canva_multiprojeto_headless.js` e `tools/validar_site.py` todos verdes. | **Revisão de 27/08 (antes do merge):** a suíte foi submetida a teste de mutação — injetar "remarcar cria caderno vazio" ficou vermelho (bom), mas injetar "os dois blocos compartilham UM caderno" passava verde. Motivo: as checagens do passo 4 olhavam só o DOM, e `patchCartaoEl()` nunca reescreve o value de um input depois de criar o cartão (de propósito — é o que impede um `render()` no meio da digitação de roubar o cursor), então o cartão do bloco B seguia mostrando os campos vazios com que nasceu enquanto o dado dos dois projetos ia pro caderno de um só. Foram acrescentadas 3 checagens no ARMAZENAMENTO (um caderno por projeto marcado; o caderno de A com o que foi digitado nele; o de B sem nada de A) — com a regressão injetada elas ficam vermelhas, como devem. É a rede que faltava justamente pro bug que o teste de aceite deste item nomeia como o mais provável.
-| 3.9 | **[humano]** José testa em produção (mobile e desktop) antes de considerar o item fechado | — | José | ⏳ não iniciado |
+| 3.9 | **[humano]** José testa em produção (mobile e desktop) antes de considerar o item fechado | — | José | ✅ FEITO em 28/08/2026 — e **reprovou o desenho**. Achou dois problemas reais, ver "Rodada 3" abaixo. Um novo 3.9 fica em aberto pra rodada 3. |
 
 ### O que a reescrita 3.3/3.4 mudou (27/08/2026) — leia antes de mexer em `canva.html`
 
@@ -264,6 +267,61 @@ durante o 3.3/3.4 e passou inteiro — é o esqueleto pronto do
 9. F5 → mesma quantidade de blocos e de checkboxes marcados de antes.
 10. `?projeto=<nome>` → aquele projeto chega marcado e com bloco (união com a seleção
     guardada, não substituição).
+
+### Rodada 3 (28/08/2026) — o que o teste em produção derrubou
+
+José testou o item 3 em produção assim que ele foi pra `main` e achou **dois problemas
+reais**. O primeiro derruba a premissa das rodadas 1 e 2:
+
+**1. Um formulário por projeto era o modelo errado.** A tela abria uma matriz de 10
+canais para CADA projeto marcado. Mas quem marca ALI Academy e ALI Coop vai pedir a
+MESMA coisa pro Foco+ — *"criar grupo de clientes com a opção de importação em csv"* —
+e não quer digitar duas vezes. Nas palavras do José: *"preciso que existam dois
+registros, um do ALI Academy para o Foco+ e outro do ALI Coop para o Foco+"*. Ou seja:
+**uma digitação, N registros**. O checklist não é um gerador de formulários, é o
+**escopo da demanda**.
+
+Vale registrar de onde veio o erro: o texto do próprio plano dizia *"marca de uma vez
+todos os projetos que vai responder, e a tela mostra a matriz de cada um"*, e as
+rodadas 3.3/3.4 implementaram exatamente isso. A frase estava lá desde o levantamento e
+ninguém — inclusive o José, ao aprovar o plano — reparou que ela dizia a coisa errada.
+Fica como lição de processo: *"a tela mostra a matriz de cada um"* descreve UI; o que
+precisava estar escrito era o que vai parar no banco.
+
+**2. Não havia botão de enviar, e a tela não dizia o que faltava.** Pior do que parece:
+quando faltava responsável ou prazo, `js/db-canva.js` marcava a demanda como
+`"incompleta"` e **zerava `d.erro`** — então o cartão mostrava o selo "INCOMPLETA" e
+nada na tela dizia o motivo. O gestor preenchia, via "incompleta", e não tinha como
+descobrir o que corrigir nem como forçar o envio. Beco sem saída.
+
+**Decisões do José (28/08/2026):**
+- Escopo: uma matriz só; a demanda vira um registro por projeto marcado. Pode haver uma
+  marcação ligando os registros criados juntos — **opcional**, na palavra dele.
+- Envio: botão explícito **somado** ao salvamento automático, não no lugar dele — o
+  automático continua como rede de segurança pra WiFi de oficina e aba fechada.
+
+| # | Atividade | Arquivo(s) | Modelo/Esforço | Status |
+|---|---|---|---|---|
+| 3.10 | `canva.html`: volta a UMA matriz. O cartão vira um "grupo" que escreve nos N cadernos dos projetos marcados — `criarGrupo`/`salvarGrupo`/`estadoDoGrupo`/`removerGrupo`. Continua existindo um caderno por projeto por baixo, porque a RPC recebe um projeto por linha e sessão/fila/retentativa/24h são por projeto em `js/db-canva.js` (que não precisou mudar) | `canva.html` | **Opus / alto** | ✅ feito (28/08/2026) |
+| 3.11 | Botão "Enviar demanda" por cartão: envia na hora sem esperar o debounce e, quando não dá, diz o que falta (`DB_CANVA.problemas()`) e leva o foco pro primeiro campo vazio. Cartão mostra "Vira 2 registros — um para cada: X e Y"; resumo separa demanda digitada de registro gerado | `canva.html` | Sonnet / médio | ✅ feito (28/08/2026) |
+| 3.12 | Escopo de demanda **não enviada** acompanha o checklist; depois de enviada, congela. Desmarcar nunca leva o cartão a zero projetos | `canva.html` | Sonnet / médio | ✅ feito — **bug pego pelo headless**: como o gestor marca um projeto de cada vez, congelar o escopo na criação deixava o cartão que o `?canal=` abre sozinho preso ao primeiro projeto marcado, e o segundo clique não valia nada |
+| 3.13 | Carimbo de origem comum (`grupo_local`): local no `.csv` (coluna "Grupo") e no payload da RPC desde já; a gravação no banco depende da migração | `canva.html`, `js/db-canva.js`, `tools/sql/2026-08_canva_grupo_local.sql` (novo) | Sonnet / médio | ✅ código feito; **SQL aguardando José rodar** |
+| 3.14 | **[humano]** Rodar `tools/sql/2026-08_canva_grupo_local.sql` no SQL Editor — OPCIONAL e aditiva. Sem ela o canvas funciona igual (a função ignora a chave extra); com ela o carimbo passa a ser gravado, sem mexer no site depois | — | José | ⏳ não iniciado |
+| 3.15 | Testes: `tools/testar_canva_multiprojeto_headless.js` reescrito pro modelo novo (30 checagens, isolamento conferido no `localStorage` e não só no DOM); `tools/testar_canva_oficina.js` reancorado na matriz única; `tools/validar_site.py` volta a cobrar os ids fixos | testes | Sonnet / médio | ✅ feito, verdes |
+| 3.16 | **[humano]** José testa a rodada 3 em produção (mobile e desktop) | — | José | ⏳ não iniciado |
+
+**Por que a rodada 3 NÃO exigiu mudança em `js/db-canva.js` (fora o carimbo):** a camada
+de dados sempre foi por projeto — uma sessão, um caderno, uma fila, uma regra de 24h por
+projeto. O erro das rodadas 1 e 2 foi de TELA, não de dado. Por isso a correção coube
+inteira em `canva.html`: o que mudou é quantos cadernos um mesmo cartão escreve.
+
+**Detalhe assumido — reagrupamento depois do F5:** os cadernos voltam do `localStorage`
+com as demandas, mas o vínculo "estas três linhas nasceram do mesmo cartão" vive só em
+memória. Ao recarregar, a tela reagrupa por **assinatura de conteúdo** (mesmo canal,
+mesmos campos, projetos diferentes = digitadas juntas). É heurística, e é honesto que
+seja: o vínculo verdadeiro só existe com a coluna `grupo_local` no banco (item 3.14).
+Na prática o pior caso é cosmético — duas demandas idênticas de projetos diferentes que
+o gestor digitou separadamente aparecem como um cartão só depois de um F5.
 
 **Ordem recomendada:** 3.1 → 3.2 → 3.3+3.4 (o núcleo, tratar como uma unidade só) →
 3.5 → 3.6 → 3.7 → 3.8 → push → 3.9. Não pule 3.8 antes do push — é a rede de proteção

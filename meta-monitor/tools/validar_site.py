@@ -27,7 +27,7 @@ OBRIG = {
     # #cv-resumo deixaram de ser ids fixos (seriam duplicados com 2 projetos marcados) e
     # viraram classe + data-projeto dentro de cada .cv-bloco. #cv-blocos é o container
     # que os recebe — é ele que precisa existir no HTML estático.
-    "canva.html": ["cv-passo1", "cv-projeto", "cv-nome", "cv-passo2", "cv-blocos"],
+    "canva.html": ["cv-passo1", "cv-projeto", "cv-nome", "cv-passo2", "cv-mini-matriz", "cv-paineis", "cv-resumo"],
     # canva-consolidado.html (item 4 do plano do canvas das oficinas) ENTRA no menu — ao
     # contrário de canva.html, que dispensa isso de propósito (§12 item 4 do plano).
     "canva-consolidado.html": ["cvc-contadores", "cvc-fila-novos", "cvc-filtros", "cvc-estado", "cvc-lista"],
