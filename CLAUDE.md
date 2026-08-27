@@ -25,3 +25,11 @@ vivo da frente "golden record de cadastros de referência", com status atualizad
 por camada/item e uma seção "Status por camada" no fim pensada pra quem está
 retomando o trabalho numa sessão nova. Leia essa seção antes de começar qualquer
 item novo desta frente.
+
+Ver também `meta-monitor/docs/PLANO_EXECUCAO_MELHORIAS_NAVEGACAO.md` — plano de
+execução vivo da frente "melhorias de navegação" (itens levantados por José em
+reunião, um a um). Mesmo formato do golden record: tabela por item, seção "Status
+por item" no fim. Regime diferente do golden record — aqui José distribui os itens
+manualmente pras sessões (não é pré-autorizado em lote); se o prompt da sessão já
+disser qual item executar (ex. "item 3.1"), vá direto nele em vez de reler o
+documento inteiro.
