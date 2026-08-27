@@ -544,6 +544,10 @@
       DB_CANVA.salvarDemanda(cadernoDe(proj), Object.assign({}, campos, {
         chave_local: g.chaves[proj],
         canal: g.canal,
+        // carimbo de origem comum: as N linhas que nasceram desta digitação levam o
+        // mesmo grupo_local. Já viaja no payload da RPC; só passa a ser GRAVADO quando
+        // a migração tools/sql/2026-08_canva_grupo_local.sql for rodada em produção.
+        grupo_local: g.id,
       }));
     });
   }

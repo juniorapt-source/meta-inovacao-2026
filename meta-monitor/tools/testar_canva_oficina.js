@@ -169,8 +169,9 @@ function ok(cond, msg, extra) {
 
     console.log("4) demanda pra OUTRO canal na mesma oficina herda o mesmo ciclo");
     await avaliar(`(function(){
-      // ancorado no bloco do projeto (existe uma linha "portal" por projeto marcado)
-      document.querySelector('.cv-bloco .cv-linha-canal[data-canal="portal"] .cv-btn-mais').click();
+      // 28/08/2026 (item 3, rodada 3): a tela voltou a ter UMA matriz — o checklist é o
+      // escopo da demanda, não um gerador de blocos. Seletor sem âncora de bloco.
+      document.querySelector('.cv-linha-canal[data-canal="portal"] .cv-btn-mais').click();
       return true;
     })()`);
     await new Promise((r) => setTimeout(r, 300));
@@ -202,13 +203,16 @@ function ok(cond, msg, extra) {
     console.log("5) sem ?canal= (link nu), ainda assim grava o ciclo do dia");
     await cdp.enviar("Page.navigate", { url: `http://127.0.0.1:${port}/canva.html?semrede=1&nada=1` }, sessionId);
     await esperarCarregar();
-    // a seleção de projetos agora é persistida (item 3.1): sem cuidado aqui, o
-    // checkbox marcado no passo 2 já chega marcado de novo (persistência de F5), e o
-    // scan por "a 1ª demanda que achar" acaba relendo o MESMO caderno/demanda já
-    // conferido no passo 3, em vez de provar algo novo sobre este passo. Pra isolar,
-    // marca um projeto NOVO (ainda não usado nesta sessão) e cria a demanda ali, num
-    // canal escolhido manualmente (não há canalDestaque nesta URL, sem ?canal=).
+    // a seleção de projetos é persistida (item 3.1): sem cuidado aqui, o checkbox
+    // marcado no passo 2 já chega marcado de novo (persistência de F5), e o scan por
+    // "a 1ª demanda que achar" acabaria relendo o MESMO caderno já conferido no passo
+    // 3, em vez de provar algo novo sobre este passo. Pra isolar, DESMARCA tudo e
+    // marca um projeto único ainda não usado nesta sessão — com a matriz única da
+    // rodada 3, a demanda nova vai só pro escopo marcado agora.
     const d2 = await avaliar(`(function(){
+      Array.from(document.querySelectorAll("#cv-projeto .cv-chk-projeto:checked")).forEach((x) => {
+        x.checked = false; x.dispatchEvent(new Event("change", { bubbles: true }));
+      });
       const c = Array.from(document.querySelectorAll("#cv-projeto .cv-chk-projeto")).find((x) => !x.checked);
       const nomeProjetoNovo = c.value;
       c.checked = true; c.dispatchEvent(new Event("change", { bubbles: true }));
@@ -216,14 +220,12 @@ function ok(cond, msg, extra) {
     })()`);
     await new Promise((r) => setTimeout(r, 300));
     await avaliar(`(function(){
-      const bloco = Array.from(document.querySelectorAll(".cv-bloco")).find((b) => b.dataset.projeto === ${JSON.stringify(d2)});
-      bloco.querySelector('.cv-linha-canal[data-canal="portal"] .cv-btn-mais').click();
+      document.querySelector('.cv-linha-canal[data-canal="portal"] .cv-btn-mais').click();
       return true;
     })()`);
     await new Promise((r) => setTimeout(r, 300));
     await avaliar(`(function(){
-      const bloco = Array.from(document.querySelectorAll(".cv-bloco")).find((b) => b.dataset.projeto === ${JSON.stringify(d2)});
-      const c = bloco.querySelector('.cv-cartao[data-canal="portal"]');
+      const c = document.querySelector('.cv-cartao[data-canal="portal"]');
       const set = (sel, v) => { const el = c.querySelector(sel); el.value = v; el.dispatchEvent(new Event("input", {bubbles:true})); };
       set(".cv-f-servico", "Teste sem canal de QR");
       set(".cv-f-responsavel", "Bia");
