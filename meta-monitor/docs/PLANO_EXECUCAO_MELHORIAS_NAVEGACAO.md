@@ -171,6 +171,25 @@ matriz na tela**. Rode em **plan mode** antes de codar.
 3.5 → 3.6 → 3.7 → 3.8 → push → 3.9. Não pule 3.8 antes do push — é a rede de proteção
 contra regressão silenciosa que o 3.3/3.4 pode introduzir.
 
+**Estratégia de branch — leia antes de abrir a sessão de qualquer sub-item 3.2–3.8:**
+diferente dos itens 1/2/4 (cada um atômico e seguro sozinho em produção), os
+sub-itens 3.2, 3.3 e 3.4 **não funcionam isolados** — o checklist em HTML (3.2) só
+funciona junto com a reescrita de estado em JS (3.3/3.4: `caderno` global vira `Map`
+de cadernos). Se qualquer um desses for sozinho pra `main`, `canva.html` quebra em
+produção — é página pública, sem login, usada ao vivo em oficina via QR Code, com
+deploy automático a cada push. Por isso:
+- **Todos os sub-itens 3.1–3.8 vivem na MESMA branch** — não crie uma branch nova a
+  partir da `main` a cada sessão/sub-item. A branch do 3.1 já existe:
+  `claude/plano-execucao-item-3-1-8redft` — continue nela até o 3.8.
+- **Só mescla com a `main` depois do 3.8** (todos os sub-itens prontos + os testes
+  headless novos verdes) — nunca no meio do caminho. O merge é 1 só pro item inteiro,
+  não 1 por sub-item.
+- Comando sugerido pra abrir a sessão de cada sub-item (troque só o número):
+  > Leia meta-monitor/docs/PLANO_EXECUCAO_MELHORIAS_NAVEGACAO.md, continue na
+  > branch `claude/plano-execucao-item-3-1-8redft` (não crie uma branch nova a
+  > partir da main) e execute o item 3.X. Não dê merge com a main — só depois do
+  > 3.8, com o item inteiro testado.
+
 **Teste de aceite:**
 - Marcar 2 projetos de núcleos diferentes mostra 2 seções de matriz, cada uma com seus
   próprios 10 canais e contagens independentes (dado do projeto errado no bloco errado
