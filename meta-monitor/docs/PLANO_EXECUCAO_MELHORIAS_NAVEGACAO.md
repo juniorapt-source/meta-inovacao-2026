@@ -18,10 +18,12 @@ conferida no código antes de cada correção.
 > **fica mantida** — o item 3 foi redesenhado (ver "Item 3 — redesenho" abaixo) depois de
 > José testar em produção e pedir um modelo diferente do que tinha sido entregue
 > (checklist de múltipla escolha em vez de "trocar de um projeto pro outro"). Item 3
-> (versão nova, checklist) **EM ANDAMENTO na branch, fora da `main`** — sub-itens 3.1 a
-> 3.8 feitos (o checklist já funciona ponta a ponta em Chrome headless, com os dois
-> testes headless verdes); falta só o teste do José em produção (3.9). **Nada do item
-> 3 foi pra `main` ainda** — o merge é um só, depois do José validar em produção (3.9).
+> (versão nova, checklist) **CÓDIGO COMPLETO — sub-itens 3.1 a 3.8 feitos e testados**
+> (checklist ponta a ponta em Chrome headless, dois testes headless verdes, incluindo o
+> isolamento entre projetos conferido no armazenamento e não só no DOM). Falta só o 3.9,
+> o teste do José em produção — e ele só é possível DEPOIS do merge, porque produção é o
+> que a `main` publica a cada push. Ordem correta, portanto: merge único do item inteiro
+> na `main` → deploy automático → José confere (3.9).
 > Item 5
 > **NÃO INICIADO** — uma das duas decisões que travava o desenho já foi tomada
 > (descartar a apresentação atual), falta a segunda (link varia por ciclo/oficina?).
@@ -288,7 +290,9 @@ deploy automático a cada push. Por isso:
   não trabalhe nelas.
 - **Só mescla com a `main` depois do 3.8** (todos os sub-itens prontos + os testes
   headless novos verdes) — nunca no meio do caminho. O merge é 1 só pro item inteiro,
-  não 1 por sub-item.
+  não 1 por sub-item. **O 3.9 vem DEPOIS do merge, não antes**: o site publica sozinho a
+  cada push, então não existe "produção" pro José conferir enquanto o item estiver fora
+  da `main`.
 - Comando sugerido pra abrir a sessão de cada sub-item (troque só o número):
   > Leia meta-monitor/docs/PLANO_EXECUCAO_MELHORIAS_NAVEGACAO.md, continue na
   > branch `claude/plano-execucao-item-3-8-mtsarn` (não crie uma branch nova a
