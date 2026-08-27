@@ -154,6 +154,19 @@
         selR = document.getElementById("f-resp"), selC = document.getElementById("f-cc"),
         busca = document.getElementById("f-busca"), corpo = document.getElementById("tabela");
 
+  // item 4 do plano de melhorias de navegação (26/08) — o título de um Nó crítico
+  // (data/nos.js, ex. "Devolutiva da URC sobre a grade") pode ser bem diferente do
+  // título da própria ação que ele referencia (ex. CAN-02 = "Validação da grade de
+  // encontros pela URC"): quem viu o nó no Dashboard/Caminho crítico e busca por esse
+  // nome aqui batia 0 resultados, mesmo a ação existindo. Mapa no → título, pra entrar
+  // na busca abaixo (mesma fonte que js/busca.js já usa pro índice global).
+  const TITULO_NO_POR_NUM = Object.fromEntries(
+    ((DB.nos && DB.nos.nos) || []).map((n) => [n.no, n.titulo])
+  );
+  function tituloNoDaAcao(a) {
+    return (a.cc && a.cc.tipo === "no") ? (TITULO_NO_POR_NUM[a.cc.no] || "") : "";
+  }
+
   // item 3.4 do plano de melhorias — identificação de quem edita agora é o módulo
   // compartilhado window.EDITOR_ATUAL (js/editor_atual.js), com rodapé "Editando
   // como…" (montado mais abaixo) em vez do prompt único de antes.
@@ -233,7 +246,7 @@
       else if (sv && a.status !== sv) return false;
       if (rv && a.resp !== rv) return false;
       if (cv === "cc" && !(a.cc && a.cc.tipo)) return false;
-      if (q && !(a.id + " " + a.atividade + " " + a.sub).toLowerCase().includes(q)) return false;
+      if (q && !(a.id + " " + a.atividade + " " + a.sub + " " + tituloNoDaAcao(a)).toLowerCase().includes(q)) return false;
       return true;
     });
     if (ordem.chave) lista = lista.slice().sort(comparador);
