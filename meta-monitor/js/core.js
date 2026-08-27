@@ -93,9 +93,15 @@
   window.ccChip = function (a, semLink) {
     if (!a.cc || !a.cc.tipo) return "";
     if (a.cc.tipo === "no") {
+      // título do nó (data/nos.js) como tooltip — item 4 do plano de melhorias de
+      // navegação (26/08): o nome que aparece no Dashboard/Caminho crítico (ex.
+      // "Devolutiva da URC sobre a grade") costuma ser diferente do título da própria
+      // ação, então o badge sozinho ("★ Nó 1") não deixava essa ligação visível.
+      const no = ((DB.nos && DB.nos.nos) || []).find((n) => n.no === a.cc.no);
+      const tituloAttr = no ? ' title="Nó ' + a.cc.no + ' — ' + esc(no.titulo) + '"' : "";
       return semLink
-        ? ' <span class="chip cc">★ Nó ' + a.cc.no + "</span>"
-        : ' <a class="chip cc" href="caminho.html#no' + a.cc.no + '">★ Nó ' + a.cc.no + "</a>";
+        ? ' <span class="chip cc"' + tituloAttr + ">★ Nó " + a.cc.no + "</span>"
+        : ' <a class="chip cc" href="caminho.html#no' + a.cc.no + '"' + tituloAttr + ">★ Nó " + a.cc.no + "</a>";
     }
     if (a.cc.tipo === "cadeia") return ' <span class="chip cc">cadeia ' + a.cc.no + "</span>";
     if (a.cc.tipo === "sla") return ' <span class="chip sla">◆ SLA</span>';
