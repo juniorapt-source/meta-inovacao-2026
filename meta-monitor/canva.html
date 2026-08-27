@@ -33,6 +33,39 @@
 .cv-escape-wrap{margin-top:10px;padding-top:10px;border-top:1px dashed var(--linha)}
 .cv-nota{font-size:12px;color:var(--grafite);font-style:italic;margin-top:5px}
 
+/* ---- passo 1: checklist de projetos (item 3 redesenho — sub-item 3.2) ----
+   Substitui o <select id="cv-projeto"> por uma lista de checkboxes agrupada por
+   núcleo, cada grupo com seu "selecionar todos". O CONTEÚDO (fieldset por núcleo,
+   um <label>/<input type=checkbox> por projeto) é montado em JS pelo sub-item 3.3
+   (montarListaProjetos()) — aqui só o container `#cv-projeto` e as classes que a
+   função vai usar ao gerar o HTML. Estrutura por grupo, gerada em JS:
+     <fieldset class="cv-projeto-grupo" data-nucleo="...">
+       <legend><label class="cv-projeto-item cv-projeto-todos">
+         <input type="checkbox" class="cv-chk-todos-grupo" data-nucleo="...">
+         <span>Nome do núcleo</span></label></legend>
+       <label class="cv-projeto-item"><input type="checkbox" class="cv-chk-projeto"
+         value="Nome do projeto"><span>Nome do projeto</span></label>
+       ...
+     </fieldset>
+   Projetos de texto livre (escape "não encontrei o meu") entram num grupo à parte,
+   `#cv-projeto-livres`, mesma classe `.cv-projeto-item`. */
+.cv-projetos-lista{border:1px solid var(--linha);background:var(--branco);max-height:340px;overflow-y:auto}
+.cv-projeto-grupo{border:0;padding:0;margin:0;border-bottom:1px solid var(--border-soft);min-width:0}
+.cv-projeto-grupo:last-child{border-bottom:0}
+.cv-projeto-grupo legend{display:block;width:100%;padding:0;margin:0;float:none}
+.cv-projeto-item{display:flex;align-items:center;gap:8px;padding:8px 12px;font-family:var(--font-sans);
+  font-size:14px;color:var(--tinta);cursor:pointer;margin:0}
+.cv-projeto-item:hover{background:var(--surface)}
+.cv-projeto-item input[type=checkbox]{width:auto;margin:0;flex-shrink:0}
+.cv-projeto-todos{background:var(--surface);font-family:'DM Sans',sans-serif;font-weight:600;
+  font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite)}
+.cv-projeto-grupo-vazio{padding:10px 12px;font-size:13px;color:var(--grafite);font-style:italic}
+#cv-projeto-livres{border-top:1px dashed var(--linha)}
+.cv-projeto-grupo-titulo{padding:8px 12px 0;font-family:'DM Sans',sans-serif;font-weight:600;
+  font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--grafite)}
+.cv-projeto-livre-linha{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.cv-projeto-livre-linha input[type=text]{flex:1;min-width:180px}
+
 /* ---- passo 2: mini-matriz do gestor ---- */
 .cv-mini-matriz{border:1px solid var(--linha);background:var(--branco)}
 .cv-linha-canal{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;
@@ -104,16 +137,22 @@
 
   <section class="card" id="cv-passo1">
     <div class="cv-campo">
-      <label for="cv-projeto">Meu projeto</label>
-      <select id="cv-projeto" aria-describedby="cv-escape-aviso"></select>
-      <p class="cv-nota">Pode responder por mais de um projeto: preenche este, depois volta aqui e escolhe outro
-        nesta mesma lista — o que você já preencheu continua salvo.</p>
+      <label id="cv-projeto-label">Meu(s) projeto(s)</label>
+      <p class="cv-nota" id="cv-projeto-ajuda">Marque um ou mais — dá pra responder por vários projetos na mesma
+        visita, cada um ganha sua própria matriz de canais abaixo.</p>
+      <!-- Conteúdo (fieldset por núcleo + "selecionar todos") montado em JS — sub-item 3.3
+           (montarListaProjetos()). Ver comentário no <style> acima pra estrutura esperada. -->
+      <div id="cv-projeto" class="cv-projetos-lista" role="group" aria-labelledby="cv-projeto-label"
+        aria-describedby="cv-projeto-ajuda"></div>
       <button type="button" class="cv-link-escape" id="cv-escape-btn">Não encontrei meu projeto na lista</button>
       <div class="cv-escape-wrap" id="cv-escape-wrap" hidden>
         <label for="cv-projeto-livre">Nome do meu projeto</label>
-        <input type="text" id="cv-projeto-livre" maxlength="2000" placeholder="Digite o nome do seu projeto">
-        <p class="cv-nota" id="cv-escape-aviso">Vamos cadastrar seu projeto depois — pode preencher normalmente.</p>
-        <button type="button" class="cv-link-escape" id="cv-escape-voltar">Voltar para a lista</button>
+        <div class="cv-projeto-livre-linha">
+          <input type="text" id="cv-projeto-livre" maxlength="2000" placeholder="Digite o nome do seu projeto">
+          <button type="button" class="btn sec" id="cv-escape-adicionar">Adicionar à seleção</button>
+        </div>
+        <p class="cv-nota" id="cv-escape-aviso">Vamos cadastrar seu projeto depois — pode preencher normalmente.
+          Ele entra marcado na lista acima, junto com os outros que você já escolheu.</p>
       </div>
     </div>
     <div class="cv-campo">
