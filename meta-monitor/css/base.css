@@ -81,6 +81,28 @@ a{color:inherit;text-decoration:none} a:hover{color:var(--accent);text-decoratio
   color:rgba(244,239,228,.34)}
 .conteudo{position:relative;padding:26px 30px 60px;max-width:1180px;width:100%}
 
+/* ---- sidebar colapsável (desktop) — js/core.js:montarColapsavel ----
+   Só entra em jogo a partir de 768px: abaixo disso o menu já é o painel deslizante
+   (.nav.aberto, na media query de mobile lá embaixo) e este mecanismo fica fora. */
+.nav-toggle{margin:2px 0 10px;padding:7px 10px;width:100%;background:rgba(244,239,228,.07);
+  border:1px solid rgba(244,239,228,.22);color:rgba(244,239,228,.75);font-family:'DM Sans';
+  font-size:11px;font-weight:600;letter-spacing:.02em;cursor:pointer;border-radius:0;text-align:left}
+.nav-toggle:hover{background:rgba(244,239,228,.14);color:#f4efe4}
+.nav-reabrir{display:none;position:fixed;left:0;top:18px;z-index:40;padding:9px 11px;
+  background:var(--ink);color:rgba(244,239,228,.8);border:1px solid rgba(244,239,228,.28);
+  border-left:0;font-family:'DM Sans';font-size:11px;font-weight:600;cursor:pointer;border-radius:0}
+.nav-reabrir:hover{color:#f4efe4;background:#3a3327}
+@media (min-width:768px){
+  /* especificidade (.shell.nav-colapsada > .shell) de propósito: precisa vencer a regra
+     de largura padrão sem depender de ordem no arquivo. Vive dentro desta media query
+     pra nunca competir com o .shell{grid-template-columns:1fr} do mobile lá embaixo —
+     nos dois, "quem ganha" seria só por especificidade, ignorando a media query, e uma
+     coluna de 0px encaixada por engano no grid de 1 coluna do mobile quebraria o layout. */
+  .shell.nav-colapsada{grid-template-columns:0 1fr}
+  .shell.nav-colapsada .nav{padding-left:0;padding-right:0}
+  .shell.nav-colapsada ~ .nav-reabrir{display:block}
+}
+
 /* ---- busca global (item 2.6 do plano de melhorias) — js/busca.js ----
    campo dentro do <nav> (topo do sidebar, logo abaixo da marca) — mesmo <input> serve
    pro desktop (sidebar sempre visível) e pro painel mobile deslizante (o mesmo <nav>).

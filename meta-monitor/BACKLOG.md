@@ -8,19 +8,36 @@ o outro arquivo pra ver o que ainda falta e em que ordem. Os números #001/#002 
 original não apareceram em nenhum prompt lido até agora (só #003/#004/#005) — se existirem,
 ainda não foram cruzados aqui.
 
-## Sidebar compacta/colapsável — sugestão fora de escopo (refactor v0.21 do Corsário)
+## Sidebar compacta/colapsável — implementada (28/08/2026)
 
-**Status:** aberto — sugestão registrada, não implementada
+**Status:** resolvido
 
 Durante o refactor de UI/UX de `corsario.html` (v0.21.0, "protagonismo da Matriz"), a
 sidebar ficou fora de escopo por instrução explícita (não alterar largura, itens ou
-comportamento — componente compartilhado entre páginas). Registrando aqui como sugestão
-pra uma rodada futura: uma sidebar compactável (largura reduzida ou colapsável) daria mais
-espaço horizontal útil pra páginas com tabelas largas, como a Matriz do Corsário (19
-colunas de critério) e a Matriz de demandas — hoje as duas dependem de scroll horizontal
-contido justamente por essa disputa de espaço com o menu lateral.
+comportamento — componente compartilhado entre páginas). Ficou registrada aqui como
+sugestão pra uma rodada futura: uma sidebar compactável (largura reduzida ou colapsável)
+daria mais espaço horizontal útil pra páginas com tabelas largas, como a Matriz do
+Corsário (19 colunas de critério) e a Matriz de demandas — hoje as duas dependem de scroll
+horizontal contido justamente por essa disputa de espaço com o menu lateral.
 
-**Nenhuma implementação feita** — só o registro da sugestão.
+**O que foi feito:** em vez de reduzir a largura (exigiria um jogo de ícones que a
+sidebar não tem hoje — só rótulos de texto), o menu passou a ser **ocultável por
+completo**, com uma aba fina "» Menu" fixada na borda esquerda pra reabrir. Um botão "«
+Ocultar menu" entra no topo do próprio `<nav>` (`js/core.js`, `montarShell`/
+`montarColapsavel`, nova função) — clicar nele soma a classe `nav-colapsada` em `.shell`,
+que zera a coluna do grid do menu (`css/base.css`, regra só dentro de
+`@media (min-width:768px)` pra nunca competir com o mecanismo de menu hambúrguer do
+mobile, que é outro). O estado fica em `localStorage` (`cc_nav_colapsada`) — colapsar
+numa página vale nas outras ao navegar, já que aqui cada página é um carregamento novo,
+não uma SPA; sem `localStorage` (file://, modo privado) o toggle ainda funciona dentro da
+mesma página, só não persiste. Zero mudança de HTML por página (mesmo padrão do menu
+mobile, injetado a partir do `<nav>` vazio que já existe em toda tela).
+
+**Teste:** sem headless novo (é layout puro, CSS+localStorage, sem lógica de dados pra
+travar) — validado manualmente: toggle esconde/mostra o menu, aba de reabrir aparece só
+colapsado, estado sobrevive a navegar pra outra página, e em ≤767px (mobile) o mecanismo
+não aparece — quem manda lá continua sendo o hambúrguer de sempre. `tools/validar_site.py`
+e a suíte headless (`tools/testar_mobile_headless.js` etc.) seguem verdes.
 
 ## Item 3.4 — Histórico e auditoria
 
@@ -46,15 +63,33 @@ Histórico de `editor.html` já passa a ler o log de verdade.
 
 ## Cobertura de teste com rede real
 
-**Status:** aberto — avaliar
+**Status:** resolvido (28/08/2026)
 
-Os testes headless atuais forçam fallback local via `?semrede=1` (e
-`window.CC_FORCAR_FALLBACK`) e por isso não pegam bugs de integração real com o
+Os testes headless da suíte forçam fallback local via `?semrede=1` (e
+`window.CC_FORCAR_FALLBACK`) e por isso não pegavam bugs de integração real com o
 Supabase — ex.: o GRANT esquecido no P10 e a ordem de `js/config.js` no bug fix seguinte
 (ambos só apareceram em produção, não na suíte).
 
-**A avaliar:** adicionar 1–2 testes headless por página crítica que rodem contra o
-Supabase de produção (ou um staging), acionados manualmente antes de deploys grandes.
+**O que foi feito:** `tools/testar_rede_real_headless.js` (novo) — 2 páginas
+(`index.html`, cobrindo Plano; `agenda.html`, cobrindo Plano+Agenda, os dois conjuntos que
+hoje vivem no Supabase) abertas SEM `?semrede=1`/`CC_FORCAR_FALLBACK`, contra o Supabase de
+verdade. Confere: `#aviso-fallback` continua escondido (não caiu pro local), zero erro de
+console/exceção durante o carregamento, e a contagem de linhas no piso conhecido (47/20) ou
+acima — piso, não igualdade, pra dado novo cadastrado depois não virar falso-positivo. Só
+leitura (nunca escreve), então é seguro rodar contra produção quantas vezes quiser. Exige
+`--confirmar` (ou `CC_CONFIRMAR_REDE_REAL=1`) — sem isso sai sem tentar rede, pra nunca
+disparar sem querer numa rodada em lote com os outros `testar_*`; por isso também não
+entra no README como parte da suíte automática, só documentado como comando manual.
+
+**Testado como:** não dá pra validar contra o Supabase de produção de dentro de uma sessão
+do Claude Code (rede bloqueada pra `supabase.co`, mesma limitação do golden record) — o
+que foi validado aqui foi o caminho de FALHA: rodado de propósito neste ambiente sem rede,
+o teste pegou exatamente os 3 sintomas que deveria pegar (`#aviso-fallback` visível,
+`TypeError` de import do SDK no console, `DB_PLANO.carregar()`/`DB_AGENDA.carregar()`
+confirmando `usandoFallback:true`) e saiu com código 1. O caminho de sucesso (rede real
+funcionando) fica pra José confirmar rodando de verdade antes do próximo deploy grande que
+mexer em `js/db-plano.js`/`js/db-agenda.js`/`js/config.js` ou nas policies/GRANTs dessas
+duas tabelas — ver o comando no README.
 
 ## #005 — Rótulos de menu confusos
 

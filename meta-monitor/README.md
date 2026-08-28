@@ -201,8 +201,25 @@ injeta `window.CC_FORCAR_FALLBACK = true` antes de navegar (via
 `?semrede=1` — os dois mecanismos fazem `js/db-plano.js`/`js/db-agenda.js` pular a
 chamada ao Supabase e usar direto o seed local (`data/plano.js`/`data/agenda.js`),
 inclusive em navegações disparadas por clique dentro da própria página (kpi-card, Enter na
-busca, drawer). Pra testar manualmente o caminho do Supabase de verdade, abra a página sem
-esse parâmetro.
+busca, drawer). É a troca certa (suíte estável, sem depender de rede), mas o preço veio à
+tona mais de uma vez em produção: bug de GRANT esquecido, ordem de `<script>` errada em
+`js/config.js` — nenhum teste da suíte conseguia pegar isso antes do push, porque nenhum
+fala com o Supabase de verdade (ver BACKLOG.md, "Cobertura de teste com rede real").
+
+```bash
+# manual — fala com o Supabase de PRODUÇÃO de verdade (só leitura, nunca escreve); sem
+# --confirmar, sai sem tentar nenhuma rede. Rodar antes de um deploy grande que mexe em
+# js/db-plano.js, js/db-agenda.js, js/config.js, ou nas policies/GRANTs das tabelas
+# meta_inovacao_plano_acoes/meta_inovacao_agenda_encontros. Precisa de rede de saída de
+# verdade pra supabase.co — não roda de dentro de uma sessão do Claude Code.
+node tools/testar_rede_real_headless.js --confirmar
+```
+
+`tools/testar_rede_real_headless.js` abre `index.html` e `agenda.html` (as duas cobrem os
+dois conjuntos: a primeira só Plano, a segunda os dois) sem nenhum parâmetro de fallback, e
+confere: o aviso "dados locais" (`#aviso-fallback`) não aparece, nenhum erro de
+console/exceção durante o carregamento, e a contagem de linhas voltou no piso conhecido (47
+ações, 20 encontros) ou acima.
 
 ## Estrutura
 
