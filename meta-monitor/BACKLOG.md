@@ -8,9 +8,9 @@ o outro arquivo pra ver o que ainda falta e em que ordem. Os números #001/#002 
 original não apareceram em nenhum prompt lido até agora (só #003/#004/#005) — se existirem,
 ainda não foram cruzados aqui.
 
-## `editor.html` grande demais — extraindo aba por aba (em andamento, iniciado 28/08/2026)
+## `editor.html` grande demais — extraindo aba por aba (concluído, 28/08/2026)
 
-**Status:** em andamento — 7 de 8 abas extraídas
+**Status:** concluído (28/08/2026) — 8 de 8 abas extraídas
 
 `editor.html` chegou a 105KB/~1750 linhas misturando o JS inline de 8 abas (Plano,
 Agenda, Matriz, Pessoas, Projetos, URC-Liderança, URC-Canais, Corsário) num único
@@ -106,16 +106,39 @@ extração.
 
 `editor.html`: 1744 → 729 linhas (as sete etapas).
 
-**Falta só a etapa 8 — Plano.** É a mais crítica (edição ao vivo das 47 ações do
-caminho crítico) e a mais acoplada: usa `proximoId`/`mapaPrefixos`/`normalizarNomePessoa`/
-`nomeExibicaoPessoa`/`listaResponsaveis`/`gravarPlanoResponsaveis` (todos já globais
-desde a etapa 3, exceto `listaResponsaveis`/`gravarPlanoResponsaveis`, que ainda não
-foram expostos — vão precisar do mesmo tratamento `window.X = X` antes de extrair, ver
-a lição da etapa 3). É também a etapa que fecha o círculo do `EDITOR_PESSOAS_CACHE`
-(nota da etapa 6): depois dela, `pessoasAtual`/`pessoasFallback` não têm mais nenhum
-consumidor direto em `editor.html`, e podem virar estado privado do módulo de Pessoas
-se fizer sentido nessa hora (não é obrigatório). Testar com dado real (dublê), não só
-o caminho vazio — lição da etapa 3, ainda mais importante aqui pelo tamanho da função.
+**Etapa 8 — Plano → `js/editor-plano.js`:** feita — última das 8. A mais crítica
+(edição ao vivo das 47 ações) e a mais acoplada: `mapaPrefixos`/`proximoId`/
+`listaResponsaveis`/`gravarPlanoResponsaveis` e todo o estado (`planoAtual`/
+`planoFallback`/`planoCarregando`/`formNovaAberto`/`coletivosAtual`/
+`listaResponsaveisMontada`) eram exclusivos desta aba — confirmado antes de mover — e
+foram todos junto. Única dependência cross-arquivo: `pessoasAtual`/`pessoasFallback`
+dentro de `listaResponsaveis()`, via `EDITOR_PESSOAS_CACHE` (mesmo padrão das etapas
+4/5, sem mudança na API).
+
+**Incidente durante esta etapa, corrigido antes do commit:** a primeira tentativa de
+remoção por linha apagou por engano `marcarLinhaStatus()`/`marcarCelulaStatus()`/
+`detErro()` inteiras — elas ficavam fisicamente ENTRE `mapaPrefixos` e `renderPlano` no
+arquivo original, mas são compartilhadas por Agenda/Pessoas/Projetos/URC, não
+exclusivas do Plano. `tools/testar_urc_editor_headless.js` pegou na hora (3 asserções
+falhando + uma exceção em cascata) — reforça a lição da etapa 3: rodar a suíte
+COMPLETA (não só o teste da aba que acabou de mudar) depois de qualquer edição que
+mexa no meio de um arquivo compartilhado, porque a extração de uma aba pode arrastar
+código de outra sem querer quando as duas estão fisicamente próximas no arquivo
+original.
+
+`editor.html`: 1744 → 519 linhas — **redução de 70%, as 8 etapas concluídas.**
+
+**Não fechado, registrado como oportunidade futura opcional (não bloqueia nada):**
+`pessoasAtual`/`pessoasFallback` continuam morando em `editor.html` (via
+`EDITOR_PESSOAS_CACHE`) em vez de dentro de `js/editor-pessoas.js`, mesmo depois da
+etapa 8 ter removido o último consumidor direto de dentro de `editor.html`. Também:
+`opts`/`avisoFallback`/`marcarLinhaStatus`/`marcarCelulaStatus`/`detErro`/
+`nucleosPorNome`/`projetoIdPorIniciativa`/`normalizarNomePessoa`/`nomeExibicaoPessoa`/
+`NUCLEOS_VALIDOS` continuam em `editor.html`, expostos via `window.X`, embora hoje só
+sejam chamados pelos 8 arquivos `js/editor-*.js` (nenhum consumidor direto sobrou em
+`editor.html` depois da etapa 8) — dá pra virar um `js/editor-shared.js` de verdade
+numa rodada futura, mas não é urgente: o objetivo original (reduzir o raio de explosão
+de mexer numa aba) já foi alcançado com as 8 extrações.
 
 ## Sidebar compacta/colapsável — implementada (28/08/2026)
 
