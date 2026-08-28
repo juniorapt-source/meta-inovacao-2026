@@ -192,6 +192,10 @@
      topo de js/editor-projetos.js. Precisa vir depois de db-projetos.js/db-pessoas.js/
      db-projeto-representantes.js/db-corsario.js (todos já carregados acima). -->
 <script src="js/editor-projetos.js"></script>
+<!-- aba "Pessoas" (Camada 1 do golden record) — 6ª etapa extraída, ver comentário no
+     topo de js/editor-pessoas.js. Precisa vir depois de db-pessoas.js (já carregado
+     acima). -->
+<script src="js/editor-pessoas.js"></script>
 <script>
 (function(){
 "use strict";
@@ -237,7 +241,7 @@ const ROTULO_ENC  = Object.fromEntries(STATUS_ENC.map((k)=>[k, CC_STATUS.rotulo(
 // seed local se o Supabase estiver fora do ar — mesma UI de aviso do resto do site).
 let planoAtual = null, planoFallback = false, planoCarregando = false;
 let agendaAtual = null, agendaFallback = false, agendaCarregando = false;
-let pessoasAtual = null, pessoasFallback = false, pessoasCarregando = false;
+let pessoasAtual = null, pessoasFallback = false;
 // acesso à cache de pessoas pra quem já foi extraído pro próprio arquivo (URC, desde
 // 28/08/2026) — o dado em si continua sendo esta MESMA variável (pessoasAtual), só um
 // getter/setter pra um script à parte conseguir ler e (quando é quem carrega primeiro)
@@ -688,76 +692,8 @@ function avisoFallback(nomeArquivo){
 }
 window.avisoFallback = avisoFallback;
 
-async function renderPessoas(){
-  if(!pessoasAtual && !pessoasCarregando){
-    pessoasCarregando = true;
-    area.innerHTML = '<div class="ed-carregando">Carregando pessoas…</div>';
-    try {
-      const { lista, usandoFallback } = await DB_PESSOAS.carregar();
-      pessoasAtual = lista; pessoasFallback = usandoFallback;
-    } catch(err){
-      console.error("editor: falha ao carregar pessoas", err);
-      pessoasCarregando = false;
-      area.innerHTML = '<div class="ed-erro-carregar">Não foi possível carregar pessoas  agora.</div>';
-      return;
-    }
-    pessoasCarregando = false;
-  }
-  if(sel.value!=="pessoas") return;
-  const lista = pessoasAtual || [];
-  const dis = pessoasFallback ? " disabled" : "";
-  let h = pessoasFallback ? avisoFallback("data/pessoas.js") : "";
-  // nome_completo/nome_exibicao/email/ativo são as colunas da Camada 1 do golden record
-  // de pessoas (tools/sql/2026-08_pessoas_golden.sql) — convivem com nome/papel/grupo/
-  // nucleo/pendente, que continuam sendo o que participantes.html lê. Núcleo virou
-  // <select> (mesma lista NUCLEOS_VALIDOS de "Projetos & Representantes"), com opção
-  // vazia porque só as linhas do grupo "Núcleos" preenchem este campo.
-  h+='<div class="ed-wrap"><table class="ed-tab"><thead><tr>'+
-    '<th style="width:170px">Nome</th>'+
-    '<th style="width:190px">Nome completo</th>'+
-    '<th style="width:110px">Exibição</th>'+
-    '<th>Papel</th>'+
-    '<th style="width:90px">Grupo</th>'+
-    '<th style="width:180px">Núcleo</th>'+
-    '<th style="width:170px">E-mail</th>'+
-    '<th style="width:60px">Ativo</th>'+
-    '<th style="width:80px">Pendente</th>'+
-    '<th style="width:70px"></th></tr></thead><tbody>';
-  lista.forEach((p)=>{
-    h+='<tr data-id="'+esc(String(p.db_id))+'">'+
-      '<td><input type="text" data-f="nome" value="'+esc(p.nome)+'"'+dis+'></td>'+
-      '<td><input type="text" data-f="nome_completo" value="'+esc(p.nome_completo||"")+'" placeholder="ainda não preenchido"'+dis+'></td>'+
-      '<td><input type="text" data-f="nome_exibicao" value="'+esc(p.nome_exibicao||"")+'"'+dis+'></td>'+
-      '<td><input type="text" data-f="papel" value="'+esc(p.papel||"")+'"'+dis+'></td>'+
-      '<td><input type="text" data-f="grupo" value="'+esc(p.grupo||"")+'"'+dis+'></td>'+
-      '<td><select data-f="nucleo"'+dis+'>'+opts([""].concat(NUCLEOS_VALIDOS),p.nucleo||"")+'</select></td>'+
-      '<td><input type="email" data-f="email" value="'+esc(p.email||"")+'"'+dis+'></td>'+
-      '<td style="text-align:center"><input type="checkbox" data-f="ativo"'+(p.ativo!==false?" checked":"")+dis+'></td>'+
-      '<td style="text-align:center"><input type="checkbox" data-f="pendente"'+(p.pendente?" checked":"")+dis+'></td>'+
-      '<td><span class="ed-row-status" aria-live="polite"></span></td></tr>';
-  });
-  area.innerHTML=h+'</tbody></table></div>';
-
-  area.querySelectorAll("tbody [data-f]").forEach(el=>el.addEventListener("change",async e=>{
-    const t=e.target, tr=t.closest("tr"), id=tr.dataset.id, campo=t.dataset.f;
-    // campos novos da Camada 1 (nome_completo/nome_exibicao/email) usam NULL pra "ainda
-    // não preenchido" (é o que marca uma pessoa como pendente de nome completo — ver
-    // tools/sql/2026-08_pessoas_golden.sql); os campos originais mantêm o comportamento
-    // de sempre (string, inclusive vazia).
-    const campoNulavel = campo==="nome_completo"||campo==="nome_exibicao"||campo==="email";
-    const valor = campo==="pendente"||campo==="ativo" ? t.checked : (campoNulavel ? (t.value||null) : t.value);
-    const p = lista.find(x=>String(x.db_id)===id);
-    if(p) p[campo]=valor;
-    marcarLinhaStatus(tr,"salvando");
-    try {
-      await DB_PESSOAS.salvar(p.db_id, { [campo]: valor }, EDITOR_ATUAL.nomeAtual());
-      marcarLinhaStatus(tr,"salvo");
-    } catch(err){
-      console.error("editor: falha ao salvar pessoa",err);
-      marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
-    }
-  }));
-}
+// aba Pessoas: mora em js/editor-pessoas.js (window.EDITOR_PESSOAS) desde 28/08/2026 —
+// ver comentário no topo daquele arquivo.
 
 // aba Projetos: mora em js/editor-projetos.js (window.EDITOR_PROJETOS) desde
 // 28/08/2026 — ver comentário no topo daquele arquivo.
@@ -794,7 +730,7 @@ function atualizarChromeVivo(){
 
 function render(){
   atualizarChromeVivo();
-  ({plano:renderPlano, matriz:EDITOR_MATRIZ.render, agenda:renderAgenda, pessoas:renderPessoas, projetos:EDITOR_PROJETOS.render,
+  ({plano:renderPlano, matriz:EDITOR_MATRIZ.render, agenda:renderAgenda, pessoas:EDITOR_PESSOAS.render, projetos:EDITOR_PROJETOS.render,
     urc_lideranca:EDITOR_URC.renderLideranca, urc_canais:EDITOR_URC.renderCanais, corsario:EDITOR_CORSARIO.render})[sel.value]();
   saida.value="";
 }
