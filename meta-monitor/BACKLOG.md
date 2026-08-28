@@ -10,7 +10,7 @@ ainda não foram cruzados aqui.
 
 ## `editor.html` grande demais — extraindo aba por aba (em andamento, iniciado 28/08/2026)
 
-**Status:** em andamento — 5 de 8 abas extraídas
+**Status:** em andamento — 6 de 8 abas extraídas
 
 `editor.html` chegou a 105KB/~1750 linhas misturando o JS inline de 8 abas (Plano,
 Agenda, Matriz, Pessoas, Projetos, URC-Liderança, URC-Canais, Corsário) num único
@@ -80,16 +80,26 @@ representante → propagação pro Corsário via insert em lote) ponta a ponta.
 
 `editor.html`: 1744 → 852 linhas (as cinco etapas).
 
-**Próximas etapas (6 a 8, nesta ordem):** Pessoas, Agenda, Plano por último. A extração
-de Pessoas fecha o círculo do `EDITOR_PESSOAS_CACHE`: hoje ele existe pra URC e Projetos
-lerem/escreverem uma variável que ainda mora em `editor.html`; quando Pessoas também for
-extraída, a variável em si (`pessoasAtual`/`pessoasFallback`) pode virar estado privado
-do módulo de Pessoas, com URC/Projetos continuando a ler/escrever pelo mesmo
-`EDITOR_PESSOAS_CACHE` (só muda ONDE o dado mora, não a API) — não é obrigatório fazer
-essa segunda mudança, mas é a oportunidade natural de simplificar se fizer sentido na
-hora. Cada etapa é mecânica e independente — não precisa reler este registro pra saber
-por onde continuar, só seguir a ordem acima e lembrar da lição da etapa 3 (testar com
-dado real, não só o caminho vazio).
+**Etapa 6 — Pessoas → `js/editor-pessoas.js`:** feita. `pessoasCarregando` virou estado
+privado do módulo (confirmado que só `renderPessoas` usava essa trava — URC e Projetos
+nunca checaram "carregando", só a lista). **`pessoasAtual`/`pessoasFallback` NÃO foram
+movidos** — ficaram de propósito em `editor.html`, diferente do que a nota da etapa 5
+cogitava: `listaResponsaveis()` (usada pela aba Plano, ainda não extraída) lê/escreve
+nelas direto no mesmo closure, então mover a variável quebraria essa leitura até o Plano
+também ser extraído. Esta etapa só usa `window.EDITOR_PESSOAS_CACHE` (já existente desde
+a etapa 4), sem mudar sua API. **A oportunidade real de "fechar o círculo" e mover a
+variável de vez fica pra quando o Plano (etapa 8) for extraído** — aí sim não sobra
+nenhum consumidor direto em `editor.html`. Testado com um script CDP ad-hoc (não existe
+teste headless dedicado pra esta aba): offline e online com dublê, editando um campo de
+texto e um checkbox, os dois gravando certo.
+
+`editor.html`: 1744 → 788 linhas (as seis etapas, menos da metade do tamanho original).
+
+**Próximas etapas (7 e 8, nesta ordem):** Agenda, Plano por último. Cada etapa é
+mecânica e independente — não precisa reler este registro pra saber por onde continuar,
+só seguir a ordem acima e lembrar da lição da etapa 3 (testar com dado real, não só o
+caminho vazio) e da nota da etapa 6 (mover `pessoasAtual`/`pessoasFallback` pro módulo
+de Pessoas só faz sentido depois que a etapa 8/Plano também sair de `editor.html`).
 
 ## Sidebar compacta/colapsável — implementada (28/08/2026)
 
