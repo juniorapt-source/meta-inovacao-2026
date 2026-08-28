@@ -113,6 +113,7 @@
     if (!nav) return;
     const cfg = DB.config || { projeto: "Carta de Corso", versao: "dev", atualizado_em: "" };
     let html = '<div class="marca">' + esc(cfg.projeto || "Carta de Corso") + "<small>" + esc(cfg.subtitulo || "") + "</small></div>";
+    html += '<button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="true">« Ocultar menu</button>';
     for (const grupo of GRUPOS) {
       html += '<div class="grupo-titulo">' + esc(grupo.titulo) + "</div>";
       for (const [href, rotulo] of grupo.paginas) {
@@ -124,7 +125,54 @@
     if (!nav.id) nav.id = "menu-principal";
 
     montarMenuMobile(nav, cfg);
+    montarColapsavel(nav);
   };
+
+  // sidebar colapsável (desktop) — sugestão registrada em BACKLOG.md ("Sidebar
+  // compacta/colapsável"): mais espaço horizontal útil pra páginas com tabela larga
+  // (Matriz do Corsário — 19 colunas de critério — e Matriz de demandas), que hoje
+  // dependem de scroll horizontal por disputarem espaço com o menu lateral fixo.
+  // Estado por NAVEGADOR via localStorage (uma chave só, não por página) — colapsar
+  // numa tela vale em todas as outras ao navegar, já que aqui cada página é um
+  // carregamento novo, não uma SPA. Só desktop: abaixo de 768px o mecanismo já é
+  // outro (menu hambúrguer, montarMenuMobile acima) e não deve competir com este —
+  // ver a media query min-width:768px em css/base.css.
+  const CHAVE_NAV_COLAPSADA = "cc_nav_colapsada";
+  function montarColapsavel(nav) {
+    const shell = nav.closest(".shell");
+    if (!shell) return;
+    const toggle = nav.querySelector("#nav-toggle");
+    let reabrir = document.querySelector(".nav-reabrir");
+    if (!reabrir) {
+      // sempre reconstruído no <nav> (que é limpo/reescrito a cada montarShell), mas o
+      // botão de reabrir fica FORA dele de propósito — precisa continuar clicável mesmo
+      // com a coluna do menu em largura 0 (ver .shell.nav-colapsada em css/base.css).
+      reabrir = document.createElement("button");
+      reabrir.type = "button";
+      reabrir.className = "nav-reabrir";
+      reabrir.setAttribute("aria-label", "Mostrar menu lateral");
+      reabrir.textContent = "» Menu";
+      document.body.appendChild(reabrir);
+    }
+    function aplicar(colapsada) {
+      shell.classList.toggle("nav-colapsada", colapsada);
+      if (toggle) toggle.setAttribute("aria-expanded", String(!colapsada));
+    }
+    let colapsada = false;
+    try {
+      colapsada = localStorage.getItem(CHAVE_NAV_COLAPSADA) === "1";
+    } catch (e) {
+      // localStorage indisponível (file://, modo privado) — sem persistência entre
+      // páginas, mas o toggle continua funcionando dentro da mesma página.
+    }
+    aplicar(colapsada);
+    function alternar(novoEstado) {
+      aplicar(novoEstado);
+      try { localStorage.setItem(CHAVE_NAV_COLAPSADA, novoEstado ? "1" : "0"); } catch (e) { /* ver acima */ }
+    }
+    if (toggle) toggle.addEventListener("click", () => alternar(true));
+    reabrir.addEventListener("click", () => alternar(false));
+  }
 
   // item 2.5 do plano de melhorias — abaixo de 768px o sidebar vira menu hambúrguer.
   // Header + backdrop são injetados aqui (uma vez por página, dentro do .shell que já

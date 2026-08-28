@@ -8,19 +8,36 @@ o outro arquivo pra ver o que ainda falta e em que ordem. Os números #001/#002 
 original não apareceram em nenhum prompt lido até agora (só #003/#004/#005) — se existirem,
 ainda não foram cruzados aqui.
 
-## Sidebar compacta/colapsável — sugestão fora de escopo (refactor v0.21 do Corsário)
+## Sidebar compacta/colapsável — implementada (28/08/2026)
 
-**Status:** aberto — sugestão registrada, não implementada
+**Status:** resolvido
 
 Durante o refactor de UI/UX de `corsario.html` (v0.21.0, "protagonismo da Matriz"), a
 sidebar ficou fora de escopo por instrução explícita (não alterar largura, itens ou
-comportamento — componente compartilhado entre páginas). Registrando aqui como sugestão
-pra uma rodada futura: uma sidebar compactável (largura reduzida ou colapsável) daria mais
-espaço horizontal útil pra páginas com tabelas largas, como a Matriz do Corsário (19
-colunas de critério) e a Matriz de demandas — hoje as duas dependem de scroll horizontal
-contido justamente por essa disputa de espaço com o menu lateral.
+comportamento — componente compartilhado entre páginas). Ficou registrada aqui como
+sugestão pra uma rodada futura: uma sidebar compactável (largura reduzida ou colapsável)
+daria mais espaço horizontal útil pra páginas com tabelas largas, como a Matriz do
+Corsário (19 colunas de critério) e a Matriz de demandas — hoje as duas dependem de scroll
+horizontal contido justamente por essa disputa de espaço com o menu lateral.
 
-**Nenhuma implementação feita** — só o registro da sugestão.
+**O que foi feito:** em vez de reduzir a largura (exigiria um jogo de ícones que a
+sidebar não tem hoje — só rótulos de texto), o menu passou a ser **ocultável por
+completo**, com uma aba fina "» Menu" fixada na borda esquerda pra reabrir. Um botão "«
+Ocultar menu" entra no topo do próprio `<nav>` (`js/core.js`, `montarShell`/
+`montarColapsavel`, nova função) — clicar nele soma a classe `nav-colapsada` em `.shell`,
+que zera a coluna do grid do menu (`css/base.css`, regra só dentro de
+`@media (min-width:768px)` pra nunca competir com o mecanismo de menu hambúrguer do
+mobile, que é outro). O estado fica em `localStorage` (`cc_nav_colapsada`) — colapsar
+numa página vale nas outras ao navegar, já que aqui cada página é um carregamento novo,
+não uma SPA; sem `localStorage` (file://, modo privado) o toggle ainda funciona dentro da
+mesma página, só não persiste. Zero mudança de HTML por página (mesmo padrão do menu
+mobile, injetado a partir do `<nav>` vazio que já existe em toda tela).
+
+**Teste:** sem headless novo (é layout puro, CSS+localStorage, sem lógica de dados pra
+travar) — validado manualmente: toggle esconde/mostra o menu, aba de reabrir aparece só
+colapsado, estado sobrevive a navegar pra outra página, e em ≤767px (mobile) o mecanismo
+não aparece — quem manda lá continua sendo o hambúrguer de sempre. `tools/validar_site.py`
+e a suíte headless (`tools/testar_mobile_headless.js` etc.) seguem verdes.
 
 ## Item 3.4 — Histórico e auditoria
 
