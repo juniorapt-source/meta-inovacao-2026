@@ -10,7 +10,7 @@ ainda não foram cruzados aqui.
 
 ## `editor.html` grande demais — extraindo aba por aba (em andamento, iniciado 28/08/2026)
 
-**Status:** em andamento — 2 de 8 abas extraídas
+**Status:** em andamento — 4 de 8 abas extraídas
 
 `editor.html` chegou a 105KB/~1750 linhas misturando o JS inline de 8 abas (Plano,
 Agenda, Matriz, Pessoas, Projetos, URC-Liderança, URC-Canais, Corsário) num único
@@ -38,12 +38,44 @@ resolvido expondo `window.EDITOR_MATRIZ.modeloAtual()` além de `.render()`. Tes
 `tools/testar_matriz_editor_headless.js` (dedicado — inclui a checagem de o snapshot
 gerado bater chave a chave com o de `demandas.html`) + suíte geral, tudo verde.
 
-`editor.html`: 1744 → 1557 linhas (as duas etapas).
+**Etapa 3 — Corsário → `js/editor-corsario.js`:** feita, mas revelou um problema que
+mudou como as etapas seguintes são feitas: `opts()`, `avisoFallback()`,
+`marcarLinhaStatus()`/`marcarCelulaStatus()`, `detErro()`, `nucleosPorNome()`,
+`projetoIdPorIniciativa()`, `normalizarNomePessoa()`, `nomeExibicaoPessoa()` e
+`NUCLEOS_VALIDOS` são declarados DENTRO do IIFE de `editor.html` — não são globais de
+verdade. Um script à parte (`js/editor-corsario.js`) referenciando `opts(...)` sem mais
+não enxergava nada e estourava `ReferenceError` assim que uma célula com dado de
+verdade tentasse renderizar. **O teste manual da época só bateu no caminho vazio
+(offline), que nunca chega a chamar essas funções — passou sem detectar o problema.**
+Corrigido expondo cada uma via `window.X = X` logo após a declaração, sem mudar onde
+elas moram (continuam em `editor.html`, ainda usadas pelas abas não extraídas). Achado e
+corrigido antes do merge pra `main` — nenhum código quebrado chegou a ir pro ar.
+**Lição pra quem for extrair as próximas abas:** todo helper que a aba extraída chama e
+que não é um `DB_*`/`window.esc`/`window.CC_*` já confirmadamente global precisa dessa
+checagem — teste sempre com DADO REAL (dublê de Supabase, não só `?semrede=1` vazio)
+antes de considerar a etapa pronta; ver o commit da etapa 3 pro exemplo de como montar
+esse teste.
 
-**Próximas etapas (3 a 8, nesta ordem):** Corsário, URC (Liderança+Canais juntos — as
-duas sub-abas comungam estado entre si), Projetos, Pessoas, Agenda, Plano por último.
-Cada etapa é mecânica e independente — não precisa reler este registro pra saber por
-onde continuar, só seguir a ordem acima.
+**Etapa 4 — URC (Liderança+Canais) → `js/editor-urc.js`:** feita. As duas sub-abas
+compartilham uma carga (`DB_URC.carregar()` busca as duas juntas — o guardrail do item
+4.4 precisa da liderança carregada mesmo editando só canais); `canaisAtual`/
+`canaisFallback` viraram estado privado do módulo (confirmado que só URC os usava antes
+de mover). Diferente das etapas 1-3, esta tinha uma dependência bidirecional de verdade
+com uma aba NÃO extraída: `pessoasAtual`/`pessoasFallback` são compartilhados com
+Pessoas e Projetos. Resolvido com `window.EDITOR_PESSOAS_CACHE.{obter,definir}` (getter/
+setter definido em `editor.html`, ao lado da variável) — quem carrega primeiro grava,
+quem abre depois reaproveita, confirmado com um teste ad-hoc (1 chamada à tabela só,
+abrindo Pessoas e depois URC). Testado com `tools/testar_urc_editor_headless.js`
+(dedicado, offline+online com dublê, inclui o guardrail) + suíte geral, tudo verde.
+
+`editor.html`: 1744 → 1173 linhas (as quatro etapas).
+
+**Próximas etapas (5 a 8, nesta ordem):** Projetos, Pessoas, Agenda, Plano por último.
+Projetos e Pessoas também compartilham `pessoasAtual` (agora via
+`EDITOR_PESSOAS_CACHE`) — mesmo padrão da etapa 4 se aplica. Cada etapa é mecânica e
+independente — não precisa reler este registro pra saber por onde continuar, só seguir
+a ordem acima e lembrar da lição da etapa 3 (testar com dado real, não só o caminho
+vazio).
 
 ## Sidebar compacta/colapsável — implementada (28/08/2026)
 
