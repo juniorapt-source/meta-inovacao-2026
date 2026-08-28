@@ -273,6 +273,12 @@ const area = document.getElementById("ed-area");
 const saida = document.getElementById("ed-saida");
 /* precisa bater exatamente com NUCLEOS_VALIDOS de tools/validar_dados.py */
 const NUCLEOS_VALIDOS = ["Inovação para Competitividade","Inovação Territorial","Startups","Tecnologias Portadoras de Futuro","Gestão do Conhecimento e Processos"];
+// exposto em window: abas já extraídas pro próprio arquivo (Corsário; URC em seguida)
+// precisam disto, e são scripts à parte — não enxergam nada declarado dentro deste IIFE
+// sem passar por window explicitamente. Mesmo motivo pras outras exposições abaixo
+// (opts, avisoFallback, marcarLinhaStatus/CelulaStatus, detErro, nucleosPorNome,
+// projetoIdPorIniciativa, normalizarNomePessoa, nomeExibicaoPessoa).
+window.NUCLEOS_VALIDOS = NUCLEOS_VALIDOS;
 
 // itens 5.5/5.7 do plano — mapa nome→nucleo_id do golden record (meta_inovacao_nucleos,
 // Camada 0), carregado sob demanda e reaproveitado pelas duas portas de escrita que o
@@ -294,6 +300,7 @@ async function nucleosPorNome(){
   nucleosAtual.forEach(n=>{ m[n.nome]=n.db_id; });
   return m;
 }
+window.nucleosPorNome = nucleosPorNome;
 
 // item 5.7 — projeto_id pro Corsário, resolvido por igualdade exata de `iniciativa`
 // contra o golden record (mesma régua do UPDATE original de
@@ -318,6 +325,7 @@ async function projetoIdPorIniciativa(nome){
   const p = (projetosAtual||[]).find(x=>x.iniciativa===nome);
   return p ? p.db_id : null;
 }
+window.projetoIdPorIniciativa = projetoIdPorIniciativa;
 
 // item 5.6 — lista "montada" de DB_RESPONSAVEIS (pessoa OU coletivo do golden record,
 // ids antigos preservados — mesma função que plano-acao.html/minhas-acoes.html usam
@@ -374,6 +382,7 @@ function opts(lista, atual, rot){
   const l = lista.includes(atual)||atual===""&&lista.includes("") ? lista : [atual].concat(lista);
   return l.map(v=>'<option value="'+esc(v)+'"'+(v===atual?" selected":"")+'>'+esc(rot?(rot[v]!==undefined?rot[v]:v):(v||"—"))+'</option>').join("");
 }
+window.opts = opts;
 
 // item 4.1 — mesma régua de tools/sql/2026-08_projeto_representantes.sql
 // (public.cc_pessoa_normalizar): minúsculas, sem acento, sem ponto, trim. Usada só
@@ -382,12 +391,14 @@ function opts(lista, atual, rot){
 function normalizarNomePessoa(txt){
   return String(txt||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\./g,"").trim();
 }
+window.normalizarNomePessoa = normalizarNomePessoa;
 // rótulo de exibição de uma pessoa nos seletores/chips novos — mesma prioridade de
 // docs/CAMADA1_DEDUPE_PESSOAS.md §3.3 (nome_completo > nome_exibicao > nome, porque
 // 15 pessoas ainda não têm nome_completo preenchido).
 function nomeExibicaoPessoa(p){
   return (p && (p.nome_completo||p.nome_exibicao||p.nome)) || "";
 }
+window.nomeExibicaoPessoa = nomeExibicaoPessoa;
 
 /* prefixo de ID por frente, descoberto a partir dos dados carregados (não hardcodado) */
 function mapaPrefixos(){
@@ -422,6 +433,7 @@ function marcarLinhaStatus(tr, texto, detalhe){
   } else if(texto){ el.textContent=texto; el.style.color="var(--critico)"; if(detalhe) el.title=detalhe; }
   else el.textContent="";
 }
+window.marcarLinhaStatus = marcarLinhaStatus;
 
 // variante de marcarLinhaStatus() pra grid densa (conjunto "corsario"): a célula é
 // estreita demais pra caber um texto "salvando…" do lado do select sem quebrar layout,
@@ -435,6 +447,7 @@ function marcarCelulaStatus(td, estado, detalhe){
   if(estado==="salvo") setTimeout(()=>td.classList.remove("ed-cel-salvando"),500);
   else if(estado && estado!=="salvando"){ td.classList.remove("ed-cel-salvando"); td.classList.add("ed-cel-erro"); td.title = detalhe ? (estado+" — "+detalhe) : estado; td.setAttribute("data-erro",""); }
 }
+window.marcarCelulaStatus = marcarCelulaStatus;
 
 // motivo técnico de um erro de escrita, pro title/tooltip dos indicadores (hover), sem
 // jamais ir pro texto visível — evita o beco sem saída do "falhou" cru, que obrigava a
@@ -442,6 +455,7 @@ function marcarCelulaStatus(td, estado, detalhe){
 function detErro(err){
   return (window.CC_SUPABASE && CC_SUPABASE.detalheErro) ? CC_SUPABASE.detalheErro(err) : ((err&&err.message)||String(err));
 }
+window.detErro = detErro;
 
 async function renderPlano(){
   if(!planoAtual && !planoCarregando){
@@ -661,6 +675,7 @@ function avisoFallback(nomeArquivo){
   return '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não foi possível atualizar os dados agora; estas são as informações da última versão salva. '+
     'As alterações não serão salvas enquanto isso; recarregue a página mais tarde.</div>';
 }
+window.avisoFallback = avisoFallback;
 
 async function renderPessoas(){
   if(!pessoasAtual && !pessoasCarregando){
