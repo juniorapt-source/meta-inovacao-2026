@@ -63,15 +63,33 @@ Histórico de `editor.html` já passa a ler o log de verdade.
 
 ## Cobertura de teste com rede real
 
-**Status:** aberto — avaliar
+**Status:** resolvido (28/08/2026)
 
-Os testes headless atuais forçam fallback local via `?semrede=1` (e
-`window.CC_FORCAR_FALLBACK`) e por isso não pegam bugs de integração real com o
+Os testes headless da suíte forçam fallback local via `?semrede=1` (e
+`window.CC_FORCAR_FALLBACK`) e por isso não pegavam bugs de integração real com o
 Supabase — ex.: o GRANT esquecido no P10 e a ordem de `js/config.js` no bug fix seguinte
 (ambos só apareceram em produção, não na suíte).
 
-**A avaliar:** adicionar 1–2 testes headless por página crítica que rodem contra o
-Supabase de produção (ou um staging), acionados manualmente antes de deploys grandes.
+**O que foi feito:** `tools/testar_rede_real_headless.js` (novo) — 2 páginas
+(`index.html`, cobrindo Plano; `agenda.html`, cobrindo Plano+Agenda, os dois conjuntos que
+hoje vivem no Supabase) abertas SEM `?semrede=1`/`CC_FORCAR_FALLBACK`, contra o Supabase de
+verdade. Confere: `#aviso-fallback` continua escondido (não caiu pro local), zero erro de
+console/exceção durante o carregamento, e a contagem de linhas no piso conhecido (47/20) ou
+acima — piso, não igualdade, pra dado novo cadastrado depois não virar falso-positivo. Só
+leitura (nunca escreve), então é seguro rodar contra produção quantas vezes quiser. Exige
+`--confirmar` (ou `CC_CONFIRMAR_REDE_REAL=1`) — sem isso sai sem tentar rede, pra nunca
+disparar sem querer numa rodada em lote com os outros `testar_*`; por isso também não
+entra no README como parte da suíte automática, só documentado como comando manual.
+
+**Testado como:** não dá pra validar contra o Supabase de produção de dentro de uma sessão
+do Claude Code (rede bloqueada pra `supabase.co`, mesma limitação do golden record) — o
+que foi validado aqui foi o caminho de FALHA: rodado de propósito neste ambiente sem rede,
+o teste pegou exatamente os 3 sintomas que deveria pegar (`#aviso-fallback` visível,
+`TypeError` de import do SDK no console, `DB_PLANO.carregar()`/`DB_AGENDA.carregar()`
+confirmando `usandoFallback:true`) e saiu com código 1. O caminho de sucesso (rede real
+funcionando) fica pra José confirmar rodando de verdade antes do próximo deploy grande que
+mexer em `js/db-plano.js`/`js/db-agenda.js`/`js/config.js` ou nas policies/GRANTs dessas
+duas tabelas — ver o comando no README.
 
 ## #005 — Rótulos de menu confusos
 
