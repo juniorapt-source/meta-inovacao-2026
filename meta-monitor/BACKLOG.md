@@ -10,7 +10,7 @@ ainda não foram cruzados aqui.
 
 ## `editor.html` grande demais — extraindo aba por aba (em andamento, iniciado 28/08/2026)
 
-**Status:** em andamento — 6 de 8 abas extraídas
+**Status:** em andamento — 7 de 8 abas extraídas
 
 `editor.html` chegou a 105KB/~1750 linhas misturando o JS inline de 8 abas (Plano,
 Agenda, Matriz, Pessoas, Projetos, URC-Liderança, URC-Canais, Corsário) num único
@@ -95,11 +95,27 @@ texto e um checkbox, os dois gravando certo.
 
 `editor.html`: 1744 → 788 linhas (as seis etapas, menos da metade do tamanho original).
 
-**Próximas etapas (7 e 8, nesta ordem):** Agenda, Plano por último. Cada etapa é
-mecânica e independente — não precisa reler este registro pra saber por onde continuar,
-só seguir a ordem acima e lembrar da lição da etapa 3 (testar com dado real, não só o
-caminho vazio) e da nota da etapa 6 (mover `pessoasAtual`/`pessoasFallback` pro módulo
-de Pessoas só faz sentido depois que a etapa 8/Plano também sair de `editor.html`).
+**Etapa 7 — Agenda → `js/editor-agenda.js`:** feita. A mais isolada das que restavam —
+zero estado compartilhado com qualquer outra aba (`agendaAtual`/`agendaFallback`/
+`agendaCarregando`/`STATUS_ENC`/`ROTULO_ENC` só eram usados aqui, confirmado antes de
+mover). Testado com um script CDP ad-hoc (sem teste headless dedicado pra esta aba):
+offline e online com dublê — o teste bateu de propósito na tradução de status
+(`encontro_confirmado` → "Confirmado", não a chave crua), pra garantir que o item
+2.4/P6 (a correção que criou `STATUS_ENC`/`ROTULO_ENC`) continua funcionando depois da
+extração.
+
+`editor.html`: 1744 → 729 linhas (as sete etapas).
+
+**Falta só a etapa 8 — Plano.** É a mais crítica (edição ao vivo das 47 ações do
+caminho crítico) e a mais acoplada: usa `proximoId`/`mapaPrefixos`/`normalizarNomePessoa`/
+`nomeExibicaoPessoa`/`listaResponsaveis`/`gravarPlanoResponsaveis` (todos já globais
+desde a etapa 3, exceto `listaResponsaveis`/`gravarPlanoResponsaveis`, que ainda não
+foram expostos — vão precisar do mesmo tratamento `window.X = X` antes de extrair, ver
+a lição da etapa 3). É também a etapa que fecha o círculo do `EDITOR_PESSOAS_CACHE`
+(nota da etapa 6): depois dela, `pessoasAtual`/`pessoasFallback` não têm mais nenhum
+consumidor direto em `editor.html`, e podem virar estado privado do módulo de Pessoas
+se fizer sentido nessa hora (não é obrigatório). Testar com dado real (dublê), não só
+o caminho vazio — lição da etapa 3, ainda mais importante aqui pelo tamanho da função.
 
 ## Sidebar compacta/colapsável — implementada (28/08/2026)
 
