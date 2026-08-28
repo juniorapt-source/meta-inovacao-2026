@@ -996,6 +996,29 @@ mede a régua, não o dado.
 
 ---
 
+## Convergência pendente — checklist de "quem ainda olha pro lugar errado" (28/08/2026)
+
+A Camada 5 fechou a porta de ESCRITA em todos os pontos de entrada (5.9, 7/7 partes) —
+o que resta hoje é território de LEITURA com fallback textual, "convivendo" de
+propósito (nunca substituição only), não porta esquecida. Registrando aqui como
+checklist único pra não ficar espalhado: 4 pontos onde um campo ainda não lê o golden
+record como fonte única.
+
+| # | Onde | O que ainda lê o quê | Status |
+|---|---|---|---|
+| C1 | `js/matriz-store.js` (`carregarLegado()`), consumido só pelo painel "Conferência com a tabela antiga" de `demandas.html` | Lê `meta_inovacao_matriz_demandas` (tabela ANTIGA, já substituída por `meta_inovacao_matriz_celulas` desde a Camada 3/3.5) | ⏳ decisão de José pendente — o painel nasceu pra validar a migração durante a janela do 3.5, que já concluiu (26/08/2026, sem divergência). Continua como rede de segurança permanente ou é retirado agora? Já registrado na seção da Camada 5 ("Aposentadoria de `meta_inovacao_matriz_demandas`") — repetido aqui só pra entrar no checklist único |
+| C2 | `js/db-plano.js` (`anexarResponsaveisGolden`) → `a.responsaveis_golden` | Cada ação do plano continua tendo `responsavel_id` (texto, os 32 ids antigos tipo `"jr"`/`"sandra"`) como o campo que toda tela lê por padrão; o vínculo golden (`pessoa_id`/`coletivo_id` via `meta_inovacao_plano_responsaveis`, item 2.6) vem anexado AO LADO, cru, sem resolver nome — quem consome (hoje só `minhas-acoes.html`) decide como casar os dois lados | ✅ decisão já tomada (item 5.9 parte 7, 27/08/2026): migrar tela existente, não criar visão nova — "convivendo" é o desenho final, não uma etapa intermediária. Não é pendência, é o estado permanente pretendido |
+| C3 | `js/db-responsaveis.js` (constante `LEGADO`) | Os 32 ids antigos de responsável (`"jr"`, `"sandra"`, `"anny"`...) ficam hardcoded no código-fonte, traduzidos à mão pra pessoa/coletivo golden — não é uma tabela golden real, é um mapa de tradução mantido manualmente. Pessoa nova cadastrada DEPOIS ganha id golden sozinha; os 32 antigos nunca migram pra lá | ✅ decisão já tomada (Camada 4, item 4.3, notas da Camada 1): preservar EXATAMENTE, `LEGADO` não cresce nunca — dado já gravado no Supabase depende dessa tradução ficar estável. Não é pendência, é o desenho final |
+| C4 | `js/drawer.js` (painel de INICIATIVA → bloco "Representante de X", sentido pessoa→projetos) | Casa por TEXTO (nome), não pela junção `meta_inovacao_projeto_representantes` do item 2.2 | ✅ decisão de escopo já tomada (item 4.4): a direção projeto→representante (a que o 4.4 corrigia) já lê a junção; o sentido inverso exigiria uma segunda tradução (id LEGADO → pessoa_id golden, item 4.3, não carregado nas páginas que abrem este painel) só pra alimentar um casamento que, no fim, ainda seria por nome dos dois lados. Não é pendência, é decisão de escopo documentada no próprio código |
+
+**Leitura do checklist:** só o **C1** é uma pendência de verdade (decisão em aberto,
+bloqueando remoção de código morto). C2/C3/C4 são "convivendo" **permanente e
+intencional** — não viram item de código nesta ou em nenhuma frente futura, a não ser
+que José decida o contrário. Registrados aqui só pra quem chegar numa sessão nova não
+redescobrir a mesma pergunta ("por que ainda tem texto legado aqui?") do zero.
+
+---
+
 ## Protocolo de ajuste (mesmo do `PLANO_EXECUCAO.md` original)
 
 1. Teste de aceite da camada falhou → registrar a causa (num `BUILD_STATUS.md` novo
@@ -1151,7 +1174,11 @@ precisa saber sem reler tudo acima:
    uso" fora do `CHECK` (Camada 3). **As duas falhas antigas da suíte
    (`testar_status_badges_headless.js` e `testar_drawer_headless.js`) foram corrigidas em
    22/08 (PR #10)** — a suíte do README está verde. Num ambiente sem rede de saída pro
-   Supabase, 2 asserções do drawer falham por isso e só por isso.
+   Supabase, 2 asserções do drawer falham por isso e só por isso. Ver também
+   "Convergência pendente — checklist" logo acima da seção de Protocolo: dos 4 pontos
+   listados, só **C1** (`js/matriz-store.js.carregarLegado()`, painel "Conferência com a
+   tabela antiga" de `demandas.html`) é decisão de José em aberto de verdade — os outros
+   3 já são o desenho final, "convivendo" permanente.
 8. **Toda migração SQL é rodada manualmente por José no SQL Editor do Supabase** —
    nenhuma automação tem acesso de escrita à produção. As sessões do Claude Code também
    **não conseguem LER** o Supabase de produção (rede bloqueada pra `supabase.co`): todo
