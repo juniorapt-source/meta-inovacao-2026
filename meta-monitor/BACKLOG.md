@@ -10,7 +10,7 @@ ainda não foram cruzados aqui.
 
 ## `editor.html` grande demais — extraindo aba por aba (em andamento, iniciado 28/08/2026)
 
-**Status:** em andamento — 4 de 8 abas extraídas
+**Status:** em andamento — 5 de 8 abas extraídas
 
 `editor.html` chegou a 105KB/~1750 linhas misturando o JS inline de 8 abas (Plano,
 Agenda, Matriz, Pessoas, Projetos, URC-Liderança, URC-Canais, Corsário) num único
@@ -68,14 +68,28 @@ quem abre depois reaproveita, confirmado com um teste ad-hoc (1 chamada à tabel
 abrindo Pessoas e depois URC). Testado com `tools/testar_urc_editor_headless.js`
 (dedicado, offline+online com dublê, inclui o guardrail) + suíte geral, tudo verde.
 
-`editor.html`: 1744 → 1173 linhas (as quatro etapas).
+**Etapa 5 — Projetos & Representantes → `js/editor-projetos.js`:** feita. Mesmo padrão
+da etapa 4 (`window.EDITOR_PESSOAS_CACHE`, sem mudança) + um cache novo,
+`window.EDITOR_PROJETOS_CACHE.{obter,definir,marcarCarregando}` — `projetosAtual`/
+`projetosFallback`/`projetosCarregando` são compartilhados com `projetoIdPorIniciativa()`
+(fica em `editor.html`, usado pela aba Corsário); `projetoIdPorIniciativa()` continua no
+mesmo closure da variável, não precisou do getter/setter. Testado com
+`tools/testar_projetos_editor_representantes_headless.js` (dedicado) + dois scripts CDP
+ad-hoc extras confirmando o fluxo completo de "+ Novo projeto" (criação → vínculo de
+representante → propagação pro Corsário via insert em lote) ponta a ponta.
 
-**Próximas etapas (5 a 8, nesta ordem):** Projetos, Pessoas, Agenda, Plano por último.
-Projetos e Pessoas também compartilham `pessoasAtual` (agora via
-`EDITOR_PESSOAS_CACHE`) — mesmo padrão da etapa 4 se aplica. Cada etapa é mecânica e
-independente — não precisa reler este registro pra saber por onde continuar, só seguir
-a ordem acima e lembrar da lição da etapa 3 (testar com dado real, não só o caminho
-vazio).
+`editor.html`: 1744 → 852 linhas (as cinco etapas).
+
+**Próximas etapas (6 a 8, nesta ordem):** Pessoas, Agenda, Plano por último. A extração
+de Pessoas fecha o círculo do `EDITOR_PESSOAS_CACHE`: hoje ele existe pra URC e Projetos
+lerem/escreverem uma variável que ainda mora em `editor.html`; quando Pessoas também for
+extraída, a variável em si (`pessoasAtual`/`pessoasFallback`) pode virar estado privado
+do módulo de Pessoas, com URC/Projetos continuando a ler/escrever pelo mesmo
+`EDITOR_PESSOAS_CACHE` (só muda ONDE o dado mora, não a API) — não é obrigatório fazer
+essa segunda mudança, mas é a oportunidade natural de simplificar se fizer sentido na
+hora. Cada etapa é mecânica e independente — não precisa reler este registro pra saber
+por onde continuar, só seguir a ordem acima e lembrar da lição da etapa 3 (testar com
+dado real, não só o caminho vazio).
 
 ## Sidebar compacta/colapsável — implementada (28/08/2026)
 
