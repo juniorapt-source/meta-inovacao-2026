@@ -8,6 +8,43 @@ o outro arquivo pra ver o que ainda falta e em que ordem. Os números #001/#002 
 original não apareceram em nenhum prompt lido até agora (só #003/#004/#005) — se existirem,
 ainda não foram cruzados aqui.
 
+## `editor.html` grande demais — extraindo aba por aba (em andamento, iniciado 28/08/2026)
+
+**Status:** em andamento — 2 de 8 abas extraídas
+
+`editor.html` chegou a 105KB/~1750 linhas misturando o JS inline de 8 abas (Plano,
+Agenda, Matriz, Pessoas, Projetos, URC-Liderança, URC-Canais, Corsário) num único
+`<script>`. Sugestão do José (28/08/2026): sem build no projeto, uma reescrita completa
+sai cara — mas dá pra quebrar o JS de cada aba em `js/editor-<aba>.js` conforme o arquivo
+for sendo mexido, reduzindo o "raio de explosão" de cada edição sem mudar nenhum
+comportamento. Plano acordado: uma aba por vez, da mais isolada (menos estado
+compartilhado com as outras) pra mais arriscada — Histórico e Matriz primeiro (as duas
+únicas só-leitura), Plano por último (a mais crítica: edição ao vivo das 47 ações, mais
+helpers compartilhados). O que for genuinamente compartilhado entre 2+ abas (`opts()`,
+`nucleosPorNome()`, `detErro()`...) fica em `editor.html` até uma 2ª aba precisar dele —
+só aí vira um `js/editor-shared.js`, em vez de adivinhar hoje o que vai ser
+compartilhado.
+
+**Etapa 1 — Histórico → `js/editor-historico.js`:** feita. Zero estado compartilhado com
+outras abas; expõe `window.EDITOR_HISTORICO.{montar,ativar}`. `alternarAba()` (o
+"spine" que troca entre a aba Dados/Histórico) passou a chamar `EDITOR_HISTORICO.ativar()`
+em vez de uma função local. Testado com `tools/testar_historico_headless.js` (dedicado)
++ suíte geral, tudo verde.
+
+**Etapa 2 — Matriz → `js/editor-matriz.js`:** feita. Único ponto de acoplamento com o
+"spine": o botão "Exportar cópia de segurança" (genérico, usado só por conjuntos
+`snapshot:true` — hoje só a Matriz) precisa do modelo carregado pra gerar o arquivo;
+resolvido expondo `window.EDITOR_MATRIZ.modeloAtual()` além de `.render()`. Testado com
+`tools/testar_matriz_editor_headless.js` (dedicado — inclui a checagem de o snapshot
+gerado bater chave a chave com o de `demandas.html`) + suíte geral, tudo verde.
+
+`editor.html`: 1744 → 1557 linhas (as duas etapas).
+
+**Próximas etapas (3 a 8, nesta ordem):** Corsário, URC (Liderança+Canais juntos — as
+duas sub-abas comungam estado entre si), Projetos, Pessoas, Agenda, Plano por último.
+Cada etapa é mecânica e independente — não precisa reler este registro pra saber por
+onde continuar, só seguir a ordem acima.
+
 ## Sidebar compacta/colapsável — implementada (28/08/2026)
 
 **Status:** resolvido

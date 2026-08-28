@@ -177,6 +177,10 @@
      comentário no topo de js/editor-historico.js. Precisa vir depois de core.js (esc),
      status.js (CC_STATUS) e supabase.js (CC_SUPABASE), todos já carregados acima. -->
 <script src="js/editor-historico.js"></script>
+<!-- aba "Matriz de demandas" (item 3.3) — 2ª aba extraída, ver comentário no topo de
+     js/editor-matriz.js. Precisa vir depois de matriz-store.js, db-projetos.js e
+     db-canais.js (todos já carregados acima). -->
+<script src="js/editor-matriz.js"></script>
 <script>
 (function(){
 "use strict";
@@ -250,13 +254,10 @@ let projRepresentantesAtual = null, formNovoProjRepresentantesSelecionados = [];
 // editando só os canais.
 let urcAtual = null, urcFallback = false, urcCarregando = false;
 let corsarioAtual = null, corsarioFallback = false, corsarioCarregando = false;
-// item 3.3 do plano — matrizModelo é { colunas, linhas } de matrizStore.montarModelo(),
-// as MESMAS três fontes que demandas.html usa (matrizStore + DB_PROJETOS + DB_CANAIS).
-// A aba fica só leitura aqui (a edição de verdade continua em demandas.html); o botão
-// "Exportar cópia de segurança" gera data/matriz.js a partir deste modelo, via
-// matrizStore.paraSnapshot() — a mesma função que o botão "Exportar matriz" de
-// demandas.html usa, pra os dois exports baterem chave a chave por construção.
-let matrizModelo = null, matrizFallback = false, matrizCarregando = false;
+// aba Matriz: o modelo { colunas, linhas } e o estado de carregamento moram em
+// js/editor-matriz.js desde 28/08/2026 (window.EDITOR_MATRIZ) — ver comentário no topo
+// daquele arquivo. O "spine" só lê EDITOR_MATRIZ.modeloAtual() quando precisa (botão de
+// exportar, mais abaixo).
 let formNovaIniciativaAberto = false;
 let formNovoProjetoAberto = false;
 
@@ -611,56 +612,9 @@ async function adicionarAtividade(){
   }
 }
 
-// item 3.3 do plano — a aba lia data/matriz.js estático (DB.matriz) e montava colunas
-// fixas a partir de DB.canais (também estático): canal novo cadastrado no catálogo não
-// aparecia aqui, o problema que a Camada 3 existe pra resolver sobrevivia nesta tela.
-// Agora lê ao vivo, com o mesmo modelo que demandas.html usa (matrizStore.montarModelo
-// sobre matrizStore + DB_PROJETOS + DB_CANAIS) — mesmo padrão de carregar-sob-demanda-e-
-// cachear de renderPlano/renderAgenda acima, só que sem edição: quem quiser mudar uma
-// célula vai pra demandas.html, que tem realtime e upsert de verdade; aqui é leitura +
-// gerar o snapshot de reserva (botão "Exportar cópia de segurança", mais abaixo).
-async function renderMatriz(){
-  if(!matrizModelo && !matrizCarregando){
-    matrizCarregando = true;
-    area.innerHTML = '<div class="ed-carregando">Carregando matriz…</div>';
-    try {
-      const [celulasRes, projRes, canaisRes] = await Promise.all([
-        matrizStore.carregar(), DB_PROJETOS.carregar(), DB_CANAIS.carregar()
-      ]);
-      matrizModelo = matrizStore.montarModelo(projRes.lista, canaisRes.lista, celulasRes.lista);
-      matrizFallback = !!(celulasRes.usandoFallback || projRes.usandoFallback || canaisRes.usandoFallback);
-    } catch(err){
-      console.error("editor: falha ao carregar a matriz", err);
-      matrizCarregando = false;
-      area.innerHTML = '<div class="ed-erro-carregar">Não foi possível carregar a matriz agora.</div>';
-      return;
-    }
-    matrizCarregando = false;
-  }
-  if(sel.value!=="matriz") return; // usuário trocou de conjunto enquanto isso carregava
-  if(!matrizModelo) return; // outra chamada concorrente ainda está carregando — ela renderiza quando terminar
-
-  const { linhas, colunas } = matrizModelo;
-  let h = '<div class="aviso" style="margin-bottom:12px"><b>A Matriz de demandas é editada ao vivo em '+
-    '<a href="demandas.html">demandas.html</a></b> — aqui é só leitura, pra conferência e pra gerar a '+
-    'cópia de segurança (botão abaixo).</div>';
-  if(matrizFallback) h += '<div class="aviso" style="margin-bottom:12px"><b>Dados locais</b> — não foi '+
-    'possível atualizar os dados agora; isto é a última versão salva (data/matriz.js). Gerar a cópia de '+
-    'segurança agora reexportaria o mesmo arquivo que já está publicado.</div>';
-  h+='<div class="ed-wrap"><table class="ed-tab ed-matriz"><thead><tr><th class="col-ini">Iniciativa</th>';
-  colunas.forEach(c=>h+='<th'+(c.nome_completo?' title="'+esc(c.nome_completo)+'"':'')+'>'+esc(c.nome)+'</th>');
-  h+='</tr></thead><tbody>';
-  linhas.forEach(l=>{
-    h+='<tr><td class="col-ini">'+esc(l.iniciativa)+'</td>';
-    colunas.forEach(c=>{
-      const cel = l.celulas[c.chave];
-      const v = (cel && cel.estado) || "";
-      h+='<td>'+CC_STATUS.badge(CC_STATUS.chaveDeEntrada("celula_matriz", v))+'</td>';
-    });
-    h+='</tr>';
-  });
-  area.innerHTML=h+'</tbody></table></div>';
-}
+// aba Matriz: mora em js/editor-matriz.js (window.EDITOR_MATRIZ) desde 28/08/2026 — ver
+// comentário no topo daquele arquivo. render() dispatcher e o botão de exportar (ambos
+// mais abaixo) chamam EDITOR_MATRIZ.render()/modeloAtual().
 
 // AGENDA guarda "local"+"modo" combinados num único campo texto (local_modo) e
 // "confirmados"+"convidados" também (confirmacoes, formato livre "3/5") — colunas reais
@@ -1545,7 +1499,7 @@ function atualizarChromeVivo(){
 
 function render(){
   atualizarChromeVivo();
-  ({plano:renderPlano, matriz:renderMatriz, agenda:renderAgenda, pessoas:renderPessoas, projetos:renderProjetos,
+  ({plano:renderPlano, matriz:EDITOR_MATRIZ.render, agenda:renderAgenda, pessoas:renderPessoas, projetos:renderProjetos,
     urc_lideranca:renderUrcLideranca, urc_canais:renderUrcCanais, corsario:renderCorsario})[sel.value]();
   saida.value="";
 }
@@ -1557,10 +1511,12 @@ btnBaixar.addEventListener("click", function(){
   if (CONJUNTOS[k].vivo) return; // conjuntos vivos não passam por aqui — botão fica escondido, isto é só rede de segurança
   // só "matriz" chega aqui agora — snapshot/export, não fluxo de edição (ver PASSOS_SNAPSHOT acima).
   // item 3.3: o objeto exportado vem do MESMO modelo ao vivo que a tabela mostrou
-  // (matrizModelo), traduzido pro formato de data/matriz.js por matrizStore.paraSnapshot
-  // — a mesma função que o botão "Exportar matriz" de demandas.html usa.
-  if (!matrizModelo) { window.alert("A matriz ainda está carregando — aguarde terminar e tente de novo."); return; }
-  const conteudo = IO.serializar(k, matrizStore.paraSnapshot(matrizModelo.linhas, matrizModelo.colunas));
+  // (EDITOR_MATRIZ.modeloAtual(), js/editor-matriz.js), traduzido pro formato de
+  // data/matriz.js por matrizStore.paraSnapshot — a mesma função que o botão "Exportar
+  // matriz" de demandas.html usa.
+  const modelo = EDITOR_MATRIZ.modeloAtual();
+  if (!modelo) { window.alert("A matriz ainda está carregando — aguarde terminar e tente de novo."); return; }
+  const conteudo = IO.serializar(k, matrizStore.paraSnapshot(modelo.linhas, modelo.colunas));
   const nomeArquivo = CONJUNTOS[k].arquivo;
 
   saida.value = conteudo;
