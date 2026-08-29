@@ -2,14 +2,22 @@
  * Camada 0, item 0.5) — window.DB_CANAIS.
  *
  * Lê de meta_inovacao_canais no Supabase; cai pra window.DB.canais (data/canais.js,
- * SEED + fallback) se a rede falhar. Mesmo mecanismo de sempre — ver js/db-projetos.js.
+ * SEED + fallback) se a rede falhar. O mecanismo (fallback, memoização, modo de teste
+ * ?semrede=1/CC_FORCAR_FALLBACK, bloqueio de escrita em teste) vive em js/db-base.js
+ * desde o item D4.1 — aqui fica só o que é próprio deste catálogo. API pública
+ * inalterada (item D4.3).
  *
  * Formato canônico devolvido por carregar() (bate com as colunas da tabela nova, não
- * com o formato antigo de data/canais.js — ver seedLocal()):
+ * com o formato antigo de data/canais.js — ver o seed abaixo):
  *   { slug, nome, nome_completo, formato, pauta, ordem, ativo, db_id }
+ *
+ * PRECISA de js/db-base.js carregado antes.
  */
 (function (root) {
   "use strict";
+
+  const BASE = root.DB_BASE || (typeof globalThis !== "undefined" && globalThis.DB_BASE);
+  if (!BASE) throw new Error("js/db-canais.js: js/db-base.js precisa ser carregado antes deste arquivo.");
 
   const TABELA = "meta_inovacao_canais";
 
@@ -38,19 +46,6 @@
     };
   }
 
-  function forcarFallback() {
-    if (root.CC_FORCAR_FALLBACK) return true;
-    try { return new URLSearchParams(root.location.search).get("semrede") === "1"; } catch (e) { return false; }
-  }
-
-  async function buscarDoSupabase() {
-    if (!root.CC_SUPABASE) throw new Error("js/supabase.js não carregado.");
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const { data, error } = await supa.from(TABELA).select("*").is("deleted_at", null).order("ordem", { ascending: true });
-    if (error) throw error;
-    return (data || []).map(linhaParaCanal);
-  }
-
   // data/canais.js usa o formato antigo (id/completo, sem ordem/ativo) — traduzido
   // aqui pro formato canônico da tabela nova, pra quem consome carregar() nunca
   // precisar saber qual das duas fontes respondeu.
@@ -68,61 +63,23 @@
     }));
   }
 
-  let promessa = null;
-  async function carregar(opts) {
-    const forcar = (opts && opts.forcar) || forcarFallback();
-    if (promessa && !(opts && opts.recarregar)) return promessa;
-    promessa = (async () => {
-      if (forcar) {
-        return { lista: seedLocal(), usandoFallback: true, motivoFallback: "modo de teste (semrede) — sem tentar rede" };
-      }
-      try {
-        const lista = await buscarDoSupabase();
-        return { lista: lista, usandoFallback: false, motivoFallback: null };
-      } catch (err) {
-        console.error("db-canais: falha ao carregar do Supabase, caindo pro seed local (data/canais.js)", err);
-        return { lista: seedLocal(), usandoFallback: true, motivoFallback: (err && err.message) || String(err) };
-      }
-    })();
-    return promessa;
-  }
-
-  function bloquearEscritaEmTeste() {
-    if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
-  }
-
-  async function salvar(id, campos, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const patch = Object.assign({}, campos, { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).update(patch).eq("id", id).select().single();
-    if (error) throw error;
-    return linhaParaCanal(data);
-  }
-
-  async function criar(canalParcial, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const payload = Object.assign({}, canalParaLinha(canalParcial), { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).insert(payload).select().single();
-    if (error) throw error;
-    return linhaParaCanal(data);
-  }
-
-  async function removerSoft(id, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const agora = new Date().toISOString();
-    const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", id);
-    if (error) throw error;
-  }
+  const api = BASE.criarWrapper({
+    nome: "db-canais",
+    raiz: root,
+    tabela: TABELA,
+    ordem: "ordem",
+    linhaPara: linhaParaCanal,
+    paraLinha: canalParaLinha,
+    seed: seedLocal,
+    avisoFalha: "db-canais: falha ao carregar do Supabase, caindo pro seed local (data/canais.js)",
+  });
 
   root.DB_CANAIS = {
     TABELA: TABELA,
-    carregar: carregar,
-    salvar: salvar,
-    criar: criar,
-    removerSoft: removerSoft,
+    carregar: api.carregar,
+    salvar: api.salvar,
+    criar: api.criar,
+    removerSoft: api.removerSoft,
     canalParaLinha: canalParaLinha,
   };
 })(this);
