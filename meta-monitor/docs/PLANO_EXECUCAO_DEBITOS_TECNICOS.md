@@ -209,11 +209,20 @@ o README acha que rodou a suíte e rodou uns 60% dela.
 
 ---
 
-## D4 — Duplicação estrutural nos 13 wrappers `js/db-*.js` 🟠 ALTO
+## D4 — Duplicação estrutural nos 13 wrappers `js/db-*.js` 🟠 ALTO ✅ CONCLUÍDO (29/08/2026)
 
-13 arquivos, 2.424 linhas, todos com o mesmo esqueleto copiado: `forcarFallback()` lendo
-`?semrede=1`/`CC_FORCAR_FALLBACK`, `buscarDoSupabase()`, `seedLocal()`, memoização em
-`promessa`, flag `usandoFallback`. Não existe `js/db-base.js`.
+**Diagnóstico original:** 13 arquivos, 2.424 linhas, todos com o mesmo esqueleto copiado:
+`forcarFallback()` lendo `?semrede=1`/`CC_FORCAR_FALLBACK`, `buscarDoSupabase()`,
+`seedLocal()`, memoização em `promessa`, flag `usandoFallback`. Não existia
+`js/db-base.js`.
+
+**Resultado:** a fábrica existe (`js/db-base.js`, 208 linhas) e 9 wrappers passaram a
+usá-la — 8 inteiros e o `db-urc.js` parcial. Os 13 wrappers somavam 2.424 linhas e agora
+somam 1.953; com a fábrica, o conjunto todo caiu de 2.424 pra 2.161 linhas, e as ~470
+linhas que sumiram eram justamente as 13 cópias do mesmo esqueleto. Trocar a política de
+fallback hoje é editar **um** arquivo. Ficam de fora, por não seguirem o padrão:
+`db-canva.js`, `db-canva-consolidado.js`, `db-responsaveis.js` (previstos) e
+`db-corsario.js` (decidido na execução — ver nota depois da tabela).
 
 **Custo real, não estético:** mudar a política de fallback, o tratamento de erro ou o
 header de escrita significa editar 13 arquivos e lembrar dos 13. Foi assim que o GRANT
@@ -349,16 +358,19 @@ Se você está começando uma sessão nova pra continuar este trabalho, isto é 
 saber sem reler tudo acima:
 
 1. **Ordem sugerida de ataque:** D1 → D3.1/D3.2 → D8 (barato, tira ruído) → D4 → D6.1 →
-   D7 → D3.3. D2 e D5 andam em paralelo assim que José responder D2.1 e D5.1.
+   D7 → D3.3. Do que sobrou, a ordem vira: D1 → D6.1 → D7 (o D7 ficou mais barato agora,
+   como o próprio item previa: `drawer.js`/`busca.js` vão passar a chamar um
+   `DB_PLANO.carregar()` que já é fábrica). D2 e D5 andam em paralelo assim que José responder D2.1 e D5.1.
 2. **D1 é o único item que eu classificaria como "conserta hoje"** — é contido, tem teste
    próprio, não toca comportamento do site e devolve um guardrail que hoje não guarda nada.
 3. **Duas perguntas ainda travam trabalho e estão com José:** D5.1 (o painel de
    conferência sai ou fica) e D6.2 (`canva.html` entra na fila de extração antes ou depois
    do merge do item 3 da navegação). **D2.1 foi respondida em 29/08/2026** — segue com
    token compartilhado, D2.2 a D2.5 liberados.
-4. **Nada aqui foi iniciado até 29/08/2026** — este documento é o levantamento, não um
-   registro de baixa. Ao concluir um item, mude o status na tabela dele **no mesmo commit**
-   da correção, como as outras duas frentes fazem.
+4. **Já saíram (29/08/2026):** D2.1 (decisão do José), D3 inteiro, D8 inteiro e **D4
+   inteiro** (D4.1 a fábrica, D4.2 os 2 wrappers simples, D4.3 os demais). O que continua
+   aberto: D1, D2.2–D2.5, D5, D6, D7. Ao concluir um item, mude o status na tabela dele
+   **no mesmo commit** da correção, como as outras duas frentes fazem.
 5. **Não existe item aqui que peça migração SQL de escrita**, exceto D5.2 (`drop` da tabela
    antiga) e um eventual caminho (b) do D2.3. Vale a regra de sempre: José roda tudo à mão
    no SQL Editor, nenhuma automação tem acesso de escrita à produção.
