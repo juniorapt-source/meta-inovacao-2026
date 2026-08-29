@@ -199,6 +199,11 @@ o README acha que rodou a suíte e rodou uns 60% dela.
 > Corsário/Capitão/Timoneiro/Marujo/Grumete) — sem travar qual delas. Continua testando
 > o mesmo comportamento real (drawer busca em produção e formata certo); só parou de
 > quebrar toda vez que alguém avança um critério do Corsário em produção.
+>
+> **Validado em CI de verdade** — run [#4](https://github.com/juniorapt-source/meta-inovacao-2026/actions/runs/33262828061):
+> os 37 testes da suíte (D3.1+D3.2) saíram `[ OK ]`, `testar_drawer_headless.js` incluído.
+> Primeira vez que a suíte inteira fica verde ponta a ponta em CI — fecha de vez a
+> pendência que o D3.3 tinha revelado.
 
 **Sobe direto pra `main` item a item** — D3.1 antes de D3.2/D3.3, que dependem dele.
 
