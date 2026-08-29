@@ -10,10 +10,17 @@
  * Sem fallback local pra arquivo próprio: esta tabela nasceu só na Camada 1, não tem
  * equivalente em data/*.js — se a rede falhar, carregar() devolve lista vazia (não
  * quebra, mas telas que dependem disso pra exibir papéis mostram "sem dados" nesse
- * cenário). Mesmo mecanismo de ?semrede=1/CC_FORCAR_FALLBACK dos outros módulos.
+ * cenário). É o que a fábrica js/db-base.js faz quando não recebe `seed` (item D4.1);
+ * o resto do mecanismo (memoização, ?semrede=1/CC_FORCAR_FALLBACK, bloqueio de escrita
+ * em teste) também vem de lá. API pública inalterada (item D4.3).
+ *
+ * PRECISA de js/db-base.js carregado antes.
  */
 (function (root) {
   "use strict";
+
+  const BASE = root.DB_BASE || (typeof globalThis !== "undefined" && globalThis.DB_BASE);
+  if (!BASE) throw new Error("js/db-pessoa-papeis.js: js/db-base.js precisa ser carregado antes deste arquivo.");
 
   const TABELA = "meta_inovacao_pessoa_papeis";
 
@@ -36,38 +43,6 @@
     };
   }
 
-  function forcarFallback() {
-    if (root.CC_FORCAR_FALLBACK) return true;
-    try { return new URLSearchParams(root.location.search).get("semrede") === "1"; } catch (e) { return false; }
-  }
-
-  async function buscarDoSupabase() {
-    if (!root.CC_SUPABASE) throw new Error("js/supabase.js não carregado.");
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const { data, error } = await supa.from(TABELA).select("*").is("deleted_at", null);
-    if (error) throw error;
-    return (data || []).map(linhaParaPapel);
-  }
-
-  let promessa = null;
-  async function carregar(opts) {
-    const forcar = (opts && opts.forcar) || forcarFallback();
-    if (promessa && !(opts && opts.recarregar)) return promessa;
-    promessa = (async () => {
-      if (forcar) {
-        return { lista: [], usandoFallback: true, motivoFallback: "modo de teste (semrede) — sem tentar rede" };
-      }
-      try {
-        const lista = await buscarDoSupabase();
-        return { lista: lista, usandoFallback: false, motivoFallback: null };
-      } catch (err) {
-        console.error("db-pessoa-papeis: falha ao carregar do Supabase, sem seed local pra esta tabela", err);
-        return { lista: [], usandoFallback: true, motivoFallback: (err && err.message) || String(err) };
-      }
-    })();
-    return promessa;
-  }
-
   // agrupa a lista achatada por pessoa_id — conveniência pra tela que mostra
   // "papéis desta pessoa" sem cada consumidor reimplementar o group-by.
   function porPessoa(lista) {
@@ -79,32 +54,21 @@
     return idx;
   }
 
-  function bloquearEscritaEmTeste() {
-    if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
-  }
-
-  async function criar(papelParcial, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const payload = Object.assign({}, papelParaLinha(papelParcial), { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).insert(payload).select().single();
-    if (error) throw error;
-    return linhaParaPapel(data);
-  }
-
-  async function removerSoft(id, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const agora = new Date().toISOString();
-    const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", id);
-    if (error) throw error;
-  }
+  const api = BASE.criarWrapper({
+    nome: "db-pessoa-papeis",
+    raiz: root,
+    tabela: TABELA,
+    ordem: null, // esta tabela nunca foi lida ordenada — o agrupamento é por pessoa
+    linhaPara: linhaParaPapel,
+    paraLinha: papelParaLinha,
+    avisoFalha: "db-pessoa-papeis: falha ao carregar do Supabase, sem seed local pra esta tabela",
+  });
 
   root.DB_PESSOA_PAPEIS = {
     TABELA: TABELA,
-    carregar: carregar,
-    criar: criar,
-    removerSoft: removerSoft,
+    carregar: api.carregar,
+    criar: api.criar,
+    removerSoft: api.removerSoft,
     porPessoa: porPessoa,
     papelParaLinha: papelParaLinha,
   };
