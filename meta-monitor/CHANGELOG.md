@@ -1,5 +1,28 @@
 # Changelog
 
+## Débito técnico D7 — painel de Pessoa e busca global passam a ler o Plano de ação ao vivo — 2026-08-29
+`js/drawer.js` (painel de Pessoa, bloco "Ações do plano sob responsabilidade") e
+`js/busca.js` (índice da busca global) liam `window.DB.plano` — o seed síncrono de
+`data/plano.js`, congelado no último commit — em vez do que está de fato salvo no
+Supabase. Quem marcava uma ação como concluída pelo Plano de ação continuava vendo
+"não iniciado" nesses dois lugares, sem nenhum aviso de defasagem (item D7,
+`docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md`).
+
+- **D7.1** — os dois passam a chamar `DB_PLANO.carregar()` (a fábrica `js/db-base.js`
+  do item D4) quando a página carregou `js/db-plano.js`: mesmo fallback pro seed de
+  sempre se a rede falhar, e o mesmo aviso discreto `#aviso-fallback` do resto do site
+  quando isso acontece. `js/busca.js.construirIndice(DB)` continua pura e síncrona
+  (testada em node) — só a UI (`montarNaPagina()`) busca o plano ao vivo antes de
+  chamar a função pura. 6 páginas que usavam `js/drawer.js`/`js/busca.js` sem
+  `js/db-plano.js` ganharam o `<script>` (`canva-consolidado.html`, `corsario.html`,
+  `demandas.html`, `participantes.html`, `plano-acao.html`, `projetos.html`); 4 delas
+  também ganharam o `<p id="aviso-fallback">` padrão, que ainda não tinham.
+- **D7.2** — `tools/testar_drawer_headless.js` e `tools/testar_busca_headless.js`
+  ganharam um cenário novo cada um: Supabase trocado por um dublê em memória (mesma
+  técnica de `tools/testar_dashboard_golden_headless.js`) com uma ação que só existe
+  "no banco", nunca no seed local — a busca e o painel de Pessoa acham essa ação,
+  provando que leram do dublê e não do seed.
+
 ## Débito técnico D2 — token compartilhado é a escolha definitiva do projeto — 2026-08-29
 A v0.30.0 (abaixo) reverteu a escrita autenticada pro token compartilhado como resposta a
 um incidente pontual (senha esquecida). Isso deixou uma leitura possível — errada — de que

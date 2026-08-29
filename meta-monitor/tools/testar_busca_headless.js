@@ -11,6 +11,11 @@
  *      linkando pra minhas-acoes.html?pessoa=sandra.
  *   5) no viewport mobile (390×844), o botão de busca do header abre o painel e a busca
  *      funciona por ali também (entrada alternativa pedida "no header mobile").
+ *   6) item D7.1/D7.2 (docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md): o índice indexa PLANO ao
+ *      vivo (DB_PLANO.carregar(), não mais o seed síncrono de data/plano.js) — Supabase
+ *      trocado por um dublê genérico de tabela (mesma técnica de
+ *      tools/testar_dashboard_golden_headless.js) com uma ação que só existe "no banco",
+ *      nunca no seed local; a busca acha essa ação, prova que leu do dublê e não do seed.
  *
  * Mesmo padrão de CDP cru (sem Playwright) dos outros testes headless do repo.
  */
@@ -128,6 +133,69 @@ function conectarCDP(wsUrl) {
 
 function esperar(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
+/* ---- dublê genérico de tabela (item D7.2) — mesma técnica de
+   tools/testar_dashboard_golden_headless.js, duplicada aqui de propósito (mesmo padrão
+   dos outros testes headless do repo: cada arquivo é autocontido). Troca window.CC_SUPABASE
+   por um client em memória, só leitura, ANTES de js/supabase.js carregar — quando
+   js/supabase.js atribui `root.CC_SUPABASE = CC_SUPABASE`, o `set` abaixo intercepta e
+   substitui obterClienteEsm/obterClienteClassico/clientePrincipal pelo client mockado, sem
+   precisar tocar em nenhum outro arquivo do site. Cenário 6 usa isto pra provar que
+   DB_PLANO.carregar() (js/db-base.js/js/db-plano.js) foi de fato consultado — não é
+   cobrível por ?semrede=1/CC_FORCAR_FALLBACK, que força o CAMINHO OPOSTO (nunca tentar
+   rede). */
+const DUBLE_SUPABASE = `
+(function(){
+  "use strict";
+  function copia(o){ return JSON.parse(JSON.stringify(o)); }
+  function tabelaMock(nome){ return (window.__MOCK.tabelas && window.__MOCK.tabelas[nome]) || []; }
+
+  function executar(q){
+    const linhas = tabelaMock(q.tabela).filter(function(r){ return !r.deleted_at; });
+    return Promise.resolve({ data: copia(linhas), error: null });
+  }
+
+  function query(tabela){
+    const q = { tabela: tabela };
+    const api = {
+      select: function(){ return api; }, is: function(){ return api; }, eq: function(){ return api; },
+      order: function(){ return api; }, limit: function(){ return api; }, in: function(){ return api; },
+      then: function(ok, erro){ return executar(q).then(ok, erro); }
+    };
+    return api;
+  }
+
+  const cliente = {
+    from: query,
+    channel: function(){ const ch = { on: function(){ return ch; }, subscribe: function(){ return ch; } }; return ch; }
+  };
+
+  let real = null;
+  Object.defineProperty(window, "CC_SUPABASE", {
+    configurable: true,
+    get: function(){ return real; },
+    set: function(v){
+      real = v;
+      real.obterClienteClassico = function(){ return cliente; };
+      real.obterClienteEsm = function(){ return Promise.resolve(cliente); };
+      real.clientePrincipal = function(){ return Promise.resolve(cliente); };
+    }
+  });
+})();
+`;
+
+// só a ação que prova o cenário — id/texto que não existe em data/plano.js (o seed), pra
+// ficar claro que achar isso na busca só é possível lendo do dublê (a "rede").
+const ACAO_SO_NO_DUBLE = {
+  id: "MOCK-D72-01",
+  frente: "Débitos técnicos", subfrente: "D7",
+  atividade: "Ação viva só no Supabase (dublê do item D7.2, nunca existiu no seed)",
+  responsavel: "Sandra", responsavel_id: ["sandra"],
+  prazo_texto: null, prazo_iso: null,
+  status: "em_andamento",
+  dependencias: [], cc_tipo: null, no_critico: null, como: null, monitor: null, ferramenta: null,
+  ordem: 1, updated_at: null, deleted_at: null,
+};
+
 async function principal() {
   const chromePath = acharChrome();
   const { server, port } = await iniciarServidor();
@@ -144,7 +212,7 @@ async function principal() {
     // as que acontecem por clique dentro da própria página (kpi-card, Enter na busca, drawer),
     // não só na URL inicial; ?semrede=1 nas URLs de abrir() cobre o caso "URL direta", isto
     // cobre o caso "navegação via JS" (item 3.1 — testes headless não podem depender de rede).
-    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.CC_FORCAR_FALLBACK = true;" }, sessionId);
+    const { identifier: idForcarFallback } = await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.CC_FORCAR_FALLBACK = true;" }, sessionId);
 
     async function evaluate(expression) {
       const r = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }, sessionId);
@@ -239,6 +307,28 @@ async function principal() {
     const itemMobile = await evaluate(`(document.querySelector('#busca-resultados-mobile a[href="plano.html?q=CMT-01#CMT-01"]') ? "achou" : "NAO ACHOU")`);
     if (itemMobile !== "achou") erros.push('mobile: busca "CMT-01" no painel do header não retornou o link certo');
 
+    // ---- 6) PLANO ao vivo (item D7.1/D7.2): ação que só existe no dublê do Supabase ----
+    // remove o CC_FORCAR_FALLBACK=true das cenas 1-5 (ele faz db-base.js NUNCA tentar
+    // rede — o oposto do que este cenário quer provar) e troca por um dublê de Supabase
+    // que RESPONDE de verdade, só que com dado que não existe no seed local.
+    await cdp.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false }, sessionId);
+    await cdp.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: idForcarFallback }, sessionId);
+    const fonteDuble = "window.__MOCK = " + JSON.stringify({ tabelas: { meta_inovacao_plano_acoes: [ACAO_SO_NO_DUBLE] } }) + ";\n" + DUBLE_SUPABASE;
+    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: fonteDuble }, sessionId);
+    await abrir("http://127.0.0.1:" + port + "/index.html"); // sem ?semrede=1 — precisa tentar "rede" de verdade pra bater no dublê
+    await digitar("#busca-input-nav", "MOCK-D72-01");
+    const resultadoAoVivo = JSON.parse(await evaluate(`JSON.stringify({
+      grupos: [...document.querySelectorAll('#busca-resultados-nav .busca-grupo-titulo')].map(e=>e.textContent),
+      itens: [...document.querySelectorAll('#busca-resultados-nav a.busca-item')].map(a=>({tipo:a.dataset.tipo, href:a.getAttribute('href')}))
+    })`));
+    if (resultadoAoVivo.itens.length !== 1) {
+      erros.push('busca "MOCK-D72-01" (ação só no dublê) deveria achar exatamente 1 resultado, achou ' + resultadoAoVivo.itens.length + ' — indício de que o índice ainda leu o seed local em vez de DB_PLANO.carregar()');
+    } else {
+      const item = resultadoAoVivo.itens[0];
+      if (item.tipo !== "acao") erros.push('resultado de "MOCK-D72-01" deveria ser do tipo "acao", veio "' + item.tipo + '"');
+      if (item.href !== "plano.html?q=MOCK-D72-01#MOCK-D72-01") erros.push('link de "MOCK-D72-01" errado: veio "' + item.href + '"');
+    }
+
     if (erros.length) {
       console.error("FALHOU busca_global:");
       erros.forEach((e) => console.error(" -", e));
@@ -246,7 +336,8 @@ async function principal() {
     } else {
       console.log('busca_global OK — "/" foca o campo, "CMT-01" acha a ação certa e navega (com ?q= aplicado em plano.html), ' +
         '"Sebraetec" acha a iniciativa e abre corsario.html na visão Cards com a busca preenchida, "Sandra" acha a pessoa ' +
-        "certa, e o painel de busca do header mobile funciona igual.");
+        "certa, o painel de busca do header mobile funciona igual, e o índice indexa PLANO ao vivo " +
+        "(achou uma ação que só existe no dublê do Supabase, nunca no seed local).");
     }
   } finally {
     cdp.close();

@@ -311,24 +311,57 @@ mexer nele agora significa resolver conflito em 1156 linhas.
 
 ---
 
-## D7 — `drawer.js` e `busca.js` mostram dado congelado 🟡 MÉDIO
+## D7 — `drawer.js` e `busca.js` mostram dado congelado 🟡 MÉDIO ✅ CONCLUÍDO (29/08/2026)
 
 `js/drawer.js:339` e `js/busca.js:54` leem `DB.plano` — o seed síncrono de
 `data/plano.js` — em vez de `DB_PLANO.carregar()`. Limitação registrada no CHANGELOG
 v0.17.0 ("fora do escopo desta leva") e nunca resolvida.
 
-**Efeito visível pro usuário:** o painel de Pessoa e a busca global mostram status e prazos
-do último commit, não o que está no Supabase. Alguém que marcou uma ação como concluída
-pelo Plano de ação continua vendo "não iniciado" na busca — sem nenhum aviso de defasagem,
-diferente do resto do site, que mostra o aviso de fallback.
+**Efeito visível pro usuário (antes):** o painel de Pessoa e a busca global mostravam status
+e prazos do último commit, não o que está no Supabase. Alguém que marcou uma ação como
+concluída pelo Plano de ação continuava vendo "não iniciado" na busca — sem nenhum aviso de
+defasagem, diferente do resto do site, que mostra o aviso de fallback.
 
 | # | Atividade | Arquivo(s) | Modelo/Esforço | Depende de | Status |
 |---|---|---|---|---|---|
-| D7.1 | Migrar `js/drawer.js` e `js/busca.js` pra `DB_PLANO.carregar()`, com o mesmo fallback pro seed e o mesmo aviso discreto das outras telas | `js/drawer.js`, `js/busca.js` | Opus / médio | D4 (se D4 já tiver rodado, é bem mais barato) | ⏳ não iniciado |
-| D7.2 | Estender `tools/testar_drawer_headless.js` e `tools/testar_busca_headless.js` pra cobrir "dado ao vivo diferente do seed" com dublê de Supabase | testes | Sonnet / médio | D7.1 | ⏳ não iniciado |
+| D7.1 | Migrar `js/drawer.js` e `js/busca.js` pra `DB_PLANO.carregar()`, com o mesmo fallback pro seed e o mesmo aviso discreto das outras telas | `js/drawer.js`, `js/busca.js` | Opus / médio | D4 (se D4 já tiver rodado, é bem mais barato) | ✅ feito 29/08/2026 |
+| D7.2 | Estender `tools/testar_drawer_headless.js` e `tools/testar_busca_headless.js` pra cobrir "dado ao vivo diferente do seed" com dublê de Supabase | testes | Sonnet / médio | D7.1 | ✅ feito 29/08/2026 |
 
-**Sobe direto pra `main`.** Atenção ao que o golden record já registrou: num ambiente sem
-rede pro Supabase, 2 asserções do drawer falham por isso e só por isso.
+**D7.1 — o que mudou:** `js/drawer.js` (`abrirPessoa()`, bloco "Ações do plano sob
+responsabilidade") e `js/busca.js` (`montarNaPagina()`/`reconstruirIndice()`) ganharam um
+`planoAoVivo()` — chama `DB_PLANO.carregar()` (já fábrica desde o D4) quando a página
+carregou `js/db-plano.js`, cai pro seed síncrono de sempre (`root.DB.plano`) se o módulo não
+estiver carregado, e acende `#aviso-fallback` (mesmo padrão do resto do site) quando a carga
+caiu pro fallback. `construirIndice(DB)` em `js/busca.js` continua **pura e síncrona**
+(testada em node, `tools/testar_busca_golden.js` inalterado) — só quem busca o PLANO ao vivo
+é a UI, que monta o objeto `DB` antes de chamar a função pura.
+
+Isso só tinha efeito real em 6 páginas que carregavam `js/drawer.js`/`js/busca.js` sem
+`js/db-plano.js`: `canva-consolidado.html`, `corsario.html`, `demandas.html`,
+`participantes.html`, `plano-acao.html`, `projetos.html` — receberam o `<script
+src="js/db-plano.js">` (mesma posição das páginas que já tinham, logo após `js/db-base.js`).
+4 delas (`canva-consolidado.html`, `corsario.html`, `demandas.html`, `plano-acao.html`) não
+tinham o `<p id="aviso-fallback">` padrão do site — ganharam, mesma marcação das outras 7
+páginas que já usam esse aviso.
+
+**D7.2 — os testes:** cenário 6 novo em cada arquivo, mesma técnica de dublê de Supabase de
+`tools/testar_dashboard_golden_headless.js` (troca `window.CC_SUPABASE` por um client em
+memória via `Page.addScriptToEvaluateOnNewDocument`) com uma ação que só existe no dublê,
+nunca no seed local — a busca/o painel de Pessoa acham essa ação, provando que leram do
+dublê (a "rede") e não do seed. Pegadinha real na execução: `testar_drawer_headless.js` já
+registrava `window.CC_FORCAR_FALLBACK = true` globalmente pras cenas 1-5 (via
+`Page.addScriptToEvaluateOnNewDocument`, sem remover depois) — isso mascarava o cenário 6
+inteiro (`DB_PLANO.carregar()` nunca chegava a tentar "rede", caía direto no seed, `usandoFallback:true`).
+Corrigido capturando o `identifier` do registro original e chamando
+`Page.removeScriptToEvaluateOnNewDocument` antes do cenário 6, mesmo padrão que
+`testar_busca_headless.js` já precisou (lá a flag também é global desde o topo do arquivo).
+
+**Suíte confirmada verde** (`tools/rodar_testes.sh`, mais os dois testes estendidos rodados
+individualmente): as únicas 2 falhas que aparecem em `testar_drawer_headless.js` neste tipo
+de ambiente (régua da Sebraetec e corsario.html Cards, cenários 1 e 5) são as **mesmas do
+golden record** — dependem de rede real pro Supabase que este sandbox não tem — reproduzidas
+idênticas rodando o teste original (sem as mudanças deste item) via `git stash`, então não
+são regressão. Sobe direto pra `main`, como o item já prescrevia.
 
 ---
 
@@ -357,24 +390,27 @@ inteiro pra reconstruir o que foi rodado quando; se ficar duvidoso em algum scri
 Se você está começando uma sessão nova pra continuar este trabalho, isto é o que precisa
 saber sem reler tudo acima:
 
-1. **Ordem sugerida de ataque:** D1 → D3.1/D3.2 → D8 (barato, tira ruído) → D4 → D6.1 →
-   D7 → D3.3. Do que sobrou, a ordem vira: D7 (ficou mais barato agora, como o próprio
-   item previa: `drawer.js`/`busca.js` vão passar a chamar um `DB_PLANO.carregar()` que
-   já é fábrica). D2.2-D2.5 e D5 andam em paralelo (D2.1 já respondido; D5 segue travado
-   em D5.1).
+1. **Ordem sugerida de ataque, já toda percorrida:** D1 → D3.1/D3.2 → D8 → D4 → D6.1 →
+   D7 → D3.3. D2.2-D2.5 andaram em paralelo (D2.1 já respondido). Só resta D5 (travado
+   em D5.1, José) e D6.2 (travado no merge do item 3 da navegação).
 2. **D1 já saiu (29/08/2026)** — era o único item que valia "conserta hoje" (contido, teste
    próprio, sem tocar comportamento do site) e foi o primeiro a fechar: `node
    tools/auditoria_fk_final.js --check` sai 0 hoje. Não repetir esse item numa sessão nova.
 3. **Uma pergunta ainda trava trabalho e está com José:** D5.1 (o painel de conferência
-   sai ou fica). **D2.1 foi respondida em 29/08/2026** — segue com token compartilhado,
-   D2.2 a D2.5 liberados. **D6.2 foi respondida em 29/08/2026** — esperar o merge do item
+   sai ou fica) — bloqueia D5.2/D5.3, únicos itens realmente pendentes deste documento.
+   **D2.1 foi respondida em 29/08/2026** — segue com token compartilhado, D2.2 a D2.5
+   liberados e já feitos. **D6.2 foi respondida em 29/08/2026** — esperar o merge do item
    3 da navegação antes de extrair `canva.html`; não é mais uma pergunta em aberto, é um
    item bloqueado por dependência externa (o merge em si, sem prazo definido).
-4. **Já saíram (29/08/2026):** D1 inteiro, D2.1 (decisão do José), D3 inteiro, D8 inteiro,
-   **D4 inteiro** (D4.1 a fábrica, D4.2 os 2 wrappers simples, D4.3 os demais) e **D6.1 +
-   D6.3** (D6.2 segue travado com o José, ver item 3 acima). O que continua aberto:
-   D2.2–D2.5, D5, D6.2, D7. Ao concluir um item, mude o status na tabela dele **no mesmo
-   commit** da correção, como as outras duas frentes fazem.
+4. **Já saíram (29/08/2026):** D1 inteiro, D2 inteiro (D2.1 decisão do José, D2.2–D2.5
+   código), D3 inteiro, D8 inteiro, **D4 inteiro** (D4.1 a fábrica, D4.2 os 2 wrappers
+   simples, D4.3 os demais), **D6.1 + D6.3** (D6.2 segue travado com o José, ver item 3
+   acima) e **D7 inteiro** (D7.1 `drawer.js`/`busca.js` lendo `DB_PLANO.carregar()` ao
+   vivo, D7.2 os dois testes headless estendidos com dublê de Supabase). **O que continua
+   aberto neste documento é só D5 (travado em D5.1) e D6.2 (travado no merge externo)** —
+   nenhum dos dois é executável numa sessão nova sem essas respostas. Ao concluir um item,
+   mude o status na tabela dele **no mesmo commit** da correção, como as outras duas
+   frentes fazem.
 5. **Não existe item aqui que peça migração SQL de escrita**, exceto D5.2 (`drop` da tabela
    antiga) e um eventual caminho (b) do D2.3. Vale a regra de sempre: José roda tudo à mão
    no SQL Editor, nenhuma automação tem acesso de escrita à produção.

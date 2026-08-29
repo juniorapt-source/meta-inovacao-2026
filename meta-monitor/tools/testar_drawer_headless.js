@@ -19,6 +19,12 @@
  *      hash certo.
  *   5) nomes de iniciativa ficam clicáveis em demandas.html e na visão Cards do
  *      Corsário (pontos de ativação da TAREFA 4).
+ *   6) item D7.1/D7.2 (docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md): "Ações do plano sob
+ *      responsabilidade" (painel de PESSOA) lê PLANO ao vivo (DB_PLANO.carregar(), não
+ *      mais o seed síncrono de data/plano.js) — Supabase trocado por um dublê genérico de
+ *      tabela (mesma técnica de tools/testar_dashboard_golden_headless.js) com uma ação
+ *      de Sandra que só existe "no banco", nunca no seed local; o painel mostra essa
+ *      ação, provando que leu do dublê e não do seed.
  *
  * Cada navegação de teste passa por "about:blank" antes do URL real — troca só de
  * hash (mesmo path) não dispara Page.loadEventFired de novo, e o teste precisa de um
@@ -149,6 +155,65 @@ function conectarCDP(wsUrl) {
 
 function esperar(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
+/* ---- dublê genérico de tabela (item D7.2) — mesma técnica de
+   tools/testar_dashboard_golden_headless.js, duplicada aqui de propósito (mesmo padrão
+   dos outros testes headless do repo: cada arquivo é autocontido). Troca window.CC_SUPABASE
+   por um client em memória, só leitura, ANTES de js/supabase.js carregar — quando
+   js/supabase.js atribui `root.CC_SUPABASE = CC_SUPABASE`, o `set` abaixo intercepta e
+   substitui obterClienteEsm/obterClienteClassico/clientePrincipal pelo client mockado. */
+const DUBLE_SUPABASE = `
+(function(){
+  "use strict";
+  function copia(o){ return JSON.parse(JSON.stringify(o)); }
+  function tabelaMock(nome){ return (window.__MOCK.tabelas && window.__MOCK.tabelas[nome]) || []; }
+
+  function executar(q){
+    const linhas = tabelaMock(q.tabela).filter(function(r){ return !r.deleted_at; });
+    return Promise.resolve({ data: copia(linhas), error: null });
+  }
+
+  function query(tabela){
+    const q = { tabela: tabela };
+    const api = {
+      select: function(){ return api; }, is: function(){ return api; }, eq: function(){ return api; },
+      order: function(){ return api; }, limit: function(){ return api; }, in: function(){ return api; },
+      then: function(ok, erro){ return executar(q).then(ok, erro); }
+    };
+    return api;
+  }
+
+  const cliente = {
+    from: query,
+    channel: function(){ const ch = { on: function(){ return ch; }, subscribe: function(){ return ch; } }; return ch; }
+  };
+
+  let real = null;
+  Object.defineProperty(window, "CC_SUPABASE", {
+    configurable: true,
+    get: function(){ return real; },
+    set: function(v){
+      real = v;
+      real.obterClienteClassico = function(){ return cliente; };
+      real.obterClienteEsm = function(){ return Promise.resolve(cliente); };
+      real.clientePrincipal = function(){ return Promise.resolve(cliente); };
+    }
+  });
+})();
+`;
+
+// ação de Sandra que só existe no dublê — id/texto ausente de data/plano.js (o seed), pra
+// ficar claro que achar isso no painel de Pessoa só é possível lendo do dublê ("a rede").
+const ACAO_SANDRA_SO_NO_DUBLE = {
+  id: "MOCK-D72-DRAWER-01",
+  frente: "Débitos técnicos", subfrente: "D7",
+  atividade: "Ação viva de Sandra só no Supabase (dublê do item D7.2, nunca existiu no seed)",
+  responsavel: "Sandra", responsavel_id: ["sandra"],
+  prazo_texto: null, prazo_iso: null,
+  status: "em_andamento",
+  dependencias: [], cc_tipo: null, no_critico: null, como: null, monitor: null, ferramenta: null,
+  ordem: 1, updated_at: null, deleted_at: null,
+};
+
 async function principal() {
   const chromePath = acharChrome();
   const { server, port } = await iniciarServidor();
@@ -165,7 +230,7 @@ async function principal() {
     // as que acontecem por clique dentro da própria página (kpi-card, Enter na busca, drawer),
     // não só na URL inicial; ?semrede=1 nas URLs de abrir() cobre o caso "URL direta", isto
     // cobre o caso "navegação via JS" (item 3.1 — testes headless não podem depender de rede).
-    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.CC_FORCAR_FALLBACK = true;" }, sessionId);
+    const { identifier: idForcarFallback } = await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.CC_FORCAR_FALLBACK = true;" }, sessionId);
 
     async function evaluate(expression) {
       const r = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }, sessionId);
@@ -294,6 +359,23 @@ async function principal() {
       erros.push("corsario.html (Cards): nenhum card de iniciativa ficou clicável");
     }
 
+    // ---- 6) PLANO ao vivo (item D7.1/D7.2): ação de Sandra que só existe no dublê ----
+    // remove o CC_FORCAR_FALLBACK=true das cenas 1-5 (ele faz db-base.js NUNCA tentar
+    // rede — o oposto do que este cenário quer provar) e troca por um dublê de Supabase
+    // que RESPONDE de verdade, só que com dado que não existe no seed local.
+    await cdp.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: idForcarFallback }, sessionId);
+    const fonteDuble = "window.__MOCK = " + JSON.stringify({ tabelas: { meta_inovacao_plano_acoes: [ACAO_SANDRA_SO_NO_DUBLE] } }) + ";\n" + DUBLE_SUPABASE;
+    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: fonteDuble }, sessionId);
+    await abrir("http://127.0.0.1:" + port + "/plano.html#pessoa=sandra"); // sem ?semrede=1 — precisa tentar "rede" de verdade pra bater no dublê
+    const pessoaAoVivo = JSON.parse(await evaluate(`JSON.stringify({
+      aberto: document.querySelector('.drawer-painel').classList.contains('aberto'),
+      acoesTexto: document.querySelectorAll('.drawer-bloco')[2].textContent
+    })`));
+    if (!pessoaAoVivo.aberto) erros.push("#pessoa=sandra (dublê) não abriu o drawer");
+    if (!pessoaAoVivo.acoesTexto.includes("MOCK-D72-DRAWER-01")) {
+      erros.push('painel de pessoa não mostrou a ação "MOCK-D72-DRAWER-01" que só existe no dublê do Supabase — indício de que ainda leu root.DB.plano (seed) em vez de DB_PLANO.carregar()');
+    }
+
     if (erros.length) {
       console.error("FALHOU drawer_entidade:");
       erros.forEach((e) => console.error(" -", e));
@@ -301,7 +383,8 @@ async function principal() {
     } else {
       console.log("drawer_entidade OK — #iniciativa=sebraetec (régua \"" + iniciativa.reguaTexto + "\") e #pessoa=sandra (3 nós, " + pessoa.acoesCount +
         " ações) renderizam os blocos esperados; fechar (X/Esc/clique fora) limpa o hash; nome clicável em plano.html abre o drawer certo; " +
-        "iniciativas clicáveis em demandas.html e no Corsário (Cards).");
+        "iniciativas clicáveis em demandas.html e no Corsário (Cards); painel de Pessoa lê PLANO ao vivo (achou uma ação de Sandra que só " +
+        "existe no dublê do Supabase, nunca no seed local).");
     }
   } finally {
     cdp.close();

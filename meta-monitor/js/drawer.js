@@ -25,6 +25,13 @@
  * desde a virada do item 3.2 — não recebe mais escrita) — aposentadoria da tabela antiga,
  * frente própria aberta 27/08/2026 (ver docs/PLANO_EXECUCAO_GOLDEN_RECORD.md). Ver
  * matrizHtml()/QUERY_MATRIZ_CELULAS abaixo.
+ *
+ * "Ações do plano sob responsabilidade" (painel de PESSOA) lia direto `root.DB.plano` —
+ * o seed síncrono de data/plano.js — em vez do que está de fato salvo no Supabase (item
+ * D7.1 de docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md). Efeito visível: alguém que concluía
+ * uma ação pelo Plano de ação continuava vendo "não iniciado" aqui, sem nenhum aviso de
+ * defasagem. Passa a chamar DB_PLANO.carregar() (js/db-plano.js), mesmo fallback pro seed
+ * e mesmo aviso discreto (#aviso-fallback) do resto do site — ver planoAoVivo() abaixo.
  */
 (function (root) {
   "use strict";
@@ -41,6 +48,22 @@
     return normalizarTexto(s).replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "");
   }
   function hoje() { return root.hojeISO ? root.hojeISO() : new Date().toISOString().slice(0, 10); }
+
+  // PLANO ao vivo (item D7.1) — DB_PLANO.carregar() (js/db-plano.js) quando a página
+  // carregou o módulo (memoizado por página: reabrir o drawer várias vezes não refaz a
+  // chamada de rede); sem o módulo, cai pro seed síncrono de sempre (root.DB.plano), sem
+  // quebrar. Mesmo aviso discreto das outras telas: só ACENDE #aviso-fallback quando
+  // existir na página (nunca apaga — outra fonte de dados da mesma tela pode já tê-lo
+  // acendido antes por outro motivo).
+  async function planoAoVivo() {
+    if (!root.DB_PLANO) return (root.DB && root.DB.plano) || [];
+    const { lista, usandoFallback } = await root.DB_PLANO.carregar();
+    if (usandoFallback) {
+      const el = document.getElementById("aviso-fallback");
+      if (el) el.hidden = false;
+    }
+    return lista;
+  }
 
   // ids de responsável que um texto livre (ex.: "Sandra/Gerência") resolve — [] se
   // js/responsaveis.js não carregou nesta página ou nada bateu.
@@ -336,7 +359,8 @@
     mostrar(p.nome);
     const h = hoje();
     const nos = ((root.DB && root.DB.nos && root.DB.nos.nos) || []).filter((n) => idsDeTexto(n.guardiao).includes(id));
-    const plano = ((root.DB && root.DB.plano) || []).filter((a) => Array.isArray(a.responsavel_id) && a.responsavel_id.includes(id));
+    const planoTodo = await planoAoVivo();
+    const plano = planoTodo.filter((a) => Array.isArray(a.responsavel_id) && a.responsavel_id.includes(id));
     const acoesAtrasadas = plano.filter((a) => root.CALC && root.CALC.ehAtrasada(a, h));
     const acoesResto = plano.filter((a) => !acoesAtrasadas.includes(a)).sort((a, b) => (a.prazo_iso || "").localeCompare(b.prazo_iso || ""));
     const acoesOrdenadas = acoesAtrasadas.concat(acoesResto);

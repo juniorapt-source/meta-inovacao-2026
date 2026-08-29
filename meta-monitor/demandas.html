@@ -53,6 +53,11 @@
   <main class="conteudo">
     <h1 class="pagina-titulo">Matriz de demandas</h1>
     <p class="pagina-sub"><span id="mz-dimensao">Iniciativas × canais</span>, editados direto aqui — oficina feita → formulário em 5 dias úteis (ou justificativa) → priorização do Comitê → encaminhado à URC. Sem login: todo mundo que abre o site vê e edita a mesma matriz. C1 até 01/09 · C2 até 30/09.</p>
+    <!-- item D7.1 do plano de débitos técnicos: aceso pela busca global (js/busca.js) ou
+         pelo drawer de Pessoa (js/drawer.js) se DB_PLANO.carregar() cair pro seed local.
+         O aviso próprio da Matriz em si (.mz-aviso, dentro de #mz-estado) é outra coisa —
+         cobre a leitura das CÉLULAS, não do Plano de ação. -->
+    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não foi possível atualizar os dados agora; mostrando a última versão salva.</p>
 
     <!-- item 2.4 do plano de melhorias — Matriz é desktop-only abaixo de 768px: a tabela
          não cabe em card nenhum sem virar sopa de letrinhas (uma coluna por canal), então
@@ -115,6 +120,7 @@
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/db-base.js"></script>
+<script src="js/db-plano.js"></script>
 <script src="data/canais.js"></script>
 <script src="data/matriz.js"></script>
 <script src="data/plano.js"></script>

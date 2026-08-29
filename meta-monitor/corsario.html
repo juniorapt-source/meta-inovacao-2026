@@ -242,6 +242,11 @@ thead .crs-mz-col-iniciativa{z-index:4;background:var(--ceu)}
       </div>
     </div>
 
+    <!-- item D7.1 do plano de débitos técnicos — aceso pela busca global (js/busca.js) ou
+         pelo drawer de Pessoa (js/drawer.js) se DB_PLANO.carregar() cair pro seed local;
+         não tem relação com #crs-estado (erros do próprio Corsário) abaixo. -->
+    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não foi possível atualizar os dados agora; mostrando a última versão salva.</p>
+
     <div id="crs-estado"></div>
 
     <section class="card crs-frota" id="crs-frota-wrap" aria-label="Painel da frota"></section>
@@ -297,6 +302,7 @@ thead .crs-mz-col-iniciativa{z-index:4;background:var(--ceu)}
 <script src="js/gate.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/db-base.js"></script>
+<script src="js/db-plano.js"></script>
 <script src="data/plano.js"></script>
 <script src="data/nos.js"></script>
 <script src="data/canais.js"></script>

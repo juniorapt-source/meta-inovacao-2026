@@ -15,6 +15,15 @@
  * quando há FK/golden record disponível pro item encontrado (hoje: iniciativa com
  * p.db_id, que aponta pro hash #iniciativa= de js/drawer.js em vez do link só-texto de
  * sempre) — ver construirIndice abaixo.
+ *
+ * construirIndice(DB) continua PURA e síncrona (testada em node, tools/testar_busca_golden.js)
+ * — recebe um objeto DB já pronto, nunca busca nada sozinha. Quem busca ações do plano AO
+ * VIVO (item D7.1 de docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md — antes a busca indexava
+ * `window.DB.plano`, o seed síncrono de data/plano.js, então uma ação concluída pelo Plano
+ * de ação continuava achável como "não iniciado" aqui) é só a UI (montarNaPagina/
+ * reconstruirIndice, abaixo), que chama DB_PLANO.carregar() e monta o objeto DB antes de
+ * passar pra construirIndice — mesmo fallback pro seed e mesmo aviso discreto do resto do
+ * site quando a rede falha. Ver planoAoVivo() mais abaixo.
  */
 (function (root) {
   "use strict";
@@ -158,6 +167,21 @@
     return root.esc ? root.esc(s) : String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
+  // PLANO ao vivo (item D7.1) — mesmo mecanismo de js/drawer.js.planoAoVivo(), duplicado
+  // aqui de propósito (mesma razão de normalizar()/slugify() acima: os dois módulos são
+  // pequenos e independentes). DB_PLANO.carregar() é memoizado por página (js/db-base.js),
+  // então reconstruir o índice a cada foco do campo de busca não refaz a chamada de rede.
+  function planoAoVivo(DB) {
+    if (!root.DB_PLANO) return Promise.resolve((DB && DB.plano) || []);
+    return root.DB_PLANO.carregar().then(({ lista, usandoFallback }) => {
+      if (usandoFallback) {
+        const el = document.getElementById("aviso-fallback");
+        if (el) el.hidden = false;
+      }
+      return lista;
+    });
+  }
+
   function montarQuandoPronto() {
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", montarNaPagina);
     else montarNaPagina();
@@ -169,7 +193,16 @@
   // "zero mudança de HTML por página" do menu hambúrguer da v0.13.0).
   function montarNaPagina() {
     let indice = [];
-    function reconstruirIndice() { indice = construirIndice(root.DB || {}); }
+    // PLANO vem ao vivo (planoAoVivo(), item D7.1); o resto do índice continua de
+    // root.DB, igual sempre foi. reconstruirIndice() não é aguardada por quem chama —
+    // `indice` fica [] até a primeira resolução, mesmo espírito de "não depende disso
+    // ficar 100% em dia em tempo real" do comentário abaixo.
+    function reconstruirIndice() {
+      const DB = root.DB || {};
+      return planoAoVivo(DB).then((plano) => {
+        indice = construirIndice(Object.assign({}, DB, { plano: plano }));
+      });
+    }
     reconstruirIndice();
 
     const nav = document.querySelector(".nav");
