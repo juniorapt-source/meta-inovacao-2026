@@ -224,7 +224,14 @@ de uma vez.
 |---|---|---|---|---|---|
 | D4.1 | `js/db-base.js` (novo): fábrica que recebe `{ tabela, linhaPara, paraLinha, ordem }` e devolve `{ carregar, salvar, criar, removerSoft, usandoFallback }` — mesmo comportamento observável de hoje, zero mudança de API pras telas | `js/db-base.js` | Opus / médio | D3.1 (precisa da suíte num comando só) | ✅ feito (29/08/2026) — `DB_BASE.criarWrapper({nome, raiz, tabela, ordem, linhaPara, paraLinha, seed, avisoFalha, aposBuscar})`; nenhum wrapper migrado ainda (é D4.2/D4.3), nenhuma tela tocada. Teste novo `tools/testar_db_base.js` (41 asserções, dublê do cliente Supabase, sem rede), na suíte do `README.md` e do `tools/rodar_testes.sh` |
 | D4.2 | Migrar 2 wrappers simples primeiro (`db-nucleos.js`, `db-coletivos.js`), rodar a suíte inteira, só então seguir | `js/db-nucleos.js`, `js/db-coletivos.js` | Sonnet / baixo | D4.1 | ✅ feito (29/08/2026) — os dois caíram de ~100 pra ~57 linhas, API pública idêntica. `<script src="js/db-base.js">` entrou nas 13 páginas que carregam `js/supabase.js` (logo depois dele, antes de qualquer `db-*.js`) e `tools/testar_catalogos_base.js` passou a requerer a fábrica antes dos wrappers. Suíte completa: 37 verdes, 0 falha real |
-| D4.3 | Migrar os demais, um commit por wrapper, suíte completa entre cada um. `db-canva.js`/`db-canva-consolidado.js`/`db-responsaveis.js` **ficam de fora** — não seguem este padrão (RPC/derivado) | `js/db-*.js` | Sonnet / alto | D4.2 | ⏳ não iniciado |
+| D4.3 | Migrar os demais, um commit por wrapper, suíte completa entre cada um. `db-canva.js`/`db-canva-consolidado.js`/`db-responsaveis.js` **ficam de fora** — não seguem este padrão (RPC/derivado) | `js/db-*.js` | Sonnet / alto | D4.2 | ✅ feito (29/08/2026) — 7 wrappers migrados inteiros (`db-canais`, `db-projetos`, `db-pessoas`, `db-agenda`, `db-plano`, `db-pessoa-papeis`, `db-plano-responsaveis`, `db-projeto-representantes`) + `db-urc` parcial (as 2 tabelas viram 2 wrappers da fábrica; o `carregar()` combinado continua próprio). **`db-corsario.js` também ficou de fora**, pela mesma razão dos 3 previstos — ver nota abaixo. Suíte completa entre cada um: 37/38 verdes, 0 falha real |
+
+**`db-corsario.js` saiu do escopo do D4.3** (decisão tomada ao executar, 29/08/2026). O
+plano previa 3 exclusões; são 4. `corsario_status` não tem `deleted_at` (o filtro que a
+fábrica aplica em toda leitura), não tem seed local, tem `atualizado_em` em toda escrita,
+lê 2 tabelas com formatos diferentes e grava em lote (`criarIniciativa` insere 1 linha por
+critério). Encaixá-lo exigiria três opções novas na fábrica usadas por um arquivo só —
+exatamente o que o D4 quer evitar. Fica como está, autônomo e legível.
 
 **Notas do D4.1** (pra quem pegar D4.2/D4.3): a fábrica cobre os 3 formatos de `ordem`
 que os wrappers usam hoje (string, lista de strings como em `db-agenda.js`, e

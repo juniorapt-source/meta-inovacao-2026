@@ -48,6 +48,7 @@ SEM_CHROME=(
   "testar_responsaveis.js|node tools/testar_responsaveis.js"
   "testar_catalogos_base.js|node tools/testar_catalogos_base.js"
   "testar_db_base.js|node tools/testar_db_base.js"
+  "testar_urc_guardrail_offline.js|node tools/testar_urc_guardrail_offline.js"
   "testar_busca_golden.js|node tools/testar_busca_golden.js"
   "auditoria_fk_final.js --check|node tools/auditoria_fk_final.js --check"
   # item D3.2 — órfãos reconciliados, puros/sem navegador

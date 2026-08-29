@@ -12,9 +12,23 @@
  * (`canaisFlat`, cada linha com `db_id` — usada por editor.html pra editar linha a
  * linha) quanto a forma agrupada de sempre (`canais`, mesmo formato de
  * window.DB.urc_canais — usada por participantes.html, que não muda de jeito de ler).
+ *
+ * MIGRAÇÃO PARCIAL de propósito (item D4.3): as duas tabelas viram dois wrappers da
+ * fábrica js/db-base.js (item D4.1), que passam a fornecer a busca e as 6 funções de
+ * escrita — é onde estava a duplicação. O `carregar()` continua próprio daqui, porque
+ * o que ele devolve não é "uma lista": são duas tabelas lidas em paralelo, combinadas
+ * num objeto só (lideranca + canaisFlat + canais agrupado) com um fallback que também
+ * é combinado. Forçar isso na fábrica seria dobrar a fábrica pra caber um caso — a
+ * mesma razão pela qual db-canva.js/db-canva-consolidado.js/db-responsaveis.js ficam
+ * de fora inteiros.
+ *
+ * PRECISA de js/db-base.js carregado antes.
  */
 (function (root) {
   "use strict";
+
+  const BASE = root.DB_BASE || (typeof globalThis !== "undefined" && globalThis.DB_BASE);
+  if (!BASE) throw new Error("js/db-urc.js: js/db-base.js precisa ser carregado antes deste arquivo.");
 
   const TABELA_LIDERANCA = "meta_inovacao_urc_lideranca";
   const TABELA_CANAIS = "meta_inovacao_urc_canais_responsaveis";
@@ -70,22 +84,24 @@
     return linhas;
   }
 
-  function forcarFallback() {
-    if (root.CC_FORCAR_FALLBACK) return true;
-    try { return new URLSearchParams(root.location.search).get("semrede") === "1"; } catch (e) { return false; }
-  }
+  // os dois wrappers da fábrica: cada um cuida da SUA tabela (busca ordenada por
+  // `ordem`, escrita com updated_by, soft delete, bloqueio de escrita em modo de teste).
+  // O `seed`/`carregar` de cada um não é usado — quem monta a resposta combinada é o
+  // carregar() daqui, com o seed combinado logo abaixo.
+  const wLideranca = BASE.criarWrapper({
+    nome: "db-urc (liderança)", raiz: root, tabela: TABELA_LIDERANCA, ordem: "ordem",
+    linhaPara: linhaParaLideranca, paraLinha: liderancaParaLinha,
+  });
+  const wCanais = BASE.criarWrapper({
+    nome: "db-urc (canais)", raiz: root, tabela: TABELA_CANAIS, ordem: "ordem",
+    linhaPara: linhaParaResponsavel, paraLinha: responsavelParaLinha,
+  });
 
   async function buscarDoSupabase() {
-    if (!root.CC_SUPABASE) throw new Error("js/supabase.js não carregado.");
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const [liderancaRes, canaisRes] = await Promise.all([
-      supa.from(TABELA_LIDERANCA).select("*").is("deleted_at", null).order("ordem", { ascending: true }),
-      supa.from(TABELA_CANAIS).select("*").is("deleted_at", null).order("ordem", { ascending: true }),
+    const [lideranca, canaisFlat] = await Promise.all([
+      wLideranca.buscarDoSupabase(),
+      wCanais.buscarDoSupabase(),
     ]);
-    if (liderancaRes.error) throw liderancaRes.error;
-    if (canaisRes.error) throw canaisRes.error;
-    const lideranca = (liderancaRes.data || []).map(linhaParaLideranca);
-    const canaisFlat = (canaisRes.data || []).map(linhaParaResponsavel);
     return { lideranca: lideranca, canaisFlat: canaisFlat };
   }
 
@@ -97,14 +113,14 @@
 
   let promessa = null;
   async function carregar(opts) {
-    const forcar = (opts && opts.forcar) || forcarFallback();
+    const forcar = (opts && opts.forcar) || wLideranca.emModoTeste();
     if (promessa && !(opts && opts.recarregar)) return promessa;
     promessa = (async () => {
       let dados, usandoFallback = false, motivoFallback = null;
       if (forcar) {
         dados = seedLocal();
         usandoFallback = true;
-        motivoFallback = "modo de teste (semrede) — sem tentar rede";
+        motivoFallback = BASE.MOTIVO_MODO_TESTE;
       } else {
         try {
           dados = await buscarDoSupabase();
@@ -124,10 +140,6 @@
       };
     })();
     return promessa;
-  }
-
-  function bloquearEscritaEmTeste() {
-    if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
   }
 
   // guardrail (item 4.4, herdado de tools/validar_dados.py; item 5.9-1 trocou a régua de
@@ -152,58 +164,21 @@
   }
   const MSG_GUARDRAIL_LIDERANCA = "é liderança da URC — liderança é transversal, não entra em canal.";
 
-  async function salvarLideranca(id, campos, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const patch = Object.assign({}, campos, { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA_LIDERANCA).update(patch).eq("id", id).select().single();
-    if (error) throw error;
-    return linhaParaLideranca(data);
-  }
-  async function criarLideranca(pParcial, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const payload = Object.assign({}, liderancaParaLinha(pParcial), { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA_LIDERANCA).insert(payload).select().single();
-    if (error) throw error;
-    return linhaParaLideranca(data);
-  }
-  async function removerLiderancaSoft(id, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const agora = new Date().toISOString();
-    const { error } = await supa.from(TABELA_LIDERANCA).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", id);
-    if (error) throw error;
-  }
-
+  // escrita de canal: o bloqueio de teste vem ANTES do guardrail, como sempre foi —
+  // em modo de teste nem se chega a avaliar o guardrail.
   async function salvarResponsavel(id, campos, usuario, liderancaAtual) {
-    bloquearEscritaEmTeste();
+    wCanais.bloquearEscritaEmTeste();
     if ((campos.nome || campos.pessoa_id) && nomeEhLideranca(campos, liderancaAtual)) {
       throw new Error('"' + campos.nome + '" ' + MSG_GUARDRAIL_LIDERANCA);
     }
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const patch = Object.assign({}, campos, { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA_CANAIS).update(patch).eq("id", id).select().single();
-    if (error) throw error;
-    return linhaParaResponsavel(data);
+    return wCanais.salvar(id, campos, usuario);
   }
   async function criarResponsavel(rParcial, usuario, liderancaAtual) {
-    bloquearEscritaEmTeste();
+    wCanais.bloquearEscritaEmTeste();
     if (nomeEhLideranca(rParcial, liderancaAtual)) {
       throw new Error('"' + rParcial.nome + '" ' + MSG_GUARDRAIL_LIDERANCA);
     }
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const payload = Object.assign({}, responsavelParaLinha(rParcial), { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA_CANAIS).insert(payload).select().single();
-    if (error) throw error;
-    return linhaParaResponsavel(data);
-  }
-  async function removerResponsavelSoft(id, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const agora = new Date().toISOString();
-    const { error } = await supa.from(TABELA_CANAIS).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", id);
-    if (error) throw error;
+    return wCanais.criar(rParcial, usuario);
   }
 
   root.DB_URC = {
@@ -211,12 +186,12 @@
     TABELA_CANAIS: TABELA_CANAIS,
     CANAIS_FIXOS: CANAIS_FIXOS,
     carregar: carregar,
-    salvarLideranca: salvarLideranca,
-    criarLideranca: criarLideranca,
-    removerLiderancaSoft: removerLiderancaSoft,
+    salvarLideranca: wLideranca.salvar,
+    criarLideranca: wLideranca.criar,
+    removerLiderancaSoft: wLideranca.removerSoft,
     salvarResponsavel: salvarResponsavel,
     criarResponsavel: criarResponsavel,
-    removerResponsavelSoft: removerResponsavelSoft,
+    removerResponsavelSoft: wCanais.removerSoft,
     nomeEhLideranca: nomeEhLideranca,
     MSG_GUARDRAIL_LIDERANCA: MSG_GUARDRAIL_LIDERANCA,
   };

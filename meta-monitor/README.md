@@ -143,6 +143,10 @@ node tools/testar_db_base.js            # a fábrica js/db-base.js (item D4.1): 
                                         # updated_by na escrita e o modo de teste
                                         # (?semrede=1/CC_FORCAR_FALLBACK) bloqueando gravação.
                                         # Usa um dublê do cliente Supabase — não fala com a rede
+node tools/testar_urc_guardrail_offline.js # guardrail da URC (liderança não entra em
+                                        # canal) conferido SEM rede: a violação é barrada
+                                        # antes de ir ao Supabase, e em modo de teste o
+                                        # bloqueio de escrita vem antes do guardrail
 node tools/testar_projetos_editor_representantes_headless.js # aba "Projetos &
                                         # Representantes" do editor.html (item 4.1):
                                         # vínculo existente vira chip removível, texto
