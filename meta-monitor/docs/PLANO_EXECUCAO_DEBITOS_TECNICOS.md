@@ -191,10 +191,14 @@ o README acha que rodou a suíte e rodou uns 60% dela.
 > Marujo" desde que foi escrito, hoje está em produção como "52,6% · Timoneiro" — alguém
 > avançou os critérios do Corsário da Sebraetec desde então, e o teste nunca tinha rodado
 > contra o Supabase de verdade antes (este ambiente sempre bateu 403 nesse fetch). Isso é
-> um teste fixado num valor de produção que muda com o tempo, não uma regressão de D1/D3 —
-> mas com o D3.3 no ar, vai continuar vermelho até alguém atualizar o valor esperado (ou
-> trocar a asserção por algo que não fixe um número de produção). Fora do escopo de
-> D3.1/D3.2/D3.3 (é conteúdo do Corsário, não runner/CI) — sugerido como tarefa separada.
+> um teste fixado num valor de produção que muda com o tempo, não uma regressão de D1/D3.
+> **Corrigido em 29/08/2026** (fora da numeração D3, era a tarefa separada sugerida
+> acima): `tools/testar_drawer_headless.js` trocou a asserção de um valor específico
+> ("~49,5% · Marujo") por uma checagem de FORMA — percentual no padrão `NN,N%`
+> (`fmtPct`, `js/drawer.js:92`) e uma das 5 patentes possíveis (`js/drawer.js:89`:
+> Corsário/Capitão/Timoneiro/Marujo/Grumete) — sem travar qual delas. Continua testando
+> o mesmo comportamento real (drawer busca em produção e formata certo); só parou de
+> quebrar toda vez que alguém avança um critério do Corsário em produção.
 
 **Sobe direto pra `main` item a item** — D3.1 antes de D3.2/D3.3, que dependem dele.
 

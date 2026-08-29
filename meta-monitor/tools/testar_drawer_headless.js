@@ -2,8 +2,15 @@
  * plano de melhorias, js/drawer.js). Confere:
  *   1) abrir plano.html#iniciativa=sebraetec renderiza o painel com os 5 blocos
  *      esperados (Núcleo e representante(s) · Posição na régua · Atividades da
- *      iniciativa · Matriz de demandas · Próximos encontros), com a régua batendo
- *      com o valor já conhecido/validado do Corsário (Sebraetec ~49,5% · Marujo).
+ *      iniciativa · Matriz de demandas · Próximos encontros), com a régua no formato
+ *      certo (NN,N% + uma das 5 patentes de js/drawer.js:89 — Corsário/Capitão/
+ *      Timoneiro/Marujo/Grumete). Não trava um valor específico: até 29/08/2026 o
+ *      teste travava "Sebraetec ~49,5% · Marujo", e o primeiro run em CI com rede de
+ *      verdade (item D3.3 do plano de débitos técnicos) mostrou "52,6% · Timoneiro" —
+ *      alguém tinha avançado os critérios do Corsário da Sebraetec em produção desde
+ *      que o teste foi escrito. O percentual/patente reais mudam com o tempo (é
+ *      conteúdo do Corsário, não comportamento do drawer); o que este teste trava é
+ *      a FORMA — drawer busca em produção, formata e renderiza certo.
  *   2) abrir plano.html#pessoa=sandra renderiza o painel de pessoa com os 4 blocos
  *      esperados e as contagens de nós/ações batendo com os dados (mesma pessoa já
  *      usada nos testes de minhas-acoes.html).
@@ -206,8 +213,17 @@ async function principal() {
     if (iniciativa.titulo !== "Sebraetec") erros.push('título do drawer errado: veio "' + iniciativa.titulo + '", esperava "Sebraetec"');
     const blocosEsperadosIniciativa = ["Núcleo e representante(s)", "Posição na régua do Corsário", "Atividades da iniciativa", "Matriz de demandas", "Próximos encontros"];
     blocosEsperadosIniciativa.forEach((b) => { if (!iniciativa.blocos.includes(b)) erros.push('painel de iniciativa sem o bloco "' + b + '"'); });
-    if (!/49,[45]%/.test(iniciativa.reguaTexto) || !iniciativa.reguaTexto.includes("Marujo")) {
-      erros.push('régua da Sebraetec não bateu com o valor conhecido (~49,5% · Marujo): veio "' + iniciativa.reguaTexto.slice(0, 60) + '..."');
+    // não trava um valor específico (ver comentário no topo do arquivo) — só a FORMA:
+    // percentual "NN,N%" (fmtPct, js/drawer.js:92) e uma das 5 patentes possíveis
+    // (js/drawer.js:89). Se um dia a régua vier "Fora da régua" ou "—" (pct null),
+    // é sinal real de regressão (Sebraetec sempre teve critério aplicável) — cai
+    // certinho no "nenhuma patente reconhecida" abaixo.
+    const PATENTES_CORSARIO = ["Corsário", "Capitão", "Timoneiro", "Marujo", "Grumete"];
+    if (!/\d{1,3},\d%/.test(iniciativa.reguaTexto)) {
+      erros.push('régua da Sebraetec sem percentual no formato esperado (NN,N%): veio "' + iniciativa.reguaTexto.slice(0, 60) + '..."');
+    }
+    if (!PATENTES_CORSARIO.some((p) => iniciativa.reguaTexto.includes(p))) {
+      erros.push('régua da Sebraetec sem nenhuma patente reconhecida (' + PATENTES_CORSARIO.join("/") + '): veio "' + iniciativa.reguaTexto.slice(0, 60) + '..."');
     }
 
     // fechar (X) limpa o hash
@@ -283,7 +299,7 @@ async function principal() {
       erros.forEach((e) => console.error(" -", e));
       process.exitCode = 1;
     } else {
-      console.log("drawer_entidade OK — #iniciativa=sebraetec (régua ~49,5%·Marujo) e #pessoa=sandra (3 nós, " + pessoa.acoesCount +
+      console.log("drawer_entidade OK — #iniciativa=sebraetec (régua \"" + iniciativa.reguaTexto + "\") e #pessoa=sandra (3 nós, " + pessoa.acoesCount +
         " ações) renderizam os blocos esperados; fechar (X/Esc/clique fora) limpa o hash; nome clicável em plano.html abre o drawer certo; " +
         "iniciativas clicáveis em demandas.html e no Corsário (Cards).");
     }
