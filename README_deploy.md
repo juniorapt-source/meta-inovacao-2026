@@ -74,7 +74,7 @@ js/core.js            shell de navegação e utilitários
 js/editor_io.js       serialização canônica dos dados (testável em node)
 data/*.js             config, plano, nos, canais, agenda, iniciativas, matriz, pessoas, changelog
 tools/                geração de dados a partir do xlsx + os 5 testes
-docs/                 PLANO_EXECUCAO.md, BUILD_STATUS.md, PENDENCIAS.md (se houver)
+docs/                 PLANO_EXECUCAO.md, PENDENCIAS.md (se houver)
 ```
 
 ## Regras editoriais embutidas
