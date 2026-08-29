@@ -1,8 +1,10 @@
 /* Camada de dados do conjunto AGENDA (item 3.1 do plano de melhorias) — window.DB_AGENDA.
  *
  * Lê de meta_inovacao_agenda_encontros no Supabase; cai pra window.DB.agenda.encontros
- * (data/agenda.js, SEED + fallback) se a rede falhar. Mesmo mecanismo de ?semrede=1 /
- * window.CC_FORCAR_FALLBACK de js/db-plano.js — ver comentário lá.
+ * (data/agenda.js, SEED + fallback) se a rede falhar. O mecanismo comum (fallback,
+ * memoização, modo de teste ?semrede=1/CC_FORCAR_FALLBACK, bloqueio de escrita em teste)
+ * vive em js/db-base.js desde o item D4.1 — API pública inalterada (item D4.3). Este
+ * conjunto não tem criar(): encontro novo não nasce pela UI.
  *
  * O "id" visível de sempre ("c1-foco", usado em âncoras — agenda.html, js/busca.js,
  * js/drawer.js) é recalculado aqui como "c"+ciclo+"-"+canal a partir das colunas
@@ -12,9 +14,14 @@
  * "hora" sempre foi null em todo encontro até esta migração — fundida em "turno" no
  * banco (ver tools/sql/2026-08_agenda.sql); "local" e "modo" viraram um campo só
  * (localModo). Consumida por agenda.html e js/timeline.js.
+ *
+ * PRECISA de js/db-base.js carregado antes.
  */
 (function (root) {
   "use strict";
+
+  const BASE = root.DB_BASE || (typeof globalThis !== "undefined" && globalThis.DB_BASE);
+  if (!BASE) throw new Error("js/db-agenda.js: js/db-base.js precisa ser carregado antes deste arquivo.");
 
   const TABELA = "meta_inovacao_agenda_encontros";
 
@@ -57,72 +64,22 @@
     };
   }
 
-  function forcarFallback() {
-    if (root.CC_FORCAR_FALLBACK) return true;
-    try { return new URLSearchParams(root.location.search).get("semrede") === "1"; } catch (e) { return false; }
-  }
-
-  async function buscarDoSupabase() {
-    if (!root.CC_SUPABASE) throw new Error("js/supabase.js não carregado.");
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const { data, error } = await supa.from(TABELA).select("*").is("deleted_at", null)
-      .order("ciclo", { ascending: true }).order("canal", { ascending: true });
-    if (error) throw error;
-    return (data || []).map(linhaParaEncontro);
-  }
-
-  function seedLocal() {
-    return ((root.DB && root.DB.agenda && root.DB.agenda.encontros) || []).slice();
-  }
-
-  let promessa = null;
-  async function carregar(opts) {
-    const forcar = (opts && opts.forcar) || forcarFallback();
-    if (promessa && !(opts && opts.recarregar)) return promessa;
-    promessa = (async () => {
-      if (forcar) {
-        return { lista: seedLocal(), usandoFallback: true, motivoFallback: "modo de teste (semrede) — sem tentar rede" };
-      }
-      try {
-        const lista = await buscarDoSupabase();
-        return { lista: lista, usandoFallback: false, motivoFallback: null };
-      } catch (err) {
-        console.error("db-agenda: falha ao carregar do Supabase, caindo pro seed local (data/agenda.js)", err);
-        return { lista: seedLocal(), usandoFallback: true, motivoFallback: (err && err.message) || String(err) };
-      }
-    })();
-    return promessa;
-  }
-
-  // Trava de segurança (item 3.3, replicada aqui de js/db-plano.js): bloqueia escrita em
-  // modo de teste (?semrede=1 / CC_FORCAR_FALLBACK) pra nenhum teste headless gravar de
-  // verdade no Supabase de produção.
-  function bloquearEscritaEmTeste() {
-    if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
-  }
-
-  async function salvar(dbId, campos, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const patch = Object.assign({}, campos, { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).update(patch).eq("id", dbId).select().single();
-    if (error) throw error;
-    return linhaParaEncontro(data);
-  }
-
-  async function removerSoft(dbId, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const agora = new Date().toISOString();
-    const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", dbId);
-    if (error) throw error;
-  }
+  const api = BASE.criarWrapper({
+    nome: "db-agenda",
+    raiz: root,
+    tabela: TABELA,
+    ordem: ["ciclo", "canal"],
+    linhaPara: linhaParaEncontro,
+    paraLinha: encontroParaLinha,
+    seed: function () { return ((root.DB && root.DB.agenda && root.DB.agenda.encontros) || []).slice(); },
+    avisoFalha: "db-agenda: falha ao carregar do Supabase, caindo pro seed local (data/agenda.js)",
+  });
 
   root.DB_AGENDA = {
     TABELA: TABELA,
-    carregar: carregar,
-    salvar: salvar,
-    removerSoft: removerSoft,
+    carregar: api.carregar,
+    salvar: api.salvar,
+    removerSoft: api.removerSoft,
     encontroParaLinha: encontroParaLinha,
   };
 })(this);
