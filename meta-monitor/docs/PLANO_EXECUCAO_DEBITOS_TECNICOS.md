@@ -80,7 +80,7 @@ vazio, e sai != 0 quando D1.3 quebra a gravação de propósito. Suíte do READM
 
 ---
 
-## D2 — Escrita do banco é pública na prática 🔴 CRÍTICO (risco aceito — precisa de decisão, não de código)
+## D2 — Escrita do banco é pública na prática 🔴 CRÍTICO — **decisão tomada (29/08/2026): segue com token compartilhado**
 
 `data/config.js` versiona `tokenEscrita: "a7c11b08-…"` e `js/gate.js` joga isso em
 `window.CC_TOKEN` em toda página. Qualquer pessoa com o link abre o DevTools e grava nas 9
@@ -100,13 +100,23 @@ por e-mail/senha porque senha esquecida custava mais caro que a exposição do t
 
 | # | Atividade | Arquivo(s) | Modelo/Esforço | Depende de | Status |
 |---|---|---|---|---|---|
-| D2.1 | **[humano]** José decide: (a) segue com token compartilhado — então é só desarmar as bombas abaixo; (b) volta pro login de editor quando a Expansão entrar; (c) fecha a escrita por IP/rede do Sebrae | — | José | — | ⏳ não iniciado — **bloqueia D2.3** |
-| D2.2 | Desarmar o gate: fazer `js/gate.js` **falhar alto** quando `exigirSenha === true` e `HASH_SENHA` ainda for o placeholder (console + overlay explicando, em vez de trancar todo mundo em silêncio) | `js/gate.js` | Sonnet / baixo | — | ⏳ não iniciado |
-| D2.3 | Executar a decisão de D2.1: se (a), apagar `js/auth.js` e o resíduo em `js/supabase.js` e registrar a escolha no `CHANGELOG`; se (b)/(c), reabrir `docs/SEGURANCA_ESCRITA_AUTH.md` como plano vivo | `js/auth.js`, `js/supabase.js`, `CHANGELOG.md` | Opus / médio | D2.1 | ⏳ não iniciado |
+| D2.1 | **[humano]** José decide o rumo da escrita | — | José | — | ✅ **RESPONDIDO 29/08/2026 — caminho (a): segue com token compartilhado.** O risco (qualquer um com o link edita) fica formalmente aceito; nada de login, nada de IP. Só desarmar as bombas abaixo. |
+| D2.2 | Desarmar o gate: fazer `js/gate.js` **falhar alto** quando `exigirSenha === true` e `HASH_SENHA` ainda for o placeholder (console + overlay explicando como gerar o hash), em vez de trancar todo mundo em silêncio | `js/gate.js` | Sonnet / baixo | — | ⏳ não iniciado |
+| D2.3 | Apagar `js/auth.js` (236 linhas, nenhum `<script src>` aponta pra ele desde a v0.30.0) | `js/auth.js` | Haiku / baixo | — | ⏳ não iniciado |
+| D2.4 | Corrigir os comentários que ainda afirmam que a escrita passa por sessão do Supabase Auth — `js/supabase.js:12-14,45,79` e `js/db-canva-consolidado.js:19`. Documentação errada no topo do arquivo de escrita é o que faz a próxima sessão desenhar em cima de premissa falsa | `js/supabase.js`, `js/db-canva-consolidado.js` | Sonnet / baixo | D2.3 | ⏳ não iniciado |
+| D2.5 | Registrar no `CHANGELOG.md` que o modelo token-compartilhado é a escolha definitiva do projeto (não um estado transitório pós-reversão), com o risco aceito escrito por extenso | `CHANGELOG.md` | Haiku / baixo | D2.4 | ⏳ não iniciado |
 
-**D2.2 sobe direto pra `main`** (é só um guard-rail defensivo, não muda comportamento de
-hoje). **D2.3 não começa sem a resposta de D2.1** — e, se a decisão for (b), a ordem
-banco→código da v0.29.0 vale de novo: policies primeiro, front depois.
+> **⚠ NÃO REMOVER `clientePrincipal()` NEM `OPCOES_AUTH` de `js/supabase.js`.** A primeira
+> versão deste documento (commit `10c81a1`) listava os dois como resíduo morto — **está
+> errado, conferido em 29/08/2026**: `js/matriz-store.js:67` chama `clientePrincipal()` em
+> produção e 9 testes headless fazem stub dele (`real.clientePrincipal = ...`);
+> `OPCOES_AUTH` monta os dois clients (`js/supabase.js:56` e `:71`). Removê-los quebra a
+> Matriz de demandas e a suíte. O único arquivo morto de verdade é `js/auth.js`.
+
+**Tudo aqui sobe direto pra `main`, sem dependência de banco nenhum.** Com o caminho (a),
+nada de policy muda: as 9 tabelas seguem no modelo `cc_token_*` que já está em produção
+desde a v0.30.0. É só código morto e comentário mentiroso saindo do caminho — nenhuma
+mudança de comportamento visível pra quem usa o site.
 
 ---
 
@@ -267,9 +277,10 @@ saber sem reler tudo acima:
    D7 → D3.3. D2 e D5 andam em paralelo assim que José responder D2.1 e D5.1.
 2. **D1 é o único item que eu classificaria como "conserta hoje"** — é contido, tem teste
    próprio, não toca comportamento do site e devolve um guardrail que hoje não guarda nada.
-3. **Três perguntas travam trabalho e estão com José:** D2.1 (o que fazer com a escrita
-   pública), D5.1 (o painel de conferência sai ou fica), D6.2 (`canva.html` entra na fila
-   de extração antes ou depois do merge do item 3 da navegação).
+3. **Duas perguntas ainda travam trabalho e estão com José:** D5.1 (o painel de
+   conferência sai ou fica) e D6.2 (`canva.html` entra na fila de extração antes ou depois
+   do merge do item 3 da navegação). **D2.1 foi respondida em 29/08/2026** — segue com
+   token compartilhado, D2.2 a D2.5 liberados.
 4. **Nada aqui foi iniciado até 29/08/2026** — este documento é o levantamento, não um
    registro de baixa. Ao concluir um item, mude o status na tabela dele **no mesmo commit**
    da correção, como as outras duas frentes fazem.
