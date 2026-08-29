@@ -176,7 +176,7 @@ o README acha que rodou a suíte e rodou uns 60% dela.
 
 | # | Atividade | Arquivo(s) | Modelo/Esforço | Depende de | Status |
 |---|---|---|---|---|---|
-| D3.1 | `tools/rodar_testes.sh` (novo): roda a suíte na ordem certa, separa os que precisam de Chrome dos que não precisam, para no primeiro vermelho, resumo final por teste | `tools/rodar_testes.sh` | Sonnet / médio | D1 (senão nasce vermelho) | ⏳ não iniciado |
+| D3.1 | `tools/rodar_testes.sh` (novo): roda a suíte na ordem certa, separa os que precisam de Chrome dos que não precisam, para no primeiro vermelho, resumo final por teste | `tools/rodar_testes.sh` | Sonnet / médio | D1 (senão nasce vermelho) | ✅ feito 29/08/2026 — `--sem-chrome` (10 testes) verde; os 12 `--com-chrome` passam individualmente, menos `testar_drawer_headless.js` (falha por falta de rede real pro Supabase **deste ambiente**, o mesmo limite já registrado no D7 — não é regressão; roda verde com Chrome + rede de verdade, ex.: GitHub Actions no D3.3) |
 | D3.2 | Reconciliar README × testes existentes: os 15 órfãos entram no runner e no README, ou são apagados se estiverem obsoletos (decidir um a um, rodando cada um) | `README.md`, `tools/testar_*.js` | Sonnet / médio | D3.1 | ⏳ não iniciado |
 | D3.3 | GitHub Actions rodando D3.1 a cada push na `main` (Chromium disponível no runner; `testar_rede_real_headless.js` fica de fora — exige `--confirmar` e produção) | `.github/workflows/testes.yml` (novo) | Sonnet / médio | D3.1 | ⏳ não iniciado |
 | D3.4 | **[humano]** José confere que o badge/resultado do Actions aparece e que um push quebrado de propósito fica vermelho | — | José | D3.3 | ⏳ não iniciado |

@@ -82,6 +82,11 @@ Quem preferir pode editar `data/*.js` direto no editor de texto — o formato é
 
 ## Testes (os mesmos usados na construção)
 
+`tools/rodar_testes.sh` roda esta lista inteira, na mesma ordem, num comando só — os que
+não abrem navegador primeiro, os headless via CDP depois, parando no primeiro vermelho com
+um resumo final por teste (`--sem-chrome`/`--com-chrome` rodam só uma das duas partes). Os
+comandos abaixo continuam valendo pra rodar um teste isolado enquanto se investiga algo.
+
 ```bash
 python3 tools/validar_dados.py         # integridade dos dados (47/27/10/7/2/20, dependências)
 node tools/testar_calc.js              # cálculos: KPIs, atraso, carga por dia, estado dos nós
