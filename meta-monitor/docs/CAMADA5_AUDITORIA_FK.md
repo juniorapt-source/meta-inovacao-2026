@@ -1,5 +1,10 @@
 # Camada 5, item 5.1 — auditoria final de FK das Camadas 2 e 4, ponta a ponta
 
+> **📌 Documento histórico congelado.** Este relatório retrata o estado *antes* dos
+> itens 5.5–5.9. O estado atual da escrita e das FKs está em
+> `docs/PLANO_EXECUCAO_GOLDEN_RECORD.md` (seção da Camada 5). Não atualizar este
+> arquivo — ele fica como registro do que a auditoria original encontrou e por quê.
+
 **Rodada em 26/08/2026.** Entrada do item 5.2 (a decisão humana, tabela a tabela,
 de dropar ou manter cada coluna de texto).
 

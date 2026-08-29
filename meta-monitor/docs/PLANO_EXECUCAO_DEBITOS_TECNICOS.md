@@ -248,19 +248,19 @@ rede pro Supabase, 2 asserções do drawer falham por isso e só por isso.
 
 ---
 
-## D8 — Higiene acumulada (itens pequenos, um commit só) 🟢 BAIXO
+## D8 — Higiene acumulada (itens pequenos, um commit só) 🟢 BAIXO ✅ CONCLUÍDO (29/08/2026)
 
 Todos pequenos, nenhum bloqueia nada, nenhum depende de decisão. Vão juntos num commit
 ("higiene: documentação e arquivos obsoletos") ou em commits pequenos seguidos.
 
-| # | Item | O que fazer | Arquivo(s) | Modelo/Esforço |
-|---|---|---|---|---|
-| D8.1 | `PLANO_EXECUCAO.md` está **duplicado byte a byte** na raiz e em `meta-monitor/docs/` | Manter um, apagar o outro, corrigir os links que apontarem pro apagado | `PLANO_EXECUCAO.md`, `docs/PLANO_EXECUCAO.md` | Haiku / baixo |
-| D8.2 | `docs/CAMADA5_AUDITORIA_FK.md` documenta o estado de *antes* dos itens 5.5–5.9 | Ou atualizar, ou marcar no topo como documento histórico congelado (o plano já avisa que está velho — falta o aviso no próprio arquivo) | `docs/CAMADA5_AUDITORIA_FK.md` | Haiku / baixo |
-| D8.3 | `docs/_to_delete/PROPOSTA_GOLDEN_RECORD_PESSOAS.md` — pasta com nome de "apagar depois", versionada | Apagar (o conteúdo vivo está em `PROPOSTA_ESQUEMA_CADASTROS_REFERENCIA.md`) | `docs/_to_delete/` | Haiku / baixo |
-| D8.4 | `docs/BUILD_STATUS.md` — log de build da madrugada da v0.1.0, fóssil | Apagar | `docs/BUILD_STATUS.md` | Haiku / baixo |
-| D8.5 | 40 scripts em `tools/sql/`, vários sendo correção de correção (`corrige_escrita_*`, `reverte_para_token_compartilhado`, `auth_escrita_completa`) — a única fonte de verdade de "o que já rodou em produção" é o CHANGELOG em prosa | `tools/sql/APLICADOS.md` (novo): uma linha por script, data em que José rodou, estado atual (aplicado / revertido / nunca rodado). Não é migration tooling, é um índice — proporcional ao projeto | `tools/sql/APLICADOS.md` | Sonnet / médio |
-| D8.6 | `BACKLOG.md` registra a extração do `editor.html` como concluída, mas não registra os débitos que ela deixou (D1 e D6.1) | Uma linha em cada, apontando pra este documento | `BACKLOG.md` | Haiku / baixo |
+| # | Item | O que fazer | Arquivo(s) | Modelo/Esforço | Status |
+|---|---|---|---|---|---|
+| D8.1 | `PLANO_EXECUCAO.md` está **duplicado byte a byte** na raiz e em `meta-monitor/docs/` | Manter um, apagar o outro, corrigir os links que apontarem pro apagado | `PLANO_EXECUCAO.md`, `docs/PLANO_EXECUCAO.md` | Haiku / baixo | ✅ feito — apagado o da raiz, mantido `docs/PLANO_EXECUCAO.md`; nenhum link apontava pro caminho da raiz |
+| D8.2 | `docs/CAMADA5_AUDITORIA_FK.md` documenta o estado de *antes* dos itens 5.5–5.9 | Ou atualizar, ou marcar no topo como documento histórico congelado (o plano já avisa que está velho — falta o aviso no próprio arquivo) | `docs/CAMADA5_AUDITORIA_FK.md` | Haiku / baixo | ✅ feito — aviso de "documento histórico congelado" adicionado no topo, apontando pro golden record |
+| D8.3 | `docs/_to_delete/PROPOSTA_GOLDEN_RECORD_PESSOAS.md` — pasta com nome de "apagar depois", versionada | Apagar (o conteúdo vivo está em `PROPOSTA_ESQUEMA_CADASTROS_REFERENCIA.md`) | `docs/_to_delete/` | Haiku / baixo | ✅ feito — pasta apagada |
+| D8.4 | `docs/BUILD_STATUS.md` — log de build da madrugada da v0.1.0, fóssil | Apagar | `docs/BUILD_STATUS.md` | Haiku / baixo | ✅ feito — apagado; as 2 menções soltas em `README.md`/`README_deploy.md` (diagrama de árvore de diretório) corrigidas |
+| D8.5 | 40 scripts em `tools/sql/`, vários sendo correção de correção (`corrige_escrita_*`, `reverte_para_token_compartilhado`, `auth_escrita_completa`) — a única fonte de verdade de "o que já rodou em produção" é o CHANGELOG em prosa | `tools/sql/APLICADOS.md` (novo): uma linha por script, data em que José rodou, estado atual (aplicado / revertido / nunca rodado). Não é migration tooling, é um índice — proporcional ao projeto | `tools/sql/APLICADOS.md` | Sonnet / médio | ✅ feito — 33 scripts indexados, cronológico, reconstruído do `CHANGELOG.md` + planos de execução. 2 diagnósticos (`auditoria_fk_final.sql`, `matriz_celulas_diagnostico.sql`) marcados à parte, por não serem migração |
+| D8.6 | `BACKLOG.md` registra a extração do `editor.html` como concluída, mas não registra os débitos que ela deixou (D1 e D6.1) | Uma linha em cada, apontando pra este documento | `BACKLOG.md` | Haiku / baixo | ✅ feito |
 
 **Sobe direto pra `main`.** D8.5 é o único que dá algum trabalho — exige ler o CHANGELOG
 inteiro pra reconstruir o que foi rodado quando; se ficar duvidoso em algum script, marcar

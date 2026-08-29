@@ -255,7 +255,7 @@ qrcodes/               um QR code .png por canal (item 7 do plano do canvas das 
                         docs/PLANO_CANVA_OFICINAS.md), gerado por
                         tools/gerar_qrcodes_canais.js — pronto pra colar no último slide de
                         cada apresentação, ver qrcodes/README.md
-docs/                 PLANO_EXECUCAO.md, BUILD_STATUS.md, PENDENCIAS.md (se houver)
+docs/                 PLANO_EXECUCAO.md, PENDENCIAS.md (se houver)
 ```
 
 ## Regras editoriais embutidas
