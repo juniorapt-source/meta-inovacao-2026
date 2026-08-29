@@ -4,23 +4,27 @@
  * rede fora do ar, tabela ainda não criada), cai pra window.DB.plano — data/plano.js
  * continua carregado via <script> em toda página como SEED e fallback de leitura, não
  * como fonte primária. Todas as páginas que liam DB.plano diretamente (index.html,
- * plano.html, caminho.html, minhas-acoes.html) passam a chamar DB_PLANO.carregar().
+ * plano.html, caminho.html, minhas-acoes.html) chamam DB_PLANO.carregar().
+ *
+ * O mecanismo comum (fallback, memoização, modo de teste ?semrede=1/CC_FORCAR_FALLBACK,
+ * bloqueio de escrita em teste) vive em js/db-base.js desde o item D4.1 — API pública
+ * inalterada (item D4.3).
  *
  * Formato do objeto "ação" devolvido é o MESMO de sempre (id/frente/sub/atividade/resp/
  * responsavel_id/prazo/prazo_iso/status/dep/cc/como/monitor/ferramenta) — o resto do
  * código (js/core.js stClass, js/calc.js, filtros de plano.html...) não precisa saber
  * de onde os dados vieram. Item 5.9 (parte 7) acrescenta um campo, só quando lido do
  * Supabase: responsaveis_golden (vínculos crus de meta_inovacao_plano_responsaveis, item
- * 2.6 — ver anexarResponsaveisGolden abaixo); no seed local (data/plano.js) fica sempre
- * [], porque o seed nunca teve essa junção.
+ * 2.6 — ver anexarResponsaveisGolden abaixo, ligado no gancho `aposBuscar` da fábrica);
+ * no seed local (data/plano.js) fica sempre [], porque o seed nunca teve essa junção.
  *
- * ?semrede=1 na URL (ou window.CC_FORCAR_FALLBACK = true antes deste script carregar)
- * força o fallback local sem tentar rede — usado pelos testes headless (item 3.1 pede
- * explicitamente que eles não dependam de rede) E é um jeito real de testar a própria
- * UI de fallback (o aviso "dados locais" aparece de verdade, não é só um atalho de teste).
+ * PRECISA de js/db-base.js carregado antes.
  */
 (function (root) {
   "use strict";
+
+  const BASE = root.DB_BASE || (typeof globalThis !== "undefined" && globalThis.DB_BASE);
+  if (!BASE) throw new Error("js/db-plano.js: js/db-base.js precisa ser carregado antes deste arquivo.");
 
   const TABELA = "meta_inovacao_plano_acoes";
 
@@ -66,21 +70,6 @@
     };
   }
 
-  function forcarFallback() {
-    if (root.CC_FORCAR_FALLBACK) return true;
-    try { return new URLSearchParams(root.location.search).get("semrede") === "1"; } catch (e) { return false; }
-  }
-
-  async function buscarDoSupabase() {
-    if (!root.CC_SUPABASE) throw new Error("js/supabase.js não carregado.");
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const { data, error } = await supa.from(TABELA).select("*").is("deleted_at", null).order("ordem", { ascending: true });
-    if (error) throw error;
-    const lista = (data || []).map(linhaParaAcao);
-    await anexarResponsaveisGolden(lista);
-    return lista;
-  }
-
   // item 5.9 (parte 7) — anexa, em cada ação, os vínculos golden de
   // meta_inovacao_plano_responsaveis (item 2.6: pessoa_id/coletivo_id, "convivendo" com o
   // texto legado responsavel_id[], nunca substituindo) em a.responsaveis_golden — cru
@@ -88,7 +77,8 @@
   // decide como casar contra a pessoa/coletivo selecionada. Best-effort de propósito: se a
   // página não carregou js/db-plano-responsaveis.js (script tag ausente) ou a busca falha,
   // cada ação fica com responsaveis_golden:[] — nunca impede a leitura das ações por isso,
-  // mesmo espírito de "cai pro texto legado" das outras partes do 5.9.
+  // mesmo espírito de "cai pro texto legado" das outras partes do 5.9. Roda como gancho
+  // `aposBuscar` da fábrica: só no caminho da rede, nunca no do seed.
   async function anexarResponsaveisGolden(lista) {
     if (!root.DB_PLANO_RESPONSAVEIS) {
       lista.forEach((a) => { a.responsaveis_golden = []; });
@@ -106,76 +96,26 @@
     }
   }
 
-  function seedLocal() {
+  const api = BASE.criarWrapper({
+    nome: "db-plano",
+    raiz: root,
+    tabela: TABELA,
+    ordem: "ordem",
+    linhaPara: linhaParaAcao,
+    paraLinha: acaoParaLinha,
+    aposBuscar: anexarResponsaveisGolden,
     // sem golden record no seed local — cada ação sai com responsaveis_golden:[] pra quem
     // consome (minhas-acoes.html) não precisar de "|| []" espalhado pelo código.
-    return ((root.DB && root.DB.plano) || []).map((a) => Object.assign({ responsaveis_golden: [] }, a));
-  }
-
-  let promessa = null;
-  // carregar({forcar:true}) ou ?semrede=1 pula a rede de propósito — devolve o mesmo
-  // seedLocal(), mas marcado como fallback de verdade (usandoFallback:true), pra
-  // exercitar a MESMA UI de aviso que apareceria numa falha real de rede, sem depender
-  // de rede pra isso acontecer de forma confiável num teste.
-  async function carregar(opts) {
-    const forcar = (opts && opts.forcar) || forcarFallback();
-    if (promessa && !(opts && opts.recarregar)) return promessa;
-    promessa = (async () => {
-      if (forcar) {
-        return { lista: seedLocal(), usandoFallback: true, motivoFallback: "modo de teste (semrede) — sem tentar rede" };
-      }
-      try {
-        const lista = await buscarDoSupabase();
-        return { lista: lista, usandoFallback: false, motivoFallback: null };
-      } catch (err) {
-        console.error("db-plano: falha ao carregar do Supabase, caindo pro seed local (data/plano.js)", err);
-        return { lista: seedLocal(), usandoFallback: true, motivoFallback: (err && err.message) || String(err) };
-      }
-    })();
-    return promessa;
-  }
-
-  // ---- escrita (editor.html, Modo edição, e o Kanban de plano.html a partir do item 3.3) ----
-  // Trava de segurança (item 3.3): em modo de teste (?semrede=1 / CC_FORCAR_FALLBACK) a
-  // ESCRITA fica bloqueada de propósito, não só a leitura — sem isso, um teste headless
-  // que exercitasse o drag-and-drop do Kanban gravaria de verdade no Supabase de produção.
-  // Erro claro em vez de deixar a chamada tentar rede (ou pior, escrever por acidente).
-  function bloquearEscritaEmTeste() {
-    if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
-  }
-
-  async function salvar(id, campos, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const patch = Object.assign({}, campos, { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).update(patch).eq("id", id).select().single();
-    if (error) throw error;
-    return linhaParaAcao(data);
-  }
-
-  async function criar(acaoParcial, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const payload = Object.assign({}, acaoParaLinha(acaoParcial), { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).insert(payload).select().single();
-    if (error) throw error;
-    return linhaParaAcao(data);
-  }
-
-  async function removerSoft(id, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const agora = new Date().toISOString();
-    const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", id);
-    if (error) throw error;
-  }
+    seed: function () { return ((root.DB && root.DB.plano) || []).map((a) => Object.assign({ responsaveis_golden: [] }, a)); },
+    avisoFalha: "db-plano: falha ao carregar do Supabase, caindo pro seed local (data/plano.js)",
+  });
 
   root.DB_PLANO = {
     TABELA: TABELA,
-    carregar: carregar,
-    salvar: salvar,
-    criar: criar,
-    removerSoft: removerSoft,
+    carregar: api.carregar,
+    salvar: api.salvar,
+    criar: api.criar,
+    removerSoft: api.removerSoft,
     acaoParaLinha: acaoParaLinha,
     CHAVE_POR_ROTULO: CHAVE_POR_ROTULO,
   };
