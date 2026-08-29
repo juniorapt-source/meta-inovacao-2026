@@ -138,6 +138,11 @@ node tools/testar_matriz_editor_headless.js # a aba "matriz" do editor.html (ite
                                         # chave a chave com o de demandas.html — offline e
                                         # com o mesmo dublê de Supabase
 node tools/testar_catalogos_base.js    # Camada 0: seeds (5/10/5) e os 3 wrappers db-*.js
+node tools/testar_db_base.js            # a fábrica js/db-base.js (item D4.1): leitura com
+                                        # fallback pro seed, memoização, ordem da consulta,
+                                        # updated_by na escrita e o modo de teste
+                                        # (?semrede=1/CC_FORCAR_FALLBACK) bloqueando gravação.
+                                        # Usa um dublê do cliente Supabase — não fala com a rede
 node tools/testar_projetos_editor_representantes_headless.js # aba "Projetos &
                                         # Representantes" do editor.html (item 4.1):
                                         # vínculo existente vira chip removível, texto

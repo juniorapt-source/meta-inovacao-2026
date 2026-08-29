@@ -222,9 +222,20 @@ de uma vez.
 
 | # | Atividade | Arquivo(s) | Modelo/Esforço | Depende de | Status |
 |---|---|---|---|---|---|
-| D4.1 | `js/db-base.js` (novo): fábrica que recebe `{ tabela, linhaPara, paraLinha, ordem }` e devolve `{ carregar, salvar, criar, removerSoft, usandoFallback }` — mesmo comportamento observável de hoje, zero mudança de API pras telas | `js/db-base.js` | Opus / médio | D3.1 (precisa da suíte num comando só) | ⏳ não iniciado |
+| D4.1 | `js/db-base.js` (novo): fábrica que recebe `{ tabela, linhaPara, paraLinha, ordem }` e devolve `{ carregar, salvar, criar, removerSoft, usandoFallback }` — mesmo comportamento observável de hoje, zero mudança de API pras telas | `js/db-base.js` | Opus / médio | D3.1 (precisa da suíte num comando só) | ✅ feito (29/08/2026) — `DB_BASE.criarWrapper({nome, raiz, tabela, ordem, linhaPara, paraLinha, seed, avisoFalha, aposBuscar})`; nenhum wrapper migrado ainda (é D4.2/D4.3), nenhuma tela tocada. Teste novo `tools/testar_db_base.js` (41 asserções, dublê do cliente Supabase, sem rede), na suíte do `README.md` e do `tools/rodar_testes.sh` |
 | D4.2 | Migrar 2 wrappers simples primeiro (`db-nucleos.js`, `db-coletivos.js`), rodar a suíte inteira, só então seguir | `js/db-nucleos.js`, `js/db-coletivos.js` | Sonnet / baixo | D4.1 | ⏳ não iniciado |
 | D4.3 | Migrar os demais, um commit por wrapper, suíte completa entre cada um. `db-canva.js`/`db-canva-consolidado.js`/`db-responsaveis.js` **ficam de fora** — não seguem este padrão (RPC/derivado) | `js/db-*.js` | Sonnet / alto | D4.2 | ⏳ não iniciado |
+
+**Notas do D4.1** (pra quem pegar D4.2/D4.3): a fábrica cobre os 3 formatos de `ordem`
+que os wrappers usam hoje (string, lista de strings como em `db-agenda.js`, e
+`{coluna, ascendente}` se um dia precisar) e o `null` das junções sem ordenação;
+`seed` ausente = fallback de lista vazia (caso do `db-pessoa-papeis.js`); `aposBuscar` é
+o gancho do enriquecimento pós-rede do `db-plano.js`. Detalhe que morde na migração: em
+Node, `this` no topo de cada `js/db-*.js` é o `module.exports` **daquele** arquivo, então
+o wrapper migrado precisa resolver a fábrica como
+`root.DB_BASE || globalThis.DB_BASE` (no navegador os dois são `window`), e os testes em
+Node precisam de `require("../js/db-base.js")` antes de requerer o wrapper — vale pro
+`tools/testar_catalogos_base.js`, que hoje requer os wrappers direto.
 
 **Sobe direto pra `main`, um wrapper por commit** — a granularidade é a rede de segurança:
 se uma tela quebrar, o `git revert` é de um arquivo só. Lição da etapa 8 do `BACKLOG.md`
