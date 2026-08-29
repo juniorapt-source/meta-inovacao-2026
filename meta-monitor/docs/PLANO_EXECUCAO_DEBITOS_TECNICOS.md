@@ -103,9 +103,9 @@ vermelho permanente treina qualquer sessão nova a ignorar a saída dele.
 
 | # | Atividade | Arquivo(s) | Modelo/Esforço | Depende de | Status |
 |---|---|---|---|---|---|
-| D1.1 | Apontar as `FONTES` e os `ok:` das entradas 2.2/2.3/2.4 pros arquivos extraídos (`js/editor-projetos.js`, `js/editor-urc.js`), mantendo `editor.html` pras âncoras que continuam lá | `tools/auditoria_fk_final.js` | Sonnet / baixo | — | ⏳ não iniciado |
-| D1.2 | Conferir as demais entradas (2.1, 2.5, 2.6, 2.7) pelo mesmo risco — qualquer âncora que aponte pra `editor.html` precisa ser reconferida contra as 8 abas extraídas | `tools/auditoria_fk_final.js` | Sonnet / baixo | D1.1 | ⏳ não iniciado |
-| D1.3 | Provar que o guardrail voltou a guardar: quebrar de propósito uma gravação de FK num dos módulos extraídos, ver o `--check` acusar, desfazer | — | Sonnet / baixo | D1.2 | ⏳ não iniciado |
+| D1.1 | Apontar as `FONTES` e os `ok:` das entradas 2.2/2.3/2.4 pros arquivos extraídos (`js/editor-projetos.js`, `js/editor-urc.js`), mantendo `editor.html` pras âncoras que continuam lá | `tools/auditoria_fk_final.js` | Sonnet / baixo | — | ✅ feito 29/08/2026 |
+| D1.2 | Conferir as demais entradas (2.1, 2.5, 2.6, 2.7) pelo mesmo risco — qualquer âncora que aponte pra `editor.html` precisa ser reconferida contra as 8 abas extraídas | `tools/auditoria_fk_final.js` | Sonnet / baixo | D1.1 | ✅ feito 29/08/2026 — 2.1 e 2.6 também tinham âncora velha (nucleo_id foi pra `js/editor-projetos.js`, a junção de responsáveis do plano pra `js/editor-plano.js`); rótulos de 2.7 também corrigidos (`js/editor-corsario.js`/`js/editor-projetos.js`). 2.5 já estava certo (canva-consolidado.html não fez parte da extração) |
+| D1.3 | Provar que o guardrail voltou a guardar: quebrar de propósito uma gravação de FK num dos módulos extraídos, ver o `--check` acusar, desfazer | — | Sonnet / baixo | D1.2 | ✅ feito 29/08/2026 — removida de propósito a atribuição de `patch.nucleo_id` em `js/editor-projetos.js`, `--check` acusou a lacuna nova (2.1), revertido em seguida (sem diff) |
 
 **Teste de aceite:** `node tools/auditoria_fk_final.js --check` sai 0 com `LACUNAS_REGISTRADAS`
 vazio, e sai != 0 quando D1.3 quebra a gravação de propósito. Suíte do README verde.

@@ -62,6 +62,13 @@ const FONTES = {
   "js/db-corsario.js": null,
   "js/db-canva.js": null,
   "js/drawer.js": null,
+  // refatoração de 28/08/2026 (extração das 8 abas do editor.html, BACKLOG.md) — as
+  // portas de 2.1/2.2 (Projetos & Representantes) e 2.3/2.4 (URC) moveram pra cá.
+  // item 5.1 (D1 do plano de débitos técnicos) achou a auditoria ainda olhando pro
+  // editor.html velho: corrigido aqui, não repetir o erro com os próximos módulos.
+  "js/editor-projetos.js": null,
+  "js/editor-urc.js": null,
+  "js/editor-plano.js": null,
   "editor.html": null,
   "plano-acao.html": null,
   "minhas-acoes.html": null,
@@ -114,21 +121,21 @@ const ITENS = [
         ok: () => tem(corpo(FONTES["js/db-projetos.js"], "linhaParaProjeto"), /nucleo_id/),
       },
       {
-        arquivo: "editor.html",
-        como: "a grade de projetos usa nucleo_id em vez do texto",
-        ok: () => tem(FONTES["editor.html"], /nucleo_id/),
+        arquivo: "js/editor-projetos.js",
+        como: "a grade de projetos guarda nucleo_id no objeto do projeto pra reaproveitar (ex.: Corsário)",
+        ok: () => tem(FONTES["js/editor-projetos.js"], /p\.nucleo_id/),
       },
     ],
     portas: [
       {
-        nome: "projeto novo (editor.html → DB_PROJETOS.criar)",
+        nome: "projeto novo (js/editor-projetos.js → DB_PROJETOS.criar)",
         ancora: "projetoParaLinha() em js/db-projetos.js — é o que vira payload do insert",
         ok: () => tem(corpo(FONTES["js/db-projetos.js"], "projetoParaLinha"), /nucleo_id/),
       },
       {
-        nome: "trocar o núcleo na grade (editor.html → DB_PROJETOS.salvar)",
-        ancora: 'handler dos <select data-f="nucleo"> em editor.html, que grava { [campo]: valor }',
-        ok: () => tem(FONTES["editor.html"], /nucleo_id/),
+        nome: 'trocar o núcleo na grade (js/editor-projetos.js → DB_PROJETOS.salvar)',
+        ancora: 'handler dos <select data-f="nucleo"> em js/editor-projetos.js, que grava { [campo]: valor, nucleo_id }',
+        ok: () => tem(FONTES["js/editor-projetos.js"], /patch\.nucleo_id/),
       },
     ],
   },
@@ -138,9 +145,9 @@ const ITENS = [
     textoLegado: "meta_inovacao_projetos.representantes (text[])",
     leitura: [
       {
-        arquivo: "editor.html",
+        arquivo: "js/editor-projetos.js",
         como: "aba \"Projetos & Representantes\" monta os chips a partir da junção (item 4.1)",
-        ok: () => tem(FONTES["editor.html"], /DB_PROJETO_REPRESENTANTES\.carregar\(/),
+        ok: () => tem(FONTES["js/editor-projetos.js"], /DB_PROJETO_REPRESENTANTES\.carregar\(/),
       },
       {
         arquivo: "js/drawer.js",
@@ -150,19 +157,19 @@ const ITENS = [
     ],
     portas: [
       {
-        nome: "adicionar representante (editor.html, item 4.1)",
+        nome: "adicionar representante (js/editor-projetos.js, item 4.1)",
         ancora: 'DB_PROJETO_REPRESENTANTES.criar({ projeto_id: p.db_id, … }) no handler do <select> "+ adicionar…"',
-        ok: () => tem(FONTES["editor.html"], /DB_PROJETO_REPRESENTANTES\.criar\(\{\s*projeto_id:\s*p\.db_id/),
+        ok: () => tem(FONTES["js/editor-projetos.js"], /DB_PROJETO_REPRESENTANTES\.criar\(\{\s*projeto_id:\s*p\.db_id/),
       },
       {
-        nome: "projeto novo com representantes (editor.html, item 4.1)",
+        nome: "projeto novo com representantes (js/editor-projetos.js, item 4.1)",
         ancora: "DB_PROJETO_REPRESENTANTES.criar({ projeto_id: criado.db_id, … }) logo depois do DB_PROJETOS.criar",
-        ok: () => tem(FONTES["editor.html"], /DB_PROJETO_REPRESENTANTES\.criar\(\{\s*projeto_id:\s*criado\.db_id/),
+        ok: () => tem(FONTES["js/editor-projetos.js"], /DB_PROJETO_REPRESENTANTES\.criar\(\{\s*projeto_id:\s*criado\.db_id/),
       },
       {
-        nome: "remover representante (editor.html, item 4.1)",
+        nome: "remover representante (js/editor-projetos.js, item 4.1)",
         ancora: "DB_PROJETO_REPRESENTANTES.removerSoft() no X do chip",
-        ok: () => tem(FONTES["editor.html"], /DB_PROJETO_REPRESENTANTES\.removerSoft\(/),
+        ok: () => tem(FONTES["js/editor-projetos.js"], /DB_PROJETO_REPRESENTANTES\.removerSoft\(/),
       },
     ],
   },
@@ -177,16 +184,16 @@ const ITENS = [
         ok: () => tem(corpo(FONTES["js/db-urc.js"], "linhaParaLideranca"), /pessoa_id/),
       },
       {
-        arquivo: "editor.html",
+        arquivo: "js/editor-urc.js",
         como: "<select> de pessoa vem pré-selecionado pelo pessoa_id (item 4.2)",
-        ok: () => tem(FONTES["editor.html"], /selectPessoaUrcHtml\(\s*p\.pessoa_id/),
+        ok: () => tem(FONTES["js/editor-urc.js"], /selectPessoaHtml\(\s*p\.pessoa_id/),
       },
     ],
     portas: [
       {
-        nome: "trocar a pessoa da liderança (editor.html, item 4.2)",
-        ancora: "patch { pessoa_id, nome } antes do DB_URC.salvarLideranca em editor.html",
-        ok: () => tem(FONTES["editor.html"], /pessoa_id:\s*pessoaId/) && tem(FONTES["editor.html"], /DB_URC\.salvarLideranca\(/),
+        nome: "trocar a pessoa da liderança (js/editor-urc.js, item 4.2)",
+        ancora: "patch { pessoa_id, nome } antes do DB_URC.salvarLideranca em js/editor-urc.js",
+        ok: () => tem(FONTES["js/editor-urc.js"], /pessoa_id:\s*pessoaId/) && tem(FONTES["js/editor-urc.js"], /DB_URC\.salvarLideranca\(/),
       },
       {
         nome: "payload de escrita (js/db-urc.js)",
@@ -209,26 +216,26 @@ const ITENS = [
         },
       },
       {
-        arquivo: "editor.html",
+        arquivo: "js/editor-urc.js",
         como: "<select> de pessoa vem pré-selecionado pelo pessoa_id (item 4.2)",
-        ok: () => tem(FONTES["editor.html"], /selectPessoaUrcHtml\(\s*l\.pessoa_id/),
+        ok: () => tem(FONTES["js/editor-urc.js"], /selectPessoaHtml\(\s*l\.pessoa_id/),
       },
     ],
     portas: [
       {
-        nome: "trocar a pessoa do canal (editor.html, item 4.2)",
-        ancora: "patch { pessoa_id, nome } antes do DB_URC.salvarResponsavel em editor.html",
-        ok: () => tem(FONTES["editor.html"], /pessoa_id:\s*pessoaId/) && tem(FONTES["editor.html"], /DB_URC\.salvarResponsavel\(/),
+        nome: "trocar a pessoa do canal (js/editor-urc.js, item 4.2)",
+        ancora: "patch { pessoa_id, nome } antes do DB_URC.salvarResponsavel em js/editor-urc.js",
+        ok: () => tem(FONTES["js/editor-urc.js"], /pessoa_id:\s*pessoaId/) && tem(FONTES["js/editor-urc.js"], /DB_URC\.salvarResponsavel\(/),
       },
       {
-        nome: "trocar o canal da linha (editor.html, item 4.2)",
+        nome: "trocar o canal da linha (js/editor-urc.js, item 4.2)",
         ancora: "patch { canal, canal_id: canalIdPorNome(…) } no mesmo handler",
-        ok: () => tem(FONTES["editor.html"], /canal_id:\s*canalIdPorNome\(/),
+        ok: () => tem(FONTES["js/editor-urc.js"], /canal_id:\s*canalIdPorNome\(/),
       },
       {
-        nome: "+ Adicionar responsável (editor.html, item 4.2)",
+        nome: "+ Adicionar responsável (js/editor-urc.js, item 4.2)",
         ancora: "DB_URC.criarResponsavel({ canal, canal_id, nome, pessoa_id, … })",
-        ok: () => tem(FONTES["editor.html"], /DB_URC\.criarResponsavel\(\{[^}]*canal_id[^}]*pessoa_id/),
+        ok: () => tem(FONTES["js/editor-urc.js"], /DB_URC\.criarResponsavel\(\{[^}]*canal_id[^}]*pessoa_id/),
       },
       {
         nome: "payload de escrita (js/db-urc.js)",
@@ -311,13 +318,13 @@ const ITENS = [
     ],
     portas: [
       {
-        nome: "ação nova (editor.html → DB_PLANO.criar)",
-        ancora: "acaoParaLinha() em js/db-plano.js + qualquer escrita na junção pelo site",
+        nome: "ação nova (js/editor-plano.js → DB_PLANO.criar)",
+        ancora: "vínculo por id logo depois do DB_PLANO.criar, em js/editor-plano.js (item 5.6)",
         ok: () => ARQUIVOS_DO_SITE.some((f) => FONTES[f].includes("meta_inovacao_plano_responsaveis")),
       },
       {
-        nome: "trocar responsável (plano-acao.html / minhas-acoes.html / editor.html → DB_PLANO.salvar)",
-        ancora: "os 3 handlers de <select> de responsável gravam responsavel_id (text[]) e só",
+        nome: "trocar responsável (plano-acao.html / minhas-acoes.html / js/editor-plano.js → DB_PLANO.salvar)",
+        ancora: "os handlers de <select> de responsável gravam responsavel_id (text[]) e só",
         ok: () => ARQUIVOS_DO_SITE.some((f) => FONTES[f].includes("meta_inovacao_plano_responsaveis")),
       },
     ],
@@ -343,7 +350,7 @@ const ITENS = [
     ],
     portas: [
       {
-        nome: "primeira avaliação de um critério (editor.html → DB_CORSARIO.criar)",
+        nome: "primeira avaliação de um critério (js/editor-corsario.js → DB_CORSARIO.criar)",
         ancora: "payload de criar() em js/db-corsario.js",
         ok: () => {
           const c = corpo(FONTES["js/db-corsario.js"], "criar");
@@ -351,7 +358,7 @@ const ITENS = [
         },
       },
       {
-        nome: "+ Nova iniciativa (editor.html → DB_CORSARIO.criarIniciativa)",
+        nome: "+ Nova iniciativa (js/editor-projetos.js → DB_CORSARIO.criarIniciativa)",
         ancora: "payload de criarIniciativa() em js/db-corsario.js — 19 linhas de uma vez",
         ok: () => {
           const c = corpo(FONTES["js/db-corsario.js"], "criarIniciativa");
