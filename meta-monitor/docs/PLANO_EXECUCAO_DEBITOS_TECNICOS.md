@@ -179,7 +179,22 @@ o README acha que rodou a suíte e rodou uns 60% dela.
 | D3.1 | `tools/rodar_testes.sh` (novo): roda a suíte na ordem certa, separa os que precisam de Chrome dos que não precisam, para no primeiro vermelho, resumo final por teste | `tools/rodar_testes.sh` | Sonnet / médio | D1 (senão nasce vermelho) | ✅ feito 29/08/2026 — `--sem-chrome` (10 testes) verde; os 12 `--com-chrome` passam individualmente, menos `testar_drawer_headless.js` (falha por falta de rede real pro Supabase **deste ambiente**, o mesmo limite já registrado no D7 — não é regressão; roda verde com Chrome + rede de verdade, ex.: GitHub Actions no D3.3) |
 | D3.2 | Reconciliar README × testes existentes: os 15 órfãos entram no runner e no README, ou são apagados se estiverem obsoletos (decidir um a um, rodando cada um) | `README.md`, `tools/testar_*.js` | Sonnet / médio | D3.1 | ✅ feito 29/08/2026 — os 15 rodados um a um: nenhum obsoleto, todos passaram (2 deles — `testar_iniciativas_cruzado.js`/`testar_guardrail_urc_supabase.js` — falam com produção mas saem 0 sem rede, mesmo padrão de graceful-skip de `testar_rede_real_headless.js`). Os 15 entraram no README e em `tools/rodar_testes.sh` (11 no lote `--com-chrome`, 4 no `--sem-chrome`) |
 | D3.3 | GitHub Actions rodando D3.1 a cada push na `main` (Chromium disponível no runner; `testar_rede_real_headless.js` fica de fora — exige `--confirmar` e produção) | `.github/workflows/testes.yml` (novo) | Sonnet / médio | D3.1 | ✅ feito 29/08/2026 — workflow na raiz do repositório (GitHub só lê `.github/workflows/` na raiz; `working-directory: meta-monitor` em todos os passos), roda `tools/rodar_testes.sh` inteiro (D3.1+D3.2, `testar_rede_real_headless.js` de fora por não estar na lista do runner) em `push`/`pull_request` pra `main` + `workflow_dispatch` manual. `ubuntu-latest` já traz Chrome; um passo confere isso antes da suíte pra falhar cedo e com mensagem clara se a imagem do runner mudar |
-| D3.4 | **[humano]** José confere que o badge/resultado do Actions aparece e que um push quebrado de propósito fica vermelho | — | José | D3.3 | ⏳ não iniciado — depende do primeiro push com o workflow rodando de verdade no GitHub (este ambiente não roda Actions, só o YAML foi validado localmente) |
+| D3.4 | **[humano]** José confere que o badge/resultado do Actions aparece e que um push quebrado de propósito fica vermelho | — | José | D3.3 | ⏳ metade respondida sozinha: o push do D3.3 já disparou o workflow de verdade (run [#1](https://github.com/juniorapt-source/meta-inovacao-2026/actions/runs/33261269530)) e ele **saiu vermelho** — mas por um motivo alheio ao D3.3, ver nota abaixo. Falta só José confirmar que o badge aparece pra ele na UI do GitHub |
+
+> **Nota sobre o primeiro run (29/08/2026):** saiu vermelho em `testar_drawer_headless.js`,
+> não pela suíte/workflow em si — os 22 testes antes dele passaram, inclusive os 4 órfãos
+> que só o D3.3 pôde provar com rede de verdade (`testar_iniciativas_cruzado.js` e
+> `testar_guardrail_urc_supabase.js` saíram OK de verdade, não só "puladas por falta de
+> rede" como neste ambiente sem egress). O motivo é um dos dois cenários que o próprio
+> `testar_drawer_headless.js` documenta como dependente de rede real (comentário no topo
+> do arquivo): a régua do Corsário pra Sebraetec, hardcoded no teste como "~49,5% ·
+> Marujo" desde que foi escrito, hoje está em produção como "52,6% · Timoneiro" — alguém
+> avançou os critérios do Corsário da Sebraetec desde então, e o teste nunca tinha rodado
+> contra o Supabase de verdade antes (este ambiente sempre bateu 403 nesse fetch). Isso é
+> um teste fixado num valor de produção que muda com o tempo, não uma regressão de D1/D3 —
+> mas com o D3.3 no ar, vai continuar vermelho até alguém atualizar o valor esperado (ou
+> trocar a asserção por algo que não fixe um número de produção). Fora do escopo de
+> D3.1/D3.2/D3.3 (é conteúdo do Corsário, não runner/CI) — sugerido como tarefa separada.
 
 **Sobe direto pra `main` item a item** — D3.1 antes de D3.2/D3.3, que dependem dele.
 
