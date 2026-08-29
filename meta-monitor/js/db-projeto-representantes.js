@@ -8,13 +8,18 @@
  * migração; novos vínculos criados por editor.html (Camada 4, item 4.1) recebem o
  * próximo número da sequência.
  *
- * Mesmo mecanismo de sempre (?semrede=1/CC_FORCAR_FALLBACK, sem fallback local
- * pra arquivo próprio — esta tabela nasceu na Camada 2, não tem equivalente em
- * data/*.js) — ver comentário de js/db-pessoa-papeis.js, que segue o mesmo padrão
- * pra uma junção irmã.
+ * Sem fallback local pra arquivo próprio (esta tabela nasceu na Camada 2, não tem
+ * equivalente em data/*.js): o fallback é lista vazia, como nas junções irmãs
+ * js/db-pessoa-papeis.js e js/db-plano-responsaveis.js. O mecanismo comum vem da
+ * fábrica js/db-base.js (item D4.1); API pública inalterada (item D4.3).
+ *
+ * PRECISA de js/db-base.js carregado antes.
  */
 (function (root) {
   "use strict";
+
+  const BASE = root.DB_BASE || (typeof globalThis !== "undefined" && globalThis.DB_BASE);
+  if (!BASE) throw new Error("js/db-projeto-representantes.js: js/db-base.js precisa ser carregado antes deste arquivo.");
 
   const TABELA = "meta_inovacao_projeto_representantes";
 
@@ -35,38 +40,6 @@
     };
   }
 
-  function forcarFallback() {
-    if (root.CC_FORCAR_FALLBACK) return true;
-    try { return new URLSearchParams(root.location.search).get("semrede") === "1"; } catch (e) { return false; }
-  }
-
-  async function buscarDoSupabase() {
-    if (!root.CC_SUPABASE) throw new Error("js/supabase.js não carregado.");
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const { data, error } = await supa.from(TABELA).select("*").is("deleted_at", null);
-    if (error) throw error;
-    return (data || []).map(linhaParaVinculo);
-  }
-
-  let promessa = null;
-  async function carregar(opts) {
-    const forcar = (opts && opts.forcar) || forcarFallback();
-    if (promessa && !(opts && opts.recarregar)) return promessa;
-    promessa = (async () => {
-      if (forcar) {
-        return { lista: [], usandoFallback: true, motivoFallback: "modo de teste (semrede) — sem tentar rede" };
-      }
-      try {
-        const lista = await buscarDoSupabase();
-        return { lista: lista, usandoFallback: false, motivoFallback: null };
-      } catch (err) {
-        console.error("db-projeto-representantes: falha ao carregar do Supabase, sem seed local pra esta tabela", err);
-        return { lista: [], usandoFallback: true, motivoFallback: (err && err.message) || String(err) };
-      }
-    })();
-    return promessa;
-  }
-
   // agrupa a lista achatada por projeto_id, ordenada por `ordem` — conveniência
   // pra tela que mostra "representantes deste projeto" sem cada consumidor
   // reimplementar o group-by (mesmo papel de DB_PESSOA_PAPEIS.porPessoa).
@@ -80,32 +53,21 @@
     return idx;
   }
 
-  function bloquearEscritaEmTeste() {
-    if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
-  }
-
-  async function criar(vinculoParcial, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const payload = Object.assign({}, vinculoParaLinha(vinculoParcial), { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).insert(payload).select().single();
-    if (error) throw error;
-    return linhaParaVinculo(data);
-  }
-
-  async function removerSoft(id, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const agora = new Date().toISOString();
-    const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", id);
-    if (error) throw error;
-  }
+  const api = BASE.criarWrapper({
+    nome: "db-projeto-representantes",
+    raiz: root,
+    tabela: TABELA,
+    ordem: null, // a ordenação por `ordem` acontece no agrupamento (porProjeto), não na consulta
+    linhaPara: linhaParaVinculo,
+    paraLinha: vinculoParaLinha,
+    avisoFalha: "db-projeto-representantes: falha ao carregar do Supabase, sem seed local pra esta tabela",
+  });
 
   root.DB_PROJETO_REPRESENTANTES = {
     TABELA: TABELA,
-    carregar: carregar,
-    criar: criar,
-    removerSoft: removerSoft,
+    carregar: api.carregar,
+    criar: api.criar,
+    removerSoft: api.removerSoft,
     porProjeto: porProjeto,
     vinculoParaLinha: vinculoParaLinha,
   };
