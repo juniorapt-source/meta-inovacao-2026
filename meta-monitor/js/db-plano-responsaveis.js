@@ -6,14 +6,20 @@
  * `ordem` é a posição em `responsavel_id[]` — mesmo papel de `ordem` em
  * js/db-projeto-representantes.js/js/db-pessoa-papeis.js, junções irmãs que seguem o
  * mesmo padrão (sem seed local pra esta tabela — nasceu na Camada 2, não tem
- * equivalente em data/*.js).
+ * equivalente em data/*.js, então o fallback é lista vazia).
  *
  * pessoa_id XOR coletivo_id (nunca os dois, nunca nenhum) — mesmo CHECK do banco
  * (`cc_plano_resp_exatamente_um`); quem decide qual é a tradução de cada id de
  * `responsavel_id[]` é js/db-responsaveis.js (item 4.3), não este módulo.
+ *
+ * O mecanismo comum vem da fábrica js/db-base.js (item D4.1); API pública inalterada
+ * (item D4.3). PRECISA de js/db-base.js carregado antes.
  */
 (function (root) {
   "use strict";
+
+  const BASE = root.DB_BASE || (typeof globalThis !== "undefined" && globalThis.DB_BASE);
+  if (!BASE) throw new Error("js/db-plano-responsaveis.js: js/db-base.js precisa ser carregado antes deste arquivo.");
 
   const TABELA = "meta_inovacao_plano_responsaveis";
 
@@ -36,38 +42,6 @@
     };
   }
 
-  function forcarFallback() {
-    if (root.CC_FORCAR_FALLBACK) return true;
-    try { return new URLSearchParams(root.location.search).get("semrede") === "1"; } catch (e) { return false; }
-  }
-
-  async function buscarDoSupabase() {
-    if (!root.CC_SUPABASE) throw new Error("js/supabase.js não carregado.");
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const { data, error } = await supa.from(TABELA).select("*").is("deleted_at", null);
-    if (error) throw error;
-    return (data || []).map(linhaParaVinculo);
-  }
-
-  let promessa = null;
-  async function carregar(opts) {
-    const forcar = (opts && opts.forcar) || forcarFallback();
-    if (promessa && !(opts && opts.recarregar)) return promessa;
-    promessa = (async () => {
-      if (forcar) {
-        return { lista: [], usandoFallback: true, motivoFallback: "modo de teste (semrede) — sem tentar rede" };
-      }
-      try {
-        const lista = await buscarDoSupabase();
-        return { lista: lista, usandoFallback: false, motivoFallback: null };
-      } catch (err) {
-        console.error("db-plano-responsaveis: falha ao carregar do Supabase, sem seed local pra esta tabela", err);
-        return { lista: [], usandoFallback: true, motivoFallback: (err && err.message) || String(err) };
-      }
-    })();
-    return promessa;
-  }
-
   // agrupa a lista achatada por plano_acao_id, ordenada por `ordem` — mesma conveniência
   // de DB_PROJETO_REPRESENTANTES.porProjeto()/DB_PESSOA_PAPEIS.porPessoa().
   function porPlanoAcao(lista) {
@@ -80,32 +54,21 @@
     return idx;
   }
 
-  function bloquearEscritaEmTeste() {
-    if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
-  }
-
-  async function criar(vinculoParcial, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const payload = Object.assign({}, vinculoParaLinha(vinculoParcial), { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).insert(payload).select().single();
-    if (error) throw error;
-    return linhaParaVinculo(data);
-  }
-
-  async function removerSoft(id, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const agora = new Date().toISOString();
-    const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", id);
-    if (error) throw error;
-  }
+  const api = BASE.criarWrapper({
+    nome: "db-plano-responsaveis",
+    raiz: root,
+    tabela: TABELA,
+    ordem: null, // a ordenação por `ordem` acontece no agrupamento (porPlanoAcao), não na consulta
+    linhaPara: linhaParaVinculo,
+    paraLinha: vinculoParaLinha,
+    avisoFalha: "db-plano-responsaveis: falha ao carregar do Supabase, sem seed local pra esta tabela",
+  });
 
   root.DB_PLANO_RESPONSAVEIS = {
     TABELA: TABELA,
-    carregar: carregar,
-    criar: criar,
-    removerSoft: removerSoft,
+    carregar: api.carregar,
+    criar: api.criar,
+    removerSoft: api.removerSoft,
     porPlanoAcao: porPlanoAcao,
     vinculoParaLinha: vinculoParaLinha,
   };
