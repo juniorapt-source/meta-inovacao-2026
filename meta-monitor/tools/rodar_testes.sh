@@ -4,9 +4,9 @@
 # impedia um push quebrado de ir pro ar, e a única barreira era a disciplina de quem
 # commitava.
 #
-# Este script roda a MESMA suíte do README, na MESMA ordem, e mais nada — reconciliar os
-# 15 testes órfãos (existem em tools/ e não estão aqui nem no README) é o item D3.2, que
-# decide um a um se cada um entra aqui ou é apagado por estar obsoleto.
+# Este script roda a MESMA suíte do README, na MESMA ordem. O item D3.2 reconciliou os 15
+# testes que existiam em tools/ e não estavam aqui nem no README: rodados um a um, nenhum
+# obsoleto — os 15 entraram nas duas fontes (README.md e este script) juntos.
 #
 # Uso:
 #   tools/rodar_testes.sh                # roda tudo: sem-Chrome primeiro, depois com-Chrome
@@ -49,6 +49,14 @@ SEM_CHROME=(
   "testar_catalogos_base.js|node tools/testar_catalogos_base.js"
   "testar_busca_golden.js|node tools/testar_busca_golden.js"
   "auditoria_fk_final.js --check|node tools/auditoria_fk_final.js --check"
+  # item D3.2 — órfãos reconciliados, puros/sem navegador
+  "testar_canva.js|node tools/testar_canva.js"
+  "testar_supabase_erros.js|node tools/testar_supabase_erros.js"
+  # os 2 abaixo falam com o Supabase de PRODUÇÃO (leitura pública) mas nunca travam a
+  # suíte por falta de rede: sem conseguir alcançar, saem 0 com aviso — mesma postura de
+  # graceful-skip, não precisam do --confirmar que testar_rede_real_headless.js exige
+  "testar_iniciativas_cruzado.js|node tools/testar_iniciativas_cruzado.js"
+  "testar_guardrail_urc_supabase.js|node tools/testar_guardrail_urc_supabase.js"
 )
 
 COM_CHROME=(
@@ -64,6 +72,18 @@ COM_CHROME=(
   "testar_projetos_editor_representantes_headless.js|node tools/testar_projetos_editor_representantes_headless.js"
   "testar_urc_editor_headless.js|node tools/testar_urc_editor_headless.js"
   "testar_plano_acao_responsavel_headless.js|node tools/testar_plano_acao_responsavel_headless.js"
+  # item D3.2 — órfãos reconciliados, headless via CDP
+  "testar_kanban_headless.js|node tools/testar_kanban_headless.js"
+  "testar_projetos_headless.js|node tools/testar_projetos_headless.js"
+  "testar_participantes_headless.js|node tools/testar_participantes_headless.js"
+  "testar_canva_oficina.js|node tools/testar_canva_oficina.js"
+  "testar_canva_multiprojeto_headless.js|node tools/testar_canva_multiprojeto_headless.js"
+  "testar_canva_combo_pessoas_headless.js|node tools/testar_canva_combo_pessoas_headless.js"
+  "testar_canva_consolidado_golden_headless.js|node tools/testar_canva_consolidado_golden_headless.js"
+  "testar_historico_headless.js|node tools/testar_historico_headless.js"
+  "testar_dashboard_golden_headless.js|node tools/testar_dashboard_golden_headless.js"
+  "testar_minhas_acoes_golden_headless.js|node tools/testar_minhas_acoes_golden_headless.js"
+  "testar_projetos_golden_headless.js|node tools/testar_projetos_golden_headless.js"
 )
 
 NOMES=()

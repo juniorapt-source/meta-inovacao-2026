@@ -176,6 +176,56 @@ node tools/auditoria_fk_final.js --check # item 5.1: por FK das Camadas 2/4, se 
                                         # Sai != 0 quando o CONJUNTO de lacunas muda: lacuna
                                         # nova (tela regrediu) ou lacuna registrada que sumiu
                                         # sem baixa em docs/CAMADA5_AUDITORIA_FK.md
+
+# item D3.2 do plano de débitos técnicos — estavam no repositório e não nesta lista
+node tools/testar_canva.js             # camada de dados de canva.html (js/db-canva.js),
+                                        # puro/sem navegador: regra "sem responsável/prazo
+                                        # não sai da mesa", caderno sobrevive ao F5, WiFi
+                                        # caindo não vira erro (retoma o pendente), honeypot
+node tools/testar_supabase_erros.js    # classificação de erros de escrita (js/supabase.js,
+                                        # CC_SUPABASE): bloqueio de RLS/token e cache de
+                                        # schema desatualizado viram mensagem acionável
+node tools/testar_iniciativas_cruzado.js # F13: contagem de iniciativas do portfólio local
+                                        # (27) == corsario_status em produção (leitura
+                                        # pública). PRECISA de rede real — sem ela, sai 0
+                                        # com aviso (não é o que este teste mede)
+node tools/testar_guardrail_urc_supabase.js # F14: o mesmo guardrail de validar_dados.py
+                                        # (responsável de canal ≠ nome de alguém da
+                                        # liderança), reforçado contra o Supabase de
+                                        # produção. PRECISA de rede real — sem ela, sai 0
+node tools/testar_kanban_headless.js   # F11: visão Kanban de plano.html — contagem de
+                                        # cards por coluna bate com a mesma fonte de
+                                        # verdade dos KPIs (F2), sem perder/duplicar ação
+node tools/testar_projetos_headless.js # F16: projetos.html com ?semrede=1 — aviso de
+                                        # dados locais, contagem, filtro por núcleo e busca
+node tools/testar_participantes_headless.js # F15: participantes.html com ?semrede=1 —
+                                        # cards por grupo, pendência de indicação, fallback
+node tools/testar_canva_oficina.js     # canva.html: ciclo e encontro_id da oficina (canal
+                                        # do QR + data de hoje) chegam na demanda gravada
+                                        # em vez de nascerem nulos
+node tools/testar_canva_multiprojeto_headless.js # canva.html: uma digitação vira um
+                                        # registro POR PROJETO marcado no checklist, sobrevive
+                                        # ao F5, ?projeto= soma à seleção sem substituir
+node tools/testar_canva_combo_pessoas_headless.js # canva.html: combo de "pessoas do
+                                        # projeto" sugere nomes do golden record sem travar
+                                        # quem não está cadastrado (troca do <input list>,
+                                        # que não funcionava no Safari)
+node tools/testar_canva_consolidado_golden_headless.js # item 5.9 parte 5: núcleo/canal/
+                                        # facilitador/responsável de canva-consolidado.html
+                                        # pelas 4 FKs quando resolvem, texto legado quando não
+node tools/testar_historico_headless.js # F12: aba "Histórico" de editor.html contra o
+                                        # MOCK_HISTORICO embutido — ordem, tradução de
+                                        # diff (UPDATE) e rótulos (INSERT/DELETE), filtros
+node tools/testar_dashboard_golden_headless.js # item 5.9 parte 3: "Composição do
+                                        # portfólio" de index.html lê nucleo_id quando
+                                        # existe, cai pro texto legado quando não
+node tools/testar_minhas_acoes_golden_headless.js # item 5.9 parte 7: seção "Ações do
+                                        # plano" de minhas-acoes.html casa por vínculo
+                                        # golden (meta_inovacao_plano_responsaveis) além
+                                        # do texto legado responsavel_id[]
+node tools/testar_projetos_golden_headless.js # item 5.9 parte 2: projetos.html lê
+                                        # núcleo/representantes pelas FKs quando resolvem,
+                                        # texto legado quando não
 ```
 
 Dois relatórios leem **produção** (só leitura, anon key de `js/config.js`) — não entram na
