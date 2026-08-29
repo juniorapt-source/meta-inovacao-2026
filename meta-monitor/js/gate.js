@@ -52,6 +52,22 @@
     return;
   }
 
+  if (HASH_SENHA === "SUBSTITUIR_PELO_HASH") {
+    // item D2.2 do plano de débitos técnicos: exigirSenha ligada sem ninguém ter gerado
+    // o hash ainda é uma bomba armada — nenhuma senha digitada bate com o placeholder, e
+    // sem este bloco o site simplesmente travava em silêncio pra todo mundo, sem pista
+    // nenhuma do porquê. Falha alto em vez de trancar mudo: console.error pra quem abrir o
+    // DevTools e um overlay explicando o próximo passo pra quem só está olhando a tela.
+    console.error(
+      "[gate.js] DB.config.exigirSenha está true, mas HASH_SENHA ainda é o placeholder " +
+        '"SUBSTITUIR_PELO_HASH" — nenhuma senha vai bater com ele e ninguém entra no site. ' +
+        "Gere o hash em tools/gerar_hash_senha.html e cole o resultado em HASH_SENHA (js/gate.js)."
+    );
+    if (document.body) montarOverlayErroConfig();
+    else document.addEventListener("DOMContentLoaded", montarOverlayErroConfig);
+    return;
+  }
+
   if (sessionStorage.getItem(CHAVE_SESSAO) === "1") {
     // já autenticado nesta aba — token derivado do sessionStorage (gravado na hora da
     // senha certa, ver montarOverlay abaixo); cai pro config se por algum motivo faltar
@@ -87,6 +103,26 @@
       "#cc-gate-overlay button:hover{background:#762424}" +
       "#cc-gate-overlay .cc-gate-erro{color:#8f2d2d;font-size:12.5px;margin-top:12px}";
     document.head.appendChild(style);
+  }
+
+  // overlay de config incompleta (D2.2) — não é o overlay de senha: não tem campo nem
+  // form, só explica o que falta e onde resolver. Reaproveita o mesmo CSS injetado acima
+  // (mesma caixa/marca), só troca o miolo.
+  function montarOverlayErroConfig() {
+    injetarEstilo();
+    const overlay = document.createElement("div");
+    overlay.id = "cc-gate-overlay";
+    overlay.innerHTML =
+      '<div class="cc-gate-caixa">' +
+        '<div class="cc-gate-marca">Carta de Corso</div>' +
+        '<p class="cc-gate-msg">Configuração incompleta: <code>DB.config.exigirSenha</code> ' +
+        "está ligada, mas ninguém gerou o hash da senha ainda — <code>HASH_SENHA</code> em " +
+        '<code>js/gate.js</code> continua no placeholder e nenhuma senha bate com ele.</p>' +
+        '<p class="cc-gate-msg">Gere o hash em <code>tools/gerar_hash_senha.html</code> ' +
+        "(roda local, no navegador, não manda nada pra lugar nenhum) e cole o resultado em " +
+        '<code>HASH_SENHA</code>.</p>' +
+      "</div>";
+    document.body.appendChild(overlay);
   }
 
   function montarOverlay() {
