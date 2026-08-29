@@ -7,8 +7,9 @@
  * qualquer outra aba (confirmado antes de mover: agendaAtual/agendaFallback/
  * agendaCarregando/STATUS_ENC/ROTULO_ENC só eram usados aqui).
  *
- * Depende dos globais já expostos em editor.html (window.opts, window.marcarLinhaStatus,
- * window.detErro) e dos globais de sempre (esc, CC_STATUS, EDITOR_ATUAL, DB_AGENDA).
+ * Depende dos globais já expostos por js/editor-shared.js (window.opts,
+ * window.marcarLinhaStatus, window.detErro) e dos globais de sempre (esc, CC_STATUS,
+ * EDITOR_ATUAL, DB_AGENDA).
  *
  * API exposta: window.EDITOR_AGENDA.render() — chamado pelo dispatcher de abas
  * (render(), em editor.html) quando o <select id="ed-conjunto"> está em "agenda".

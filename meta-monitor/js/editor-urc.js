@@ -13,15 +13,16 @@
  * compartilhado). pessoasAtual/pessoasFallback são DIFERENTES — genuinamente
  * compartilhados com as abas Pessoas e Projetos, que ainda vivem em editor.html — por
  * isso este módulo lê/escreve neles através de window.EDITOR_PESSOAS_CACHE (getter/
- * setter definido em editor.html, ao lado da declaração de pessoasAtual), em vez de uma
+ * setter definido em js/editor-shared.js desde 29/08/2026, D6.1), em vez de uma
  * variável própria: se este módulo carregar primeiro, quem abrir "Pessoas"/"Projetos"
  * depois reaproveita; se uma daquelas já carregou antes, este módulo reaproveita.
  *
- * Depende de globais já expostos em editor.html (window.opts, window.avisoFallback,
- * window.marcarLinhaStatus, window.detErro, window.normalizarNomePessoa,
- * window.nomeExibicaoPessoa — todos precisaram virar window.X explicitamente na etapa 3,
- * porque são declarados dentro do IIFE de editor.html, não são globais "de graça") e dos
- * globais de sempre (esc, EDITOR_ATUAL, DB_URC, DB_PESSOAS, DB_CANAIS).
+ * Depende de globais já expostos por js/editor-shared.js (window.opts,
+ * window.avisoFallback, window.marcarLinhaStatus, window.detErro,
+ * window.normalizarNomePessoa, window.nomeExibicaoPessoa — todos precisaram virar
+ * window.X explicitamente na etapa 3, porque eram declarados dentro do IIFE de
+ * editor.html, não eram globais "de graça") e dos globais de sempre (esc, EDITOR_ATUAL,
+ * DB_URC, DB_PESSOAS, DB_CANAIS).
  *
  * API exposta: window.EDITOR_URC.renderLideranca()/renderCanais() — chamadas pelo
  * dispatcher de abas (render(), em editor.html) pras chaves "urc_lideranca"/"urc_canais".

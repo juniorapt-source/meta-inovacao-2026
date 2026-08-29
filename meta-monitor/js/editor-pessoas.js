@@ -12,12 +12,12 @@
  * editor.html (não viraram estado privado deste módulo): listaResponsaveis() (usada
  * pela aba Plano, ainda não extraída) lê/escreve nelas direto, no mesmo closure — mover
  * a variável pra cá quebraria essa leitura. Este módulo acessa a variável via
- * window.EDITOR_PESSOAS_CACHE.{obter,definir} (definido em editor.html, já usado por
- * URC e Projetos desde as etapas 4 e 5).
+ * window.EDITOR_PESSOAS_CACHE.{obter,definir} (definido em js/editor-shared.js desde
+ * 29/08/2026, D6.1 — já usado por URC e Projetos desde as etapas 4 e 5).
  *
- * Depende dos globais já expostos em editor.html (window.opts, window.avisoFallback,
- * window.marcarLinhaStatus, window.detErro, window.NUCLEOS_VALIDOS) e dos globais de
- * sempre (esc, EDITOR_ATUAL, DB_PESSOAS).
+ * Depende dos globais já expostos por js/editor-shared.js (window.opts,
+ * window.avisoFallback, window.marcarLinhaStatus, window.detErro,
+ * window.NUCLEOS_VALIDOS) e dos globais de sempre (esc, EDITOR_ATUAL, DB_PESSOAS).
  *
  * API exposta: window.EDITOR_PESSOAS.render() — chamado pelo dispatcher de abas
  * (render(), em editor.html) quando o <select id="ed-conjunto"> está em "pessoas".

@@ -13,16 +13,15 @@
  *
  * ÚNICA dependência cross-arquivo de verdade: pessoasAtual/pessoasFallback, dentro de
  * listaResponsaveis() — lidos/escritos via window.EDITOR_PESSOAS_CACHE (definido em
- * editor.html, já usado por URC e Projetos desde as etapas 4 e 5), em vez da variável
- * direta. Com esta etapa, editor.html deixa de ter QUALQUER leitor/escritor direto de
- * pessoasAtual/pessoasFallback — a variável em si continua lá (não migrou pra dentro de
- * js/editor-pessoas.js: isso é só uma limpeza opcional futura, não uma correção
- * necessária — ver nota da etapa 6 no BACKLOG.md).
+ * js/editor-shared.js desde 29/08/2026, D6.1 — já usado por URC e Projetos desde as
+ * etapas 4 e 5), em vez da variável direta. Desde o D6.1, a variável em si (junto do
+ * getter/setter) também mora em js/editor-shared.js — editor.html não tem mais nenhum
+ * leitor/escritor de pessoasAtual/pessoasFallback.
  *
- * Depende dos globais já expostos em editor.html desde a etapa 3 (window.opts,
- * window.marcarLinhaStatus, window.detErro — lição daquela etapa: são declarados
- * dentro do IIFE de editor.html, não são globais "de graça", por isso precisaram do
- * window.X = X explícito) e dos globais de sempre (esc, EDITOR_ATUAL, DB_PLANO,
+ * Depende dos globais já expostos por js/editor-shared.js desde o D6.1 (window.opts,
+ * window.marcarLinhaStatus, window.detErro — lição da etapa 3: são declarados dentro
+ * de um IIFE, não são globais "de graça", por isso precisaram do window.X = X
+ * explícito) e dos globais de sempre (esc, EDITOR_ATUAL, DB_PLANO,
  * DB_PESSOAS, DB_COLETIVOS, DB_RESPONSAVEIS, DB_PLANO_RESPONSAVEIS, RESP, DB — este
  * último é o window.DB de dados estáticos, usado só pra window.DB.responsaveis, a
  * lista legada que RESP.mapearTexto() resolve).
@@ -61,7 +60,7 @@
   // ids antigos preservados — mesma função que plano-acao.html/minhas-acoes.html usam
   // desde o item 4.3), carregada sob demanda e reaproveitando a cache de pessoas se a
   // aba "Projetos" ou "Pessoas" já carregou antes nesta sessão (EDITOR_PESSOAS_CACHE,
-  // mesmo princípio de nucleosPorNome/projetoIdPorIniciativa em editor.html).
+  // mesmo princípio de nucleosPorNome/projetoIdPorIniciativa em js/editor-shared.js).
   let listaResponsaveisMontada = null;
   async function listaResponsaveis() {
     if (!listaResponsaveisMontada) {

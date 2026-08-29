@@ -12,7 +12,8 @@ ainda não foram cruzados aqui.
 
 **Status:** concluído (28/08/2026) — 8 de 8 abas extraídas. Débitos que a extração
 deixou (guardrail de FK cego pras âncoras migradas, helpers ainda em `editor.html`):
-`docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md`, itens D1 e D6.1.
+`docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md`, itens D1 e D6.1 — os dois já resolvidos
+(29/08/2026, ver etapa 9 abaixo pro D6.1).
 
 `editor.html` chegou a 105KB/~1750 linhas misturando o JS inline de 8 abas (Plano,
 Agenda, Matriz, Pessoas, Projetos, URC-Liderança, URC-Canais, Corsário) num único
@@ -130,17 +131,25 @@ original.
 
 `editor.html`: 1744 → 519 linhas — **redução de 70%, as 8 etapas concluídas.**
 
-**Não fechado, registrado como oportunidade futura opcional (não bloqueia nada):**
-`pessoasAtual`/`pessoasFallback` continuam morando em `editor.html` (via
-`EDITOR_PESSOAS_CACHE`) em vez de dentro de `js/editor-pessoas.js`, mesmo depois da
-etapa 8 ter removido o último consumidor direto de dentro de `editor.html`. Também:
-`opts`/`avisoFallback`/`marcarLinhaStatus`/`marcarCelulaStatus`/`detErro`/
-`nucleosPorNome`/`projetoIdPorIniciativa`/`normalizarNomePessoa`/`nomeExibicaoPessoa`/
-`NUCLEOS_VALIDOS` continuam em `editor.html`, expostos via `window.X`, embora hoje só
-sejam chamados pelos 8 arquivos `js/editor-*.js` (nenhum consumidor direto sobrou em
-`editor.html` depois da etapa 8) — dá pra virar um `js/editor-shared.js` de verdade
-numa rodada futura, mas não é urgente: o objetivo original (reduzir o raio de explosão
-de mexer numa aba) já foi alcançado com as 8 extrações.
+**Etapa 9 (D6.1 de `docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md`) — `js/editor-shared.js`,
+29/08/2026:** feita — fecha o círculo. `opts`/`avisoFallback`/`marcarLinhaStatus`/
+`marcarCelulaStatus`/`detErro`/`nucleosPorNome`/`projetoIdPorIniciativa`/
+`normalizarNomePessoa`/`nomeExibicaoPessoa`/`NUCLEOS_VALIDOS` + `EDITOR_PESSOAS_CACHE`
+(pessoasAtual/pessoasFallback) saíram de `editor.html` pra `js/editor-shared.js` —
+nenhum dos dois tinha consumidor dentro do próprio `editor.html`, só nos 8 módulos
+`js/editor-*.js`. Única mudança de comportamento: `projetoIdPorIniciativa()` fechava
+sobre `projetosAtual` no mesmo closure de `window.EDITOR_PROJETOS_CACHE` (que continua
+em `editor.html`, ao lado de `projetosFallback`/`projetosCarregando` — não fazia parte
+deste item); agora que mora em outro arquivo, passa pelo getter/setter
+(`obter`/`definir`/`marcarCarregando`) como qualquer outro consumidor de fora — mesma
+cache, mesmo efeito observável, confirmado com um script CDP ad-hoc chamando a função
+direto e via UI ("+ Nova iniciativa" do Corsário, iniciativa com nome batendo um
+projeto do golden record: `projeto_id`/`nucleo_id` saem preenchidos igual antes).
+Testado com a suíte geral (`testar_matriz_editor_headless.js`,
+`testar_projetos_editor_representantes_headless.js`, `testar_urc_editor_headless.js`,
+`testar_historico_headless.js`, `testar_editor.js`), tudo verde.
+
+`editor.html`: 519 → 397 linhas.
 
 ## Sidebar compacta/colapsável — implementada (28/08/2026)
 

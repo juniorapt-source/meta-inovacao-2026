@@ -5,10 +5,10 @@
  * "editor.html grande demais"; Histórico e Matriz foram as etapas 1 e 2). Diferente
  * daquelas duas, esta aba EDITA ao vivo (status/observação por célula, + nova
  * iniciativa) — por isso usa alguns helpers genuinamente compartilhados com outras
- * abas, que continuam em editor.html até uma 2ª/3ª aba precisar deles de novo:
- * `opts()`, `avisoFallback()`, `marcarCelulaStatus()`, `detErro()`,
- * `projetoIdPorIniciativa()`, `nucleosPorNome()`, `NUCLEOS_VALIDOS`, além dos globais de
- * sempre (esc, EDITOR_ATUAL, DB_CORSARIO).
+ * abas: `opts()`, `avisoFallback()`, `marcarCelulaStatus()`, `detErro()`,
+ * `projetoIdPorIniciativa()`, `nucleosPorNome()`, `NUCLEOS_VALIDOS`, todos em
+ * js/editor-shared.js desde 29/08/2026 (D6.1), além dos globais de sempre (esc,
+ * EDITOR_ATUAL, DB_CORSARIO).
  *
  * API exposta: window.EDITOR_CORSARIO.render() — chamado pelo dispatcher de abas
  * (render(), em editor.html) quando o <select id="ed-conjunto"> está em "corsario".

@@ -11,18 +11,21 @@
  * pessoasAtual, ver comentário lá):
  *   - pessoasAtual/pessoasFallback são compartilhados com Pessoas (ainda em
  *     editor.html) e URC (js/editor-urc.js) — lidos/escritos via
- *     window.EDITOR_PESSOAS_CACHE (definido em editor.html).
+ *     window.EDITOR_PESSOAS_CACHE (definido em js/editor-shared.js desde 29/08/2026,
+ *     D6.1).
  *   - projetosAtual/projetosFallback/projetosCarregando são compartilhados com
- *     projetoIdPorIniciativa() (fica em editor.html, usado pela aba Corsário) — lidos/
- *     escritos via window.EDITOR_PROJETOS_CACHE (definido em editor.html, ao lado da
- *     declaração da variável; projetoIdPorIniciativa() continua no mesmo closure de
- *     projetosAtual, não precisa do getter/setter).
+ *     projetoIdPorIniciativa() (fica em js/editor-shared.js desde 29/08/2026, D6.1,
+ *     usado pela aba Corsário) — lidos/escritos via window.EDITOR_PROJETOS_CACHE
+ *     (definido em editor.html, ao lado da declaração da variável). Antes do D6.1,
+ *     projetoIdPorIniciativa() fechava sobre projetosAtual direto, no mesmo closure
+ *     desta declaração; agora que mora em outro arquivo, passa pelo getter/setter como
+ *     qualquer outro consumidor de fora.
  *
- * Depende dos globais já expostos em editor.html (window.opts, window.avisoFallback,
- * window.marcarLinhaStatus, window.detErro, window.nucleosPorNome,
- * window.normalizarNomePessoa, window.nomeExibicaoPessoa, window.NUCLEOS_VALIDOS) e dos
- * globais de sempre (esc, EDITOR_ATUAL, DB_PROJETOS, DB_PESSOAS,
- * DB_PROJETO_REPRESENTANTES, DB_CORSARIO).
+ * Depende dos globais já expostos por js/editor-shared.js (window.opts,
+ * window.avisoFallback, window.marcarLinhaStatus, window.detErro,
+ * window.nucleosPorNome, window.normalizarNomePessoa, window.nomeExibicaoPessoa,
+ * window.NUCLEOS_VALIDOS) e dos globais de sempre (esc, EDITOR_ATUAL, DB_PROJETOS,
+ * DB_PESSOAS, DB_PROJETO_REPRESENTANTES, DB_CORSARIO).
  *
  * API exposta: window.EDITOR_PROJETOS.render() — chamado pelo dispatcher de abas
  * (render(), em editor.html) quando o <select id="ed-conjunto"> está em "projetos".

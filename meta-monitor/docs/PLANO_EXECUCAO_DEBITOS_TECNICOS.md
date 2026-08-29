@@ -301,8 +301,8 @@ global.
 
 | # | Atividade | Arquivo(s) | Modelo/Esforço | Depende de | Status |
 |---|---|---|---|---|---|
-| D6.1 | `js/editor-shared.js` (novo): mover os 10 helpers + `EDITOR_PESSOAS_CACHE` pra lá, `editor.html` só carrega. Fecha o círculo das 8 etapas | `editor.html`, `js/editor-shared.js` | Sonnet / médio | D3.1 | ⏳ não iniciado |
-| D6.2 | **[humano]** José decide se `canva.html` entra na fila agora — está com o item 3 da frente de navegação em redesenho numa branch fora da `main`; extrair antes do merge cria conflito garantido | — | José | item 3 da nav | ⏳ não iniciado |
+| D6.1 | `js/editor-shared.js` (novo): mover os 10 helpers + `EDITOR_PESSOAS_CACHE` pra lá, `editor.html` só carrega. Fecha o círculo das 8 etapas | `editor.html`, `js/editor-shared.js` | Sonnet / médio | D3.1 | ✅ feito (29/08/2026) — `editor.html` 519→397 linhas; `projetoIdPorIniciativa()` (única função com estado compartilhado de verdade, `window.EDITOR_PROJETOS_CACHE`) passou a usar o getter/setter em vez de fechar sobre a variável direto, mesmo cache/efeito, confirmado com script CDP ad-hoc + suíte geral. Ver BACKLOG.md, etapa 9 |
+| D6.2 | **[humano]** José decide se `canva.html` entra na fila agora — está com o item 3 da frente de navegação em redesenho numa branch fora da `main`; extrair antes do merge cria conflito garantido | — | José | item 3 da nav | ⏳ não iniciado — segue travado, pergunta com o José |
 | D6.3 | Extrair o JS inline de `corsario.html` pra `js/corsario.js` (é a maior das três sem trabalho concorrente) — uma etapa só, com teste headless antes e depois | `corsario.html`, `js/corsario.js` | Sonnet / alto | D6.1 | ⏳ não iniciado |
 
 **D6.1 e D6.3 sobem direto pra `main`. D6.2 é bloqueio real** — `canva.html` tem
