@@ -2,11 +2,19 @@
  * Camada 0, item 0.5) — window.DB_COLETIVOS.
  *
  * Lê de meta_inovacao_coletivos no Supabase; cai pra window.DB.coletivos
- * (data/coletivos.js, SEED + fallback) se a rede falhar. Mesmo mecanismo de sempre —
- * ver js/db-projetos.js.
+ * (data/coletivos.js, SEED + fallback) se a rede falhar. O mecanismo (fallback,
+ * memoização, modo de teste ?semrede=1/CC_FORCAR_FALLBACK, bloqueio de escrita em teste)
+ * vive em js/db-base.js desde o item D4.1 — este arquivo só descreve o que é próprio
+ * deste catálogo. A API pública é a mesma de sempre: nada mudou pras telas (item D4.2).
+ *
+ * PRECISA de js/db-base.js carregado antes (todas as páginas carregam logo depois de
+ * js/supabase.js).
  */
 (function (root) {
   "use strict";
+
+  const BASE = root.DB_BASE || (typeof globalThis !== "undefined" && globalThis.DB_BASE);
+  if (!BASE) throw new Error("js/db-coletivos.js: js/db-base.js precisa ser carregado antes deste arquivo.");
 
   const TABELA = "meta_inovacao_coletivos";
 
@@ -25,78 +33,23 @@
     };
   }
 
-  function forcarFallback() {
-    if (root.CC_FORCAR_FALLBACK) return true;
-    try { return new URLSearchParams(root.location.search).get("semrede") === "1"; } catch (e) { return false; }
-  }
-
-  async function buscarDoSupabase() {
-    if (!root.CC_SUPABASE) throw new Error("js/supabase.js não carregado.");
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const { data, error } = await supa.from(TABELA).select("*").is("deleted_at", null).order("ordem", { ascending: true });
-    if (error) throw error;
-    return (data || []).map(linhaParaColetivo);
-  }
-
-  function seedLocal() {
-    return ((root.DB && root.DB.coletivos) || []).slice();
-  }
-
-  let promessa = null;
-  async function carregar(opts) {
-    const forcar = (opts && opts.forcar) || forcarFallback();
-    if (promessa && !(opts && opts.recarregar)) return promessa;
-    promessa = (async () => {
-      if (forcar) {
-        return { lista: seedLocal(), usandoFallback: true, motivoFallback: "modo de teste (semrede) — sem tentar rede" };
-      }
-      try {
-        const lista = await buscarDoSupabase();
-        return { lista: lista, usandoFallback: false, motivoFallback: null };
-      } catch (err) {
-        console.error("db-coletivos: falha ao carregar do Supabase, caindo pro seed local (data/coletivos.js)", err);
-        return { lista: seedLocal(), usandoFallback: true, motivoFallback: (err && err.message) || String(err) };
-      }
-    })();
-    return promessa;
-  }
-
-  function bloquearEscritaEmTeste() {
-    if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
-  }
-
-  async function salvar(id, campos, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const patch = Object.assign({}, campos, { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).update(patch).eq("id", id).select().single();
-    if (error) throw error;
-    return linhaParaColetivo(data);
-  }
-
-  async function criar(coletivoParcial, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const payload = Object.assign({}, coletivoParaLinha(coletivoParcial), { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).insert(payload).select().single();
-    if (error) throw error;
-    return linhaParaColetivo(data);
-  }
-
-  async function removerSoft(id, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const agora = new Date().toISOString();
-    const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", id);
-    if (error) throw error;
-  }
+  const api = BASE.criarWrapper({
+    nome: "db-coletivos",
+    raiz: root,
+    tabela: TABELA,
+    ordem: "ordem",
+    linhaPara: linhaParaColetivo,
+    paraLinha: coletivoParaLinha,
+    seed: function () { return ((root.DB && root.DB.coletivos) || []).slice(); },
+    avisoFalha: "db-coletivos: falha ao carregar do Supabase, caindo pro seed local (data/coletivos.js)",
+  });
 
   root.DB_COLETIVOS = {
     TABELA: TABELA,
-    carregar: carregar,
-    salvar: salvar,
-    criar: criar,
-    removerSoft: removerSoft,
+    carregar: api.carregar,
+    salvar: api.salvar,
+    criar: api.criar,
+    removerSoft: api.removerSoft,
     coletivoParaLinha: coletivoParaLinha,
   };
 })(this);

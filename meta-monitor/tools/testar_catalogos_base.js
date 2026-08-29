@@ -8,6 +8,12 @@
 const fs = require("fs");
 const path = require("path");
 
+// item D4.2/D4.3: os wrappers migrados pedem a fábrica js/db-base.js. Em Node, `this` no
+// topo de cada arquivo é o module.exports DAQUELE arquivo, então eles acham a fábrica por
+// globalThis — que é o que este require publica. No navegador a ordem equivalente é a das
+// tags <script> (db-base.js logo depois de supabase.js, antes dos db-*.js).
+require(path.join(__dirname, "..", "js", "db-base.js"));
+
 // mesma técnica de tools/testar_calc.js: os arquivos de data/ usam `window.DB...`,
 // que não existe em Node — lê como texto e extrai o literal em vez de rodar o
 // arquivo.

@@ -238,11 +238,15 @@ function config(raiz, extra) {
     checa("criarWrapper sem linhaPara explica o que falta", m2.indexOf("linhaPara") !== -1);
   }
 
-  // --- a fábrica não muda nenhum wrapper: os 13 seguem como estão (item D4.2/D4.3) ---
+  // --- wrapper migrado (D4.2/D4.3) continua com a mesma API pública ---
+  // o teste de comportamento de cada wrapper é o tools/testar_catalogos_base.js e os
+  // headless de cada tela; aqui só se confere que a migração usa a fábrica de verdade
+  // (e não uma cópia esquecida do esqueleto antigo).
   {
     const fs = require("fs");
     const nucleos = fs.readFileSync(path.join(__dirname, "..", "js", "db-nucleos.js"), "utf8");
-    checa("D4.1 não migrou wrapper nenhum (db-nucleos.js segue autônomo)", nucleos.indexOf("DB_BASE") === -1);
+    checa("db-nucleos.js usa a fábrica", nucleos.indexOf("BASE.criarWrapper(") !== -1);
+    checa("db-nucleos.js não repete mais o esqueleto copiado", nucleos.indexOf("bloquearEscritaEmTeste") === -1 && nucleos.indexOf("let promessa") === -1);
   }
 
   if (erros) { console.error("testar_db_base: " + erros + " erro(s)"); process.exit(1); }
