@@ -10,7 +10,9 @@ ainda não foram cruzados aqui.
 
 ## `editor.html` grande demais — extraindo aba por aba (concluído, 28/08/2026)
 
-**Status:** concluído (28/08/2026) — 8 de 8 abas extraídas
+**Status:** concluído (28/08/2026) — 8 de 8 abas extraídas. Débitos que a extração
+deixou (guardrail de FK cego pras âncoras migradas, helpers ainda em `editor.html`):
+`docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md`, itens D1 e D6.1.
 
 `editor.html` chegou a 105KB/~1750 linhas misturando o JS inline de 8 abas (Plano,
 Agenda, Matriz, Pessoas, Projetos, URC-Liderança, URC-Canais, Corsário) num único
