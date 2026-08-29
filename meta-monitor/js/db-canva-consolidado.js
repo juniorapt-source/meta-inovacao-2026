@@ -16,8 +16,9 @@
  *     credencial nenhuma (§8) — é ela que garante status e deleted_at andarem juntos e
  *     que só transições de status válidas aconteçam, o que um UPDATE solto não garante.
  *
- * Nenhuma das duas pede login: nada de js/auth.js, nada de OTP, nada de chave — regra do
- * projeto (§6.6). O contrato de e-mail/OTP mencionado nos comentários de
+ * Nenhuma das duas pede login: nem sessão do Supabase Auth (revertida na v0.30.0, o antigo
+ * js/auth.js foi apagado — item D2.3), nada de OTP, nada de chave — regra do projeto (§6.6).
+ * O contrato de e-mail/OTP mencionado nos comentários de
  * tools/sql/2026-08_canva_demandas.sql é de uma versão anterior do plano (v3–v7) e foi
  * revertido pela v8 antes deste arquivo existir; tools/sql/2026-08_canva_leitura_aberta.sql
  * é o script que vale.

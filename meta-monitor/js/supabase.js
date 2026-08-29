@@ -7,13 +7,14 @@
  * carregar a lib continuam existindo (trocar isso tocaria em mais coisa do que o
  * necessário), mas agora passam por AQUI — um lugar só decide como o client é montado.
  *
- * v0.28.0/v0.29.0 — escrita autenticada (Supabase Auth, tools/sql/2026-08_auth_escrita.sql
- * + 2026-08_auth_escrita_completa.sql): o token compartilhado (x-cc-token) saiu. Quem PODE
- * escrever agora é decidido pela SESSÃO do Supabase Auth (login de verdade, js/auth.js) +
- * allowlist meta_inovacao_editores no banco — os clients abaixo persistem a sessão
- * (auth.persistSession/autoRefreshToken) pra valer nas 5 telas de escrita sem precisar
- * logar de novo em cada uma. x-cc-editor (QUEM escreveu, abaixo) continua só um bônus
- * informativo pro trigger de auditoria — não é mais o que decide permissão.
+ * v0.28.0/v0.29.0 tentaram escrita autenticada (Supabase Auth, tools/sql/2026-08_auth_escrita.sql
+ * + 2026-08_auth_escrita_completa.sql: sessão de login + allowlist meta_inovacao_editores) —
+ * revertido na v0.30.0 (docs/REVERTER_LOGIN_PARA_TOKEN.md): senha esquecida custava mais caro
+ * que a exposição do token. Desde então quem PODE escrever é decidido pelo header x-cc-token
+ * (headersComToken abaixo, alimentado por window.CC_TOKEN — ver js/gate.js) conferido pela RLS
+ * do Supabase, role anon, sem sessão nem login nenhum — decisão permanente do projeto
+ * (docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md, item D2). x-cc-editor (QUEM escreveu, abaixo)
+ * continua só um bônus informativo pro trigger de auditoria — não é o que decide permissão.
  */
 (function (root) {
   "use strict";
@@ -38,11 +39,13 @@
     return root.APP_CONFIG;
   }
 
-  // opções de auth iguais nos dois clients — persiste a sessão do Supabase Auth em
-  // localStorage (login vale nas 5 telas de escrita, sem pedir de novo por página) e
-  // renova o token sozinho antes de expirar. detectSessionInUrl:false porque este site
-  // não usa magic link/OAuth redirect (D2 do runbook, docs/SEGURANCA_ESCRITA_AUTH.md) —
-  // só e-mail+senha via js/auth.js.
+  // opções de auth iguais nos dois clients — resíduo inofensivo da fase de login (Supabase
+  // Auth) revertida na v0.30.0: nenhuma tela chama auth.signInWithPassword/signOut mais (o
+  // arquivo que fazia isso, js/auth.js, foi apagado — item D2.3), então persistSession/
+  // autoRefreshToken não têm sessão nenhuma pra persistir ou renovar hoje. Mantido só porque
+  // remover não muda comportamento nenhum e os dois construtores de client ficam iguais.
+  // Quem decide permissão de escrita agora é o header x-cc-token (headersComToken acima) +
+  // RLS no Supabase, role anon — nenhuma sessão envolvida.
   const OPCOES_AUTH = { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } };
 
   let clienteClassico = null;
@@ -73,12 +76,13 @@
     return promessaClienteEsm;
   }
 
-  // Client "principal" da página para sessão (login/logout) e escrita autenticada: usa
-  // o SDK clássico se a página carregou o CDN <script> (demandas.html), senão o ESM
-  // (editor.html, plano-acao.html, minhas-acoes.html, plano.html) — assim há UM único
-  // client de auth por página, sempre o mesmo que faz a escrita (js/auth.js usa este
-  // pra login/logout/estado; as camadas DB_* usam obterClienteEsm/obterClienteClassico
-  // diretamente pra escrita — é o MESMO client em cache, então a sessão é a mesma).
+  // Client "principal" da página: usa o SDK clássico se a página carregou o CDN <script>
+  // (demandas.html, via js/matriz-store.js:67), senão o ESM (editor.html, plano-acao.html,
+  // minhas-acoes.html, plano.html). Nome e formato (Promise) são resíduo da fase de login
+  // (Supabase Auth, revertida na v0.30.0) — hoje não decide sessão nem permissão de escrita
+  // nenhuma (isso é x-cc-token + RLS, ver headersComToken acima). Mantido porque
+  // js/matriz-store.js e 9 testes headless (stub de clientePrincipal) dependem dele — ver
+  // aviso no topo de docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md, item D2.
   function clientePrincipal() {
     if (root.supabase && root.supabase.createClient) return Promise.resolve(obterClienteClassico());
     return obterClienteEsm();
