@@ -1,0 +1,47 @@
+name: Testes
+
+# D3.3 do plano de débitos técnicos (meta-monitor/docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md):
+# o site publica sozinho a cada push na main (README.md) e, até este workflow, nada rodava
+# a suíte antes disso — a única barreira era a disciplina de quem commitava.
+#
+# Roda tools/rodar_testes.sh (D3.1/D3.2) inteiro: os testes sem Chrome primeiro, os
+# headless via CDP depois, na mesma ordem e com o mesmo runner usado localmente — nenhuma
+# lógica de teste duplicada aqui. tools/testar_rede_real_headless.js fica de fora de
+# propósito (não está na lista do rodar_testes.sh): exige --confirmar e fala com o
+# Supabase de PRODUÇÃO, incompatível com um runner de CI que roda em qualquer push.
+on:
+  push:
+    branches: [main]
+  # também roda em Pull Request pra quem abrir um PR eventualmente (o fluxo padrão do
+  # repositório é push direto na main, ver CLAUDE.md, mas um PR ocasional não deve escapar
+  # da suíte só porque não é o caminho de todo dia).
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: meta-monitor
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Confirma que há um Chrome/Chromium disponível
+        # ubuntu-latest da GitHub já vem com o Chrome instalado; isto só falha cedo e com
+        # mensagem clara se um dia a imagem do runner mudar, em vez de deixar os 12
+        # testes headless falharem um a um com "não achei Chrome".
+        run: |
+          google-chrome --version || google-chrome-stable --version || chromium-browser --version || chromium --version
+
+      - name: Suíte completa (tools/rodar_testes.sh)
+        run: ./tools/rodar_testes.sh
