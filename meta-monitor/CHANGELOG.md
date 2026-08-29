@@ -1,5 +1,46 @@
 # Changelog
 
+## Débito técnico D2 — token compartilhado é a escolha definitiva do projeto — 2026-08-29
+A v0.30.0 (abaixo) reverteu a escrita autenticada pro token compartilhado como resposta a
+um incidente pontual (senha esquecida). Isso deixou uma leitura possível — errada — de que
+o token compartilhado era um estado transitório até alguém reativar login. **Não é.** José
+decidiu formalmente em 29/08/2026 (item D2.1,
+`docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md`) que o projeto **segue com o token
+compartilhado**: nenhuma reativação de login está planejada, nenhuma policy do Supabase
+muda por causa disto.
+
+- **Risco aceito, por extenso:** `data/config.js` versiona `tokenEscrita` em texto — quem
+  abre o DevTools em qualquer página do site lê o UUID e consegue gravar diretamente nas 9
+  tabelas do esquema (`cc_token_insert/update/delete`, role `anon`) sem precisar de senha,
+  login ou autorização nenhuma. O gate de senha (`js/gate.js`, `DB.config.exigirSenha`) é
+  proteção client-side leve contra alguém cair na página por engano — não impede quem sabe
+  usar o DevTools de ler ou escrever, com ou sem a flag ligada. Não há allowlist, não há
+  IP, não há rate limit. O custo desse risco (qualquer pessoa com o link edita) foi julgado
+  menor que o custo de manter login com recuperação de senha num projeto pequeno — essa
+  troca é reavaliada só se as circunstâncias do projeto mudarem, não por padrão.
+- **Consequência prática, com o risco formalmente aceito:** o que sobrou pra corrigir era
+  só o custo colateral que a reversão da v0.30.0 tinha deixado espalhado — não uma
+  reversão do modelo em si:
+  - `js/gate.js` (item D2.2) — antes, ligar `exigirSenha:true` sem gerar o hash em
+    `HASH_SENHA` travava o site em silêncio pra todo mundo (placeholder
+    `SUBSTITUIR_PELO_HASH` nunca bate com senha nenhuma), sem nenhuma pista do porquê.
+    Agora falha alto: `console.error` + overlay explicando que falta gerar o hash com
+    `tools/gerar_hash_senha.html`. `exigirSenha:false` (estado de produção hoje) e a
+    exceção permanente de `canva.html` continuam exatamente como estavam.
+  - `js/auth.js` (item D2.3) — apagado. 236 linhas de código morto desde a v0.30.0;
+    nenhuma tela carregava `<script src="js/auth.js">`, conferido por `grep` antes de
+    apagar.
+  - `js/supabase.js` e `js/db-canva-consolidado.js` (item D2.4) — comentários que ainda
+    afirmavam que a escrita passa por sessão do Supabase Auth (resíduo da v0.28.0/v0.29.0)
+    corrigidos pra descrever a realidade desde a v0.30.0: permissão de escrita é decidida
+    pelo header `x-cc-token` (`headersComToken`) conferido pela RLS, role `anon`, sem
+    sessão nenhuma. Documentação errada no topo do arquivo de escrita é o que faz a
+    próxima sessão desenhar em cima de premissa falsa.
+- **Não removido, de propósito:** `clientePrincipal()` e `OPCOES_AUTH` em `js/supabase.js`
+  continuam — `js/matriz-store.js:67` chama `clientePrincipal()` em produção e 9 testes
+  headless fazem stub dele; `OPCOES_AUTH` monta os dois clients. Só o comentário ao redor
+  deles mudou (não descrevem mais login ativo).
+
 ## v0.30.0 — 2026-08-20
 **Reverte escrita autenticada pro token compartilhado** — risco assumido, projeto
 pequeno/temporário, senha esquecida custava mais caro que a exposição do token. Volta pro

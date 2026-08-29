@@ -137,7 +137,7 @@ por e-mail/senha porque senha esquecida custava mais caro que a exposição do t
 | D2.2 | Desarmar o gate: fazer `js/gate.js` **falhar alto** quando `exigirSenha === true` e `HASH_SENHA` ainda for o placeholder (console + overlay explicando como gerar o hash), em vez de trancar todo mundo em silêncio | `js/gate.js` | Sonnet / baixo | — | ✅ feito 29/08/2026 |
 | D2.3 | Apagar `js/auth.js` (236 linhas, nenhum `<script src>` aponta pra ele desde a v0.30.0) | `js/auth.js` | Haiku / baixo | — | ✅ feito 29/08/2026 |
 | D2.4 | Corrigir os comentários que ainda afirmam que a escrita passa por sessão do Supabase Auth — `js/supabase.js:12-14,45,79` e `js/db-canva-consolidado.js:19`. Documentação errada no topo do arquivo de escrita é o que faz a próxima sessão desenhar em cima de premissa falsa | `js/supabase.js`, `js/db-canva-consolidado.js` | Sonnet / baixo | D2.3 | ✅ feito 29/08/2026 |
-| D2.5 | Registrar no `CHANGELOG.md` que o modelo token-compartilhado é a escolha definitiva do projeto (não um estado transitório pós-reversão), com o risco aceito escrito por extenso | `CHANGELOG.md` | Haiku / baixo | D2.4 | ⏳ não iniciado |
+| D2.5 | Registrar no `CHANGELOG.md` que o modelo token-compartilhado é a escolha definitiva do projeto (não um estado transitório pós-reversão), com o risco aceito escrito por extenso | `CHANGELOG.md` | Haiku / baixo | D2.4 | ✅ feito 29/08/2026 |
 
 > **⚠ NÃO REMOVER `clientePrincipal()` NEM `OPCOES_AUTH` de `js/supabase.js`.** A primeira
 > versão deste documento (commit `10c81a1`) listava os dois como resíduo morto — **está
