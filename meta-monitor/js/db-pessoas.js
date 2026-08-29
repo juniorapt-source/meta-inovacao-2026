@@ -2,8 +2,9 @@
  * Modo edição pro Supabase) — window.DB_PESSOAS.
  *
  * Lê de meta_inovacao_pessoas no Supabase; cai pra window.DB.pessoas (data/pessoas.js,
- * SEED + fallback) se a rede falhar. Mesmo mecanismo de ?semrede=1/CC_FORCAR_FALLBACK e
- * a mesma trava de escrita em modo de teste de js/db-plano.js — ver comentários lá.
+ * SEED + fallback) se a rede falhar. O mecanismo comum (fallback, memoização, modo de
+ * teste ?semrede=1/CC_FORCAR_FALLBACK, bloqueio de escrita em teste) vive em
+ * js/db-base.js desde o item D4.1 — API pública inalterada (item D4.3).
  *
  * NÃO confundir com window.DB.responsaveis (lista canônica do P4, usada por
  * plano-acao.html/minhas-acoes.html) — são dados diferentes, este módulo só cobre
@@ -17,9 +18,14 @@
  * única por pessoa física, preenchida a partir do dedupe confirmado (ver
  * meta-monitor/docs/CAMADA1_DEDUPE_PESSOAS.md) — convivem com as antigas até a Camada 5
  * decidir aposentar o texto livre duplicado por grupo.
+ *
+ * PRECISA de js/db-base.js carregado antes.
  */
 (function (root) {
   "use strict";
+
+  const BASE = root.DB_BASE || (typeof globalThis !== "undefined" && globalThis.DB_BASE);
+  if (!BASE) throw new Error("js/db-pessoas.js: js/db-base.js precisa ser carregado antes deste arquivo.");
 
   const TABELA = "meta_inovacao_pessoas";
 
@@ -54,78 +60,23 @@
     };
   }
 
-  function forcarFallback() {
-    if (root.CC_FORCAR_FALLBACK) return true;
-    try { return new URLSearchParams(root.location.search).get("semrede") === "1"; } catch (e) { return false; }
-  }
-
-  async function buscarDoSupabase() {
-    if (!root.CC_SUPABASE) throw new Error("js/supabase.js não carregado.");
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const { data, error } = await supa.from(TABELA).select("*").is("deleted_at", null).order("ordem", { ascending: true });
-    if (error) throw error;
-    return (data || []).map(linhaParaPessoa);
-  }
-
-  function seedLocal() {
-    return ((root.DB && root.DB.pessoas) || []).slice();
-  }
-
-  let promessa = null;
-  async function carregar(opts) {
-    const forcar = (opts && opts.forcar) || forcarFallback();
-    if (promessa && !(opts && opts.recarregar)) return promessa;
-    promessa = (async () => {
-      if (forcar) {
-        return { lista: seedLocal(), usandoFallback: true, motivoFallback: "modo de teste (semrede) — sem tentar rede" };
-      }
-      try {
-        const lista = await buscarDoSupabase();
-        return { lista: lista, usandoFallback: false, motivoFallback: null };
-      } catch (err) {
-        console.error("db-pessoas: falha ao carregar do Supabase, caindo pro seed local (data/pessoas.js)", err);
-        return { lista: seedLocal(), usandoFallback: true, motivoFallback: (err && err.message) || String(err) };
-      }
-    })();
-    return promessa;
-  }
-
-  function bloquearEscritaEmTeste() {
-    if (forcarFallback()) throw new Error("modo de teste (semrede) — escrita bloqueada de propósito, pra nunca gravar de verdade durante testes automatizados.");
-  }
-
-  async function salvar(id, campos, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const patch = Object.assign({}, campos, { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).update(patch).eq("id", id).select().single();
-    if (error) throw error;
-    return linhaParaPessoa(data);
-  }
-
-  async function criar(pessoaParcial, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const payload = Object.assign({}, pessoaParaLinha(pessoaParcial), { updated_by: usuario || null });
-    const { data, error } = await supa.from(TABELA).insert(payload).select().single();
-    if (error) throw error;
-    return linhaParaPessoa(data);
-  }
-
-  async function removerSoft(id, usuario) {
-    bloquearEscritaEmTeste();
-    const supa = await root.CC_SUPABASE.obterClienteEsm();
-    const agora = new Date().toISOString();
-    const { error } = await supa.from(TABELA).update({ deleted_at: agora, updated_by: usuario || null }).eq("id", id);
-    if (error) throw error;
-  }
+  const api = BASE.criarWrapper({
+    nome: "db-pessoas",
+    raiz: root,
+    tabela: TABELA,
+    ordem: "ordem",
+    linhaPara: linhaParaPessoa,
+    paraLinha: pessoaParaLinha,
+    seed: function () { return ((root.DB && root.DB.pessoas) || []).slice(); },
+    avisoFalha: "db-pessoas: falha ao carregar do Supabase, caindo pro seed local (data/pessoas.js)",
+  });
 
   root.DB_PESSOAS = {
     TABELA: TABELA,
-    carregar: carregar,
-    salvar: salvar,
-    criar: criar,
-    removerSoft: removerSoft,
+    carregar: api.carregar,
+    salvar: api.salvar,
+    criar: api.criar,
+    removerSoft: api.removerSoft,
     pessoaParaLinha: pessoaParaLinha,
   };
 })(this);
