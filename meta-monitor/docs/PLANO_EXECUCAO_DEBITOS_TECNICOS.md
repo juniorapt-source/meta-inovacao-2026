@@ -302,7 +302,7 @@ global.
 | # | Atividade | Arquivo(s) | Modelo/Esforço | Depende de | Status |
 |---|---|---|---|---|---|
 | D6.1 | `js/editor-shared.js` (novo): mover os 10 helpers + `EDITOR_PESSOAS_CACHE` pra lá, `editor.html` só carrega. Fecha o círculo das 8 etapas | `editor.html`, `js/editor-shared.js` | Sonnet / médio | D3.1 | ✅ feito (29/08/2026) — `editor.html` 519→397 linhas; `projetoIdPorIniciativa()` (única função com estado compartilhado de verdade, `window.EDITOR_PROJETOS_CACHE`) passou a usar o getter/setter em vez de fechar sobre a variável direto, mesmo cache/efeito, confirmado com script CDP ad-hoc + suíte geral. Ver BACKLOG.md, etapa 9 |
-| D6.2 | **[humano]** José decide se `canva.html` entra na fila agora — está com o item 3 da frente de navegação em redesenho numa branch fora da `main`; extrair antes do merge cria conflito garantido | — | José | item 3 da nav | ⏳ não iniciado — segue travado, pergunta com o José |
+| D6.2 | **[humano]** José decide se `canva.html` entra na fila agora — está com o item 3 da frente de navegação em redesenho numa branch fora da `main`; extrair antes do merge cria conflito garantido | — | José | item 3 da nav | ⏳ decidido (29/08/2026): esperar o merge do item 3 da navegação antes de extrair — não abrir `js/canva.js` enquanto essa branch não fechar |
 | D6.3 | Extrair o JS inline de `corsario.html` pra `js/corsario.js` (é a maior das três sem trabalho concorrente) — uma etapa só, com teste headless antes e depois | `corsario.html`, `js/corsario.js` | Sonnet / alto | D6.1 | ✅ feito (29/08/2026) — `corsario.html` era um único IIFE autocontido (sem helper compartilhado com outra página), moveu de uma vez; `corsario.html` 1019→322 linhas, `js/corsario.js` novo com 720. Extração confirmada byte-idêntica (diff do corpo do `<script>`) + script CDP ad-hoc (contador/Matriz/Cards/filtro de núcleo, sem erro de console) rodado igual antes e depois da extração — mesmo resultado nos dois. Ver BACKLOG.md |
 
 **D6.1 e D6.3 sobem direto pra `main`. D6.2 é bloqueio real** — `canva.html` tem
@@ -367,9 +367,9 @@ saber sem reler tudo acima:
    tools/auditoria_fk_final.js --check` sai 0 hoje. Não repetir esse item numa sessão nova.
 3. **Uma pergunta ainda trava trabalho e está com José:** D5.1 (o painel de conferência
    sai ou fica). **D2.1 foi respondida em 29/08/2026** — segue com token compartilhado,
-   D2.2 a D2.5 liberados. **D6.2 também segue travado com o José** (`canva.html` entra na
-   fila de extração antes ou depois do merge do item 3 da navegação) — diferente de D5.1,
-   não bloqueia mais nada dentro de D6: D6.1 e D6.3 já saíram sem esperar essa resposta.
+   D2.2 a D2.5 liberados. **D6.2 foi respondida em 29/08/2026** — esperar o merge do item
+   3 da navegação antes de extrair `canva.html`; não é mais uma pergunta em aberto, é um
+   item bloqueado por dependência externa (o merge em si, sem prazo definido).
 4. **Já saíram (29/08/2026):** D1 inteiro, D2.1 (decisão do José), D3 inteiro, D8 inteiro,
    **D4 inteiro** (D4.1 a fábrica, D4.2 os 2 wrappers simples, D4.3 os demais) e **D6.1 +
    D6.3** (D6.2 segue travado com o José, ver item 3 acima). O que continua aberto:
