@@ -151,6 +151,29 @@ Testado com a suíte geral (`testar_matriz_editor_headless.js`,
 
 `editor.html`: 519 → 397 linhas.
 
+## `corsario.html` grande demais — extração de uma etapa só (D6.3, 29/08/2026)
+
+**Status:** concluído (29/08/2026).
+
+Mesmo problema de `editor.html` (JS/CSS inline, ver seção acima), item D6.3 de
+`docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md`. Diferente de `editor.html` (8 abas
+independentes, cada uma virou módulo numa etapa própria), `corsario.html` era um único
+IIFE autocontido — sem helper compartilhado com outra página, sem estado que precisasse
+de getter/setter — então moveu de uma vez só pra `js/corsario.js`, como o plano previa
+("é a maior das três sem trabalho concorrente... uma etapa só").
+
+Extração confirmada byte-idêntica: `diff` do corpo do `<script>` original contra o novo
+arquivo (menos o comentário de cabeçalho) bateu sem diferença nenhuma. Validado também
+com um script CDP ad-hoc (mesmo padrão dos testes headless da suíte: Chrome real via
+CDP cru, `window.fetch` interceptado com 2 iniciativas/1 critério) rodado ANTES e DEPOIS
+da extração, mesmo resultado nos dois: contador "2 de 2", Matriz com 2 linhas, Cards com
+2 → 1 ao filtrar por núcleo, zero erro de console.
+
+`corsario.html`: 1019 → 322 linhas. `js/corsario.js`: novo, 720 linhas.
+
+**D6.1 e D6.3 já saíram; D6.2 (`canva.html`) segue travado com o José** — não bloqueava
+D6.3, cada item do D6 sobe na sua própria etapa.
+
 ## Sidebar compacta/colapsável — implementada (28/08/2026)
 
 **Status:** resolvido
