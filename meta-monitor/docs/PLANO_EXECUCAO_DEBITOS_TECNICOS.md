@@ -205,6 +205,20 @@ o README acha que rodou a suíte e rodou uns 60% dela.
 > Primeira vez que a suíte inteira fica verde ponta a ponta em CI — fecha de vez a
 > pendência que o D3.3 tinha revelado.
 
+> **Correção do D3.1 (30/08/2026, auditoria deste plano):** o runner nascera com dois
+> lotes (`--sem-chrome`/`--com-chrome`), e `testar_drawer_headless.js` estava no MEIO do
+> segundo — 7º de 23. Como a suíte para no primeiro vermelho e esse teste **exige egress
+> real pro Supabase** (cenários 1 e 5 fazem `fetch()` direto em produção, fora do
+> mecanismo `CC_FORCAR_FALLBACK`/`?semrede=1`), num ambiente sem rede — qualquer sandbox
+> de sessão do Claude Code — ele derrubava a rodada e **os 16 testes seguintes nunca
+> chegavam a rodar**. Foi exatamente o que aconteceu na auditoria. O plano registrou três
+> vezes que o vermelho dele "não é regressão", mas não adaptou o runner. Agora são **três
+> lotes**: `--sem-chrome`, `--com-chrome` e `--com-rede` (só o drawer), nessa ordem.
+> Continua vermelho de verdade quando falha — não virou graceful-skip, o CI precisa
+> seguir pegando regressão nele — mas vermelho **depois** de todo o resto ter sido
+> coberto. Quem está offline roda os dois primeiros lotes e tem uma suíte verde honesta,
+> sabendo o que ficou de fora. README e `.github/workflows/testes.yml` atualizados junto.
+
 **Sobe direto pra `main` item a item** — D3.1 antes de D3.2/D3.3, que dependem dele.
 
 ---
@@ -302,12 +316,25 @@ global.
 | # | Atividade | Arquivo(s) | Modelo/Esforço | Depende de | Status |
 |---|---|---|---|---|---|
 | D6.1 | `js/editor-shared.js` (novo): mover os 10 helpers + `EDITOR_PESSOAS_CACHE` pra lá, `editor.html` só carrega. Fecha o círculo das 8 etapas | `editor.html`, `js/editor-shared.js` | Sonnet / médio | D3.1 | ✅ feito (29/08/2026) — `editor.html` 519→397 linhas; `projetoIdPorIniciativa()` (única função com estado compartilhado de verdade, `window.EDITOR_PROJETOS_CACHE`) passou a usar o getter/setter em vez de fechar sobre a variável direto, mesmo cache/efeito, confirmado com script CDP ad-hoc + suíte geral. Ver BACKLOG.md, etapa 9 |
-| D6.2 | **[humano]** José decide se `canva.html` entra na fila agora — está com o item 3 da frente de navegação em redesenho numa branch fora da `main`; extrair antes do merge cria conflito garantido | — | José | item 3 da nav | ⏳ decidido (29/08/2026): esperar o merge do item 3 da navegação antes de extrair — não abrir `js/canva.js` enquanto essa branch não fechar |
+| D6.2 | **[humano]** José decide se `canva.html` entra na fila agora — estava com o item 3 da frente de navegação em redesenho numa branch fora da `main`; extrair antes do merge criaria conflito garantido | — | José | item 3 da nav | 🔓 **DESBLOQUEADO (30/08/2026)** — a condição de 29/08 ("esperar o merge do item 3") **já foi cumprida**: a rodada 3 (itens 3.10–3.15) está na `main` (`canva.html` tem `criarGrupo`/`grupo_local`) e não existe mais nenhuma branch do item 3 fora da `main`. Falta só o **3.16**, o teste do José em produção. Aguarda o "pode ir" dele — ver nota abaixo |
 | D6.3 | Extrair o JS inline de `corsario.html` pra `js/corsario.js` (é a maior das três sem trabalho concorrente) — uma etapa só, com teste headless antes e depois | `corsario.html`, `js/corsario.js` | Sonnet / alto | D6.1 | ✅ feito (29/08/2026) — `corsario.html` era um único IIFE autocontido (sem helper compartilhado com outra página), moveu de uma vez; `corsario.html` 1019→322 linhas, `js/corsario.js` novo com 720. Extração confirmada byte-idêntica (diff do corpo do `<script>`) + script CDP ad-hoc (contador/Matriz/Cards/filtro de núcleo, sem erro de console) rodado igual antes e depois da extração — mesmo resultado nos dois. Ver BACKLOG.md |
 
-**D6.1 e D6.3 sobem direto pra `main`. D6.2 é bloqueio real** — `canva.html` tem
-redesenho em andamento fora da `main` (item 3 de `PLANO_EXECUCAO_MELHORIAS_NAVEGACAO.md`);
-mexer nele agora significa resolver conflito em 1156 linhas.
+**D6.1 e D6.3 subiram direto pra `main`.**
+
+**D6.2 — o bloqueio caiu (auditoria de 30/08/2026).** A decisão do José em 29/08 foi
+"esperar o merge do item 3 da navegação"; esse merge já aconteceu. Conferido: `canva.html`
+na `main` carrega a rodada 3 inteira (`criarGrupo`/`salvarGrupo`/`grupo_local`, itens
+3.10–3.15 de `PLANO_EXECUCAO_MELHORIAS_NAVEGACAO.md`) e `git branch -r` não lista nenhuma
+branch do item 3 — só `main`. Não há mais trabalho concorrente em `canva.html`, e portanto
+não há mais conflito garantido a evitar.
+
+**O que ainda aconselha esperar** não é o merge, é o **3.16**: José ainda não testou a
+rodada 3 em produção (mobile e desktop). Se esse teste derrubar o desenho de novo — como o
+3.9 derrubou o da rodada 2 — a rodada 4 mexe em `canva.html`, e uma extração feita antes
+disso vira exatamente o conflito que o D6.2 queria evitar, só que mais tarde. **Pergunta
+pro José, portanto, mudou:** não é mais "espero o merge?", é "o 3.16 passou? posso extrair
+`canva.html` agora?". Se o 3.16 passar, o D6.2 pode ser executado na hora — é o mesmo
+trabalho do D6.3, numa tela maior (1157 linhas).
 
 ---
 
@@ -399,9 +426,10 @@ saber sem reler tudo acima:
 3. **Uma pergunta ainda trava trabalho e está com José:** D5.1 (o painel de conferência
    sai ou fica) — bloqueia D5.2/D5.3, únicos itens realmente pendentes deste documento.
    **D2.1 foi respondida em 29/08/2026** — segue com token compartilhado, D2.2 a D2.5
-   liberados e já feitos. **D6.2 foi respondida em 29/08/2026** — esperar o merge do item
-   3 da navegação antes de extrair `canva.html`; não é mais uma pergunta em aberto, é um
-   item bloqueado por dependência externa (o merge em si, sem prazo definido).
+   liberados e já feitos. **D6.2 mudou de estado em 30/08/2026**: a condição que o José
+   deu em 29/08 (esperar o merge do item 3 da navegação) **já foi cumprida** — a rodada 3
+   está na `main` e não há mais branch concorrente. O que resta é o aval dele depois do
+   **3.16** (o teste da rodada 3 em produção). Ver a nota no D6.2.
 4. **Já saíram (29/08/2026):** D1 inteiro, D2 inteiro (D2.1 decisão do José, D2.2–D2.5
    código), D3 inteiro, D8 inteiro, **D4 inteiro** (D4.1 a fábrica, D4.2 os 2 wrappers
    simples, D4.3 os demais), **D6.1 + D6.3** (D6.2 segue travado com o José, ver item 3

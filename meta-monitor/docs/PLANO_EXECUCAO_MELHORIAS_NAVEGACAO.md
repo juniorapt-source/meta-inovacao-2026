@@ -13,20 +13,28 @@ Origem: reunião de José em 26/08/2026, documento
 `melhorias_de_navegação_2608_projeto_corso.docx` — 5 itens levantados, causa raiz
 conferida no código antes de cada correção.
 
-> **STATUS GERAL (atualizado 27/08/2026):** Itens 1 e 4 concluídos e em produção. Item 2
+> **STATUS GERAL (atualizado 30/08/2026):** Itens 1 e 4 concluídos e em produção. Item 2
 > concluído e em produção, mas sua solução original (o botão "‹ Trocar de projeto")
 > **fica mantida** — o item 3 foi redesenhado (ver "Item 3 — redesenho" abaixo) depois de
 > José testar em produção e pedir um modelo diferente do que tinha sido entregue
 > (checklist de múltipla escolha em vez de "trocar de um projeto pro outro"). Item 3
-> (versão nova, checklist) **rodadas 1 e 2 EM PRODUÇÃO; RODADA 3 na branch, aguardando
-> merge** — o teste do José em produção (3.9) derrubou o desenho de "um formulário por
-> projeto" e pediu o inverso: uma matriz, um registro por projeto. Ver "Rodada 3" no item
-> 3. O texto abaixo descreve o estado ANTES desse teste: **sub-itens 3.1 a 3.8 feitos e testados**
-> (checklist ponta a ponta em Chrome headless, dois testes headless verdes, incluindo o
-> isolamento entre projetos conferido no armazenamento e não só no DOM). Falta só o 3.9,
-> o teste do José em produção — e ele só é possível DEPOIS do merge, porque produção é o
-> que a `main` publica a cada push. Ordem correta, portanto: merge único do item inteiro
-> na `main` → deploy automático → José confere (3.9).
+> (versão nova, checklist) **rodadas 1, 2 e 3 EM PRODUÇÃO** — o teste do José em produção
+> (3.9) derrubou o desenho de "um formulário por projeto" e pediu o inverso: uma matriz,
+> um registro por projeto. Ver "Rodada 3" no item 3. **Falta só o 3.16** (José testar a
+> rodada 3 em produção, mobile e desktop); todo o código dela — 3.10 a 3.15 — já está na
+> `main`.
+>
+> *(Correção de 30/08/2026, auditoria do plano de débitos técnicos: este parágrafo e o
+> título do item 3 ainda diziam "RODADA 3 na branch, aguardando merge", contradizendo a
+> linha do 3.16 logo abaixo, que já dizia "o resto está em produção". O merge aconteceu —
+> `canva.html` na `main` tem `criarGrupo`/`grupo_local`, e não existe mais nenhuma branch
+> do item 3 fora da `main`. O texto velho estava travando o item D6.2 do plano de débitos
+> técnicos, que esperava justamente esse merge.)*
+>
+> O texto do item 3 abaixo descreve o estado ANTES do teste do 3.9: **sub-itens 3.1 a 3.8
+> feitos e testados** (checklist ponta a ponta em Chrome headless, dois testes headless
+> verdes, incluindo o isolamento entre projetos conferido no armazenamento e não só no
+> DOM).
 > Item 5
 > **NÃO INICIADO** — uma das duas decisões que travava o desenho já foi tomada
 > (descartar a apresentação atual), falta a segunda (link varia por ciclo/oficina?).
@@ -90,7 +98,7 @@ o projeto é que muda (select único → checklist, ver Item 3 abaixo).
 
 ---
 
-## Item 3 — Canvas de demandas: responder por mais de um projeto — 🔄 RODADA 3 (3.1–3.8 em produção; rodada 3 na branch, aguardando merge)
+## Item 3 — Canvas de demandas: responder por mais de um projeto — 🔄 RODADA 3 EM PRODUÇÃO (3.1–3.15 na `main`; falta só o 3.16, o teste do José)
 
 ### Histórico (por que este item foi reaberto)
 

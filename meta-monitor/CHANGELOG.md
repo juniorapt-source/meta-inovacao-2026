@@ -1,5 +1,28 @@
 # Changelog
 
+## Auditoria do plano de débitos técnicos — 2026-08-30
+Varredura completa do `docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md` contra o código: todos os
+itens marcados ✅ estão de fato na `main` e conferem com o que o plano descreve. Três
+coisas ficaram para trás e foram corrigidas aqui.
+
+- **`tools/rodar_testes.sh` ganhou um terceiro lote (`--com-rede`).**
+  `tools/testar_drawer_headless.js` é o único teste da suíte que exige egress real pro
+  Supabase (dois dos seus cenários fazem `fetch()` direto em produção, fora do mecanismo
+  de fallback do resto do site), e estava no meio do lote com Chrome — 7º de 23. Como a
+  suíte para no primeiro vermelho, **num ambiente sem rede os 16 testes seguintes nunca
+  rodavam**. Agora ele é o lote final: `--sem-chrome` → `--com-chrome` → `--com-rede`.
+  Não virou graceful-skip (o CI precisa continuar pegando regressão real nele), só parou
+  de esconder o resto da suíte. README e `.github/workflows/testes.yml` atualizados junto.
+- **Este arquivo passou a cobrir os débitos D1, D3, D4, D6 e D8** (entrada abaixo). Só D2
+  e D7 tinham registro, apesar de o item D8.5 tratar o CHANGELOG como a fonte de verdade
+  do que já rodou no projeto.
+- **D6.2 desbloqueado.** O item esperava o merge do item 3 da frente de navegação pra
+  extrair o JS de `canva.html`; esse merge já tinha acontecido (a rodada 3 está na `main`,
+  nenhuma branch do item 3 sobrou), mas o cabeçalho do
+  `docs/PLANO_EXECUCAO_MELHORIAS_NAVEGACAO.md` ainda dizia "na branch, aguardando merge" —
+  contradizendo o próprio item 3.16 logo abaixo. Os dois planos foram corrigidos. O que
+  ainda aconselha esperar não é o merge, é o teste do José em produção (item 3.16).
+
 ## Débito técnico D7 — painel de Pessoa e busca global passam a ler o Plano de ação ao vivo — 2026-08-29
 `js/drawer.js` (painel de Pessoa, bloco "Ações do plano sob responsabilidade") e
 `js/busca.js` (índice da busca global) liam `window.DB.plano` — o seed síncrono de
@@ -22,6 +45,62 @@ Supabase. Quem marcava uma ação como concluída pelo Plano de ação continuav
   técnica de `tools/testar_dashboard_golden_headless.js`) com uma ação que só existe
   "no banco", nunca no seed local — a busca e o painel de Pessoa acham essa ação,
   provando que leram do dublê e não do seed.
+
+## Débitos técnicos D1, D3, D4, D6 e D8 — manutenção do que já existe — 2026-08-29
+Registradas em 30/08/2026, na auditoria do `docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md`: as
+cinco frentes abaixo subiram pra `main` em 29/08 e não tinham entrada aqui, ao contrário
+do D2 e do D7. Como o próprio item D8.5 trata este arquivo como a fonte de verdade do que
+já rodou no projeto, a lacuna escondia justamente as mudanças estruturais que uma sessão
+nova precisa saber que existem.
+
+- **D1 — o guardrail de FK voltou a guardar.** `node tools/auditoria_fk_final.js --check`
+  saía com código 1 acusando 7 "lacunas novas" de escrita de FK. Não havia regressão
+  nenhuma: a extração das 8 abas do `editor.html` (28/08) tinha movido esse código pra
+  `js/editor-projetos.js`/`js/editor-urc.js`/`js/editor-plano.js`/`js/editor-corsario.js`,
+  e a auditoria ainda fazia `grep` no `editor.html`. As âncoras das entradas 2.1, 2.2,
+  2.3, 2.4, 2.6 e 2.7 foram reapontadas pros arquivos certos. O grave não era o vermelho,
+  era a cegueira — vermelho permanente não detecta nada e treina todo mundo a ignorar a
+  saída. Provado por quebra proposital (removida a gravação de `nucleo_id`, o `--check`
+  acusou, revertido).
+- **D3 — a suíte virou um comando só, e roda em CI.** Não existia runner nem
+  `.github/workflows`: o README listava ~25 comandos rodados à mão e a `main` publica
+  sozinha a cada push. Pior, **15 testes existiam em `tools/` e não estavam no README** —
+  quem seguia o README rodava ~60% da suíte achando que rodava tudo. Agora:
+  `tools/rodar_testes.sh` roda tudo na ordem certa, parando no primeiro vermelho, com
+  resumo final por teste; os 15 órfãos foram rodados um a um (nenhum obsoleto) e entraram
+  no runner e no README; e `.github/workflows/testes.yml` roda a suíte inteira a cada push
+  e PR pra `main`. Hoje as duas fontes têm os mesmos 38 testes, sem órfão nenhum.
+- **D4 — os 13 wrappers `js/db-*.js` ganharam uma fábrica.** Os 13 arquivos (2.424 linhas)
+  repetiam o mesmo esqueleto copiado — `forcarFallback()`, `buscarDoSupabase()`,
+  `seedLocal()`, memoização, `usandoFallback`. Trocar a política de fallback, o tratamento
+  de erro ou o header de escrita significava editar 13 arquivos e lembrar dos 13 — foi
+  assim que o GRANT esquecido do P10 passou e que a v0.29.0 quebrou 5 tabelas de uma vez.
+  `js/db-base.js` (novo, 208 linhas) é a fábrica; 9 wrappers passaram a usá-la (8 inteiros
+  + `db-urc.js` parcial) e o conjunto caiu pra 2.161 linhas. **API pública inalterada** —
+  nenhuma tela mudou. `<script src="js/db-base.js">` entrou nas 13 páginas que carregam
+  `js/supabase.js`. Ficam de fora, por não seguirem o padrão: `db-canva.js`,
+  `db-canva-consolidado.js`, `db-responsaveis.js` e `db-corsario.js` (este último saiu do
+  escopo durante a execução — sem `deleted_at`, sem seed, escrita em lote; encaixá-lo
+  exigiria três opções novas na fábrica usadas por um arquivo só). Teste novo
+  `tools/testar_db_base.js`, 41 asserções, dublê do cliente Supabase, sem rede.
+- **D6 — o que sobrou de JS inline nas telas grandes.** `js/editor-shared.js` (novo)
+  recebeu os 10 helpers que a extração das 8 abas tinha deixado no `editor.html` expostos
+  via `window.X` **sem nenhum consumidor dentro do próprio arquivo** (`opts`,
+  `avisoFallback`, `marcarLinhaStatus`, `marcarCelulaStatus`, `detErro`, `nucleosPorNome`,
+  `projetoIdPorIniciativa`, `normalizarNomePessoa`, `nomeExibicaoPessoa`,
+  `NUCLEOS_VALIDOS`) mais o `EDITOR_PESSOAS_CACHE` — `editor.html` foi de 519 pra 397
+  linhas, fechando o círculo das 8 etapas. E `corsario.html` (1019 linhas) teve seu IIFE
+  extraído pra `js/corsario.js` (720 linhas), sobrando 322 — extração conferida
+  byte-idêntica no corpo do `<script>`. `canva.html` continua de fora, por decisão
+  registrada no plano.
+- **D8 — higiene acumulada.** `PLANO_EXECUCAO.md` estava duplicado byte a byte na raiz e
+  em `docs/` (a cópia da raiz saiu); `docs/CAMADA5_AUDITORIA_FK.md` ganhou o aviso de
+  documento histórico congelado que faltava no próprio arquivo; `docs/_to_delete/` e
+  `docs/BUILD_STATUS.md` (fóssil do build da v0.1.0) foram apagados, com as menções soltas
+  nos READMEs corrigidas; e `tools/sql/APLICADOS.md` (novo) indexa os 33 scripts SQL —
+  data em que José rodou cada um e estado atual (aplicado / revertido / diagnóstico) —
+  reconstruído deste CHANGELOG, já que até então "o que já rodou em produção" só existia
+  em prosa espalhada.
 
 ## Débito técnico D2 — token compartilhado é a escolha definitiva do projeto — 2026-08-29
 A v0.30.0 (abaixo) reverteu a escrita autenticada pro token compartilhado como resposta a

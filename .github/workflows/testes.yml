@@ -5,8 +5,12 @@ name: Testes
 # a suíte antes disso — a única barreira era a disciplina de quem commitava.
 #
 # Roda tools/rodar_testes.sh (D3.1/D3.2) inteiro: os testes sem Chrome primeiro, os
-# headless via CDP depois, na mesma ordem e com o mesmo runner usado localmente — nenhuma
-# lógica de teste duplicada aqui. tools/testar_rede_real_headless.js fica de fora de
+# headless via CDP depois e, por último, o lote que exige egress real pro Supabase
+# (tools/testar_drawer_headless.js) — na mesma ordem e com o mesmo runner usado
+# localmente, nenhuma lógica de teste duplicada aqui. O runner do CI é o único ambiente
+# que roda os TRÊS lotes: tem Chrome e tem rede de saída.
+#
+# tools/testar_rede_real_headless.js fica de fora de
 # propósito (não está na lista do rodar_testes.sh): exige --confirmar e fala com o
 # Supabase de PRODUÇÃO, incompatível com um runner de CI que roda em qualquer push.
 on:
@@ -38,7 +42,7 @@ jobs:
 
       - name: Confirma que há um Chrome/Chromium disponível
         # ubuntu-latest da GitHub já vem com o Chrome instalado; isto só falha cedo e com
-        # mensagem clara se um dia a imagem do runner mudar, em vez de deixar os 12
+        # mensagem clara se um dia a imagem do runner mudar, em vez de deixar os 23
         # testes headless falharem um a um com "não achei Chrome".
         run: |
           google-chrome --version || google-chrome-stable --version || chromium-browser --version || chromium --version

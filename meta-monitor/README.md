@@ -83,9 +83,18 @@ Quem preferir pode editar `data/*.js` direto no editor de texto — o formato é
 ## Testes (os mesmos usados na construção)
 
 `tools/rodar_testes.sh` roda esta lista inteira, na mesma ordem, num comando só — os que
-não abrem navegador primeiro, os headless via CDP depois, parando no primeiro vermelho com
-um resumo final por teste (`--sem-chrome`/`--com-chrome` rodam só uma das duas partes). Os
-comandos abaixo continuam valendo pra rodar um teste isolado enquanto se investiga algo.
+não abrem navegador primeiro, os headless via CDP depois e, por último, os que exigem rede
+de saída pro Supabase de produção. Para no primeiro vermelho, com um resumo final por
+teste. `--sem-chrome`/`--com-chrome`/`--com-rede` rodam só uma das três partes. Os comandos
+abaixo continuam valendo pra rodar um teste isolado enquanto se investiga algo.
+
+**Sem egress pro Supabase** (sandbox, avião, rede corporativa fechada), rode
+`--sem-chrome` e `--com-chrome`: as duas partes ficam verdes de verdade. Só
+`tools/testar_drawer_headless.js` — o terceiro lote inteiro — precisa da rede real, porque
+dois dos seus cenários fazem `fetch()` direto em produção e não passam pelo mecanismo de
+fallback do resto do site. Ele fica por último de propósito: até 30/08/2026 estava no meio
+do lote com Chrome e, como a suíte para no primeiro vermelho, num ambiente sem rede ele
+derrubava a rodada antes dos 16 testes seguintes rodarem.
 
 ```bash
 python3 tools/validar_dados.py         # integridade dos dados (47/27/10/7/2/20, dependências)

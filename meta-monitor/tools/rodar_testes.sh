@@ -9,13 +9,28 @@
 # obsoleto — os 15 entraram nas duas fontes (README.md e este script) juntos.
 #
 # Uso:
-#   tools/rodar_testes.sh                # roda tudo: sem-Chrome primeiro, depois com-Chrome
+#   tools/rodar_testes.sh                # roda tudo: sem-Chrome, com-Chrome, com-rede
 #   tools/rodar_testes.sh --sem-chrome   # só os que não abrem navegador (rápido, sem CDP)
 #   tools/rodar_testes.sh --com-chrome   # só os que abrem Chrome/Chromium via CDP
+#   tools/rodar_testes.sh --com-rede     # só os que exigem egress real pro Supabase
 #
 # Ordem: primeiro os testes que não precisam de Chrome (mais rápidos, então "para no
 # primeiro vermelho" já pega o mais barato de diagnosticar primeiro), depois os headless
-# via CDP. Pra rodar os headless, precisa de um Chrome/Chromium instalado — cada teste já
+# via CDP, e por último os que EXIGEM rede de saída pro Supabase de produção.
+#
+# Por que existe o terceiro lote (auditoria de 30/08/2026): testar_drawer_headless.js é o
+# único teste da suíte que não roda sem egress real — os cenários 1 (régua do Corsário) e
+# 5 (cards do corsario.html) fazem fetch() direto no Supabase e não são cobertos por
+# CC_FORCAR_FALLBACK/?semrede=1 (ver o comentário no topo do próprio arquivo). Ele estava
+# no MEIO do lote com Chrome (7º de 23) e, como a suíte para no primeiro vermelho, num
+# ambiente sem egress — qualquer sandbox de sessão do Claude Code, por exemplo — os 16
+# testes seguintes NUNCA chegavam a rodar. Movido pro fim: continua vermelho de verdade
+# (não é graceful-skip, o CI precisa pegar regressão real nele — ver .github/workflows/
+# testes.yml, que roda a suíte inteira com rede), mas agora vermelho DEPOIS de todo o
+# resto ter sido coberto. Quem está offline roda `--sem-chrome` + `--com-chrome` e tem
+# uma suíte verde honesta, sabendo exatamente o que ficou de fora.
+#
+# Pra rodar os headless, precisa de um Chrome/Chromium instalado — cada teste já
 # procura sozinho (CHROME_PATH ou os caminhos comuns de Linux/macOS, ver
 # tools/testar_dashboard_headless.js:acharChrome()); se nenhum for achado, o teste falha
 # com a mensagem explicando onde configurar CHROME_PATH, e este script conta isso como
@@ -31,8 +46,8 @@ cd "$REPO"
 
 MODO="${1:-tudo}"
 case "$MODO" in
-  --sem-chrome|--com-chrome|tudo) ;;
-  *) echo "uso: $0 [--sem-chrome|--com-chrome]" >&2; exit 2 ;;
+  --sem-chrome|--com-chrome|--com-rede|tudo) ;;
+  *) echo "uso: $0 [--sem-chrome|--com-chrome|--com-rede]" >&2; exit 2 ;;
 esac
 
 # nome | comando — mesma ordem e mesmo conjunto do README ("Testes (os mesmos usados na
@@ -68,7 +83,6 @@ COM_CHROME=(
   "testar_timeline_headless.js|node tools/testar_timeline_headless.js"
   "testar_mobile_headless.js|node tools/testar_mobile_headless.js"
   "testar_busca_headless.js|node tools/testar_busca_headless.js"
-  "testar_drawer_headless.js|node tools/testar_drawer_headless.js"
   "testar_matriz_headless.js|node tools/testar_matriz_headless.js"
   "testar_matriz_editor_headless.js|node tools/testar_matriz_editor_headless.js"
   "testar_projetos_editor_representantes_headless.js|node tools/testar_projetos_editor_representantes_headless.js"
@@ -86,6 +100,13 @@ COM_CHROME=(
   "testar_dashboard_golden_headless.js|node tools/testar_dashboard_golden_headless.js"
   "testar_minhas_acoes_golden_headless.js|node tools/testar_minhas_acoes_golden_headless.js"
   "testar_projetos_golden_headless.js|node tools/testar_projetos_golden_headless.js"
+)
+
+# Chrome + EGRESS REAL pro Supabase de produção. Roda por último de propósito — ver a
+# explicação no cabeçalho. Não é graceful-skip: falha vermelha como qualquer outro teste
+# (o CI, que tem rede, precisa continuar pegando regressão de verdade aqui).
+COM_REDE=(
+  "testar_drawer_headless.js|node tools/testar_drawer_headless.js"
 )
 
 NOMES=()
@@ -117,11 +138,14 @@ rodar_lote() {
   done
 }
 
-if [ "$MODO" != "--com-chrome" ]; then
+if [ "$MODO" = "tudo" ] || [ "$MODO" = "--sem-chrome" ]; then
   rodar_lote "sem Chrome" "${SEM_CHROME[@]}"
 fi
-if [ "$MODO" != "--sem-chrome" ]; then
+if [ "$MODO" = "tudo" ] || [ "$MODO" = "--com-chrome" ]; then
   rodar_lote "com Chrome (headless via CDP)" "${COM_CHROME[@]}"
+fi
+if [ "$MODO" = "tudo" ] || [ "$MODO" = "--com-rede" ]; then
+  rodar_lote "com Chrome + rede real pro Supabase" "${COM_REDE[@]}"
 fi
 
 echo ""
