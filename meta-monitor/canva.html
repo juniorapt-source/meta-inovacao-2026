@@ -124,6 +124,7 @@
 .cv-badge-pendente{background:var(--neutro-w);color:var(--grafite)}
 .cv-badge-offline{background:var(--warn-w);color:var(--warn)}
 .cv-badge-salvando{background:var(--prog-w);color:var(--prog)}
+.cv-badge-salvo-auto{background:var(--prog-w);color:var(--prog)}
 .cv-badge-salva{background:var(--ok-w);color:var(--ok)}
 .cv-badge-erro{background:var(--critico-w);color:var(--critico)}
 .cv-cartao-acoes{display:flex;gap:10px;align-items:center;flex-shrink:0}
@@ -866,13 +867,31 @@
     renderLinhasCanal();
   }
 
-  function badgeDe(est) {
+  // "salva" sozinho não basta pra dizer "enviada": o autosave (debounce de 1,5s em
+  // db-canva.js) já manda pro banco antes de qualquer clique, pra não perder nada se o
+  // WiFi da oficina cair ou a aba fechar — isso é bom e continua acontecendo. O que
+  // faltava era o gestor ter um ato dele de "terminei" (ver enviarDoCartao). Por isso o
+  // selo distingue "o banco já tem isso" (salvo-auto, tom neutro de "em andamento") de
+  // "o gestor confirmou que terminou" (salva, verde) — confirmado vem de
+  // grupoConfirmado(), não do estado técnico da demanda.
+  function badgeDe(est, confirmado) {
     if (est.estado === "incompleta") return ["cv-badge-incompleta", "incompleta"];
     if (est.estado === "salvando") return ["cv-badge-salvando", "enviando…"];
-    if (est.estado === "salva") return ["cv-badge-salva", "enviada"];
+    if (est.estado === "salva") {
+      return confirmado ? ["cv-badge-salva", "enviada"] : ["cv-badge-salvo-auto", "salvo — falta confirmar"];
+    }
     if (est.estado === "erro") return ["cv-badge-erro", "erro — tentar de novo"];
     if (est.offline) return ["cv-badge-offline", "sem conexão — tentando de novo"];
     return ["cv-badge-pendente", "rascunho local"];
+  }
+
+  // true só depois que o gestor clicou em "Enviar demanda" com o cartão completo — não
+  // quando o autosave decidiu mandar sozinho. Fica gravado em d.confirmado, dentro do
+  // caderno de cada projeto (ver enviarDoCartao), então sobrevive a F5 — ao contrário do
+  // id do grupo, que é reconstruído a cada carga por reidratarGrupos().
+  function grupoConfirmado(g) {
+    const ds = demandasDoGrupo(g);
+    return ds.length > 0 && ds.every((d) => d.confirmado === true);
   }
 
   // o que ainda falta pra esta demanda poder ser enviada, em português de gente. Sai de
@@ -896,7 +915,7 @@
   // cursor.
   function criarCartaoEl(g, d) {
     const id = g.id;
-    const [classeBadge] = badgeDe(estadoDoGrupo(g));
+    const [classeBadge] = badgeDe(estadoDoGrupo(g), grupoConfirmado(g));
     const marcado = (v) => (d.canal_proprio === v ? " checked" : "");
     const valeParaTexto = g.projetos.length === 1
       ? "Vira 1 registro, para " + esc(g.projetos[0]) + "."
@@ -954,7 +973,8 @@
   // o gestor troca o radio, e quem cuida disso é o ouvinte de change.)
   function patchCartaoEl(cartaoEl, g) {
     const est = estadoDoGrupo(g);
-    const [classeBadge, rotulo] = badgeDe(est);
+    const confirmado = grupoConfirmado(g);
+    const [classeBadge, rotulo] = badgeDe(est, confirmado);
     const badge = cartaoEl.querySelector("[data-badge]");
     badge.className = "cv-badge " + classeBadge;
     badge.textContent = rotulo;
@@ -964,18 +984,23 @@
 
     const btn = cartaoEl.querySelector("[data-enviar]");
     const faltaEl = cartaoEl.querySelector("[data-falta]");
-    if (est.estado === "salva") {
+    if (est.estado === "salva" && confirmado) {
       btn.textContent = "Enviar de novo";
       faltaEl.textContent = g.projetos.length === 1 ? "Enviada." : "Enviada — " + g.projetos.length + " registros.";
     } else if (est.estado === "erro") {
       btn.textContent = "Tentar de novo";
       faltaEl.textContent = "";
     } else {
+      // continua "Enviar demanda" mesmo quando o autosave já salvou sozinho (est.estado
+      // === "salva" && !confirmado): o botão só vira "Enviar de novo" DEPOIS que o
+      // gestor deu ele mesmo o ato de concluir — é o que faltava no fluxo original.
       btn.textContent = "Enviar demanda";
-      // a lista do que falta só aparece DEPOIS que o gestor tentou enviar (ou já
-      // digitou alguma coisa): num cartão recém-aberto, listar tudo o que está vazio
-      // seria acusar antes de existir erro.
-      if (cartaoEl.dataset.tentou === "1") {
+      if (est.estado === "salva" && !confirmado) {
+        faltaEl.textContent = 'Salvo automaticamente — clique em "Enviar demanda" para concluir.';
+      } else if (cartaoEl.dataset.tentou === "1") {
+        // a lista do que falta só aparece DEPOIS que o gestor tentou enviar (ou já
+        // digitou alguma coisa): num cartão recém-aberto, listar tudo o que está vazio
+        // seria acusar antes de existir erro.
         const f = faltando(demandaLider(g));
         faltaEl.textContent = f.length ? "Falta: " + listaNomes(f) + "." : "";
       }
@@ -1044,8 +1069,17 @@
       render();
       return;
     }
-    // completa: manda agora, sem esperar o debounce de 1,5s
-    g.projetos.forEach((proj) => DB_CANVA.enviarAgora(cadernoDe(proj)));
+    // completa: marca o ato de "terminei" do gestor (confirmado), grava e manda agora,
+    // sem esperar o debounce de 1,5s. d.confirmado não viaja pro banco — é só o que
+    // esta tela usa pra saber se já existe um clique explícito, e sobrevive a F5 porque
+    // fica dentro do próprio objeto da demanda, salvo pelo salvarCaderno normal.
+    g.projetos.forEach((proj) => {
+      const cad = cadernoDe(proj);
+      const dd = (cad.demandas || []).filter((x) => x.chave_local === g.chaves[proj])[0];
+      if (dd) dd.confirmado = true;
+      DB_CANVA.salvarCaderno(cad);
+      DB_CANVA.enviarAgora(cad);
+    });
     render();
   }
 
@@ -1099,11 +1133,15 @@
   function renderResumo() {
     const todos = Array.from(grupos.values());
     if (!todos.length) { resumoEl.textContent = "Nenhuma demanda registrada ainda nesta sessão."; return; }
-    const r = { salvas: 0, pendentes: 0, incompletas: 0, erros: 0, offline: false, registros: 0 };
+    const r = { salvas: 0, salvasAuto: 0, pendentes: 0, incompletas: 0, erros: 0, offline: false, registros: 0 };
     todos.forEach((g) => {
       const est = estadoDoGrupo(g);
       r.registros += g.projetos.length;
-      if (est.estado === "salva") r.salvas += 1;
+      // "enviada" no resumo é o mesmo critério do selo do cartão: só conta depois do
+      // gestor confirmar. O que o autosave já mandou pro banco sozinho, sem clique
+      // ainda, entra em salvasAuto — existe pra não desaparecer da contagem, não pra
+      // aparecer como "aguardando envio" (isso confundiria mais).
+      if (est.estado === "salva") { if (grupoConfirmado(g)) r.salvas += 1; else r.salvasAuto += 1; }
       else if (est.estado === "incompleta") r.incompletas += 1;
       else if (est.estado === "erro") r.erros += 1;
       else r.pendentes += 1;
@@ -1112,6 +1150,7 @@
     let txt = todos.length + (todos.length === 1 ? " demanda" : " demandas") + " nesta sessão";
     if (r.registros !== todos.length) txt += " (" + r.registros + " registros, um por projeto)";
     txt += " · " + r.salvas + " enviada" + (r.salvas === 1 ? "" : "s");
+    if (r.salvasAuto) txt += " · " + r.salvasAuto + " salva" + (r.salvasAuto === 1 ? "" : "s") + " automaticamente, falta confirmar";
     if (r.pendentes) txt += " · " + r.pendentes + " aguardando envio";
     if (r.incompletas) txt += " · " + r.incompletas + " incompleta" + (r.incompletas === 1 ? "" : "s");
     if (r.erros) txt += " · " + r.erros + " com erro";

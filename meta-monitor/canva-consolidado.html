@@ -97,7 +97,7 @@
     <h1 class="pagina-titulo">Consolidação do canvas</h1>
     <p class="pagina-sub">O que as oficinas registraram em <a href="canva.html">canva.html</a>, tudo num
       lugar: valide, descarte, corrija o que veio com typo e ligue projeto novo ao golden record. Tudo
-      nasce <b>rascunho</b> — nada vira dado oficial do painel até passar por aqui.</p>
+      chega aqui <b>aguardando validação</b> — nada vira dado oficial do painel até passar por aqui.</p>
     <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não foi possível atualizar os dados agora; mostrando a última versão salva.</p>
 
     <div id="cvc-contadores"></div>
@@ -202,12 +202,16 @@
   const PRAZO_MAX = isoMaisAnos(5);
 
   const ROTULO_ACAO = { validar: "Validar", descartar: "Descartar", reabrir: "Reabrir" };
+  // rótulo de exibição só — o valor interno do status continua "rascunho" (é o que está
+  // gravado na coluna do banco); o texto virou "aguardando validação" pra não colidir
+  // com o "rascunho" do lado de quem preenche o canva.html, que quer dizer outra coisa
+  // (ainda digitando, antes de mandar) e confundia o gestor que abre este painel.
   const STATUS_BADGE = {
-    rascunho: ["st-janela", "rascunho"],
+    rascunho: ["st-janela", "aguardando validação"],
     validada: ["st-concluido", "validada"],
     descartada: ["st-nao cvc-badge-descartada", "descartada"],
   };
-  const ROTULO_STATUS_CSV = { rascunho: "rascunho", validada: "validada", descartada: "descartada" };
+  const ROTULO_STATUS_CSV = { rascunho: "aguardando validação", validada: "validada", descartada: "descartada" };
 
   function acoesDisponiveis(status) {
     if (status === "rascunho") return ["validar", "descartar"];
@@ -424,7 +428,7 @@
 
     contadoresEl.innerHTML =
       '<div class="grid kpis">' +
-        kpiHtml(porStatus.rascunho, "Rascunho") +
+        kpiHtml(porStatus.rascunho, "Aguardando validação") +
         kpiHtml(porStatus.validada, "Validadas") +
         kpiHtml(porStatus.descartada, "Descartadas") +
         kpiHtml(preencheram.size, "Projetos que preencheram") +
@@ -434,7 +438,7 @@
         ? '<details class="cvc-nao-preencheram"><summary>Ver quem falta (' + naoPreencheram.length + ")</summary><p>" +
           naoPreencheram.map((p) => esc(p.iniciativa)).join(" · ") + "</p></details>"
         : "") +
-      '<p class="cvc-contador-canais">Por canal (rascunho + validada): ' +
+      '<p class="cvc-contador-canais">Por canal (aguardando validação + validada): ' +
         CANAIS.map((c) => esc(c.nome) + " " + porCanal[c.id]).join(" · ") + "</p>" +
       (usandoFallbackProj
         ? '<p class="cvc-nota-fallback">A lista de projetos do golden record está desatualizada (sem conexão) — "quem preencheu" pode não refletir cadastros recentes.</p>'
