@@ -134,20 +134,6 @@ window.DB.agenda = {
    "turno": "tarde"
   },
   {
-   "id": "c1-dxp",
-   "ciclo": "c1",
-   "canal": "dxp",
-   "data": null,
-   "hora": null,
-   "local": null,
-   "modo": "a definir",
-   "status": "a agendar",
-   "confirmados": 0,
-   "convidados": 0,
-   "nota": "",
-   "turno": null
-  },
-  {
    "id": "c1-contab",
    "ciclo": "c1",
    "canal": "contab",
@@ -267,20 +253,6 @@ window.DB.agenda = {
    "hora": null,
    "local": null,
    "modo": "presencial",
-   "status": "a agendar",
-   "confirmados": 0,
-   "convidados": 0,
-   "nota": "",
-   "turno": null
-  },
-  {
-   "id": "c2-dxp",
-   "ciclo": "c2",
-   "canal": "dxp",
-   "data": null,
-   "hora": null,
-   "local": null,
-   "modo": "a definir",
    "status": "a agendar",
    "confirmados": 0,
    "convidados": 0,

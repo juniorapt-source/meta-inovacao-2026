@@ -55,7 +55,7 @@ check(len(db.get("plano", [])) == 47, f"plano: esperado 47, veio {len(db.get('pl
 check(len(db.get("canais", [])) == 10, "canais != 10")
 check(len(db.get("nos", {}).get("nos", [])) == 7, "nós != 7")
 check(len(db.get("nos", {}).get("slas", [])) == 2, "SLAs != 2")
-check(len(db.get("agenda", {}).get("encontros", [])) == 20, "encontros != 20 (10 canais × 2 ciclos)")
+check(len(db.get("agenda", {}).get("encontros", [])) == 18, "encontros != 18 (9 canais × 2 ciclos — DXP saiu da agenda, set/2026)")
 check(len(db.get("projetos", [])) == 27, f"projetos: esperado 27, veio {len(db.get('projetos', []))}")
 
 ids = {a["id"] for a in db.get("plano", [])}
