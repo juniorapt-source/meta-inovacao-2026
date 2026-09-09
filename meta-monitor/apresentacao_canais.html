@@ -12,7 +12,7 @@
 :root{
   --tinta:#14273D; --papel:#F7F9FB; --ceu:#EAF1F8; --linha:#D8E2EC; --grafite:#5A6E82;
   --c-cnr:#1F4E79; --c-assessoria:#2F7D5A; --c-portal:#0B7386; --c-loja:#BF6A0F;
-  --c-mkt:#7A4FBF; --c-foco:#C2455A; --c-rede:#5C6E31; --c-dxp:#5A6B7D;
+  --c-mkt:#7A4FBF; --c-foco:#C2455A; --c-rede:#5C6E31;
   --ativo:var(--c-cnr);
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -91,16 +91,18 @@ mark{background:linear-gradient(transparent 62%,color-mix(in srgb,var(--ativo) 2
 "use strict";
 /* ============ DADOS ============ */
 /* Esta apresentação é sobre os canais da URC (Central de Relacionamento), não sobre a lista
- * inteira de data/canais.js. São 8 de propósito: os mesmos 8 de CANAIS_URC em
+ * inteira de data/canais.js. São 7 de propósito: os mesmos 7 de CANAIS_URC em
  * tools/validar_dados.py / data/urc.js (CNR, Assessoria, Portal, Loja, Marketing Cloud, Foco+,
- * Rede, DXP) — a contraparte URC de cada canal que esta sessão apresenta. "Sebrae na sua
- * empresa" e "Contabilizações e instrumentos" são canais novos da grade v2 de data/canais.js
- * (10 no total), mas não têm liderança/URC própria em data/urc.js e não têm conteúdo (fala, em
- * rede, jogada) escrito para este deck — por isso ficam fora deste laço. Este arquivo não lê
- * data/canais.js nem data/agenda.js: os dados abaixo são hardcoded, de propósito, pra manter a
- * apresentação um HTML único e portátil (sem <script src>, além das fontes do Google).
- * Se um dia a URC ganhar um 9º canal, adicione aqui e em data/urc.js — não em data/canais.js. */
-const CORES = {cnr:"--c-cnr",assessoria:"--c-assessoria",portal:"--c-portal",loja:"--c-loja",mkt:"--c-mkt",foco:"--c-foco",rede:"--c-rede",dxp:"--c-dxp"};
+ * Rede) — a contraparte URC de cada canal que esta sessão apresenta. DXP saiu deste laço
+ * (set/2026 — a oficina não acontece mais em ciclo nenhum, ver tools/sql/2026-09_remover_dxp_canal.sql).
+ * "Sebrae na sua empresa" e "Contabilizações e instrumentos" são canais novos da grade v2 de
+ * data/canais.js (9 no total), mas não têm liderança/URC própria em data/urc.js e não têm
+ * conteúdo (fala, em rede, jogada) escrito para este deck — por isso ficam fora deste laço.
+ * Este arquivo não lê data/canais.js nem data/agenda.js: os dados abaixo são hardcoded, de
+ * propósito, pra manter a apresentação um HTML único e portátil (sem <script src>, além das
+ * fontes do Google).
+ * Se um dia a URC ganhar um canal novo, adicione aqui e em data/urc.js — não em data/canais.js. */
+const CORES = {cnr:"--c-cnr",assessoria:"--c-assessoria",portal:"--c-portal",loja:"--c-loja",mkt:"--c-mkt",foco:"--c-foco",rede:"--c-rede"};
 const CANAIS = [
  {id:"cnr", num:"01", sigla:"CNR", nome:"CNR — operação ativa e receptiva",
   lead:"A voz do Sebrae em escala nacional: do tira-dúvidas tributário à prospecção ativa.",
@@ -201,7 +203,7 @@ const CANAIS = [
   con:[
    {p:["cnr","assessoria","rede"], t:"Dá contexto a quem fala com o cliente: histórico completo antes do alô, na central, na carteira ou no território."},
    {p:["mkt"], t:"É a fonte das segmentações; e recebe de volta cada interação, fechando o ciclo da jornada."},
-   {p:["portal","loja","dxp"], t:"Login, navegação e compra identificados abastecem o golden record que personaliza a experiência digital."}
+   {p:["portal","loja"], t:"Login, navegação e compra identificados abastecem o golden record que personaliza a experiência digital."}
   ],
   jogada:{selo:"DO E-MAIL", t:"O ALI 100% integrado ao Foco é a régua de chegada: o mesmo padrão de registro vira meta para as demais iniciativas do portfólio no ciclo de adequação."}},
 
@@ -218,22 +220,7 @@ const CANAIS = [
    {p:["portal","mkt"], t:"Usa o conteúdo do Portal como material de campo e entra como etapa presencial das jornadas."},
    {p:["assessoria"], t:"Agenda local compartilhada: a rede abre a porta, a assessoria aprofunda a relação."}
   ],
-  jogada:{selo:"PROPOSTA UI", t:"ELI como porta territorial da Inovação: cidade com articulação local é cidade onde ALI Rural, Origens e Biomas chegam com endereço."}},
-
- {id:"dxp", num:"08", sigla:"DXP", nome:"Estratégia DXP",
-  lead:"A camada que costura os canais digitais numa experiência só.",
-  fala:[
-   ["O que é a estratégia DXP",""],
-   ["Como pode transformar o relacionamento da Inovação","com clientes e com parceiros"]
-  ],
-  sozinho:"é plataforma.",
-  emrede:"é a promessa de continuidade: o cliente muda de canal e a conversa não recomeça do zero.",
-  con:[
-   {p:["portal","loja"], t:"Unifica navegação, conteúdo e transação numa experiência contínua, sem emendas visíveis."},
-   {p:["foco"], t:"Personaliza com os dados do Foco+: cada cliente vê o Sebrae que faz sentido para o momento dele."},
-   {p:["mkt"], t:"Dá às jornadas um destino à altura: páginas e fluxos que reconhecem quem chega."}
-  ],
-  jogada:{selo:"PROPOSTA UI", t:"Sessão em formato reduzido com um objetivo: sair com 2 ou 3 pilotos mapeados junto às iniciativas mais digitais, como Sebrae Startups e Catalisa."}}
+  jogada:{selo:"PROPOSTA UI", t:"ELI como porta territorial da Inovação: cidade com articulação local é cidade onde ALI Rural, Origens e Biomas chegam com endereço."}}
 ];
 
 /* ============ MANDALA ============ */

@@ -143,7 +143,7 @@ window.DB.urc_canais.forEach((c) => {
 });
 console.log("-- ===== SEED: meta_inovacao_urc_canais_responsaveis (" + urcCanaisRows.length + " linhas) =====");
 console.log("-- canais sem responsável hoje (Assessoria de Negócios, Marketing Cloud, Foco+,");
-console.log("-- Rede própria e parceira, DXP) não geram linha nenhuma — a lista de 8 canais em");
+console.log("-- Rede própria e parceira) não geram linha nenhuma — a lista de 7 canais em");
 console.log("-- si continua fixa no client (CANAIS_URC), não é uma tabela.");
 console.log("INSERT INTO public.meta_inovacao_urc_canais_responsaveis");
 console.log("  (canal, nome, email, ordem)");

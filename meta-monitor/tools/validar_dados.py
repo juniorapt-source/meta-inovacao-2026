@@ -52,7 +52,7 @@ check(len(db.get("plano", [])) == 47, f"plano: esperado 47, veio {len(db.get('pl
 # data/iniciativas.js foi aposentado (governança do golden record, camada 1): a lista
 # canônica de iniciativas agora é data/projetos.js. A contagem == 27 é conferida abaixo
 # via db["projetos"].
-check(len(db.get("canais", [])) == 10, "canais != 10")
+check(len(db.get("canais", [])) == 9, "canais != 9 (DXP saiu do catálogo, set/2026)")
 check(len(db.get("nos", {}).get("nos", [])) == 7, "nós != 7")
 check(len(db.get("nos", {}).get("slas", [])) == 2, "SLAs != 2")
 check(len(db.get("agenda", {}).get("encontros", [])) == 18, "encontros != 18 (9 canais × 2 ciclos — DXP saiu da agenda, set/2026)")
@@ -144,7 +144,7 @@ for nome_ds, dados in db.items():
 
 # --- URC: liderança + responsáveis por canal (data/urc.js) ---
 CANAIS_URC = ["CNR", "Assessoria de Negócios", "Portal", "Loja", "Marketing Cloud",
-              "Foco+", "Rede própria e parceira", "DXP"]
+              "Foco+", "Rede própria e parceira"]
 urc_lid = db.get("urc_lideranca", [])
 urc_canais = db.get("urc_canais", [])
 
@@ -158,7 +158,7 @@ for p in urc_lid:
     nomes_lideranca.add(p.get("nome"))
 
 nomes_canais = [c.get("canal") for c in urc_canais]
-check(nomes_canais == CANAIS_URC, f"urc_canais: esperava exatamente os 8 canais na ordem canônica, veio {nomes_canais}")
+check(nomes_canais == CANAIS_URC, f"urc_canais: esperava exatamente os 7 canais na ordem canônica, veio {nomes_canais}")
 
 nomes_operacionais = {}
 for c in urc_canais:

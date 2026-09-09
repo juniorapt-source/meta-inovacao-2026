@@ -63,7 +63,8 @@ const PAGINAS = [
   { pagina: "caminho.html?semrede=1", seletor: "#lista-nos .chip", esperado: 18 },
   // esperado caiu de 20→18: a DXP saiu da agenda dos ciclos (set/2026) — 9 canais × 2 ciclos
   { pagina: "agenda.html?semrede=1", seletor: "#encontros .chip", esperado: 18 },
-  { pagina: "demandas.html", seletor: "#matriz .cel", esperado: 270 },
+  // esperado caiu de 270→243: DXP saiu do catálogo de canais (set/2026) — 27 iniciativas × 9 canais
+  { pagina: "demandas.html", seletor: "#matriz .cel", esperado: 243 },
   // esperado caiu de 17→3: em minhas-acoes.html, o status de AÇÃO e de ATIVIDADE virou
   // controle editável inline (<select>) — o badge visual só permanece nos nós do caminho
   // crítico (estado calculado, não editável, sem select). Sandra é guardiã de 3 nós.

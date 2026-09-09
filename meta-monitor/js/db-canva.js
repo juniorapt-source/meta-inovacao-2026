@@ -46,11 +46,16 @@
   const MAX_CAMPO = 2000;                          // espelha o teto da função SQL (§6.3)
   const ESPERA_RETENTATIVA_MS = 8000;              // rede fora: espera antes de reenfileirar sozinho
 
-  // Os 10 canais fixos. QUINTO lugar onde eles aparecem (data/canais.js, data/matriz.js,
+  // Os 9 canais fixos. QUINTO lugar onde eles aparecem (data/canais.js, data/matriz.js,
   // dropdown de demandas.html, whitelist da função SQL) — mas aqui é só pra não mandar
   // pro banco o que a gente já sabe que ele vai recusar; a whitelist que MANDA continua
   // sendo a da função SQL. Canal novo: bater nos cinco.
-  const CANAIS = ["foco", "cnr", "empresa", "portal", "mkt", "loja", "rede", "assessoria", "dxp", "contab"];
+  //
+  // "dxp" saiu daqui (set/2026) — a oficina não acontece mais em ciclo nenhum. A
+  // whitelist da função SQL (cc_canva_gravar/cc_canva_editar) ainda aceita "dxp" por
+  // trás (não foi tocada nesta rodada — ver a nota em tools/sql/2026-09_remover_dxp_canal.sql);
+  // como o client não oferece mais essa opção, o valor simplesmente nunca é mandado.
+  const CANAIS = ["foco", "cnr", "empresa", "portal", "mkt", "loja", "rede", "assessoria", "contab"];
 
   /* ---------------------------------------------------------------- utilidades */
 

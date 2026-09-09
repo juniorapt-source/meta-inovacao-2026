@@ -88,16 +88,6 @@ window.DB.canais = [
   ]
  },
  {
-  "id": "dxp",
-  "nome": "DXP",
-  "completo": "Estratégia DXP",
-  "formato": "formato reduzido · 2h · candidato a online",
-  "pauta": [
-   "O que é a estratégia DXP",
-   "Como pode transformar o relacionamento da Inovação com clientes e parceiros"
-  ]
- },
- {
   "id": "contab",
   "nome": "Contabilizações e instrumentos",
   "completo": "Contabilizações e instrumentos",

@@ -6,9 +6,9 @@
  * caminho Supabase).
  *
  * meta_inovacao_urc_canais_responsaveis é uma tabela ACHATADA (1 linha por
- * canal+responsável) — os 8 canais em si (CANAIS_FIXOS abaixo) continuam uma lista
+ * canal+responsável) — os 7 canais em si (CANAIS_FIXOS abaixo) continuam uma lista
  * FIXA no client, não uma tabela; não existe "criar canal" na UI, só responsáveis
- * dentro dos 8 que já existem. `carregar()` devolve tanto a lista achatada
+ * dentro dos 7 que já existem. `carregar()` devolve tanto a lista achatada
  * (`canaisFlat`, cada linha com `db_id` — usada por editor.html pra editar linha a
  * linha) quanto a forma agrupada de sempre (`canais`, mesmo formato de
  * window.DB.urc_canais — usada por participantes.html, que não muda de jeito de ler).
@@ -36,7 +36,10 @@
   // mesma lista de sempre (CANAIS_URC, hardcoded até aqui em editor.html E
   // participantes.html cada um com sua cópia) — agora só um lugar. Não é uma tabela:
   // reservar/remover canal não é uma operação da UI.
-  const CANAIS_FIXOS = ["CNR", "Assessoria de Negócios", "Portal", "Loja", "Marketing Cloud", "Foco+", "Rede própria e parceira", "DXP"];
+  //
+  // DXP saiu daqui (set/2026): a oficina não acontece mais em ciclo nenhum — ver
+  // tools/sql/2026-09_remover_dxp_canal.sql e data/canais.js.
+  const CANAIS_FIXOS = ["CNR", "Assessoria de Negócios", "Portal", "Loja", "Marketing Cloud", "Foco+", "Rede própria e parceira"];
 
   // pessoa_id (item 2.3) e canal_id/pessoa_id (item 2.4) são as FKs da Camada 2, lidas
   // aqui desde o item 4.2 — editor.html usa pra oferecer seletor de pessoa/canal em vez

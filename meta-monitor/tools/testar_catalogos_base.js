@@ -30,7 +30,7 @@ if (nucleos.length !== 5) throw new Error("data/nucleos.js deveria ter 5 núcleo
 
 const canais = db("canais.js");
 console.log("Canais (seed local):", canais.length);
-if (canais.length !== 10) throw new Error("data/canais.js deveria ter 10 canais, tem " + canais.length);
+if (canais.length !== 9) throw new Error("data/canais.js deveria ter 9 canais, tem " + canais.length);
 
 const coletivos = db("coletivos.js");
 console.log("Coletivos (seed local):", coletivos.length);

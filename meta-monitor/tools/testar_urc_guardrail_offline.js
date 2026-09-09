@@ -72,7 +72,7 @@ const LIDERANCA = [{ nome: "Fulana Líder", pessoa_id: "p1" }];
   const r = await URC.carregar();
   checa("carregar() devolve lideranca + canaisFlat + canais agrupado + aviso de fallback",
     ["lideranca", "canaisFlat", "canais", "usandoFallback", "motivoFallback"].every((k) => k in r));
-  checa("canais agrupados são os 8 canais fixos, mesmo sem dado nenhum", r.canais.length === URC.CANAIS_FIXOS.length);
+  checa("canais agrupados são os 7 canais fixos, mesmo sem dado nenhum", r.canais.length === URC.CANAIS_FIXOS.length);
   checa("modo de teste marca usandoFallback", r.usandoFallback === true);
 
   if (erros) { console.error("testar_urc_guardrail_offline: " + erros + " erro(s)"); process.exit(1); }

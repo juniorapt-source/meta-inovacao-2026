@@ -36,6 +36,5 @@ window.DB.urc_canais = [
  },
  { "canal": "Marketing Cloud",         "responsaveis": [] },
  { "canal": "Foco+",                   "responsaveis": [] },
- { "canal": "Rede própria e parceira", "responsaveis": [] },
- { "canal": "DXP",                     "responsaveis": [] }
+ { "canal": "Rede própria e parceira", "responsaveis": [] }
 ];

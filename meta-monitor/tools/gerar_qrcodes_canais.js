@@ -36,8 +36,8 @@ require(path.join(REPO, "data", "canais.js"));
 const qrcode = require(path.join(__dirname, "vendor", "qrcode-generator.js"));
 
 const canais = window.DB.canais;
-if (!Array.isArray(canais) || canais.length !== 10) {
-  throw new Error("data/canais.js: esperava 10 canais, veio " + (canais && canais.length));
+if (!Array.isArray(canais) || canais.length !== 9) {
+  throw new Error("data/canais.js: esperava 9 canais, veio " + (canais && canais.length));
 }
 
 // --- 1. matriz do QR (biblioteca vendorizada) -----------------------------------------------

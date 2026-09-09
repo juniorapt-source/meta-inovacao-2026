@@ -9,7 +9,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "ALI Academy": {
@@ -21,7 +20,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "ALI Coop": {
@@ -33,7 +31,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "ALI Ecossistema": {
@@ -45,7 +42,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "ALI IG": {
@@ -57,7 +53,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "ALI Produtividade": {
@@ -69,7 +64,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "ALI Rural": {
@@ -81,7 +75,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "ATIVA": {
@@ -93,7 +86,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Catalisa Gov": {
@@ -105,7 +97,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Catalisa ICT": {
@@ -117,7 +108,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Consult": {
@@ -129,7 +119,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Convênio Anprotec": {
@@ -141,7 +130,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Coopera mais Amazônia": {
@@ -153,7 +141,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "ELI": {
@@ -165,7 +152,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "ELI Summit": {
@@ -177,7 +163,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Embrapii": {
@@ -189,7 +174,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Inova Biomas": {
@@ -201,7 +185,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Internacionalização": {
@@ -213,7 +196,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "MEI + Inovador": {
@@ -225,7 +207,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Missões": {
@@ -237,7 +218,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Prêmio Sebrae Startups": {
@@ -249,7 +229,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Sebrae Origens": {
@@ -261,7 +240,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Sebrae Startups": {
@@ -273,7 +251,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Sebraetec": {
@@ -285,7 +262,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Startup Day": {
@@ -297,7 +273,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Startup NE": {
@@ -309,7 +284,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  },
  "Websummit Rio e Lisboa": {
@@ -321,7 +295,6 @@ window.DB.matriz = {
   "loja": "",
   "rede": "",
   "assessoria": "",
-  "dxp": "",
   "contab": ""
  }
 };

@@ -138,7 +138,7 @@ const BASE = {
   /* --- 7. mini-matriz do gestor: contagem por canal --- */
   console.log("7) contagem por canal (a mini-matriz)");
   const porCanal = DB.contarPorCanal(caderno);
-  checa("os 10 canais aparecem, mesmo zerados", Object.keys(porCanal).length === 10);
+  checa("os 9 canais aparecem, mesmo zerados", Object.keys(porCanal).length === 9);
   checa("empresa tem 3 (1 completa + 2 incompletas)", porCanal.empresa === 3);
   checa("portal tem 1", porCanal.portal === 1);
   checa("foco tem 0 — a pergunta silenciosa", porCanal.foco === 0);

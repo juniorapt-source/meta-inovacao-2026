@@ -163,8 +163,8 @@ function ok(cond, msg, extra) {
     await new Promise((r) => setTimeout(r, 400));
     ok(await avaliar('document.querySelectorAll(".cv-mini-matriz").length === 1'),
       "UMA matriz na tela, não uma por projeto (regressão da rodada anterior)");
-    ok(await avaliar('document.querySelectorAll(".cv-mini-matriz .cv-linha-canal").length === 10'),
-      "os 10 canais, uma vez só");
+    ok(await avaliar('document.querySelectorAll(".cv-mini-matriz .cv-linha-canal").length === 9'),
+      "os 9 canais, uma vez só");
     ok(await avaliar('document.getElementById("cv-escopo").textContent.indexOf("um registro para cada") !== -1'),
       "a tela avisa que a demanda vira um registro por projeto");
 
