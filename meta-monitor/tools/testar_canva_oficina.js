@@ -98,12 +98,25 @@ function ok(cond, msg, extra) {
   const cdp = await conectarCDP(wsUrl);
   try {
     const url = `http://127.0.0.1:${port}/canva.html?semrede=1&canal=empresa`;
-    // alvo já criado NA url (e não about:blank + Page.navigate): com navigate depois do
-    // attach, o evaluate pega o documento no meio do parse e vê window.DB vazio.
-    const { targetId } = await cdp.enviar("Target.createTarget", { url });
+    // O teste depende da janela do Ciclo 1 (18–31/08): com a data real do relógio, qualquer
+    // dia fora dela faz o ciclo voltar nulo e o teste quebrar sem ter regressão nenhuma
+    // (aconteceu em 09/2026). Então a data do NAVEGADOR é congelada em 25/08/2026 (12h em
+    // Brasília = 15h UTC, mesmo dia em qualquer fuso) por um script registrado antes de
+    // qualquer página carregar — vale também para o Page.navigate do passo 5.
+    const { targetId } = await cdp.enviar("Target.createTarget", { url: "about:blank" });
     const { sessionId } = await cdp.enviar("Target.attachToTarget", { targetId, flatten: true });
     await cdp.enviar("Page.enable", {}, sessionId);
     await cdp.enviar("Runtime.enable", {}, sessionId);
+    await cdp.enviar("Page.addScriptToEvaluateOnNewDocument", { source: `(function(){
+      var R = Date, F = R.UTC(2026, 7, 25, 15, 0, 0);
+      function D() {
+        if (!(this instanceof D)) return new R(F).toString();
+        return arguments.length ? new (Function.prototype.bind.apply(R, [null].concat([].slice.call(arguments))))() : new R(F);
+      }
+      D.prototype = R.prototype; D.now = function(){ return F; }; D.parse = R.parse; D.UTC = R.UTC;
+      window.Date = D;
+    })();` }, sessionId);
+    await cdp.enviar("Page.navigate", { url }, sessionId);
     const esperarCarregar = async () => {
       for (let i = 0; i < 75 && !eventos.load; i++) await new Promise((r) => setTimeout(r, 200));
       eventos.load = false;
