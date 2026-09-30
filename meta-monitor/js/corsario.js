@@ -541,7 +541,7 @@
     return 1 + CRITERIOS.length + 2; // Iniciativa + critérios + % + Patente
   }
 
-  // agrupamento por núcleo (D2) — a ordem de cada grupo já vem correta porque `lista` já
+  // agrupamento por núcleo (D2) — a ordem de cada grupo é alfabética (ver abaixo); `lista` já vem
   // está ordenada por listaFiltrada()/comparador(); só balda por chave normalizada
   function agruparPorNucleo(lista) {
     const grupos = new Map();
@@ -559,6 +559,8 @@
       if (ib === -1) return -1;
       return ia - ib;
     });
+    // Matriz: dentro de cada núcleo, a coluna Iniciativa fica sempre em ordem alfabética
+    chaves.forEach((chave) => grupos.get(chave).itens.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
     return chaves.map((chave) => grupos.get(chave));
   }
 
