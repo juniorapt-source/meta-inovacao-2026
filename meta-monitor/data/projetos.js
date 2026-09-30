@@ -1,13 +1,12 @@
 window.DB = window.DB || {};
 window.DB.projetos = [
-  { "nucleo": "Inovação para Competitividade", "iniciativa": "ALI Academy", "representantes": ["Carol"] },
   { "nucleo": "Inovação para Competitividade", "iniciativa": "ALI Coop", "representantes": ["Carol"] },
   { "nucleo": "Inovação para Competitividade", "iniciativa": "ALI Produtividade", "representantes": ["Fred"] },
   { "nucleo": "Inovação para Competitividade", "iniciativa": "ALI Rural", "representantes": ["Jr."] },
   { "nucleo": "Inovação para Competitividade", "iniciativa": "Consult", "representantes": ["Carol"] },
   { "nucleo": "Inovação para Competitividade", "iniciativa": "Convênio Anprotec", "representantes": ["Matheus"] },
   { "nucleo": "Inovação para Competitividade", "iniciativa": "Coopera mais Amazônia", "representantes": ["Carol"] },
-  { "nucleo": "Inovação para Competitividade", "iniciativa": "MEI + Inovador", "representantes": ["Thiago"] },
+  { "nucleo": "Inovação para Competitividade", "iniciativa": "MEI Inova Mais", "representantes": ["Thiago"] },
   { "nucleo": "Inovação para Competitividade", "iniciativa": "Sebraetec", "representantes": ["Matheus"] },
 
   { "nucleo": "Inovação Territorial", "iniciativa": "ALI Ecossistema", "representantes": ["Raquel"] },

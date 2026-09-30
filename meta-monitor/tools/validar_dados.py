@@ -50,13 +50,13 @@ def check(cond, msg):
 
 check(len(db.get("plano", [])) == 47, f"plano: esperado 47, veio {len(db.get('plano', []))}")
 # data/iniciativas.js foi aposentado (governança do golden record, camada 1): a lista
-# canônica de iniciativas agora é data/projetos.js. A contagem == 27 é conferida abaixo
+# canônica de iniciativas agora é data/projetos.js. A contagem == 26 é conferida abaixo
 # via db["projetos"].
 check(len(db.get("canais", [])) == 10, "canais != 10")
 check(len(db.get("nos", {}).get("nos", [])) == 7, "nós != 7")
 check(len(db.get("nos", {}).get("slas", [])) == 2, "SLAs != 2")
 check(len(db.get("agenda", {}).get("encontros", [])) == 18, "encontros != 18 (9 canais × 2 ciclos — DXP saiu da agenda, set/2026)")
-check(len(db.get("projetos", [])) == 27, f"projetos: esperado 27, veio {len(db.get('projetos', []))}")
+check(len(db.get("projetos", [])) == 26, f"projetos: esperado 26, veio {len(db.get('projetos', []))}")
 
 ids = {a["id"] for a in db.get("plano", [])}
 for a in db.get("plano", []):

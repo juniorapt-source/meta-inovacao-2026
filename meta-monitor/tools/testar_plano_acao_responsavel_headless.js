@@ -215,7 +215,7 @@ const INTERCEPTOR = `
 })();
 `;
 
-const INICIATIVA = "ALI Academy"; // iniciativa real de data/projetos.js — deixa PORTFOLIO.pronto
+const INICIATIVA = "ALI Coop"; // iniciativa real de data/projetos.js — deixa PORTFOLIO.pronto
                                     // hidratar com o seed local (meta_inovacao_projetos vazio no
                                     // mock não zera o portfólio, ver js/portfolio.js).
 

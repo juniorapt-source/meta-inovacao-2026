@@ -314,8 +314,8 @@ async function principal() {
     conferir(off.linhas.length > 0, "offline: nenhuma linha de projeto apareceu na aba");
     conferir(off.linhas.every(l => l.chips.length === 0), "offline: não deveria haver chip nenhum (sem vínculo pra ler) — veio " + JSON.stringify(off.linhas.map(l => l.chips)));
     conferir(off.linhas.every(l => l.addDesabilitado), "offline: o <select> de adicionar representante deveria estar desabilitado");
-    const linhaAliOff = off.linhas.find(l => l.iniciativa === "ALI Academy");
-    conferir(!!linhaAliOff && linhaAliOff.textoLivre === "Carol", 'offline: "ALI Academy" deveria mostrar o texto puro "Carol" (data/projetos.js) — veio ' + JSON.stringify(linhaAliOff));
+    const linhaAliOff = off.linhas.find(l => l.iniciativa === "ALI Coop");
+    conferir(!!linhaAliOff && linhaAliOff.textoLivre === "Carol", 'offline: "ALI Coop" deveria mostrar o texto puro "Carol" (data/projetos.js) — veio ' + JSON.stringify(linhaAliOff));
     notas.push("offline: texto puro + seletor desabilitado (sem rede)");
 
     /* ---- 2) online: chip pro vínculo existente, texto puro pro placeholder sem pessoa ---- */

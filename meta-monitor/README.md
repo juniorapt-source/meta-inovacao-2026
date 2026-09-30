@@ -97,7 +97,7 @@ do lote com Chrome e, como a suíte para no primeiro vermelho, num ambiente sem 
 derrubava a rodada antes dos 16 testes seguintes rodarem.
 
 ```bash
-python3 tools/validar_dados.py         # integridade dos dados (47/27/10/7/2/20, dependências)
+python3 tools/validar_dados.py         # integridade dos dados (47/26/10/7/2/20, dependências)
 node tools/testar_calc.js              # cálculos: KPIs, atraso, carga por dia, estado dos nós
 python3 tools/validar_site.py          # HTML: referências locais e ids obrigatórios por página
 python3 tools/testar_kpis_cruzado.py   # KPIs do Python == KPIs do JS

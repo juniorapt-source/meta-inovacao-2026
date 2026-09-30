@@ -12,18 +12,6 @@ window.DB.matriz = {
   "dxp": "",
   "contab": ""
  },
- "ALI Academy": {
-  "foco": "",
-  "cnr": "",
-  "empresa": "",
-  "portal": "",
-  "mkt": "",
-  "loja": "",
-  "rede": "",
-  "assessoria": "",
-  "dxp": "",
-  "contab": ""
- },
  "ALI Coop": {
   "foco": "",
   "cnr": "",
@@ -216,7 +204,7 @@ window.DB.matriz = {
   "dxp": "",
   "contab": ""
  },
- "MEI + Inovador": {
+ "MEI Inova Mais": {
   "foco": "",
   "cnr": "",
   "empresa": "",
