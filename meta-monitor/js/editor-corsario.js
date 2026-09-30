@@ -44,6 +44,32 @@
   // padrão das outras abas vivas de editor.html.
   let corsarioAtual = null, corsarioFallback = false, corsarioCarregando = false;
   let formNovaIniciativaAberto = false;
+  // preferências de visualização — só conveniência por navegador (localStorage pode falhar/estar bloqueado)
+  let invertida = false, filtroNucleo = "";
+  try { invertida = localStorage.getItem("ed-corsario-invertida") === "1"; filtroNucleo = localStorage.getItem("ed-corsario-nucleo") || ""; } catch (e) { /* segue com o padrão */ }
+  function guardarPref(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignora */ } }
+
+  /* estilos próprios desta aba, injetados uma vez (mantém editor.html enxuto). A grade rola
+     dentro do próprio quadro, então o cabeçalho (sticky top) e a primeira coluna (sticky
+     left) ficam sempre visíveis; cores de status = mesma paleta de corsario.html (.crs-st-*). */
+  (function injetarEstilos() {
+    if (document.getElementById("ed-corsario-estilos")) return;
+    const st = document.createElement("style");
+    st.id = "ed-corsario-estilos";
+    st.textContent =
+      ".ed-wrap-alto{max-height:calc(100vh - 210px)}" +
+      ".ed-matriz thead th{position:sticky;top:0;z-index:2;box-shadow:inset 0 -1px 0 var(--linha)}" +
+      ".ed-matriz thead th.col-ini{left:0;z-index:3;background:var(--ceu)}" +
+      ".ed-matriz .col-ini{z-index:1}" +
+      ".ed-invertida .th-ini{min-width:130px;text-transform:none;letter-spacing:0;font-size:11.5px}" +
+      ".ed-invertida .th-nuc{display:block;font-weight:400;font-size:10px;color:var(--ink-3);margin-top:2px}" +
+      '.ed-matriz select[data-st="ok"]{background:var(--ok-w);color:var(--ok)}' +
+      '.ed-matriz select[data-st="ajuste em andamento"]{background:var(--prog-w);color:var(--prog)}' +
+      '.ed-matriz select[data-st="a iniciar"]{background:var(--warn-w);color:var(--warn)}' +
+      '.ed-matriz select[data-st="em entendimento"]{background:var(--neutro-w);color:var(--ink-2)}' +
+      '.ed-matriz select[data-st="não se aplica"]{color:var(--ink-3);font-style:italic}';
+    document.head.appendChild(st);
+  })();
 
   async function render() {
     const area = document.getElementById("ed-area");
@@ -81,10 +107,17 @@
       if (!ent.nucleo && r.nucleo) ent.nucleo = r.nucleo;
       ent.porCriterio.set(r.criterio, r);
     });
-    const iniciativas = Array.from(porIniciativa.values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    const todasIniciativas = Array.from(porIniciativa.values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    const nucleosPresentes = Array.from(new Set(todasIniciativas.map(i => i.nucleo).filter(Boolean))).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    if (filtroNucleo && !nucleosPresentes.includes(filtroNucleo)) filtroNucleo = "";
+    const iniciativas = filtroNucleo ? todasIniciativas.filter(i => i.nucleo === filtroNucleo) : todasIniciativas;
 
     let h = corsarioFallback ? avisoFallback("(sem cópia local disponível)") : "";
     h += '<div class="ed-topo" style="margin-bottom:12px"><button type="button" id="ed-abrir-nova-ini" class="ed-btn"' + dis + '>+ Nova iniciativa</button>' +
+      '<label for="ed-filtro-nucleo" style="font:600 13px \'DM Sans\',sans-serif">Núcleo:</label>' +
+      '<select id="ed-filtro-nucleo"><option value="">Todos (' + todasIniciativas.length + ')</option>' +
+        nucleosPresentes.map(n => '<option value="' + esc(n) + '"' + (n === filtroNucleo ? " selected" : "") + '>' + esc(n) + ' (' + todasIniciativas.filter(i => i.nucleo === n).length + ')</option>').join("") + '</select>' +
+      '<button type="button" id="ed-inverter" class="ed-btn sec" title="Troca linhas por colunas">⇄ Inverter eixos</button>' +
       '<span style="font-size:12px;color:var(--grafite)">Clique no botão pequeno ao lado de cada status pra ver/editar a observação.</span></div>';
     h += '<div id="ed-form-nova-ini" class="ed-nova" style="display:' + (formNovaIniciativaAberto ? "block" : "none") + '">' +
       '<h3>Nova iniciativa</h3>' +
@@ -98,30 +131,47 @@
         '<button type="button" id="ed-cancelar-nova-ini" class="ed-btn sec">Cancelar</button></div>' +
     '</div>';
 
-    h += '<div class="ed-wrap"><table class="ed-tab ed-matriz"><thead><tr><th class="col-ini">Iniciativa</th><th style="width:150px">Núcleo</th>';
-    criterios.forEach(c => h += '<th title="' + esc(c.rotulo || c.chave) + '">' + esc(rotuloColunaCorsario(c)) + '</th>');
-    h += '</tr></thead><tbody>';
-    iniciativas.forEach((ini) => {
-      h += '<tr><td class="col-ini">' + esc(ini.nome) + '</td><td style="font-size:11.5px">' + esc(ini.nucleo || "—") + '</td>';
-      criterios.forEach((c) => {
-        const r = ini.porCriterio.get(c.chave);
-        const idAttr = r ? ' data-id="' + esc(String(r.db_id)) + '"' : "";
-        const obs = (r && r.observacao) || "";
-        h += '<td><div class="cel-status-wrap">' +
-          '<select data-ini="' + esc(ini.nome) + '" data-nucleo="' + esc(ini.nucleo || "") + '" data-crit="' + esc(c.chave) + '"' + idAttr + dis + '>' +
-            opts(STATUS_CORSARIO, r ? r.status : "não se aplica", ROTULO_STATUS_CORSARIO) +
-          '</select>' +
-          '<button type="button" class="ed-obs-btn" data-obs="' + esc(obs) + '" title="' + (obs ? esc(obs) : "Sem observação — clique pra adicionar") + '"' + dis + '>' + (obs ? "🗨" : "·") + '</button>' +
-        '</div></td>';
+    const celula = (ini, c) => {
+      const r = ini.porCriterio.get(c.chave);
+      const idAttr = r ? ' data-id="' + esc(String(r.db_id)) + '"' : "";
+      const obs = (r && r.observacao) || "";
+      const st = r ? r.status : "não se aplica";
+      return '<td><div class="cel-status-wrap">' +
+        '<select data-st="' + esc(st) + '" data-ini="' + esc(ini.nome) + '" data-nucleo="' + esc(ini.nucleo || "") + '" data-crit="' + esc(c.chave) + '"' + idAttr + dis + '>' +
+          opts(STATUS_CORSARIO, st, ROTULO_STATUS_CORSARIO) +
+        '</select>' +
+        '<button type="button" class="ed-obs-btn" data-obs="' + esc(obs) + '" title="' + (obs ? esc(obs) : "Sem observação — clique pra adicionar") + '"' + dis + '>' + (obs ? "🗨" : "·") + '</button>' +
+      '</div></td>';
+    };
+    if (!iniciativas.length) {
+      h += '<div class="aviso">Nenhuma iniciativa neste núcleo.</div>';
+    } else if (!invertida) {
+      h += '<div class="ed-wrap ed-wrap-alto"><table class="ed-tab ed-matriz"><thead><tr><th class="col-ini">Iniciativa</th><th style="width:150px">Núcleo</th>';
+      criterios.forEach(c => h += '<th title="' + esc(c.rotulo || c.chave) + '">' + esc(rotuloColunaCorsario(c)) + '</th>');
+      h += '</tr></thead><tbody>';
+      iniciativas.forEach((ini) => {
+        h += '<tr><td class="col-ini">' + esc(ini.nome) + '</td><td style="font-size:11.5px">' + esc(ini.nucleo || "—") + '</td>';
+        criterios.forEach(c => h += celula(ini, c));
+        h += '</tr>';
       });
-      h += '</tr>';
-    });
-    area.innerHTML = h + '</tbody></table></div>';
+    } else {
+      // eixos invertidos: critérios nas linhas, iniciativas nas colunas
+      h += '<div class="ed-wrap ed-wrap-alto"><table class="ed-tab ed-matriz ed-invertida"><thead><tr><th class="col-ini">Critério</th>';
+      iniciativas.forEach(ini => h += '<th class="th-ini" title="' + esc(ini.nome + " — " + (ini.nucleo || "sem núcleo")) + '">' + esc(ini.nome) + '<span class="th-nuc">' + esc(ini.nucleo || "—") + '</span></th>');
+      h += '</tr></thead><tbody>';
+      criterios.forEach((c) => {
+        h += '<tr><td class="col-ini" title="' + esc(c.rotulo || c.chave) + '">' + esc(rotuloColunaCorsario(c)) + '</td>';
+        iniciativas.forEach(ini => h += celula(ini, c));
+        h += '</tr>';
+      });
+    }
+    area.innerHTML = h + (iniciativas.length ? '</tbody></table></div>' : '');
 
     area.querySelectorAll("tbody select[data-crit]").forEach(el => el.addEventListener("change", async e => {
       const t = e.target, td = t.closest("td");
       const usuario = EDITOR_ATUAL.nomeAtual();
       marcarCelulaStatus(td, "salvando");
+      t.dataset.st = t.value;
       try {
         if (t.dataset.id) {
           await DB_CORSARIO.salvar(t.dataset.id, { status: t.value }, usuario);
@@ -168,6 +218,9 @@
         marcarCelulaStatus(td, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
       }
     }));
+
+    document.getElementById("ed-filtro-nucleo").addEventListener("change", e => { filtroNucleo = e.target.value; guardarPref("ed-corsario-nucleo", filtroNucleo); render(); });
+    document.getElementById("ed-inverter").addEventListener("click", () => { invertida = !invertida; guardarPref("ed-corsario-invertida", invertida ? "1" : "0"); render(); });
 
     const btnAbrirNovaIni = document.getElementById("ed-abrir-nova-ini");
     if (btnAbrirNovaIni) btnAbrirNovaIni.addEventListener("click", () => { formNovaIniciativaAberto = true; render(); });
