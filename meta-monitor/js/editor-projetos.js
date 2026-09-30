@@ -175,6 +175,7 @@
       const t = e.target, tr = t.closest("tr"), id = tr.dataset.id, campo = t.dataset.f;
       const valor = t.value;
       const p = lista.find(x => String(x.db_id) === id);
+      const iniciativaAntes = p ? p.iniciativa : null;
       if (p) p[campo] = valor;
       marcarLinhaStatus(tr, "salvando");
       try {
@@ -188,7 +189,23 @@
           if (p) p.nucleo_id = patch.nucleo_id;
         }
         await DB_PROJETOS.salvar(p.db_id, patch, EDITOR_ATUAL.nomeAtual());
-        marcarLinhaStatus(tr, "salvo");
+        // renomear/trocar núcleo tem que acompanhar o Corsário (que guarda o nome como
+        // texto em corsario_status); falha aqui não desfaz o projeto, só avisa.
+        let avisoCorsario = null, detCorsario;
+        try {
+          const camposCorsario = {};
+          if (campo === "iniciativa") camposCorsario.iniciativa = valor;
+          if (campo === "nucleo") { camposCorsario.nucleo = valor; camposCorsario.nucleo_id = patch.nucleo_id; }
+          await DB_CORSARIO.atualizarIniciativa(p.db_id, iniciativaAntes, camposCorsario, EDITOR_ATUAL.nomeAtual());
+          const cache = await DB_CORSARIO.carregar();
+          (cache.statusRows || []).forEach(r => {
+            if (String(r.projeto_id) === String(p.db_id) || (!r.projeto_id && r.iniciativa === iniciativaAntes)) Object.assign(r, camposCorsario, { projeto_id: p.db_id });
+          });
+        } catch (errCorsario) {
+          console.error("editor: projeto salvo, mas falhou ao atualizar o Corsário", errCorsario);
+          avisoCorsario = "salvo, mas o Corsário não atualizou"; detCorsario = detErro(errCorsario);
+        }
+        marcarLinhaStatus(tr, avisoCorsario || "salvo", detCorsario);
       } catch (err) {
         console.error("editor: falha ao salvar projeto", err);
         marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
@@ -279,6 +296,16 @@
       if (!window.confirm('Remover o projeto "' + nomeProj + '"? Ele sai do portfólio (golden record) e de todas as telas.')) return;
       try {
         await DB_PROJETOS.removerSoft(id, EDITOR_ATUAL.nomeAtual());
+        // tira também do Corsário (corsario.html lista a partir de corsario_status, não do
+        // golden record). Falha não desfaz a remoção — avisa pra limpar por lá.
+        try {
+          await DB_CORSARIO.removerIniciativa(p ? p.db_id : id, nomeProj, EDITOR_ATUAL.nomeAtual());
+          const cache = await DB_CORSARIO.carregar();
+          cache.statusRows = (cache.statusRows || []).filter(r => !(String(r.projeto_id) === String(id) || (!r.projeto_id && r.iniciativa === nomeProj)));
+        } catch (errCorsario) {
+          console.error("editor: projeto removido, mas falhou ao remover do Corsário", errCorsario);
+          window.alert('Projeto removido do portfólio, mas não consegui removê-lo do Caminho do Corsário: ' + ((errCorsario && errCorsario.message) || errCorsario) + '\nSe for permissão, rode tools/sql/2026-09_corsario_status_delete.sql no Supabase.');
+        }
         const filtrada = (EDITOR_PROJETOS_CACHE.obter().lista || []).filter(x => String(x.db_id) !== id);
         EDITOR_PROJETOS_CACHE.definir(filtrada, EDITOR_PROJETOS_CACHE.obter().fallback);
         render();

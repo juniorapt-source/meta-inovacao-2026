@@ -133,6 +133,51 @@
     return (data || []).map(linhaParaStatus);
   }
 
+  // Mantém o Corsário em sincronia com o golden record quando um projeto é removido ou
+  // renomeado no editor. corsario_status guarda a iniciativa como TEXTO (+ projeto_id
+  // opcional), e a tela corsario.html monta a lista só a partir dela — então sem isto o
+  // projeto removido continua aparecendo lá, e um renomeado vira uma iniciativa "nova".
+  // Casa por projeto_id e, pras linhas legadas sem FK, pelo nome (só onde projeto_id é nulo,
+  // pra nunca pegar linha de outro projeto que por acaso tenha o mesmo nome).
+  // HARD DELETE (corsario_status não tem soft-delete) — exige tools/sql/2026-09_corsario_status_delete.sql.
+  async function removerIniciativa(projetoId, nome, usuario) {
+    bloquearEscritaEmTeste();
+    const supa = await root.CC_SUPABASE.obterClienteEsm();
+    let removidas = [];
+    if (projetoId != null) {
+      const r = await supa.from(TABELA_STATUS).delete().eq("projeto_id", projetoId).select("id");
+      if (r.error) throw r.error;
+      removidas = removidas.concat(r.data || []);
+    }
+    if (nome) {
+      const r = await supa.from(TABELA_STATUS).delete().is("projeto_id", null).eq("iniciativa", nome).select("id");
+      if (r.error) throw r.error;
+      removidas = removidas.concat(r.data || []);
+    }
+    return removidas.length;
+  }
+
+  // `campos`: { iniciativa?, nucleo?, nucleo_id? } — só o que mudou no projeto.
+  async function atualizarIniciativa(projetoId, nomeAntigo, campos, usuario) {
+    bloquearEscritaEmTeste();
+    const supa = await root.CC_SUPABASE.obterClienteEsm();
+    const patch = Object.assign({}, campos, { updated_by: usuario || null, atualizado_em: new Date().toISOString() });
+    let linhas = 0;
+    if (projetoId != null) {
+      const r = await supa.from(TABELA_STATUS).update(patch).eq("projeto_id", projetoId).select("id");
+      if (r.error) throw r.error;
+      linhas += (r.data || []).length;
+    }
+    if (nomeAntigo) {
+      // legado sem FK: aproveita pra preencher projeto_id, assim a próxima vez casa pela FK
+      const r = await supa.from(TABELA_STATUS).update(Object.assign({ projeto_id: projetoId != null ? projetoId : null }, patch))
+        .is("projeto_id", null).eq("iniciativa", nomeAntigo).select("id");
+      if (r.error) throw r.error;
+      linhas += (r.data || []).length;
+    }
+    return linhas;
+  }
+
   root.DB_CORSARIO = {
     TABELA_STATUS: TABELA_STATUS,
     TABELA_CRITERIOS: TABELA_CRITERIOS,
@@ -140,5 +185,7 @@
     salvar: salvar,
     criar: criar,
     criarIniciativa: criarIniciativa,
+    removerIniciativa: removerIniciativa,
+    atualizarIniciativa: atualizarIniciativa,
   };
 })(this);
