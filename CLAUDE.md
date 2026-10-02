@@ -68,12 +68,3 @@ por item" no fim. Regime diferente do golden record — aqui José distribui os 
 manualmente pras sessões (não é pré-autorizado em lote); se o prompt da sessão já
 disser qual item executar (ex. "item 3.1"), vá direto nele em vez de reler o
 documento inteiro.
-
-## Frente "Parceria Sebrae e Instituto Integrador" (`parceria-monitor/`)
-
-Site separado do Corso, na pasta `parceria-monitor/` (projeto Vercel próprio, Root
-Directory = `parceria-monitor`). Plano de execução vivo:
-`parceria-monitor/docs/PLANO_ACAO_FASES.md` — José executa uma fase por sessão; se o
-prompt disser "Fase N", vá direto nela. Conteúdo permitido no seed: só o de
-`parceria-monitor/docs/CONTEUDO_INICIAL.md` (não criar tarefas). Nada de importar arquivos
-de `../meta-monitor` em tempo de execução — reaproveitar por cópia.
