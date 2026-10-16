@@ -1,6 +1,6 @@
 /* fluxo-dados.html — tela "Fluxo de dados" (Projeto Corso). Somente leitura, salvo no modo de
- * edição (botão "Ativar edição", flag em sessionStorage): aí aparecem "Nova rota" e "Novo
- * encaminhamento", com o formulário compartilhado de js/fluxo-form.js (o mesmo da aba do editor).
+ * edição (botão "Ativar edição", flag em sessionStorage): aí aparecem "Nova rota", "Novo painel" e
+ * "Novo encaminhamento", com o formulário compartilhado de js/fluxo-form.js (o mesmo da aba do editor).
  *
  * 4 blocos: Matriz (iniciativa × cliente/atendimento/processo/painel, vinda da view
  * fluxo_dados_matriz), Rotas (view fluxo_dados_rotas_lacunas), Painéis (view
@@ -23,6 +23,7 @@
   let mensagem = null;     // { ok, texto }
   const FF = window.FLUXO_FORM;
   const CHAVE_EDICAO = "cc_fluxo_edicao";
+  const TITULO_FORM = { rotas: "Nova rota", paineis: "Novo painel", encaminhamentos: "Novo encaminhamento" };
 
   const $ = (id) => document.getElementById(id);
   const rotulo = (map, k) => (k && map[k] !== undefined ? map[k] : (k || "—"));
@@ -162,13 +163,14 @@
     let h = "";
     if (!on) h = '<button type="button" class="ed-btn sec" id="fd-ed-ligar">Ativar edição</button>';
     else h = '<button type="button" class="ed-btn" id="fd-ed-rota"' + (usandoFallback ? " disabled" : "") + '>Nova rota</button>'
+      + '<button type="button" class="ed-btn" id="fd-ed-painel"' + (usandoFallback ? " disabled" : "") + '>Novo painel</button>'
       + '<button type="button" class="ed-btn" id="fd-ed-enc"' + (usandoFallback ? " disabled" : "") + '>Novo encaminhamento</button>'
       + '<button type="button" class="ed-btn sec" id="fd-ed-desligar">Sair da edição</button>';
     $("fd-edicao").innerHTML = h;
     $("fd-msg").innerHTML = mensagem ? '<p class="fx-msg ' + (mensagem.ok ? "ok" : "erro") + '">' + esc(mensagem.texto) + "</p>" : "";
     if (on && formAberto) {
       const reg = formAberto.id ? (D[formAberto.secao] || []).find((x) => x.id === formAberto.id) : null;
-      $("fd-form").innerHTML = '<h2>' + (formAberto.secao === "rotas" ? (formAberto.id ? "Rota" : "Nova rota") : "Novo encaminhamento") + "</h2>" + FF.formHtml(formAberto.secao, reg, ctx());
+      $("fd-form").innerHTML = '<h2>' + TITULO_FORM[formAberto.secao] + "</h2>" + FF.formHtml(formAberto.secao, reg, ctx());
       FF.ligarForm($("fd-form"));
       $("fx-form").addEventListener("submit", (e) => { e.preventDefault(); salvarForm(); });
       $("fx-cancelar").addEventListener("click", () => { formAberto = null; renderEdicao(); });
@@ -176,6 +178,7 @@
     const on1 = $("fd-ed-ligar"); if (on1) on1.addEventListener("click", () => { definirEdicao(true); mensagem = null; renderEdicao(); });
     const off = $("fd-ed-desligar"); if (off) off.addEventListener("click", () => { definirEdicao(false); formAberto = null; mensagem = null; renderEdicao(); });
     const nr = $("fd-ed-rota"); if (nr) nr.addEventListener("click", () => { formAberto = { secao: "rotas", id: null }; mensagem = null; renderEdicao(); $("fd-form").scrollIntoView({ block: "nearest" }); });
+    const np = $("fd-ed-painel"); if (np) np.addEventListener("click", () => { formAberto = { secao: "paineis", id: null }; mensagem = null; renderEdicao(); $("fd-form").scrollIntoView({ block: "nearest" }); });
     const ne = $("fd-ed-enc"); if (ne) ne.addEventListener("click", () => { formAberto = { secao: "encaminhamentos", id: null }; mensagem = null; renderEdicao(); $("fd-form").scrollIntoView({ block: "nearest" }); });
   }
 

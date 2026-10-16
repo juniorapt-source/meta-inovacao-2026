@@ -17,6 +17,8 @@
   modo de edição ("Ativar edição", flag `cc_fluxo_edicao` em `sessionStorage`; o `editor.html` não
   tem flag que se reaproveite). Formulários e gravação foram extraídos para `js/fluxo-form.js`,
   compartilhado com a aba do editor. Depois de salvar, a matriz e as listas se atualizam sem recarregar.
+- **Novo painel pela página** (ajuste posterior): `fluxo-dados.html` ganhou o botão "Novo painel" no
+  modo de edição, com o mesmo formulário da aba do editor (sem indicador/ferramenta, com link).
 - **Painel sem "indicador" e "ferramenta".** Saíram do formulário, das telas e do snapshot; as
   colunas ficam no banco (anuláveis) e a edição de painel antigo não as apaga.
 - **"Link do painel".** Campo opcional em `fluxo_dados_paineis.link_painel` (só `http://` ou
