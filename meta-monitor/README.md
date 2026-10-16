@@ -20,6 +20,7 @@ Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanh
 | `projetos.html` | Portfólio de projetos por núcleo, com representantes |
 | `plano-acao.html` | Atividades por iniciativa (CRUD via Supabase) |
 | `corsario.html` | Adequação de cada iniciativa ao ecossistema oficial (Supabase, somente leitura) — régua de 19 critérios, patente por faixa de % |
+| `fluxo-dados.html` | Fluxo de dados (Projeto Corso): matriz iniciativa × cliente/atendimento/processo/painel, rotas com lacunas, painéis prontos para reapontar e encaminhamentos (Supabase `fluxo_dados_*`, somente leitura; edição na aba "Fluxo de dados" do `editor.html`) |
 | `editor.html` | Modo edição: Plano de ação e Agenda editam ao vivo no Supabase (linha a linha, salva sozinho); matriz, pessoas, projetos e URC continuam no modelo "edita a cópia local, baixa `data/*.js`, publica no Git"; aba **Histórico** com as últimas 100 alterações (log de auditoria) |
 
 ## Como os dados funcionam
@@ -188,6 +189,9 @@ node tools/testar_plano_acao_responsavel_headless.js # plano-acao.html (item 4.3
                                         # "legado", pessoa golden fora da lista estática de
                                         # 32 ids aparece (grupo URC), trocar grava o id
                                         # golden novo — dublê de Supabase, sem rede real
+node tools/testar_fluxo_dados.js        # frente Fluxo de dados (v0.31.0): snapshot data/fluxo_dados.js
+                                        # íntegro (FKs, enums), rota ok exige alvo_definido (AVISO,
+                                        # exit 0), fallback offline, erro de permissão cita GRANT
 node tools/auditoria_fk_final.js --check # item 5.1: por FK das Camadas 2/4, se toda porta
                                         # de entrada de linha nova grava a FK (e quem lê a
                                         # FK hoje). Offline — mede o código, não o banco.

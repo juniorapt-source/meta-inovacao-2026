@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.31.0 — 2026-10-16
+**Nova frente: "Fluxo de dados" (Projeto Corso).** Mapa de como o dado de cada iniciativa
+nasce, quem manda, quem deveria mandar e para onde vai, e de onde cada painel lê — base para
+reapontar os painéis que hoje leem planilhas para o banco do Foco.
+
+- **Página `fluxo-dados.html`** (menu: grupo *Jornada*, ao lado do Corsário), somente
+  leitura, 4 blocos: Matriz (iniciativa × cliente/atendimento/processo/painel, pior status por
+  célula, mesmas cores do Corsário), Rotas (com selos de lacuna e "alvo indefinido"), Painéis
+  (com "pronto para reapontar") e Encaminhamentos (com dependência: bloqueado até a anterior
+  ficar `feito`). Lê as views `fluxo_dados_matriz`, `fluxo_dados_rotas_lacunas` e
+  `fluxo_dados_paineis_prontidao`.
+- **Edição na aba "Fluxo de dados" do `editor.html`** (`js/editor-fluxo.js`): rotas (todos os
+  campos, "quem envia hoje"/"quem deveria enviar" em destaque), painéis (com as rotas que os
+  alimentam), encaminhamentos (com dependência) e sistemas (cadastro de sistema novo).
+  Diferente das outras abas, salva por botão "Salvar" (formulário de ~22 campos), não campo a
+  campo. Nunca DELETE: "Desativar" grava `ativo = false`; a única exceção é desvincular
+  painel × rota. Erro 401/403/42501 vira mensagem que lembra que pode ser GRANT faltando.
+- **Dados:** `js/db-fluxo.js` (`window.DB_FLUXO`) lê do Supabase e cai no snapshot
+  `data/fluxo_dados.js` (7 sistemas, 2 rotas, 1 painel, 5 encaminhamentos e as 3 views, de
+  16/10/2026). Não usa a fábrica `DB_BASE.criarWrapper` porque estas tabelas não têm
+  `deleted_at`/`updated_by`.
+- **Teste:** `tools/testar_fluxo_dados.js` (integridade do snapshot, regra "rota `ok` precisa de
+  `alvo_definido`" como aviso, fallback offline, mensagem de erro de permissão).
+- **Banco:** nenhum DDL neste repositório — as tabelas já existiam no Supabase.
+
 ## Auditoria do plano de débitos técnicos — 2026-08-30
 Varredura completa do `docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md` contra o código: todos os
 itens marcados ✅ estão de fato na `main` e conferem com o que o plano descreve. Três

@@ -121,7 +121,12 @@ CAMPO_AUTORIA = re.compile(r"respons|dono|gestor|representante|owner", re.I)
 # partir do próprio "resp" (nunca editado à mão); "node tools/gerar_responsavel_id.js
 # --check" (rodado nos testes, ver README) falha se os dois ficarem fora de sincronia —
 # isso fecha a mesma lacuna de drift que motivou o guardrail, sem duplicar autoria de fato.
-CAMPOS_PERMITIDOS_POR_EXCECAO = {("plano", "responsavel_id")}
+#
+# segunda exceção (v0.31.0, frente Fluxo de dados): "fluxo_dados.responsavel" é quem executa um
+# ENCAMINHAMENTO/PAINEL da frente (texto livre vindo da tabela fluxo_dados_* do Supabase, snapshot
+# em data/fluxo_dados.js) — dono de uma tarefa, não a autoria da iniciativa. Mesmo critério da
+# exceção acima.
+CAMPOS_PERMITIDOS_POR_EXCECAO = {("plano", "responsavel_id"), ("fluxo_dados", "responsavel")}
 
 def campos_suspeitos(obj, origem, nome_ds, caminho=""):
     if isinstance(obj, dict):

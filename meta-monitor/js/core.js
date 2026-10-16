@@ -40,6 +40,7 @@
     ] },
     { titulo: "Jornada", paginas: [
       ["corsario.html", "O Caminho para o Corsário"],
+      ["fluxo-dados.html", "Fluxo de dados"],
     ] },
     { titulo: "Admin", paginas: [
       ["editor.html", "Modo edição"],

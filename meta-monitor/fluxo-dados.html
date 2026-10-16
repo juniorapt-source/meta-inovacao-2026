@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Fluxo de dados · Carta de Corso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<style>
+.conteudo{max-width:none;min-width:0}
+.fd-sub{font-family:var(--font-sans);color:var(--ink-2);font-size:13px;margin:0 0 14px}
+.fd-sub a{margin-left:8px}
+/* cores de status = as mesmas do Corsário (.crs-st-* em corsario.html): ok / andamento /
+   a iniciar / entendimento. "Não se aplica" usa o neutro apagado, como .cel-vazia. */
+.fd-st{display:inline-block;padding:2px 9px;font:600 11px 'DM Sans',sans-serif;border-radius:0;white-space:nowrap}
+.fd-st-ok{background:var(--ok-w);color:var(--ok)}
+.fd-st-andamento{background:var(--prog-w);color:var(--prog)}
+.fd-st-a_iniciar{background:var(--warn-w);color:var(--warn)}
+.fd-st-entendimento{background:var(--neutro-w);color:var(--ink-2)}
+.fd-st-nao_se_aplica{background:transparent;color:var(--ink-3);border:1px dashed var(--linha)}
+.fd-selo{display:inline-block;padding:1px 7px;margin:2px 4px 2px 0;font:600 10.5px 'DM Sans',sans-serif;background:var(--warn-w);color:var(--warn);border-radius:0}
+.fd-selo.ok{background:var(--ok-w);color:var(--ok)}
+.fd-selo.neutro{background:var(--neutro-w);color:var(--ink-2)}
+.fd-bloco{margin-top:22px}
+.fd-bloco h2{font-family:var(--font-sans);font-weight:600;font-size:17px;margin:0 0 8px}
+.fd-wrap{overflow:auto;max-width:100%}
+.fd-matriz{border-collapse:collapse;background:var(--branco);border:1px solid var(--linha);min-width:560px}
+.fd-matriz th{font:700 10.5px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--grafite);background:var(--ceu);padding:8px 10px;text-align:center;position:sticky;top:0}
+.fd-matriz th:first-child,.fd-matriz td:first-child{text-align:left;position:sticky;left:0;background:var(--branco)}
+.fd-matriz th:first-child{background:var(--ceu)}
+.fd-matriz td{padding:5px 8px;border-top:1px solid var(--border-soft);text-align:center;font:400 13px 'DM Sans',sans-serif}
+.fd-matriz tr.sel td:first-child{font-weight:700}
+.fd-cel{min-width:120px;cursor:pointer;border:1px solid transparent;background:none;padding:3px 4px;font:inherit}
+.fd-cel:hover,.fd-cel:focus-visible{border-color:var(--accent)}
+.fd-vazia{color:var(--ink-3);font-size:11px;font-style:italic}
+.fd-filtro{margin:0 0 10px;font:600 13px 'DM Sans',sans-serif}
+.fd-card{background:var(--branco);border:1px solid var(--linha);padding:10px 14px;margin-bottom:8px}
+.fd-card h3{font:600 14px 'DM Sans',sans-serif;margin:0 0 4px}
+.fd-linha{font:400 13px 'DM Sans',sans-serif;color:var(--tinta);margin:3px 0}
+.fd-linha b{font-weight:600;color:var(--grafite)}
+.fd-quem{background:var(--prog-w);padding:6px 10px;margin:6px 0}
+.fd-quem .vazio{color:var(--warn);font-style:italic}
+.fd-seta{color:var(--ink-3);margin:0 4px}
+.fd-vazio-msg{font:400 13px 'DM Sans',sans-serif;color:var(--ink-2);font-style:italic}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Fluxo de dados</h1>
+    <p class="fd-sub">Como o dado de cada iniciativa nasce, quem manda, quem deveria mandar e para onde vai — e de onde cada painel lê. <a href="editor.html#fluxo">Editar no Modo edição</a></p>
+
+    <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não foi possível atualizar os dados agora; mostrando a última versão salva.</p>
+    <div id="fd-estado"></div>
+
+    <section class="fd-bloco" aria-labelledby="fd-h-matriz">
+      <h2 id="fd-h-matriz">Matriz: iniciativa × tipo de dado</h2>
+      <p class="fd-sub">Cada célula mostra o pior status entre as rotas daquela iniciativa. Clique para ver só as rotas dela.</p>
+      <div class="fd-wrap"><table class="fd-matriz" id="fd-matriz"></table></div>
+    </section>
+
+    <div class="fd-filtro" id="fd-filtro"></div>
+
+    <section class="fd-bloco" aria-labelledby="fd-h-rotas">
+      <h2 id="fd-h-rotas">Rotas</h2>
+      <div id="fd-rotas"></div>
+    </section>
+
+    <section class="fd-bloco" aria-labelledby="fd-h-paineis">
+      <h2 id="fd-h-paineis">Painéis</h2>
+      <div id="fd-paineis"></div>
+    </section>
+
+    <section class="fd-bloco" aria-labelledby="fd-h-enc">
+      <h2 id="fd-h-enc">Encaminhamentos</h2>
+      <div id="fd-enc"></div>
+    </section>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="js/gate.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/db-base.js"></script>
+<script src="data/projetos.js"></script>
+<script src="js/db-projetos.js"></script>
+<script src="data/fluxo_dados.js"></script>
+<script src="js/db-fluxo.js"></script>
+<script src="data/plano.js"></script>
+<script src="data/nos.js"></script>
+<script src="data/canais.js"></script>
+<script src="data/agenda.js"></script>
+<script src="data/pessoas.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script src="js/fluxo-dados.js"></script>
+</body>
+</html>

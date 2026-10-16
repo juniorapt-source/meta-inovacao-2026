@@ -157,6 +157,8 @@
 <script src="js/db-canais.js"></script>
 <script src="js/db-urc.js"></script>
 <script src="js/db-corsario.js"></script>
+<script src="data/fluxo_dados.js"></script>
+<script src="js/db-fluxo.js"></script>
 <script src="js/matriz-store.js"></script>
 <script src="js/responsaveis.js"></script>
 <!-- helpers e caches genuinamente compartilhados entre as abas (opts/avisoFallback/
@@ -213,6 +215,9 @@
      db-coletivos.js/db-responsaveis.js/db-plano-responsaveis.js/responsaveis.js
      (todos já carregados acima). -->
 <script src="js/editor-plano.js"></script>
+<!-- aba "Fluxo de dados" (Projeto Corso) — ver comentário no topo de js/editor-fluxo.js.
+     Precisa vir depois de db-fluxo.js/db-projetos.js/editor-shared.js (já carregados acima). -->
+<script src="js/editor-fluxo.js"></script>
 <script>
 (function(){
 "use strict";
@@ -232,7 +237,8 @@ const CONJUNTOS = {
   projetos:     { rotulo:"Projetos & Representantes — núcleos e portfólio UI (editado ao vivo)", vivo:true },
   urc_lideranca:{ rotulo:"URC — Liderança (editado ao vivo)", vivo:true },
   urc_canais:   { rotulo:"URC — Responsáveis por canal (editado ao vivo)", vivo:true },
-  corsario:     { rotulo:"O Caminho para o Corsário — status por critério (editado ao vivo)", vivo:true }
+  corsario:     { rotulo:"O Caminho para o Corsário — status por critério (editado ao vivo)", vivo:true },
+  fluxo:        { rotulo:"Fluxo de dados — rotas, painéis e encaminhamentos (editado ao vivo)", vivo:true }
 };
 // aba Agenda: STATUS_ENC/ROTULO_ENC e renderAgenda() moram em js/editor-agenda.js
 // desde 28/08/2026 (window.EDITOR_AGENDA) — ver comentário no topo daquele arquivo.
@@ -340,10 +346,12 @@ function atualizarChromeVivo(){
 function render(){
   atualizarChromeVivo();
   ({plano:EDITOR_PLANO.render, matriz:EDITOR_MATRIZ.render, agenda:EDITOR_AGENDA.render, pessoas:EDITOR_PESSOAS.render, projetos:EDITOR_PROJETOS.render,
-    urc_lideranca:EDITOR_URC.renderLideranca, urc_canais:EDITOR_URC.renderCanais, corsario:EDITOR_CORSARIO.render})[sel.value]();
+    urc_lideranca:EDITOR_URC.renderLideranca, urc_canais:EDITOR_URC.renderCanais, corsario:EDITOR_CORSARIO.render, fluxo:EDITOR_FLUXO.render})[sel.value]();
   saida.value="";
 }
 sel.addEventListener("change", render);
+// link "Editar no Modo edição" de fluxo-dados.html abre direto nesta aba
+if (location.hash === "#fluxo" && CONJUNTOS.fluxo) sel.value = "fluxo";
 render();
 
 btnBaixar.addEventListener("click", function(){

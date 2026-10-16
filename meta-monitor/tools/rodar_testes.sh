@@ -69,6 +69,8 @@ SEM_CHROME=(
   # item D3.2 — órfãos reconciliados, puros/sem navegador
   "testar_canva.js|node tools/testar_canva.js"
   "testar_supabase_erros.js|node tools/testar_supabase_erros.js"
+  # frente Fluxo de dados (Projeto Corso, v0.31.0) — puro/sem navegador e sem rede
+  "testar_fluxo_dados.js|node tools/testar_fluxo_dados.js"
   # os 2 abaixo falam com o Supabase de PRODUÇÃO (leitura pública) mas nunca travam a
   # suíte por falta de rede: sem conseguir alcançar, saem 0 com aviso — mesma postura de
   # graceful-skip, não precisam do --confirmar que testar_rede_real_headless.js exige
