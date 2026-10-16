@@ -20,7 +20,7 @@ Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanh
 | `projetos.html` | Portfólio de projetos por núcleo, com representantes |
 | `plano-acao.html` | Atividades por iniciativa (CRUD via Supabase) |
 | `corsario.html` | Adequação de cada iniciativa ao ecossistema oficial (Supabase, somente leitura) — régua de 19 critérios, patente por faixa de % |
-| `fluxo-dados.html` | Fluxo de dados (Projeto Corso): matriz iniciativa × cliente/atendimento/processo/painel, rotas com lacunas, painéis prontos para reapontar e encaminhamentos (Supabase `fluxo_dados_*`, somente leitura; edição na aba "Fluxo de dados" do `editor.html`) |
+| `fluxo-dados.html` | Fluxo de dados (Projeto Corso): matriz iniciativa × cliente/atendimento/processo/painel, rotas com lacunas, painéis prontos para reapontar e encaminhamentos (Supabase `fluxo_dados_*`, somente leitura; com "Ativar edição" cria rota e encaminhamento; edição completa na aba "Fluxo de dados" do `editor.html`) |
 | `editor.html` | Modo edição: Plano de ação e Agenda editam ao vivo no Supabase (linha a linha, salva sozinho); matriz, pessoas, projetos e URC continuam no modelo "edita a cópia local, baixa `data/*.js`, publica no Git"; aba **Histórico** com as últimas 100 alterações (log de auditoria) |
 
 ## Como os dados funcionam

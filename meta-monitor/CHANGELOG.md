@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.32.0 — 2026-10-16
+**Fluxo de dados: 5 ajustes.**
+
+- **Outras fontes em lista.** "Existe outra fonte?" (sim/não/não sei) virou uma lista de textos,
+  um por fonte (`fluxo_dados_rotas.outras_fontes`). Ignora itens em branco e repetidos exatos ao
+  salvar; lista vazia = "nenhuma outra fonte informada". Linha antiga com `existe_outra_fonte =
+  'sim'` e lista vazia mostra "Há outra fonte, ainda não informada" (sem inventar conteúdo).
+- **Destinos múltiplos.** "Destino hoje" e "Destino alvo" aceitam vários sistemas (caixas de
+  marcar), gravados em `fluxo_dados_rota_destinos`. Ao salvar, só a diferença vai ao banco
+  (INSERT dos novos, DELETE dos removidos; a tabela não tem UPDATE). A rota nova é gravada
+  primeiro e os destinos depois; se os destinos falharem, o formulário fica aberto na rota já
+  criada para repetir, sem duplicá-la. As colunas antigas (`existe_outra_fonte`,
+  `sistema_destino_*_id`) ficam no banco, deprecadas e sem uso na tela.
+- **Criar pela página.** `fluxo-dados.html` ganhou "Nova rota" e "Novo encaminhamento", só no
+  modo de edição ("Ativar edição", flag `cc_fluxo_edicao` em `sessionStorage`; o `editor.html` não
+  tem flag que se reaproveite). Formulários e gravação foram extraídos para `js/fluxo-form.js`,
+  compartilhado com a aba do editor. Depois de salvar, a matriz e as listas se atualizam sem recarregar.
+- **Painel sem "indicador" e "ferramenta".** Saíram do formulário, das telas e do snapshot; as
+  colunas ficam no banco (anuláveis) e a edição de painel antigo não as apaga.
+- **"Link do painel".** Campo opcional em `fluxo_dados_paineis.link_painel` (só `http://` ou
+  `https://`; sem esquema é recusado com mensagem). Aparece como "Abrir painel"
+  (`target="_blank" rel="noopener noreferrer"`, href validado e montado por DOM). A view
+  `fluxo_dados_paineis_prontidao` não foi alterada: o link vem da tabela.
+- **Correção de CSS:** nas caixas de marcar do formulário (ex.: "Rotas que alimentam este painel") o
+  quadradinho ocupava a linha toda acima do texto; agora fica na mesma linha.
+- **Banco (rodado à mão em 16/10/2026):** `patch3` (outras_fontes, rota_destinos, view de lacunas
+  por conjuntos) e `patch4` (link_painel). Registrados em `tools/sql/APLICADOS.md`.
+  `2026-10_fluxo_dados_limpeza_zz_teste.sql` remove o resíduo do teste de escrita.
+- **Testes:** `tools/testar_fluxo_dados.js` ampliado (fontes, diff de destinos, lacuna por
+  conjunto, formulário de painel e link, validações de rota/encaminhamento, escrita contra
+  cliente simulado).
+
 ## v0.31.0 — 2026-10-16
 **Nova frente: "Fluxo de dados" (Projeto Corso).** Mapa de como o dado de cada iniciativa
 nasce, quem manda, quem deveria mandar e para onde vai, e de onde cada painel lê — base para
