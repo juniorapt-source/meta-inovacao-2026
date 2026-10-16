@@ -23,7 +23,15 @@ reapontar os painéis que hoje leem planilhas para o banco do Foco.
   `deleted_at`/`updated_by`.
 - **Teste:** `tools/testar_fluxo_dados.js` (integridade do snapshot, regra "rota `ok` precisa de
   `alvo_definido`" como aviso, fallback offline, mensagem de erro de permissão).
-- **Banco:** nenhum DDL neste repositório — as tabelas já existiam no Supabase.
+- **Banco:** o DDL foi executado à mão no SQL Editor em 16/10/2026 (a anon key não roda DDL) e
+  está versionado em `tools/sql/`: `2026-10_fluxo_dados.sql` (5 tabelas + 3 views), `patch1`
+  (view de lacunas: "indefinido" conta como lacuna) e `patch2` (policies no padrão do repo:
+  leitura pública, escrita com `x-cc-token`). Registro e o desvio do padrão de tabela
+  (`ativo boolean` e prefixo `fluxo_dados_`, não `deleted_at`/`meta_inovacao_`) em
+  `tools/sql/APLICADOS.md`.
+- **Correção pós-teste de gravação:** o formulário de rota agora respeita os campos `NOT NULL` do
+  banco (`chega_completo` e `existe_outra_fonte` com padrão `nao_sabe`; `descricao` da rota e
+  `tipo` do sistema obrigatórios).
 
 ## Auditoria do plano de débitos técnicos — 2026-08-30
 Varredura completa do `docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md` contra o código: todos os
