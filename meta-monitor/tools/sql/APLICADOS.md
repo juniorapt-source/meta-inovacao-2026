@@ -43,6 +43,22 @@ ter sido aplicado e depois revertido ou substituído por outro.
 | `2026-08_canva_grupo_local.sql` | 28/08/2026 | ✅ aplicado | Melhorias de navegação, item 3.14 — conferido em produção (`coluna=1, funcao=1, indice=1`), ensaiado contra PostgreSQL 16 real antes de rodar. |
 | `2026-08_auditoria_fk_final.sql` | roda sob demanda | — (diagnóstico) | Só leitura — não é migração. É o script do guardrail de FK (Camada 5, D1 deste débito técnico) rodado manualmente por José no SQL Editor a cada auditoria. |
 | `2026-08_matriz_celulas_diagnostico.sql` | roda sob demanda | — (diagnóstico) | Só leitura — 17 checagens de schema/RLS/realtime da Matriz. Não é migração. |
+| `2026-10_fluxo_dados.sql` | 16/10/2026 (projeto `wdygbfrmewlaffjsfyoi`) | ✅ aplicado | Frente Fluxo de dados (Projeto Corso, v0.31.0): 5 tabelas `fluxo_dados_*` (sistemas, rotas, paineis, painel_rotas, encaminhamentos) + 3 views (matriz, rotas_lacunas, paineis_prontidao). Policies deste script eram ABERTAS; o patch2 as substitui. **Desvio do padrão — ver nota abaixo.** |
+| `2026-10_fluxo_dados_patch1.sql` | 16/10/2026 (projeto `wdygbfrmewlaffjsfyoi`) | ✅ aplicado | Só troca a view `fluxo_dados_rotas_lacunas`: "indefinido" (dois `a_definir` ou dois vazios) passa a contar como lacuna. Sem mexer em tabela ou dado. |
+| `2026-10_fluxo_dados_patch2.sql` | 16/10/2026 (projeto `wdygbfrmewlaffjsfyoi`) | ✅ aplicado | Endurece as policies das 5 tabelas pro padrão do repo: leitura pública (`cc_select_publico`), escrita só com `x-cc-token` (`cc_token_insert/update`); `cc_token_delete` só em `fluxo_dados_painel_rotas` (desvincular). Token lido de uma policy existente — não está no arquivo. Ordem: principal, patch1, patch2. |
+
+### Desvio do padrão de tabela (frente Fluxo de dados)
+
+As tabelas `fluxo_dados_*` **não seguem** dois itens de `PADRAO_TABELA.md`, por decisão
+tomada no desenho do módulo (não é esquecimento):
+
+- **Prefixo:** `fluxo_dados_`, e não `meta_inovacao_`.
+- **Desativação:** coluna `ativo boolean` (desativar = `ativo = false`), e não `deleted_at`
+  (soft delete por timestamp). Por isso também não têm `updated_by`, e `js/db-fluxo.js` não
+  usa a fábrica `DB_BASE.criarWrapper` (que assume `deleted_at`/`updated_by`).
+- Efeito no GRANT/DELETE: sem DELETE nas 4 tabelas principais; só `fluxo_dados_painel_rotas`
+  tem DELETE (desvincular painel × rota). Triggers de auditoria (`cc_audit()`) ficaram
+  adiados.
 
 ## Como manter isto atualizado
 
