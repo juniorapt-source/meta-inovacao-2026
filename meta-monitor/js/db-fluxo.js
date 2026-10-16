@@ -1,6 +1,6 @@
 /* Camada de dados da frente "Fluxo de dados" (Projeto Corso) — window.DB_FLUXO.
  *
- * Lê as 5 tabelas fluxo_dados_* e as 3 views (matriz, rotas_lacunas, paineis_prontidao) do
+ * Lê as 6 tabelas fluxo_dados_* e as 3 views (matriz, rotas_lacunas, paineis_prontidao) do
  * Supabase; cai pro seed local (window.DB.fluxo_dados, data/fluxo_dados.js) se a rede ou
  * alguma tabela falhar, no mesmo espírito de js/db-base.js (modo de teste ?semrede=1/
  * CC_FORCAR_FALLBACK incluso).
@@ -11,8 +11,9 @@
  * versão com painéis de outra). Só reaproveita DB_BASE.forcarFallback e as mensagens de
  * modo de teste.
  *
- * Regras de escrita (decisão do projeto): NUNCA DELETE — desativar é `ativo = false`. A
- * única exceção é fluxo_dados_painel_rotas (desvincular).
+ * Regras de escrita (decisão do projeto): NUNCA DELETE — desativar é `ativo = false`. As
+ * únicas exceções são fluxo_dados_painel_rotas (desvincular) e fluxo_dados_rota_destinos
+ * (tirar um destino da rota; a tabela só tem INSERT e DELETE, sem UPDATE — v0.32.0).
  */
 (function (root) {
   "use strict";
@@ -29,6 +30,7 @@
     paineis: "fluxo_dados_paineis",
     painel_rotas: "fluxo_dados_painel_rotas",
     encaminhamentos: "fluxo_dados_encaminhamentos",
+    rota_destinos: "fluxo_dados_rota_destinos",
   };
   const VIEWS = {
     matriz: "fluxo_dados_matriz",
@@ -46,8 +48,6 @@
   const ROTULO_MECANISMO = { nenhum: "Nenhum", manual: "Manual", planilha: "Planilha", importacao: "Importação", integracao: "Integração", a_definir: "A definir" };
   const CHEGA_COMPLETO = ["sim", "parcial", "nao", "nao_sabe"];
   const ROTULO_CHEGA = { sim: "Sim", parcial: "Parcial", nao: "Não", nao_sabe: "Não sabe" };
-  const OUTRA_FONTE = ["sim", "nao", "nao_sabe"];
-  const ROTULO_OUTRA = { sim: "Sim", nao: "Não", nao_sabe: "Não sabe" };
   const STATUS_ENC = ["a_fazer", "andamento", "feito", "bloqueado", "cancelado"];
   const ROTULO_ENC = { a_fazer: "A fazer", andamento: "Em andamento", feito: "Feito", bloqueado: "Bloqueado", cancelado: "Cancelado" };
   const TIPOS_SISTEMA_SUGERIDOS = ["crm", "planilha", "plataforma", "bi", "banco", "dw", "outro"];
@@ -98,7 +98,7 @@
 
   // ---- escrita ----
   function tabelaValida(chave) {
-    if (!TABELAS[chave] || chave === "painel_rotas") throw new Error("db-fluxo: tabela editável inválida: " + chave);
+    if (!TABELAS[chave] || chave === "painel_rotas" || chave === "rota_destinos") throw new Error("db-fluxo: tabela editável inválida: " + chave);
     return TABELAS[chave];
   }
   function limpar(campos) {
@@ -138,6 +138,90 @@
     const { error } = await supa.from(TABELAS.painel_rotas).delete().eq("painel_id", painelId).eq("rota_id", rotaId);
     if (error) { error.tabela = TABELAS.painel_rotas; error.operacao = "DELETE"; throw error; }
   }
+
+  // ---- destinos da rota (fluxo_dados_rota_destinos: uma linha por rota × sistema × momento) ----
+  const MOMENTOS = ["hoje", "alvo"];
+  const chaveDestino = (d) => d.momento + "|" + d.sistema_id;
+
+  // desejados/atuais: [{ sistema_id, momento }]. Devolve só a diferença: o que inserir e o que
+  // remover. Nunca "apagar tudo e reinserir" — a tabela não tem UPDATE e a rota não pode ficar
+  // sem destino no meio do caminho.
+  function diffDestinos(atuais, desejados) {
+    const tem = new Map();
+    (atuais || []).forEach((d) => tem.set(chaveDestino(d), { sistema_id: d.sistema_id, momento: d.momento }));
+    const quer = new Map();
+    (desejados || []).forEach((d) => { if (d && d.sistema_id && MOMENTOS.indexOf(d.momento) !== -1) quer.set(chaveDestino(d), { sistema_id: d.sistema_id, momento: d.momento }); });
+    const inserir = [], remover = [];
+    quer.forEach((d, k) => { if (!tem.has(k)) inserir.push(d); });
+    tem.forEach((d, k) => { if (!quer.has(k)) remover.push(d); });
+    return { inserir: inserir, remover: remover };
+  }
+
+  // lacuna de destino por CONJUNTOS (mesma regra da view fluxo_dados_rotas_lacunas): hoje e alvo
+  // diferem como conjunto de sistemas, ignorando ordem e repetição.
+  function lacunaDestino(hojeIds, alvoIds) {
+    const a = Array.from(new Set(hojeIds || [])).sort(), b = Array.from(new Set(alvoIds || [])).sort();
+    return a.length !== b.length || a.some((x, i) => x !== b[i]);
+  }
+
+  function destinosDaRota(dados, rotaId, momento) {
+    return (dados.rota_destinos || []).filter((d) => d.rota_id === rotaId && d.momento === momento).map((d) => d.sistema_id);
+  }
+  function nomesDestinos(dados, rotaId, momento) {
+    const nome = {}; (dados.sistemas || []).forEach((s) => { nome[s.id] = s.nome; });
+    return destinosDaRota(dados, rotaId, momento).map((id) => nome[id] || "—").sort((x, y) => x.localeCompare(y, "pt-BR"));
+  }
+
+  // Lê o que está de fato no banco (não a tela, que pode estar velha depois de uma falha pela
+  // metade), calcula a diferença e aplica: primeiro os INSERTs, depois os DELETEs.
+  async function sincronizarDestinos(rotaId, desejados) {
+    bloquearEscritaEmTeste();
+    const supa = await cliente();
+    const T = TABELAS.rota_destinos;
+    const lido = await supa.from(T).select("sistema_id,momento").eq("rota_id", rotaId);
+    if (lido.error) { lido.error.tabela = T; lido.error.operacao = "SELECT"; throw lido.error; }
+    const dif = diffDestinos(lido.data || [], desejados);
+    if (dif.inserir.length) {
+      const r = await supa.from(T).insert(dif.inserir.map((d) => ({ rota_id: rotaId, sistema_id: d.sistema_id, momento: d.momento })));
+      if (r.error) { r.error.tabela = T; r.error.operacao = "INSERT"; throw r.error; }
+    }
+    for (const d of dif.remover) {
+      const r = await supa.from(T).delete().eq("rota_id", rotaId).eq("sistema_id", d.sistema_id).eq("momento", d.momento);
+      if (r.error) { r.error.tabela = T; r.error.operacao = "DELETE"; throw r.error; }
+    }
+    return dif;
+  }
+
+  // ---- outras fontes (fluxo_dados_rotas.outras_fontes, text[]) ----
+  // tira espaços, descarta itens em branco e repetidos exatos (mantém a primeira ocorrência)
+  function normalizarFontes(lista) {
+    const vistos = new Set(), out = [];
+    (lista || []).forEach((x) => { const t = String(x == null ? "" : x).trim(); if (t && !vistos.has(t)) { vistos.add(t); out.push(t); } });
+    return out;
+  }
+  // texto de leitura. Linha antiga com existe_outra_fonte = 'sim' e lista vazia não inventa
+  // conteúdo: só avisa que existe e não foi informada.
+  function resumoOutrasFontes(rota) {
+    const f = normalizarFontes(rota && rota.outras_fontes);
+    if (f.length) return { itens: f, aviso: null };
+    if (rota && rota.existe_outra_fonte === "sim") return { itens: [], aviso: "Há outra fonte, ainda não informada" };
+    if (rota && rota.existe_outra_fonte === "nao") return { itens: [], aviso: "Sem outra fonte" };
+    return { itens: [], aviso: "Nenhuma outra fonte informada" };
+  }
+
+  // ---- link do painel (fluxo_dados_paineis.link_painel) ----
+  // o banco só aceita http:// ou https:// (check no patch4); o mesmo vale aqui, antes de enviar
+  // e antes de virar href. Sem esquema: recusa (não completa sozinho).
+  const MSG_LINK = "O link do painel precisa começar com http:// ou https:// (ex.: https://app.powerbi.com/...).";
+  function validarLinkPainel(v) {
+    const t = String(v == null ? "" : v).trim();
+    if (!t) return { ok: true, valor: null };
+    if (/\s/.test(t) || !/^https?:\/\//i.test(t)) return { ok: false, erro: MSG_LINK };
+    try { const u = new URL(t); if (u.protocol !== "http:" && u.protocol !== "https:") return { ok: false, erro: MSG_LINK }; }
+    catch (e) { return { ok: false, erro: MSG_LINK }; }
+    return { ok: true, valor: t };
+  }
+  function linkSeguro(v) { const r = validarLinkPainel(v); return r.ok ? r.valor : null; }
 
   // ---- erro legível ----
   // 401/403/42501 aqui NÃO quer dizer necessariamente "token errado": as tabelas fluxo_dados_*
@@ -188,12 +272,15 @@
     STATUS: STATUS, ROTULO_STATUS: ROTULO_STATUS,
     MECANISMOS: MECANISMOS, ROTULO_MECANISMO: ROTULO_MECANISMO,
     CHEGA_COMPLETO: CHEGA_COMPLETO, ROTULO_CHEGA: ROTULO_CHEGA,
-    OUTRA_FONTE: OUTRA_FONTE, ROTULO_OUTRA: ROTULO_OUTRA,
     STATUS_ENC: STATUS_ENC, ROTULO_ENC: ROTULO_ENC,
     TIPOS_SISTEMA_SUGERIDOS: TIPOS_SISTEMA_SUGERIDOS,
     carregar: carregar, seed: seed,
     criar: criar, salvar: salvar, desativar: desativar, reativar: reativar,
     vincularPainelRota: vincularPainelRota, desvincularPainelRota: desvincularPainelRota,
+    sincronizarDestinos: sincronizarDestinos, diffDestinos: diffDestinos, lacunaDestino: lacunaDestino,
+    destinosDaRota: destinosDaRota, nomesDestinos: nomesDestinos, MOMENTOS: MOMENTOS,
+    normalizarFontes: normalizarFontes, resumoOutrasFontes: resumoOutrasFontes,
+    validarLinkPainel: validarLinkPainel, linkSeguro: linkSeguro,
     mensagemErro: mensagemErro,
     piorStatus: piorStatus, rotasOkSemAlvo: rotasOkSemAlvo, encaminhamentoTravado: encaminhamentoTravado,
     emModoTeste: forcarFallback,

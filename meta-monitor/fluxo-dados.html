@@ -45,6 +45,14 @@
 .fd-quem .vazio{color:var(--warn);font-style:italic}
 .fd-seta{color:var(--ink-3);margin:0 4px}
 .fd-vazio-msg{font:400 13px 'DM Sans',sans-serif;color:var(--ink-2);font-style:italic}
+.fd-chip{display:inline-block;padding:1px 8px;margin:1px 4px 1px 0;font:600 11px 'DM Sans',sans-serif;background:var(--neutro-w);color:var(--tinta)}
+.fd-edicao{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+/* botões do formulário compartilhado (js/fluxo-form.js) — mesmos do editor.html */
+.ed-btn{font:700 12px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--branco);background:var(--azul);border:0;border-radius:0;padding:9px 16px;cursor:pointer}
+.ed-btn:hover{background:var(--accent-hover)}
+.ed-btn.sec{background:var(--grafite-w);color:var(--tinta)}
+.ed-btn.sec:hover{background:#e1d7c0}
+.ed-btn:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -53,6 +61,10 @@
   <main class="conteudo">
     <h1 class="pagina-titulo">Fluxo de dados</h1>
     <p class="fd-sub">Como o dado de cada iniciativa nasce, quem manda, quem deveria mandar e para onde vai — e de onde cada painel lê. <a href="editor.html#fluxo">Editar no Modo edição</a></p>
+
+    <div class="fd-edicao" id="fd-edicao"></div>
+    <div id="fd-msg" role="status"></div>
+    <div id="fd-form"></div>
 
     <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não foi possível atualizar os dados agora; mostrando a última versão salva.</p>
     <div id="fd-estado"></div>
@@ -98,6 +110,7 @@
 <script src="data/pessoas.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/core.js"></script>
+<script src="js/fluxo-form.js"></script>
 <script src="js/fluxo-dados.js"></script>
 </body>
 </html>

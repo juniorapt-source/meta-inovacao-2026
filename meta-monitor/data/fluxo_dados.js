@@ -114,7 +114,8 @@ window.DB.fluxo_dados = {
    "observacao": "Perguntas abertas: como se identifica, na plataforma, quem é do Prêmio? O que a empresa terceirizada controla dentro da plataforma?",
    "ativo": true,
    "criado_em": "2026-10-16T14:25:48.583042+00:00",
-   "atualizado_em": "2026-10-16T14:25:48.583042+00:00"
+   "atualizado_em": "2026-10-16T14:25:48.583042+00:00",
+   "outras_fontes": []
   },
   {
    "id": "40483e2b-8cf1-4e35-b773-bfccb5d525c9",
@@ -142,7 +143,28 @@ window.DB.fluxo_dados = {
    "observacao": "Motivo do alvo: cruzar a participação no Prêmio com a de outras iniciativas. Participantes de 2025 e 2026 hoje são consultados no ambiente da plataforma. O panorama é lido do planilhão.",
    "ativo": true,
    "criado_em": "2026-10-16T14:25:48.583042+00:00",
-   "atualizado_em": "2026-10-16T14:25:48.583042+00:00"
+   "atualizado_em": "2026-10-16T14:25:48.583042+00:00",
+   "outras_fontes": []
+  }
+ ],
+ "rota_destinos": [
+  {
+   "rota_id": "42d89ce1-6779-4f3d-822e-4ed8a048ee2f",
+   "sistema_id": "4f653b35-a99d-4e7f-bb95-01e2a16fa4b2",
+   "momento": "hoje",
+   "criado_em": "2026-10-16T14:25:48.583042+00:00"
+  },
+  {
+   "rota_id": "42d89ce1-6779-4f3d-822e-4ed8a048ee2f",
+   "sistema_id": "4f653b35-a99d-4e7f-bb95-01e2a16fa4b2",
+   "momento": "alvo",
+   "criado_em": "2026-10-16T14:25:48.583042+00:00"
+  },
+  {
+   "rota_id": "40483e2b-8cf1-4e35-b773-bfccb5d525c9",
+   "sistema_id": "4f653b35-a99d-4e7f-bb95-01e2a16fa4b2",
+   "momento": "alvo",
+   "criado_em": "2026-10-16T14:25:48.583042+00:00"
   }
  ],
  "paineis": [
@@ -150,8 +172,6 @@ window.DB.fluxo_dados = {
    "id": "2f27cda7-10d7-4179-98ec-a4a6959d26c9",
    "nome": "Panorama de participantes do Prêmio",
    "iniciativa": "Prêmio Startups",
-   "indicador": "Número de participantes do Prêmio (2025 e 2026)",
-   "ferramenta": null,
    "sistema_fonte_hoje_id": "dcd9a2f3-9d98-487a-a7da-a2b746502358",
    "sistema_fonte_alvo_id": "4f653b35-a99d-4e7f-bb95-01e2a16fa4b2",
    "responsavel": null,
@@ -159,7 +179,8 @@ window.DB.fluxo_dados = {
    "observacao": "Hoje o número é buscado no ambiente da plataforma. Panorama usa o planilhão como fonte.",
    "ativo": true,
    "criado_em": "2026-10-16T14:25:48.583042+00:00",
-   "atualizado_em": "2026-10-16T14:25:48.583042+00:00"
+   "atualizado_em": "2026-10-16T14:25:48.583042+00:00",
+   "link_painel": null
   }
  ],
  "painel_rotas": [
@@ -322,7 +343,6 @@ window.DB.fluxo_dados = {
    "id": "2f27cda7-10d7-4179-98ec-a4a6959d26c9",
    "nome": "Panorama de participantes do Prêmio",
    "iniciativa": "Prêmio Startups",
-   "indicador": "Número de participantes do Prêmio (2025 e 2026)",
    "fonte_hoje": "Planilhão",
    "fonte_alvo": "Foco (Salesforce)",
    "status": "entendimento",

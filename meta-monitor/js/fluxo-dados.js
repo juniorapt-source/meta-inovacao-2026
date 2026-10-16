@@ -1,12 +1,15 @@
-/* fluxo-dados.html — tela "Fluxo de dados" (Projeto Corso), SOMENTE LEITURA.
+/* fluxo-dados.html — tela "Fluxo de dados" (Projeto Corso). Somente leitura, salvo no modo de
+ * edição (botão "Ativar edição", flag em sessionStorage): aí aparecem "Nova rota" e "Novo
+ * encaminhamento", com o formulário compartilhado de js/fluxo-form.js (o mesmo da aba do editor).
  *
  * 4 blocos: Matriz (iniciativa × cliente/atendimento/processo/painel, vinda da view
  * fluxo_dados_matriz), Rotas (view fluxo_dados_rotas_lacunas), Painéis (view
  * fluxo_dados_paineis_prontidao) e Encaminhamentos. Os dados vêm de DB_FLUXO.carregar(),
- * que lê do Supabase e cai pro snapshot data/fluxo_dados.js. A edição mora na aba "Fluxo de
- * dados" do editor.html (js/editor-fluxo.js).
+ * que lê do Supabase e cai pro snapshot data/fluxo_dados.js. A edição completa mora na aba "Fluxo
+ * de dados" do editor.html (js/editor-fluxo.js).
  *
- * PRECISA de js/core.js (esc, montarShell), js/db-fluxo.js e js/db-projetos.js antes.
+ * PRECISA de js/core.js (esc, montarShell), js/db-fluxo.js, js/fluxo-form.js e js/db-projetos.js
+ * antes.
  */
 (function () {
   "use strict";
@@ -15,10 +18,25 @@
   let D = null;            // dados carregados
   let iniciativas = [];    // linhas da matriz
   let selecionada = "";    // "" = todas
+  let usandoFallback = false;
+  let formAberto = null;   // { secao: "rotas"|"encaminhamentos", id: null|uuid }
+  let mensagem = null;     // { ok, texto }
+  const FF = window.FLUXO_FORM;
+  const CHAVE_EDICAO = "cc_fluxo_edicao";
 
   const $ = (id) => document.getElementById(id);
   const rotulo = (map, k) => (k && map[k] !== undefined ? map[k] : (k || "—"));
   const ativos = (l) => (l || []).filter((x) => x.ativo !== false);
+
+  function edicaoLigada() { try { return sessionStorage.getItem(CHAVE_EDICAO) === "1"; } catch (e) { return false; } }
+  function definirEdicao(on) {
+    try { if (on) sessionStorage.setItem(CHAVE_EDICAO, "1"); else sessionStorage.removeItem(CHAVE_EDICAO); } catch (e) { /* sem sessionStorage: o modo vale só até recarregar */ }
+  }
+  const ctx = () => ({ dados: D, fallback: usandoFallback, iniciativasBase: iniciativas });
+  function textoErro(err) {
+    const S = window.CC_SUPABASE;
+    return (S && S.ehErroDePermissao && S.ehErroDePermissao(err) && S.mensagemEscritaAmigavel(err)) || F.mensagemErro(err);
+  }
 
   function chipStatus(s) {
     if (!s) return "";
@@ -72,16 +90,24 @@
   function renderRotas() {
     const lista = D.rotas_lacunas.filter((r) => !selecionada || r.iniciativa === selecionada);
     if (!lista.length) { $("fd-rotas").innerHTML = '<p class="fd-vazio-msg">Nenhuma rota cadastrada' + (selecionada ? " para " + esc(selecionada) : "") + ".</p>"; return; }
+    const rotaPorId = {}; ativos(D.rotas).forEach((x) => { rotaPorId[x.id] = x; });
+    const chips = (nomes) => (nomes.length ? nomes.map((n) => '<span class="fd-chip">' + esc(n) + "</span>").join("") : "—");
     $("fd-rotas").innerHTML = lista.map((r) => {
+      // outras fontes e destinos vêm das tabelas (a view de lacunas só traz destino em texto e
+      // não traz outras fontes); se a rota não estiver na tabela, cai no texto da view
+      const tab = rotaPorId[r.id] || {};
+      const fontes = F.resumoOutrasFontes(tab);
+      const hojeN = F.nomesDestinos(D, r.id, "hoje"), alvoN = F.nomesDestinos(D, r.id, "alvo");
       const quem = (v) => (v ? esc(v) : '<span class="vazio">não informado</span>');
       return '<article class="fd-card"><h3>' + esc(r.iniciativa) + " · " + esc(rotulo(F.ROTULO_TIPO_DADO, r.tipo_dado)) + " " + chipStatus(r.status) + "</h3>"
         + '<div class="fd-linha">' + esc(r.descricao || "") + "</div>"
         + '<div class="fd-quem"><div class="fd-linha"><b>Quem envia hoje:</b> ' + quem(r.quem_envia_hoje) + "</div>"
         + '<div class="fd-linha"><b>Quem deveria enviar:</b> ' + quem(r.quem_deveria_enviar) + "</div></div>"
-        + '<div class="fd-linha"><b>Origem</b> ' + esc(r.origem || "—") + '<span class="fd-seta">→</span><b>destino hoje</b> ' + esc(r.destino_hoje || "—")
-        + '<span class="fd-seta">→</span><b>destino alvo</b> ' + esc(r.destino_alvo || "—") + "</div>"
+        + '<div class="fd-linha"><b>Origem</b> ' + esc(r.origem || "—") + '<span class="fd-seta">→</span><b>destino hoje</b> ' + (hojeN.length || !r.destino_hoje ? chips(hojeN) : esc(r.destino_hoje))
+        + '<span class="fd-seta">→</span><b>destino alvo</b> ' + (alvoN.length || !r.destino_alvo ? chips(alvoN) : esc(r.destino_alvo)) + "</div>"
         + '<div class="fd-linha"><b>Mecanismo</b> ' + esc(rotulo(F.ROTULO_MECANISMO, r.mecanismo_hoje)) + '<span class="fd-seta">→</span>' + esc(rotulo(F.ROTULO_MECANISMO, r.mecanismo_alvo))
         + " · <b>chega completo</b> " + esc(rotulo(F.ROTULO_CHEGA, r.chega_completo)) + "</div>"
+        + '<div class="fd-linha"><b>Outras fontes</b> ' + (fontes.itens.length ? chips(fontes.itens) : '<span class="fd-vazia">' + esc(fontes.aviso) + "</span>") + "</div>"
         + "<div>" + seloLacuna(r) + "</div></article>";
     }).join("");
   }
@@ -94,11 +120,13 @@
         ? '<span class="fd-selo ok">pronto para reapontar</span>'
         : '<span class="fd-selo">ainda não pronto</span>';
       return '<article class="fd-card"><h3>' + esc(p.nome) + " " + chipStatus(p.status) + "</h3>"
-        + '<div class="fd-linha">' + esc(p.indicador || "") + (p.iniciativa ? " · " + esc(p.iniciativa) : " · transversal") + "</div>"
+        + '<div class="fd-linha">' + (p.iniciativa ? esc(p.iniciativa) : "transversal") + ' <span data-link-painel="' + esc(p.id) + '"></span></div>'
         + '<div class="fd-linha"><b>Fonte hoje</b> ' + esc(p.fonte_hoje || "—") + '<span class="fd-seta">→</span><b>fonte alvo</b> ' + esc(p.fonte_alvo || "—") + "</div>"
         + '<div class="fd-linha"><b>Rotas:</b> ' + p.rotas_ok + " ok · " + p.rotas_pendentes + " pendentes (de " + p.rotas_ligadas + ")</div>"
         + "<div>" + pronto + "</div></article>";
     }).join("");
+    // link do painel: a view de prontidão não tem link_painel; vem da tabela fluxo_dados_paineis
+    FF.anexarLinksPainel($("fd-paineis"), D.paineis);
   }
 
   function renderEncaminhamentos() {
@@ -128,7 +156,56 @@
     }).join("");
   }
 
-  function renderTudo() { renderMatriz(); renderFiltro(); renderRotas(); renderPaineis(); renderEncaminhamentos(); }
+  // ---- modo de edição: Nova rota / Novo encaminhamento ----
+  function renderEdicao() {
+    const on = edicaoLigada();
+    let h = "";
+    if (!on) h = '<button type="button" class="ed-btn sec" id="fd-ed-ligar">Ativar edição</button>';
+    else h = '<button type="button" class="ed-btn" id="fd-ed-rota"' + (usandoFallback ? " disabled" : "") + '>Nova rota</button>'
+      + '<button type="button" class="ed-btn" id="fd-ed-enc"' + (usandoFallback ? " disabled" : "") + '>Novo encaminhamento</button>'
+      + '<button type="button" class="ed-btn sec" id="fd-ed-desligar">Sair da edição</button>';
+    $("fd-edicao").innerHTML = h;
+    $("fd-msg").innerHTML = mensagem ? '<p class="fx-msg ' + (mensagem.ok ? "ok" : "erro") + '">' + esc(mensagem.texto) + "</p>" : "";
+    if (on && formAberto) {
+      const reg = formAberto.id ? (D[formAberto.secao] || []).find((x) => x.id === formAberto.id) : null;
+      $("fd-form").innerHTML = '<h2>' + (formAberto.secao === "rotas" ? (formAberto.id ? "Rota" : "Nova rota") : "Novo encaminhamento") + "</h2>" + FF.formHtml(formAberto.secao, reg, ctx());
+      FF.ligarForm($("fd-form"));
+      $("fx-form").addEventListener("submit", (e) => { e.preventDefault(); salvarForm(); });
+      $("fx-cancelar").addEventListener("click", () => { formAberto = null; renderEdicao(); });
+    } else $("fd-form").innerHTML = "";
+    const on1 = $("fd-ed-ligar"); if (on1) on1.addEventListener("click", () => { definirEdicao(true); mensagem = null; renderEdicao(); });
+    const off = $("fd-ed-desligar"); if (off) off.addEventListener("click", () => { definirEdicao(false); formAberto = null; mensagem = null; renderEdicao(); });
+    const nr = $("fd-ed-rota"); if (nr) nr.addEventListener("click", () => { formAberto = { secao: "rotas", id: null }; mensagem = null; renderEdicao(); $("fd-form").scrollIntoView({ block: "nearest" }); });
+    const ne = $("fd-ed-enc"); if (ne) ne.addEventListener("click", () => { formAberto = { secao: "encaminhamentos", id: null }; mensagem = null; renderEdicao(); $("fd-form").scrollIntoView({ block: "nearest" }); });
+  }
+
+  async function recarregarDados() {
+    const r = await F.carregar({ recarregar: true });
+    D = r.dados; usandoFallback = r.usandoFallback;
+  }
+
+  async function salvarForm() {
+    const secao = formAberto.secao;
+    const col = FF.coletar(secao);
+    if (col.erros.length) { mensagem = { ok: false, texto: col.erros.join(" ") }; renderEdicao(); return FF.restaurar(secao, col); }
+    try {
+      await FF.gravar(secao, formAberto.id, col, ctx());
+      await recarregarDados();
+      formAberto = null; mensagem = { ok: true, texto: "Salvo." };
+      renderTudo();
+    } catch (err) {
+      console.error("fluxo-dados: falha ao salvar", err);
+      if (err.rotaId) {
+        // a rota já foi gravada; o formulário fica aberto nela para repetir só os destinos
+        formAberto = { secao: "rotas", id: err.rotaId };
+        try { await recarregarDados(); renderTudo(); } catch (e) { /* mantém a tela atual */ }
+        mensagem = { ok: false, texto: "A rota foi salva, mas os destinos não. " + textoErro(err) + " Clique em Salvar para tentar de novo." };
+      } else mensagem = { ok: false, texto: textoErro(err) };
+      renderEdicao(); FF.restaurar(secao, col);
+    }
+  }
+
+  function renderTudo() { FF.injetarEstilos(); renderEdicao(); renderMatriz(); renderFiltro(); renderRotas(); renderPaineis(); renderEncaminhamentos(); }
   function selecionar(ini) { selecionada = ini; renderTudo(); if (ini) $("fd-filtro").scrollIntoView({ behavior: "smooth", block: "start" }); }
 
   async function iniciar() {
@@ -138,7 +215,7 @@
       iniciativas = rp.lista.map((p) => p.iniciativa);
     } catch (e) { iniciativas = ((window.DB && window.DB.projetos) || []).map((p) => p.iniciativa); }
     const r = await F.carregar();
-    D = r.dados;
+    D = r.dados; usandoFallback = r.usandoFallback;
     if (r.usandoFallback) {
       $("aviso-fallback").hidden = false;
       if (r.motivoFallback) $("aviso-fallback").insertAdjacentHTML("beforeend", ' <small title="' + esc(r.motivoFallback) + '">(' + esc(r.motivoFallback) + ")</small>");
