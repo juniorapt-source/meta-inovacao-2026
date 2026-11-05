@@ -12,8 +12,9 @@
 - Grava sozinho ao editar (link ao sair do campo ou Enter; só aceita `http://`/`https://`).
   Linha nova só nasce no primeiro preenchimento. Código em `js/iniciativa-links.js` e
   `js/db-iniciativa-links.js`.
-- **Banco (pendente, rodar à mão):** `tools/sql/2026-11_iniciativa_links.sql` cria
-  `meta_inovacao_iniciativa_links`. Até rodar, as páginas abrem com a edição desligada e um aviso.
+- **Banco (rodado à mão em 05/11/2026):** `tools/sql/2026-11_iniciativa_links.sql` cria
+  `meta_inovacao_iniciativa_links` (3 policies conferidas). Sem a tabela, as páginas abrem com a edição
+  desligada e um aviso.
 - **Correção de CSS:** o rodapé "Editando como … trocar" mostrava o formulário de troca sempre
   aberto (`display:flex` anulava o `hidden`).
 
