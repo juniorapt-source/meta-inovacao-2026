@@ -98,6 +98,7 @@ COM_CHROME=(
   "testar_plano_acao_responsavel_headless.js|node tools/testar_plano_acao_responsavel_headless.js"
   # item D3.2 — órfãos reconciliados, headless via CDP
   "testar_kanban_headless.js|node tools/testar_kanban_headless.js"
+  "testar_plano_editar_headless.js|node tools/testar_plano_editar_headless.js"
   "testar_projetos_headless.js|node tools/testar_projetos_headless.js"
   "testar_participantes_headless.js|node tools/testar_participantes_headless.js"
   "testar_paineis_headless.js|node tools/testar_paineis_headless.js"

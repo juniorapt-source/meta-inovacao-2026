@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.37.0 — 2026-11-05
+**Plano de ação: editar a ação direto no detalhe da linha.**
+
+Na visão Lista de `plano.html`, o detalhe de cada ação (aberto ao clicar na linha) ganhou o botão
+**Editar**. Ele troca o detalhe por um formulário com status, prazo (data e texto exibido),
+atividade, como executar, como monitorar e ferramenta. **Salvar** grava no Supabase só os campos
+alterados, pelo mesmo caminho do Kanban e do editor (`DB_PLANO.salvar`, com "Editando como…" no
+`updated_by`).
+
+- Mudar a data do prazo atualiza o texto "como aparece" (ex.: `20/11`) quando ele ainda era o
+  da data antiga.
+- Com dados locais (sem conexão com o banco), o botão fica desabilitado com o motivo.
+- Responsável fica de fora: ele tem vínculos próprios no golden record
+  (`meta_inovacao_plano_responsaveis`) que um campo de texto deixaria dessincronizados.
+- Teste novo: `tools/testar_plano_editar_headless.js`.
+
 ## v0.36.0 — 2026-11-05
 **Projeto ligado por `projeto_id`: renomear no editor não deixa mais nada órfão.**
 

@@ -57,6 +57,19 @@
 .kb-faixa-janela{margin-top:2px;padding-top:10px;border-top:1px dashed var(--linha);display:flex;flex-direction:column;gap:8px}
 .kb-faixa-janela-titulo{font:700 10px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite)}
 @media (max-width:960px){ .kb-board{grid-template-columns:1fr} }
+
+/* edição da ação direto no detalhe da linha (visão Lista) — mesma gravação
+   (DB_PLANO.salvar) do Kanban e de editor.html. */
+.det-acoes{display:flex;align-items:center;gap:10px;margin-top:12px}
+.det-acoes .btn{padding:6px 14px;font-size:12px}
+.det-acoes .det-msg{font-size:12px;color:var(--grafite)}
+.det-acoes .det-msg.erro{color:var(--critico)}
+.det-form{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 14px}
+.det-form label{display:flex;flex-direction:column;gap:4px;font:700 10.5px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--grafite)}
+.det-form .full{grid-column:1 / -1}
+.det-form input,.det-form select,.det-form textarea{font:400 13px var(--font-sans);text-transform:none;letter-spacing:0;color:var(--ink);background:var(--branco);border:1px solid var(--linha);border-radius:0;padding:6px 8px}
+.det-form textarea{min-height:58px;resize:vertical}
+@media (max-width:767px){ .det-form{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -64,7 +77,7 @@
   <nav class="nav" aria-label="Navegação do painel"></nav>
   <main class="conteudo">
     <h1 class="pagina-titulo">Plano de ação</h1>
-    <p class="pagina-sub">47 ações em 5 frentes. Clique numa linha para ver dependências e a <b>solução proposta</b>: como executar, como monitorar e com qual ferramenta.</p>
+    <p class="pagina-sub">47 ações em 5 frentes. Clique numa linha para ver dependências e a <b>solução proposta</b>: como executar, como monitorar e com qual ferramenta — e, em <b>Editar</b>, alterar status, prazo e textos.</p>
     <p class="aviso" id="aviso-fallback" hidden><b>Dados locais</b> — pode haver defasagem. Não foi possível atualizar os dados agora; mostrando a última versão salva.</p>
 
     <div class="vista-toggle">
@@ -258,6 +271,88 @@
     document.getElementById("contagem").textContent = lista.length + " de " + plano.length + " ações exibidas.";
   }
 
+  // ---- edição no detalhe da linha (visão Lista) ----
+  // `abertos` guarda quais detalhes estão abertos pra sobreviver a um render() (salvar,
+  // filtrar, ordenar); `editando` é o id da ação com o formulário aberto (uma por vez).
+  // Grava com DB_PLANO.salvar — o mesmo caminho do Kanban e de editor.html. Responsável
+  // fica de fora de propósito: ele tem vínculos próprios no golden record
+  // (meta_inovacao_plano_responsaveis) que um campo de texto aqui deixaria dessincronizados.
+  const abertos = new Set();
+  let editando = null;
+  const STATUS_ACAO = ["Não iniciado", "Em andamento", "Concluído"];
+  const CAMPOS_EDITAVEIS = [ // campo do objeto ação -> coluna em meta_inovacao_plano_acoes
+    ["status", "status"], ["prazo_iso", "prazo_iso"], ["prazo", "prazo_texto"],
+    ["atividade", "atividade"], ["como", "como"], ["monitor", "monitor"], ["ferramenta", "ferramenta"],
+  ];
+
+  function detalheLeituraHtml(a) {
+    return '<div style="margin-bottom:10px;font-size:12.5px"><b style="color:var(--grafite)">Depende de:</b> ' +
+      (a.dep.length ? a.dep.map(d => '<a class="mono" href="#' + d + '" data-goto="' + d + '">' + d + "</a>").join(" · ") : "—") + "</div>" +
+      '<div class="det-grid">' +
+      "<div><b>Como executar</b>" + esc(a.como) + "</div>" +
+      "<div><b>Como monitorar</b>" + esc(a.monitor) + "</div>" +
+      "<div><b>Ferramenta</b>" + esc(a.ferramenta) + "</div></div>" +
+      '<div class="det-acoes">' +
+        '<button type="button" class="btn sec" data-editar="' + esc(a.id) + '"' +
+          (usandoFallback ? ' disabled title="Sem conexão com o banco — a edição volta quando os dados forem atualizados."' : "") + ">Editar</button>" +
+        (usandoFallback ? '<span class="det-msg">Edição indisponível com dados locais.</span>' : "") +
+      "</div>";
+  }
+
+  function formEdicaoHtml(a) {
+    const opcoes = STATUS_ACAO.map(s => "<option" + (s === a.status ? " selected" : "") + ">" + esc(s) + "</option>").join("");
+    return '<form class="det-form" data-form="' + esc(a.id) + '">' +
+      '<label>Status<select name="status">' + opcoes + "</select></label>" +
+      '<label>Prazo (data)<input type="date" name="prazo_iso" value="' + esc(a.prazo_iso || "") + '"></label>' +
+      '<label>Prazo (como aparece)<input type="text" name="prazo" value="' + esc(a.prazo || "") + '" placeholder="ex.: 14/08 ou 2ª quinzena de set"></label>' +
+      '<label class="full">Atividade<input type="text" name="atividade" value="' + esc(a.atividade || "") + '"></label>' +
+      '<label>Como executar<textarea name="como">' + esc(a.como || "") + "</textarea></label>" +
+      '<label>Como monitorar<textarea name="monitor">' + esc(a.monitor || "") + "</textarea></label>" +
+      '<label>Ferramenta<textarea name="ferramenta">' + esc(a.ferramenta || "") + "</textarea></label>" +
+      '<div class="det-acoes full">' +
+        '<button type="submit" class="btn">Salvar</button>' +
+        '<button type="button" class="btn sec" data-cancelar>Cancelar</button>' +
+        '<span class="det-msg" aria-live="polite"></span>' +
+      "</div></form>";
+  }
+
+  // "AAAA-MM-DD" -> "DD/MM", o formato do texto de prazo das ações com data fixa
+  function isoParaTexto(iso) { return iso ? iso.slice(8, 10) + "/" + iso.slice(5, 7) : ""; }
+
+  async function salvarEdicao(form) {
+    const id = form.dataset.form;
+    const a = plano.find(x => x.id === id);
+    if (!a) return;
+    const msg = form.querySelector(".det-msg");
+    const valor = (nome) => form.elements[nome].value.trim();
+    if (!valor("atividade")) { msg.textContent = "A atividade não pode ficar vazia."; msg.classList.add("erro"); return; }
+
+    const novo = {}, patch = {};
+    for (const [campo, coluna] of CAMPOS_EDITAVEIS) {
+      let v = valor(campo);
+      if (campo === "prazo_iso" && v === "") v = null;
+      if ((a[campo] == null ? (campo === "prazo_iso" ? null : "") : a[campo]) === v) continue;
+      novo[campo] = v;
+      patch[coluna] = campo === "status" ? DB_PLANO.CHAVE_POR_ROTULO[v] : v;
+    }
+    if (!Object.keys(patch).length) { editando = null; render(); return; }
+
+    form.querySelectorAll("button,input,select,textarea").forEach(el => { el.disabled = true; });
+    msg.classList.remove("erro");
+    msg.textContent = "salvando…";
+    try {
+      await DB_PLANO.salvar(a.db_id, patch, EDITOR_ATUAL.nomeAtual());
+      Object.assign(a, novo);
+      editando = null;
+      render();
+    } catch (err) {
+      console.error("plano: falha ao salvar a ação pelo detalhe", err);
+      form.querySelectorAll("button,input,select,textarea").forEach(el => { el.disabled = false; });
+      msg.classList.add("erro");
+      msg.textContent = (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || ("Não consegui salvar — " + ((err && err.message) || err));
+    }
+  }
+
   function renderLista(lista){
     let html = "";
     for (const a of lista) {
@@ -269,13 +364,8 @@
         '<td data-label="Responsável">' + DRAWER.spanPessoasEmTexto(a.resp) + "</td>" +
         '<td class="mono" data-label="Prazo" style="font-size:12px;white-space:nowrap">' + esc(a.prazo || "—") + "</td>" +
         '<td><span class="chip ' + cls + '">' + rot + "</span></td></tr>";
-      html += '<tr class="detalhe" data-det="' + a.id + '" hidden><td colspan="6">' +
-        '<div style="margin-bottom:10px;font-size:12.5px"><b style="color:var(--grafite)">Depende de:</b> ' +
-        (a.dep.length ? a.dep.map(d => '<a class="mono" href="#' + d + '" data-goto="' + d + '">' + d + "</a>").join(" · ") : "—") + "</div>" +
-        '<div class="det-grid">' +
-        "<div><b>Como executar</b>" + esc(a.como) + "</div>" +
-        "<div><b>Como monitorar</b>" + esc(a.monitor) + "</div>" +
-        "<div><b>Ferramenta</b>" + esc(a.ferramenta) + "</div></div></td></tr>";
+      html += '<tr class="detalhe" data-det="' + a.id + '"' + (abertos.has(a.id) ? "" : " hidden") + '><td colspan="6">' +
+        (editando === a.id ? formEdicaoHtml(a) : detalheLeituraHtml(a)) + "</td></tr>";
     }
     corpo.innerHTML = html || '<tr><td colspan="6" style="color:var(--grafite)">Nenhuma ação com esses filtros.</td></tr>';
     atualizarIndicadoresOrdenacao();
@@ -454,15 +544,35 @@
     // (window.ccChip) agora é um <a> pra caminho.html dentro da célula do ID; sem isso o
     // clique nele também abriria/fecharia o detalhe da linha.
     if (e.target.closest("a")) return;
+    const btnEditar = e.target.closest("[data-editar]");
+    if (btnEditar) { editando = btnEditar.dataset.editar; render(); return; }
+    if (e.target.closest("[data-cancelar]")) { editando = null; render(); return; }
     const tr = e.target.closest("tr.clicavel");
     if (!tr) return;
     const det = corpo.querySelector('[data-det="' + tr.dataset.id + '"]');
     det.hidden = !det.hidden;
+    if (det.hidden) abertos.delete(tr.dataset.id); else abertos.add(tr.dataset.id);
+  });
+  corpo.addEventListener("submit", (e) => {
+    const form = e.target.closest("form[data-form]");
+    if (!form) return;
+    e.preventDefault();
+    salvarEdicao(form);
+  });
+  // data fixa nova: se o texto do prazo ainda era o da data antiga (ou vazio), acompanha.
+  corpo.addEventListener("change", (e) => {
+    if (e.target.name !== "prazo_iso") return;
+    const form = e.target.closest("form[data-form]");
+    const a = form && plano.find(x => x.id === form.dataset.form);
+    if (!a) return;
+    const txt = form.elements.prazo;
+    if (!txt.value.trim() || txt.value.trim() === isoParaTexto(a.prazo_iso)) txt.value = isoParaTexto(e.target.value);
   });
 
   function abrir(id){
     const tr = corpo.querySelector('tr.clicavel[data-id="' + id + '"]');
     if (!tr) return;
+    abertos.add(id);
     corpo.querySelector('[data-det="' + id + '"]').hidden = false;
     tr.scrollIntoView({ block: "center" });
   }

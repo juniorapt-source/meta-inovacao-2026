@@ -239,6 +239,9 @@ node tools/testar_guardrail_urc_supabase.js # F14: o mesmo guardrail de validar_
 node tools/testar_kanban_headless.js   # F11: visão Kanban de plano.html — contagem de
                                         # cards por coluna bate com a mesma fonte de
                                         # verdade dos KPIs (F2), sem perder/duplicar ação
+node tools/testar_plano_editar_headless.js # plano.html, visão Lista: "Editar" no
+                                        # detalhe da ação grava só o que mudou (dublê,
+                                        # sem escrita real); bloqueado com dados locais
 node tools/testar_projetos_headless.js # F16: projetos.html com ?semrede=1 — aviso de
                                         # dados locais, contagem, filtro por núcleo e busca
 node tools/testar_participantes_headless.js # F15: participantes.html com ?semrede=1 —
