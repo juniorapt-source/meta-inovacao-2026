@@ -15,6 +15,25 @@
   o 2º painel e os detalhes falham com um aviso na página apontando o script.
 - Teste novo: `tools/testar_paineis_headless.js` (banco falso em memória, sem rede).
 
+## v0.33.2 — 2026-11-05
+**Fluxo de dados: editar direto na página.**
+
+- Com "Ativar edição" ligado, cada cartão de rota, painel e encaminhamento em `fluxo-dados.html`
+  ganha um botão **Editar**, que abre o mesmo formulário do editor já preenchido ("Editar rota",
+  "Editar painel", "Editar encaminhamento"). Antes a página só criava; editar exigia ir à aba
+  "Fluxo de dados" do `editor.html`, que continua sendo o lugar de desativar/reativar e de
+  cadastrar sistemas. Sem banco (dados locais), o botão aparece desabilitado.
+- Teste novo: `tools/testar_fluxo_dados_editar_headless.js`.
+
+## v0.33.1 — 2026-11-05
+**Sites e Painéis: projeto novo aparece mesmo fora do Corsário.**
+
+- As duas páginas liam a lista só de `corsario_status`. Projeto criado no editor só entrava ali se a
+  inclusão automática no Corsário desse certo; quando falhava, ficava de fora (caso "Startup Day -
+  Mentores"). Agora a lista soma o cadastro de projetos (`meta_inovacao_projetos`) às iniciativas do
+  Corsário, sem repetir (casa por `projeto_id` e, sem FK, pelo nome). Iniciativas livres do Corsário
+  continuam aparecendo.
+
 ## v0.33.0 — 2026-11-05
 **Execução: páginas "Painéis" e "Sites".**
 

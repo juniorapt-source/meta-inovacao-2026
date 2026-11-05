@@ -20,7 +20,7 @@ Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanh
 | `projetos.html` | Portfólio de projetos por núcleo, com representantes |
 | `plano-acao.html` | Atividades por iniciativa (CRUD via Supabase) |
 | `corsario.html` | Adequação de cada iniciativa ao ecossistema oficial (Supabase, somente leitura) — régua de 19 critérios, patente por faixa de % |
-| `fluxo-dados.html` | Fluxo de dados (Projeto Corso): matriz iniciativa × cliente/atendimento/processo/painel, rotas com lacunas, painéis prontos para reapontar e encaminhamentos (Supabase `fluxo_dados_*`, somente leitura; com "Ativar edição" cria rota e encaminhamento; edição completa na aba "Fluxo de dados" do `editor.html`) |
+| `fluxo-dados.html` | Fluxo de dados (Projeto Corso): matriz iniciativa × cliente/atendimento/processo/painel, rotas com lacunas, painéis prontos para reapontar e encaminhamentos (Supabase `fluxo_dados_*`, somente leitura; com "Ativar edição" cria rota, painel e encaminhamento e edita os existentes pelo botão "Editar" de cada cartão; desativar e cadastrar sistemas na aba "Fluxo de dados" do `editor.html`) |
 | `paineis.html` | Painéis (menu Execução): por iniciativa do Corsário, um ou mais painéis, cada um com link, detalhes (texto livre) e responsável pela manutenção (pessoa de `meta_inovacao_pessoas`). Grava em `meta_inovacao_iniciativa_links` (tipo `painel`) ao editar |
 | `sites.html` | Sites (menu Execução): por iniciativa do Corsário, link da página e se tem formulário de captura de lead. Grava em `meta_inovacao_iniciativa_links` (tipo `site`) ao editar |
 | `editor.html` | Modo edição: Plano de ação e Agenda editam ao vivo no Supabase (linha a linha, salva sozinho); matriz, pessoas, projetos e URC continuam no modelo "edita a cópia local, baixa `data/*.js`, publica no Git"; aba **Histórico** com as últimas 100 alterações (log de auditoria) |
@@ -162,6 +162,10 @@ node tools/testar_urc_guardrail_offline.js # guardrail da URC (liderança não e
 node tools/testar_pessoas_editor_nova_headless.js # aba "Pessoas" do editor.html:
                                         # "+ Nova pessoa" valida nome/grupo, recusa
                                         # nome+grupo repetido e grava a linha nova
+node tools/testar_fluxo_dados_editar_headless.js # fluxo-dados.html: botão "Editar"
+                                        # nos cartões de rota/painel/encaminhamento (só com
+                                        # "Ativar edição"; desabilitado offline) abre o
+                                        # formulário preenchido e Salvar faz UPDATE
 node tools/testar_projetos_editor_representantes_headless.js # aba "Projetos &
                                         # Representantes" do editor.html (item 4.1):
                                         # vínculo existente vira chip removível, texto
