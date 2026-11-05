@@ -119,7 +119,7 @@
     } else if (c.t === "destinos") {
       // vários sistemas por momento: caixas de marcar (mesmo padrão das rotas do painel)
       const marcados = new Set(reg ? F.destinosDaRota(dados, reg.id, c.momento) : []);
-      ctl = '<div class="fx-rotas" id="' + id + '">' + (ativos(dados.sistemas).map((s) =>
+      ctl = '<div class="fx-rotas" id="' + id + '">' + (F.sistemasDoMomento(ativos(dados.sistemas), c.momento, marcados).map((s) =>
         '<label><input type="checkbox" data-destino="' + c.momento + '" value="' + _esc(s.id) + '"' + (marcados.has(s.id) ? " checked" : "") + "> " + _esc(s.nome) + "</label>").join("") || "<em>Nenhum sistema cadastrado.</em>") + "</div>";
     } else if (c.t === "fontes") {
       const lista = F.normalizarFontes(reg ? reg.outras_fontes : []);

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.33.3 — 2026-11-05
+**Fluxo de dados: opção "Sistema próprio" em "Destino hoje".**
+
+- Novo sistema "Sistema próprio" (`tools/sql/2026-11_fluxo_dados_patch5.sql`), oferecido só em
+  "Destino hoje (um ou mais)" no formulário de rota; em "Destino alvo" ele fica escondido (a não
+  ser que já esteja marcado). No site publicado, a opção só aparece depois de rodar o patch5 no
+  Supabase; nos dados locais (`data/fluxo_dados.js`) já está.
+
 ## v0.33.2 — 2026-11-05
 **Fluxo de dados: editar direto na página.**
 

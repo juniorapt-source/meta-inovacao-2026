@@ -3,7 +3,8 @@
  * Supabase primeiro (js/db-fluxo.js) e só cai aqui se a rede/tabela falhar. As 3 views
  * (matriz, rotas_lacunas, paineis_prontidao) vão junto, já calculadas, porque offline não há
  * quem as calcule. Gerado em 2026-10-16 a partir de leitura com a anon key; para atualizar,
- * regerar a partir do banco (não editar à mão). */
+ * regerar a partir do banco (não editar à mão). Exceção: "Sistema próprio" entrou à mão em
+ * 05/11/2026, com o mesmo id fixo do 2026-11_fluxo_dados_patch5.sql. */
 window.DB = window.DB || {};
 window.DB.fluxo_dados = {
  "gerado_em": "2026-10-16",
@@ -85,6 +86,17 @@ window.DB.fluxo_dados = {
    "ativo": true,
    "criado_em": "2026-10-16T14:25:48.583042+00:00",
    "atualizado_em": "2026-10-16T14:25:48.583042+00:00"
+  },
+  {
+   "id": "f2f26e37-862e-44b6-900b-bd25bfd2b4a4",
+   "slug": "sistema_proprio",
+   "nome": "Sistema próprio",
+   "tipo": "outro",
+   "mantenedor": null,
+   "observacao": "Sistema da própria iniciativa. Só aparece como destino de hoje (patch5).",
+   "ativo": true,
+   "criado_em": "2026-11-05T00:00:00+00:00",
+   "atualizado_em": "2026-11-05T00:00:00+00:00"
   }
  ],
  "rotas": [

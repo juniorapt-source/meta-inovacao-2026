@@ -51,6 +51,13 @@
   const STATUS_ENC = ["a_fazer", "andamento", "feito", "bloqueado", "cancelado"];
   const ROTULO_ENC = { a_fazer: "A fazer", andamento: "Em andamento", feito: "Feito", bloqueado: "Bloqueado", cancelado: "Cancelado" };
   const TIPOS_SISTEMA_SUGERIDOS = ["crm", "planilha", "plataforma", "bi", "banco", "dw", "outro"];
+  // sistemas que só fazem sentido como destino de HOJE (não são alvo): somem de "Destino alvo"
+  const SISTEMAS_SO_HOJE = ["sistema_proprio"];
+  // lista de sistemas a oferecer como destino num momento ('hoje' ou 'alvo'); quem já está
+  // marcado continua aparecendo, para não sumir um destino gravado antes da regra
+  function sistemasDoMomento(sistemas, momento, marcados) {
+    return (sistemas || []).filter((s) => momento !== "alvo" || SISTEMAS_SO_HOJE.indexOf(s.slug) === -1 || (marcados && marcados.has(s.id)));
+  }
 
   function forcarFallback() { return BASE.forcarFallback(raiz); }
 
@@ -274,6 +281,7 @@
     CHEGA_COMPLETO: CHEGA_COMPLETO, ROTULO_CHEGA: ROTULO_CHEGA,
     STATUS_ENC: STATUS_ENC, ROTULO_ENC: ROTULO_ENC,
     TIPOS_SISTEMA_SUGERIDOS: TIPOS_SISTEMA_SUGERIDOS,
+    SISTEMAS_SO_HOJE: SISTEMAS_SO_HOJE, sistemasDoMomento: sistemasDoMomento,
     carregar: carregar, seed: seed,
     criar: criar, salvar: salvar, desativar: desativar, reativar: reativar,
     vincularPainelRota: vincularPainelRota, desvincularPainelRota: desvincularPainelRota,

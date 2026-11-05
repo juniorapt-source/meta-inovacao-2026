@@ -25,8 +25,8 @@ function avisa(nome, cond) { if (cond) console.log("  ok:", nome); else { consol
 
 const S = window.DB.fluxo_dados;
 checa("snapshot existe", !!S);
-checa("7 sistemas, 2 rotas, 1 painel, 5 encaminhamentos (snapshot de 16/10/2026)",
-  S.sistemas.length === 7 && S.rotas.length === 2 && S.paineis.length === 1 && S.encaminhamentos.length === 5);
+checa("8 sistemas, 2 rotas, 1 painel, 5 encaminhamentos (snapshot de 16/10/2026 + Sistema próprio)",
+  S.sistemas.length === 8 && S.rotas.length === 2 && S.paineis.length === 1 && S.encaminhamentos.length === 5);
 
 const ids = (l) => new Set(l.map((x) => x.id));
 const sis = ids(S.sistemas), rotas = ids(S.rotas), pain = ids(S.paineis), encs = ids(S.encaminhamentos);
@@ -95,6 +95,14 @@ checa("diff: mesmo sistema em outro momento = insere alvo e remove hoje", d3.ins
 checa("lacuna de destino compara conjuntos (ordem e repetição não contam)", F.lacunaDestino(["a", "b"], ["b", "a", "a"]) === false);
 checa("lacuna de destino: conjuntos diferentes", F.lacunaDestino(["a"], ["a", "b"]) === true && F.lacunaDestino([], ["a"]) === true && F.lacunaDestino([], []) === false);
 checa("nomesDestinos lê rota_destinos + sistemas", F.nomesDestinos(S, S.rotas[0].id, "hoje").join() === "Foco (Salesforce)");
+{
+  const proprio = S.sistemas.find((x) => x.slug === "sistema_proprio");
+  checa("Sistema próprio existe no snapshot", !!proprio && proprio.nome === "Sistema próprio");
+  const slugs = (m, marc) => F.sistemasDoMomento(S.sistemas, m, marc).map((x) => x.slug);
+  checa("Sistema próprio aparece em Destino hoje", slugs("hoje").indexOf("sistema_proprio") !== -1);
+  checa("Sistema próprio NÃO aparece em Destino alvo", slugs("alvo").indexOf("sistema_proprio") === -1 && slugs("alvo").length === S.sistemas.length - 1);
+  checa("Sistema próprio já marcado como alvo continua visível", slugs("alvo", new Set([proprio.id])).indexOf("sistema_proprio") !== -1);
+}
 
 // Ajuste 4/5 — formulário de painel
 const chavesPainel = FF.CAMPOS.paineis.map((c) => c.k);
