@@ -76,10 +76,9 @@
 .ed-chip-remover:hover{color:var(--critico)}
 .ed-repr-vazio{color:var(--ink-2);font-size:12.5px;font-style:italic}
 
-/* item 3.4 — aba Histórico (mesmo .vista-toggle de agenda.html/plano.html) */
-.vista-toggle{display:flex;gap:8px;margin-bottom:14px}
-.vista-toggle button{font:600 12px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.06em;padding:8px 14px;border-radius:0;border:1px solid var(--linha);background:var(--branco);color:var(--tinta);cursor:pointer}
-.vista-toggle button.ativo{background:var(--azul);color:var(--branco);border-color:var(--azul)}
+.ed-titulo-conj{font-weight:400;color:var(--grafite)}
+.ed-titulo-conj:not(:empty)::before{content:" · "}
+.ed-topo:has(#ed-baixar[style*="none"]){display:none}
 .hist-linha{padding:8px 10px;border-top:1px solid var(--border-soft);font-size:13px}
 .hist-linha:first-child{border-top:0}
 .hist-linha .hist-autor{font-weight:600}
@@ -92,22 +91,18 @@
 <div class="shell">
   <nav class="nav" aria-label="Navegação do painel"></nav>
   <main class="conteudo">
-    <h1 class="pagina-titulo">Modo edição</h1>
+    <h1 class="pagina-titulo">Modo edição<span class="ed-titulo-conj" id="ed-titulo-conjunto"></span></h1>
 
-    <!-- item 3.4 do plano de melhorias — "Histórico" é uma 2ª aba, separada do fluxo de
-         edição por conjunto (não é mais um conjunto de dado, é uma visão de leitura do
-         log de auditoria — tools/sql/2026-08_auditoria.sql). -->
-    <div class="vista-toggle">
-      <button type="button" id="btn-aba-dados" class="ativo">Editar dados</button>
-      <button type="button" id="btn-aba-historico">Histórico</button>
-    </div>
+    <!-- 05/11/2026 — o conjunto (e o Histórico, item 3.4) é escolhido pelo menu lateral,
+         grupo "Modo edição" (js/core.js): cada item é editor.html#<chave>. O <select>
+         abaixo continua existindo, oculto, porque os módulos js/editor-*.js leem o valor
+         dele pra saber se ainda são a aba ativa. -->
 
     <div id="aba-dados">
       <p class="pagina-sub" id="ed-sub">Edite abaixo, gere o arquivo atualizado e substitua o arquivo correspondente na pasta de dados. Nada é salvo automaticamente nesta página.</p>
       <section class="cartao">
         <div class="ed-topo">
-          <label for="ed-conjunto" style="font:600 13px 'DM Sans',sans-serif">Conjunto:</label>
-          <select id="ed-conjunto" aria-label="Escolher conjunto de dados"></select>
+          <select id="ed-conjunto" aria-label="Escolher conjunto de dados" hidden></select>
           <button id="ed-baixar" class="ed-btn">Exportar cópia de segurança dos dados</button>
         </div>
         <div id="ed-area"></div>
@@ -224,7 +219,7 @@
 (function(){
 "use strict";
 const DB = window.DB, IO = window.EDITOR_IO;
-montarShell("editor.html");
+montarShell("editor.html#" + ((location.hash || "").slice(1) || "plano"));
 
 // "Correções v0.18.x" — plano/agenda já eram vivo desde o P10; pessoas/projetos/
 // urc_lideranca/urc_canais entram agora na mesma leva. matriz continua a ÚNICA exceção
@@ -232,15 +227,15 @@ montarShell("editor.html");
 // demandas.html, não aqui — o botão dela vira `snapshot:true` (exporta data/matriz.js
 // pra servir de fallback), não um flag de "ainda falta migrar".
 const CONJUNTOS = {
-  plano:        { rotulo:"Plano de ação — status e prazos (editado ao vivo)", vivo:true },
-  matriz:       { rotulo:"Matriz de demandas — iniciativas × canais, ao vivo (edite em demandas.html)", snapshot:true, arquivo:"matriz.js" },
-  agenda:       { rotulo:"Agenda — encontros dos ciclos (editada ao vivo)", vivo:true },
-  pessoas:      { rotulo:"Pessoas — representantes e papéis (editado ao vivo)", vivo:true },
-  projetos:     { rotulo:"Projetos & Representantes — núcleos e portfólio UI (editado ao vivo)", vivo:true },
-  urc_lideranca:{ rotulo:"URC — Liderança (editado ao vivo)", vivo:true },
-  urc_canais:   { rotulo:"URC — Responsáveis por canal (editado ao vivo)", vivo:true },
-  corsario:     { rotulo:"O Caminho para o Corsário — status por critério (editado ao vivo)", vivo:true },
-  fluxo:        { rotulo:"Fluxo de dados — rotas, painéis e encaminhamentos (editado ao vivo)", vivo:true }
+  plano:        { rotulo:"Plano de ação — status e prazos (editado ao vivo)", titulo:"Plano de ação", vivo:true },
+  matriz:       { rotulo:"Matriz de demandas — iniciativas × canais, ao vivo (edite em demandas.html)", titulo:"Matriz de demandas (cópia de segurança)", snapshot:true, arquivo:"matriz.js" },
+  agenda:       { rotulo:"Agenda — encontros dos ciclos (editada ao vivo)", titulo:"Agenda", vivo:true },
+  pessoas:      { rotulo:"Pessoas — representantes e papéis (editado ao vivo)", titulo:"Pessoas", vivo:true },
+  projetos:     { rotulo:"Projetos & Representantes — núcleos e portfólio UI (editado ao vivo)", titulo:"Projetos & Representantes", vivo:true },
+  urc_lideranca:{ rotulo:"URC — Liderança (editado ao vivo)", titulo:"URC — Liderança", vivo:true },
+  urc_canais:   { rotulo:"URC — Responsáveis por canal (editado ao vivo)", titulo:"URC — Responsáveis por canal", vivo:true },
+  corsario:     { rotulo:"O Caminho para o Corsário — status por critério (editado ao vivo)", titulo:"O Caminho para o Corsário", vivo:true },
+  fluxo:        { rotulo:"Fluxo de dados — rotas, painéis e encaminhamentos (editado ao vivo)", titulo:"Fluxo de dados", vivo:true }
 };
 // aba Agenda: STATUS_ENC/ROTULO_ENC e renderAgenda() moram em js/editor-agenda.js
 // desde 28/08/2026 (window.EDITOR_AGENDA) — ver comentário no topo daquele arquivo.
@@ -347,14 +342,12 @@ function atualizarChromeVivo(){
 
 function render(){
   atualizarChromeVivo();
+  document.getElementById("ed-titulo-conjunto").textContent = CONJUNTOS[sel.value].titulo || "";
   ({plano:EDITOR_PLANO.render, matriz:EDITOR_MATRIZ.render, agenda:EDITOR_AGENDA.render, pessoas:EDITOR_PESSOAS.render, projetos:EDITOR_PROJETOS.render,
     urc_lideranca:EDITOR_URC.renderLideranca, urc_canais:EDITOR_URC.renderCanais, corsario:EDITOR_CORSARIO.render, fluxo:EDITOR_FLUXO.render})[sel.value]();
   saida.value="";
 }
-sel.addEventListener("change", render);
-// link "Editar no Modo edição" de fluxo-dados.html abre direto nesta aba
-if (location.hash === "#fluxo" && CONJUNTOS.fluxo) sel.value = "fluxo";
-render();
+sel.addEventListener("change", ()=>{ marcarNavAtivo("editor.html#"+sel.value); render(); });
 
 btnBaixar.addEventListener("click", function(){
   const k = sel.value;
@@ -379,8 +372,9 @@ btnBaixar.addEventListener("click", function(){
 });
 
 // ==================== item 3.4 — aba "Histórico" (log de auditoria) ====================
-const btnAbaDados = document.getElementById("btn-aba-dados");
-const btnAbaHistorico = document.getElementById("btn-aba-historico");
+// Desde 05/11/2026 não há mais botões "Editar dados"/"Histórico": o menu lateral (grupo
+// "Modo edição", js/core.js) aponta pra editor.html#<conjunto> ou editor.html#historico,
+// e trocar de item só muda o #hash — aplicarHash() decide o que mostrar.
 const elAbaDados = document.getElementById("aba-dados");
 const elAbaHistorico = document.getElementById("aba-historico");
 
@@ -388,17 +382,30 @@ function alternarAba(aba){
   const historico = aba === "historico";
   elAbaDados.style.display = historico ? "none" : "";
   elAbaHistorico.style.display = historico ? "" : "none";
-  btnAbaDados.classList.toggle("ativo", !historico);
-  btnAbaHistorico.classList.toggle("ativo", historico);
-  if(historico) EDITOR_HISTORICO.ativar();
+  if(historico){
+    document.getElementById("ed-titulo-conjunto").textContent = "Histórico de alterações";
+    EDITOR_HISTORICO.ativar();
+  }
 }
-btnAbaDados.addEventListener("click", ()=>alternarAba("dados"));
-btnAbaHistorico.addEventListener("click", ()=>alternarAba("historico"));
 
-// o CONTEÚDO da aba Histórico (item 3.4) mora em js/editor-historico.js desde
-// 28/08/2026 — 1ª aba extraída do inline (ver comentário no topo daquele arquivo). Só o
-// "spine" (troca de aba acima) continua aqui.
+function aplicarHash(){
+  const chave = (location.hash || "").slice(1);
+  if (chave === "historico") {
+    marcarNavAtivo("editor.html#historico");
+    alternarAba("historico");
+    return;
+  }
+  // sem hash (ou hash desconhecido, ex. link antigo) cai no Plano de ação, como o
+  // <select> fazia antes. "#fluxo" de fluxo-dados.html continua valendo.
+  const k = CONJUNTOS[chave] ? chave : "plano";
+  marcarNavAtivo("editor.html#" + k);
+  alternarAba("dados");
+  if (sel.value !== k || !area.hasChildNodes()) { sel.value = k; render(); }
+}
+window.addEventListener("hashchange", ()=>{ aplicarHash(); window.scrollTo(0,0); });
+
 EDITOR_HISTORICO.montar();
+aplicarHash();
 
 EDITOR_ATUAL.montar(document.getElementById("cc-editor-rodape-wrap"));
 })();
