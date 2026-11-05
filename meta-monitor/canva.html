@@ -365,7 +365,9 @@
   // substitui montarSelectProjetos(): mesmo agrupamento por núcleo que o <optgroup>
   // fazia, agora como <fieldset> com um "selecionar todos" no <legend>.
   async function montarListaProjetos() {
-    const { lista: projetos, usandoFallback } = await DB_PROJETOS.carregar();
+    const { lista: todos, usandoFallback } = await DB_PROJETOS.carregar();
+    // só projetos com "Canva" marcado no cadastro (v0.35.0; sem a coluna, todos)
+    const projetos = todos.filter((p) => DB_PROJETOS.exibir(p, "exibir_canva"));
     if (usandoFallback) document.getElementById("cv-aviso-fallback").hidden = false;
 
     const nucleos = [...new Set(projetos.map((p) => p.nucleo))];

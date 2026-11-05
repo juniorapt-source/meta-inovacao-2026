@@ -138,8 +138,13 @@
   let listaAtual = [];
   const timers = new Map(); // debounce por "id:campo"
 
+  // projetos com "Atividades" marcado no cadastro (v0.35.0; sem a coluna, todos)
+  function projetosVisiveis() {
+    return ((window.DB && window.DB.projetos) || []).filter((p) => !window.DB_PROJETOS || DB_PROJETOS.exibir(p, "exibir_atividades"));
+  }
+
   function renderNav() {
-    const projetos = (window.DB && window.DB.projetos) || [];
+    const projetos = projetosVisiveis();
     const nucleos = [...new Set(projetos.map((p) => p.nucleo))];
     let html = "";
     nucleos.forEach((n) => {
@@ -337,7 +342,7 @@
     painel.innerHTML = '<div class="pa-erro">Não foi possível carregar os dados agora.</div>';
     return;
   }
-  const projetos = (window.DB && window.DB.projetos) || [];
+  const projetos = projetosVisiveis();
   if (projetos.length) selecionar(projetos[0].iniciativa);
   EDITOR_ATUAL.montar(document.getElementById("cc-editor-rodape-wrap"));
 })();

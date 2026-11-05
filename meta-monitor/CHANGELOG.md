@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.35.0 — 2026-11-05
+**Cadastro de projetos como fonte única: "Aparece em".**
+
+- **Editor › Projetos & Representantes** ganhou a coluna **Aparece em**, com uma caixa por tela:
+  Corsário, Sites, Painéis, Fluxo (de dados), Atividades (por iniciativa), Matriz (de demandas) e
+  Canva (oficina e consolidado). Marcar/desmarcar grava na hora. O formulário "+ Novo projeto" tem
+  as mesmas caixas, todas marcadas por padrão. Portfólio, busca e página inicial mostram sempre
+  todos os projetos.
+- **Corsário** (página e aba do editor) passa a listar os projetos com "Corsário" marcado; nome e
+  núcleo vêm do cadastro, e `corsario_status` guarda só os status. Projeto sem status aparece fora
+  da régua até ser avaliado. Saiu o botão "+ Nova iniciativa" do Corsário: projeto novo entra só
+  pelo cadastro, e criar projeto não precisa mais semear o Corsário.
+- **Sites e Painéis** listam os projetos com a sua caixa marcada (sem somar as iniciativas do
+  Corsário). **Atividades**, **Canva** e a **Matriz de demandas** filtram pela caixa delas; na Matriz,
+  as células de projeto escondido não viram linha órfã. **Fluxo de dados** tira da matriz o projeto
+  desmarcado (os cartões de rota continuam).
+- **Banco (a rodar):** `tools/sql/2026-11_projetos_visibilidade.sql` cria as 7 colunas `exibir_*`
+  em `meta_inovacao_projetos` (default true). Na primeira vez, desmarca "Corsário" de quem não
+  estava no Corsário; transforma em projeto as iniciativas que existiam só no Corsário (com
+  Corsário, Sites e Painéis marcados); e liga ao projeto as linhas de `corsario_status` que casavam
+  só pelo nome. Ensaiado em PostgreSQL 16 local. **Sem o script, todas as telas seguem como antes.**
+- Testes novos: `tools/testar_projetos_visibilidade.js` (puro) e
+  `tools/testar_projetos_visibilidade_headless.js`.
+
 ## v0.34.0 — 2026-11-05
 **Painéis: mais de um painel por iniciativa e coluna de detalhes.**
 

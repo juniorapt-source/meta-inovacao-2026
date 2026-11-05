@@ -328,7 +328,8 @@
         DB_PESSOAS.carregar().catch((err) => { console.error("canva-consolidado: falha ao carregar pessoas golden, caindo pro texto legado", err); return null; }),
       ]);
       demandas = linhas;
-      projetosGolden = proj.lista || [];
+      // só projetos com "Canva" marcado no cadastro (v0.35.0; sem a coluna, todos)
+      projetosGolden = (proj.lista || []).filter((p) => DB_PROJETOS.exibir(p, "exibir_canva"));
       usandoFallbackProj = !!proj.usandoFallback;
       nucleosPorDbId = new Map((nucleosRes ? nucleosRes.lista : []).map((n) => [n.db_id, n]));
       canaisPorDbId = new Map((canaisRes ? canaisRes.lista : []).map((c) => [c.db_id, c]));

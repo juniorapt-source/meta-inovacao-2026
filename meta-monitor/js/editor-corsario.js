@@ -43,7 +43,7 @@
   // estado ao vivo — carregado sob demanda na primeira vez que a aba é aberta, mesmo
   // padrão das outras abas vivas de editor.html.
   let corsarioAtual = null, corsarioFallback = false, corsarioCarregando = false;
-  let formNovaIniciativaAberto = false;
+  let corsarioProjetos = null; // lista do cadastro (v0.35.0) ou null = modo antigo
   // preferências de visualização — só conveniência por navegador (localStorage pode falhar/estar bloqueado)
   let invertida = false, filtroNucleo = "";
   try { invertida = localStorage.getItem("ed-corsario-invertida") === "1"; filtroNucleo = localStorage.getItem("ed-corsario-nucleo") || ""; } catch (e) { /* segue com o padrão */ }
@@ -79,8 +79,11 @@
       corsarioCarregando = true;
       area.innerHTML = '<div class="ed-carregando">Carregando o Caminho do Corsário…</div>';
       try {
-        const r = await DB_CORSARIO.carregar();
+        const [r, rp] = await Promise.all([DB_CORSARIO.carregar(), DB_PROJETOS.carregar()]);
         corsarioAtual = r; corsarioFallback = r.usandoFallback;
+        // cadastro de projetos como fonte da lista (v0.35.0) — só quando ele veio do banco
+        // já com as colunas de visibilidade; antes disso, a lista sai de corsario_status
+        corsarioProjetos = (!rp.usandoFallback && DB_PROJETOS.temVisibilidade(rp.lista)) ? rp.lista : null;
       } catch (err) {
         console.error("editor: falha ao carregar corsário", err);
         corsarioCarregando = false;
@@ -98,42 +101,42 @@
       return;
     }
 
-    // agrupa por iniciativa — mesma lógica de corsario.html/processar(): núcleo é o
-    // primeiro valor não vazio encontrado entre as linhas da iniciativa.
+    // agrupa por iniciativa — mesma lógica de corsario.html/processar(). Com o cadastro de
+    // projetos disponível: um item por projeto marcado "Corsário", nome e núcleo do cadastro.
+    // Sem ele (modo antigo): núcleo é o primeiro valor não vazio entre as linhas.
     const porIniciativa = new Map();
-    statusRows.forEach((r) => {
-      if (!porIniciativa.has(r.iniciativa)) porIniciativa.set(r.iniciativa, { nome: r.iniciativa, nucleo: r.nucleo, porCriterio: new Map() });
-      const ent = porIniciativa.get(r.iniciativa);
-      if (!ent.nucleo && r.nucleo) ent.nucleo = r.nucleo;
-      ent.porCriterio.set(r.criterio, r);
-    });
+    if (corsarioProjetos) {
+      DB_PROJETOS.agruparPorProjeto(statusRows, corsarioProjetos, "exibir_corsario").forEach((g) => {
+        const ent = { nome: g.projeto.iniciativa, nucleo: g.projeto.nucleo, projetoId: g.projeto.db_id, porCriterio: new Map() };
+        g.linhas.forEach((r) => ent.porCriterio.set(r.criterio, r));
+        porIniciativa.set("p" + g.projeto.db_id, ent);
+      });
+    } else {
+      statusRows.forEach((r) => {
+        if (!porIniciativa.has(r.iniciativa)) porIniciativa.set(r.iniciativa, { nome: r.iniciativa, nucleo: r.nucleo, projetoId: null, porCriterio: new Map() });
+        const ent = porIniciativa.get(r.iniciativa);
+        if (!ent.nucleo && r.nucleo) ent.nucleo = r.nucleo;
+        ent.porCriterio.set(r.criterio, r);
+      });
+    }
     const todasIniciativas = Array.from(porIniciativa.values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
     const nucleosPresentes = Array.from(new Set(todasIniciativas.map(i => i.nucleo).filter(Boolean))).sort((a, b) => a.localeCompare(b, "pt-BR"));
     if (filtroNucleo && !nucleosPresentes.includes(filtroNucleo)) filtroNucleo = "";
     const iniciativas = filtroNucleo ? todasIniciativas.filter(i => i.nucleo === filtroNucleo) : todasIniciativas;
 
     let h = corsarioFallback ? avisoFallback("(sem cópia local disponível)") : "";
-    h += '<div class="ed-topo" style="margin-bottom:12px"><button type="button" id="ed-abrir-nova-ini" class="ed-btn"' + dis + '>+ Nova iniciativa</button>' +
+    h += '<div class="ed-topo" style="margin-bottom:12px">' +
       '<label for="ed-filtro-nucleo" style="font:600 13px \'DM Sans\',sans-serif">Núcleo:</label>' +
       '<select id="ed-filtro-nucleo"><option value="">Todos (' + todasIniciativas.length + ')</option>' +
         nucleosPresentes.map(n => '<option value="' + esc(n) + '"' + (n === filtroNucleo ? " selected" : "") + '>' + esc(n) + ' (' + todasIniciativas.filter(i => i.nucleo === n).length + ')</option>').join("") + '</select>' +
       '<button type="button" id="ed-inverter" class="ed-btn sec" title="Troca linhas por colunas">⇄ Inverter eixos</button>' +
       '<span style="font-size:12px;color:var(--grafite)">Clique no botão pequeno ao lado de cada status pra ver/editar a observação.</span></div>';
-    h += '<div id="ed-form-nova-ini" class="ed-nova" style="display:' + (formNovaIniciativaAberto ? "block" : "none") + '">' +
-      '<h3>Nova iniciativa</h3>' +
-      '<div class="ed-nova-grid">' +
-        '<div class="ed-campo-erro" data-campo="nome"><label>Nome *</label><input type="text" id="nvi-nome" placeholder="ex.: Nova iniciativa X">' +
-          '<span class="ed-erro-msg">Obrigatório.</span></div>' +
-        '<div class="ed-campo-erro" data-campo="nucleo"><label>Núcleo *</label><select id="nvi-nucleo">' + opts(NUCLEOS_VALIDOS, NUCLEOS_VALIDOS[0]) + '</select></div>' +
-      '</div>' +
-      '<p style="font-size:12px;color:var(--grafite);margin-top:8px">Cria ' + criterios.length + ' linhas (uma por critério), todas como "Não se aplica" — edite cada uma na tabela depois.</p>' +
-      '<div class="ed-nova-acoes"><button type="button" id="ed-confirmar-nova-ini" class="ed-btn">Criar</button>' +
-        '<button type="button" id="ed-cancelar-nova-ini" class="ed-btn sec">Cancelar</button></div>' +
-    '</div>';
+    // v0.35.0: o Corsário não cria mais iniciativa própria — a lista vem do cadastro de projetos
+    h += '<p class="ed-nota-fonte" style="font-size:12px;color:var(--grafite);margin:0 0 10px">Para incluir ou tirar um projeto daqui, marque ou desmarque <b>Corsário</b> na aba <b>Projetos &amp; Representantes</b>.</p>';
 
     const celula = (ini, c) => {
       const r = ini.porCriterio.get(c.chave);
-      const idAttr = r ? ' data-id="' + esc(String(r.db_id)) + '"' : "";
+      const idAttr = (r ? ' data-id="' + esc(String(r.db_id)) + '"' : "") + (ini.projetoId != null ? ' data-projeto="' + esc(String(ini.projetoId)) + '"' : "");
       const obs = (r && r.observacao) || "";
       const st = r ? r.status : "não se aplica";
       return '<td><div class="cel-status-wrap">' +
@@ -178,7 +181,7 @@
         } else {
           // item 5.7 — iniciativa já existente no Corsário (só faltava linha pra este
           // critério): resolve as duas FKs pela régua de nome de sempre.
-          const [projetoId, porNucleo] = await Promise.all([projetoIdPorIniciativa(t.dataset.ini), nucleosPorNome()]);
+          const [projetoId, porNucleo] = await Promise.all([t.dataset.projeto ? Number(t.dataset.projeto) : projetoIdPorIniciativa(t.dataset.ini), nucleosPorNome()]);
           const criado = await DB_CORSARIO.criar({ iniciativa: t.dataset.ini, nucleo: t.dataset.nucleo, projeto_id: projetoId, nucleo_id: porNucleo[t.dataset.nucleo] || null, criterio: t.dataset.crit, status: t.value }, usuario);
           t.dataset.id = String(criado.db_id);
           statusRows.push(criado); // mantém a cópia local em sincronia — evita duplicar a linha se o conjunto for re-renderizado sem recarregar
@@ -204,7 +207,7 @@
           await DB_CORSARIO.salvar(select.dataset.id, { observacao: nova || null }, usuario);
         } else {
           // item 5.7 — mesma régua da outra porta de escrita, acima.
-          const [projetoId, porNucleo] = await Promise.all([projetoIdPorIniciativa(select.dataset.ini), nucleosPorNome()]);
+          const [projetoId, porNucleo] = await Promise.all([select.dataset.projeto ? Number(select.dataset.projeto) : projetoIdPorIniciativa(select.dataset.ini), nucleosPorNome()]);
           const criado = await DB_CORSARIO.criar({ iniciativa: select.dataset.ini, nucleo: select.dataset.nucleo, projeto_id: projetoId, nucleo_id: porNucleo[select.dataset.nucleo] || null, criterio: select.dataset.crit, status: select.value, observacao: nova || null }, usuario);
           select.dataset.id = String(criado.db_id);
           statusRows.push(criado);
@@ -221,46 +224,6 @@
 
     document.getElementById("ed-filtro-nucleo").addEventListener("change", e => { filtroNucleo = e.target.value; guardarPref("ed-corsario-nucleo", filtroNucleo); render(); });
     document.getElementById("ed-inverter").addEventListener("click", () => { invertida = !invertida; guardarPref("ed-corsario-invertida", invertida ? "1" : "0"); render(); });
-
-    const btnAbrirNovaIni = document.getElementById("ed-abrir-nova-ini");
-    if (btnAbrirNovaIni) btnAbrirNovaIni.addEventListener("click", () => { formNovaIniciativaAberto = true; render(); });
-    if (formNovaIniciativaAberto) {
-      document.getElementById("ed-cancelar-nova-ini").addEventListener("click", () => { formNovaIniciativaAberto = false; render(); });
-      document.getElementById("ed-confirmar-nova-ini").addEventListener("click", criarIniciativa);
-    }
-  }
-
-  async function criarIniciativa() {
-    const campo = id => document.getElementById(id);
-    const nome = campo("nvi-nome").value.trim();
-    document.querySelectorAll("#ed-form-nova-ini .ed-campo-erro").forEach(el => el.classList.remove("ed-campo-erro"));
-    if (!nome) {
-      document.querySelector('#ed-form-nova-ini [data-campo="nome"]').classList.add("ed-campo-erro");
-      return;
-    }
-    const jaExiste = (corsarioAtual.statusRows || []).some(r => r.iniciativa.toLowerCase() === nome.toLowerCase());
-    if (jaExiste) {
-      window.alert('Já existe uma iniciativa chamada "' + nome + '" — edite as células dela na tabela em vez de criar de novo.');
-      return;
-    }
-    const nucleo = campo("nvi-nucleo").value;
-    const btn = document.getElementById("ed-confirmar-nova-ini");
-    btn.disabled = true;
-    try {
-      // item 5.7 — esta iniciativa nasce direto aqui no Corsário, sem passar por "+ Novo
-      // projeto"; pode ou não já existir em meta_inovacao_projetos com o mesmo nome
-      // (coincidência de texto) — projetoIdPorIniciativa() resolve se existir, e devolve
-      // null honestamente se não existir (a linha nasce sem projeto_id, não com um errado).
-      const [projetoId, porNucleo] = await Promise.all([projetoIdPorIniciativa(nome), nucleosPorNome()]);
-      const criadas = await DB_CORSARIO.criarIniciativa(nome, nucleo, corsarioAtual.criterios, EDITOR_ATUAL.nomeAtual(), { projetoId: projetoId, nucleoId: porNucleo[nucleo] || null });
-      corsarioAtual.statusRows.push(...criadas);
-      formNovaIniciativaAberto = false;
-      render();
-    } catch (err) {
-      console.error("editor: falha ao criar iniciativa do corsário", err);
-      btn.disabled = false;
-      window.alert((window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "Não foi possível criar a iniciativa.");
-    }
   }
 
   window.EDITOR_CORSARIO = { render: render };

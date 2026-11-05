@@ -7,7 +7,11 @@
  *                               "+ painel" abre uma linha nova, "×" remove (soft delete).
  *
  * Fontes:
- *   - iniciativas: cadastro de projetos (meta_inovacao_projetos, DB_PROJETOS) somado às
+ *   - iniciativas (v0.35.0): os projetos do cadastro (meta_inovacao_projetos) com "Sites" /
+ *     "Painéis" marcado (colunas exibir_sites / exibir_paineis). Enquanto essas colunas não
+ *     existem no banco (tools/sql/2026-11_projetos_visibilidade.sql não rodado), vale o modo
+ *     antigo abaixo:
+ *     cadastro de projetos (meta_inovacao_projetos, DB_PROJETOS) somado às
  *     iniciativas de corsario_status (DB_CORSARIO) — as do Corsário que não são projeto
  *     (criadas pelo "+ Nova iniciativa" de lá) continuam aparecendo. Projeto novo entra
  *     aqui mesmo que a inclusão automática dele no Corsário tenha falhado. Sem rede,
@@ -113,10 +117,18 @@
       DB_INICIATIVA_LINKS.carregar(),
       TIPO === "painel" && window.DB_PESSOAS ? DB_PESSOAS.carregar() : Promise.resolve({ lista: [] }),
     ]);
-    INICIATIVAS = iniciativasDoCorsario(crs.statusRows || []);
-    // só soma o cadastro quando ele veio do banco — o seed local pode estar atrás
-    if (!projs.usandoFallback) INICIATIVAS = juntarComProjetos(INICIATIVAS, projs.lista);
-    const usouSeed = !INICIATIVAS.length;
+    const doCadastro = !projs.usandoFallback && DB_PROJETOS.temVisibilidade(projs.lista);
+    if (doCadastro) {
+      // fonte única: o cadastro, filtrado pela marca desta página
+      const chave = TIPO === "painel" ? "exibir_paineis" : "exibir_sites";
+      INICIATIVAS = projs.lista.filter((p) => p.iniciativa && DB_PROJETOS.exibir(p, chave))
+        .map((p) => ({ iniciativa: p.iniciativa, nucleo: p.nucleo || null, projeto_id: p.db_id != null ? p.db_id : null, nucleo_id: p.nucleo_id || null }));
+    } else {
+      INICIATIVAS = iniciativasDoCorsario(crs.statusRows || []);
+      // só soma o cadastro quando ele veio do banco — o seed local pode estar atrás
+      if (!projs.usandoFallback) INICIATIVAS = juntarComProjetos(INICIATIVAS, projs.lista);
+    }
+    const usouSeed = !doCadastro && !INICIATIVAS.length;
     if (usouSeed) INICIATIVAS = iniciativasDoSeed();
 
     LINKS = new Map();

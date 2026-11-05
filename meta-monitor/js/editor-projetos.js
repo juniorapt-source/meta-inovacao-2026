@@ -127,6 +127,21 @@
     // mesmo critério de "+ Novo projeto" logo abaixo.
     const disRepr = (cacheProj.fallback || pessoasFallback) ? " disabled" : "";
     let h = cacheProj.fallback ? avisoFallback("data/projetos.js") : "";
+    // v0.35.0 — "Aparece em": uma caixa por tela (DB_PROJETOS.VISIBILIDADE). Só aparece quando
+    // as colunas existem no banco (tools/sql/2026-11_projetos_visibilidade.sql).
+    const VIS = DB_PROJETOS.VISIBILIDADE;
+    const temVis = !cacheProj.fallback && DB_PROJETOS.temVisibilidade(lista);
+    if (!cacheProj.fallback && !temVis && lista.length) {
+      h += '<div class="aviso">Para escolher em quais telas cada projeto aparece, rode <code>tools/sql/2026-11_projetos_visibilidade.sql</code> no Supabase.</div>';
+    }
+    const caixasVis = (p, prefixoId) => '<div class="ed-vis">' + VIS.map(v =>
+      '<label title="' + esc(v.titulo) + '"><input type="checkbox" ' + (prefixoId ? 'id="' + prefixoId + v.k + '"' : 'data-vis="' + v.k + '"') +
+      (DB_PROJETOS.exibir(p, v.k) ? " checked" : "") + dis + '> ' + esc(v.rotulo) + '</label>').join("") + '</div>';
+    if (!document.getElementById("ed-vis-estilo")) {
+      const st = document.createElement("style"); st.id = "ed-vis-estilo";
+      st.textContent = ".ed-vis{display:flex;flex-wrap:wrap;gap:2px 10px;font:400 12px 'DM Sans',sans-serif}.ed-vis label{display:inline-flex;align-items:center;gap:3px;white-space:nowrap;cursor:pointer}.ed-vis input{margin:0}";
+      document.head.appendChild(st);
+    }
     const pessoasPorId = {};
     (pessoasAtual || []).forEach(ps => { pessoasPorId[String(ps.db_id)] = ps; });
     const pessoasSelecionaveis = (pessoasAtual || []).filter(ps => ps.ativo !== false)
@@ -145,11 +160,12 @@
         '<div class="full" data-campo="representantes"><label>Representantes *</label>' +
           '<div id="nvp-repr-area" class="ed-repr-cel">' + nvpReprAreaHtml() + '</div>' +
           '<span class="ed-erro-msg">Escolha ao menos uma pessoa, ou preencha a indicação pendente.</span></div>' +
+        (temVis ? '<div class="full"><label>Aparece em</label>' + caixasVis({}, "nvp-") + '</div>' : '') +
       '</div>' +
       '<div class="ed-nova-acoes"><button type="button" id="ed-confirmar-novo-proj" class="ed-btn">Adicionar</button>' +
         '<button type="button" id="ed-cancelar-novo-proj" class="ed-btn sec">Cancelar</button></div>' +
     '</div>';
-    h += '<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Núcleo</th><th>Iniciativa</th><th>Representantes</th><th style="width:70px"></th></tr></thead><tbody>';
+    h += '<div class="ed-wrap"><table class="ed-tab"><thead><tr><th style="width:220px">Núcleo</th><th>Iniciativa</th><th>Representantes</th>' + (temVis ? '<th style="width:250px">Aparece em</th>' : '') + '<th style="width:70px"></th></tr></thead><tbody>';
     lista.forEach((p) => {
       const vinculos = represPorProjeto[p.db_id] || [];
       const jaSelecionados = new Set(vinculos.map(v => String(v.pessoa_id)));
@@ -167,6 +183,7 @@
           '<select class="ed-add-repr" data-projeto="' + esc(String(p.db_id)) + '"' + disRepr + '><option value="">+ adicionar…</option>' +
           disponiveis.map(ps => '<option value="' + esc(String(ps.db_id)) + '">' + esc(nomeExibicaoPessoa(ps)) + '</option>').join("") +
           '</select></div></td>' +
+        (temVis ? '<td>' + caixasVis(p) + '</td>' : '') +
         '<td><span class="ed-row-status" aria-live="polite"></span> <button type="button" class="ed-btn sec" data-del="' + esc(String(p.db_id)) + '" style="padding:4px 8px"' + dis + ' title="Remover projeto">×</button></td></tr>';
     });
     area.innerHTML = h + '</tbody></table></div>';
@@ -208,6 +225,23 @@
         marcarLinhaStatus(tr, avisoCorsario || "salvo", detCorsario);
       } catch (err) {
         console.error("editor: falha ao salvar projeto", err);
+        marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
+      }
+    }));
+
+    // v0.35.0 — marcar/desmarcar uma tela grava na hora a coluna exibir_* do projeto
+    area.querySelectorAll("tbody input[data-vis]").forEach(el => el.addEventListener("change", async e => {
+      const t = e.target, tr = t.closest("tr"), chave = t.dataset.vis, valor = t.checked;
+      const p = lista.find(x => String(x.db_id) === tr.dataset.id);
+      if (!p) return;
+      marcarLinhaStatus(tr, "salvando");
+      try {
+        await DB_PROJETOS.salvar(p.db_id, { [chave]: valor }, EDITOR_ATUAL.nomeAtual());
+        p[chave] = valor; // mesmo objeto da lista de DB_PROJETOS: a aba Corsário já vê a mudança
+        marcarLinhaStatus(tr, "salvo");
+      } catch (err) {
+        console.error("editor: falha ao salvar onde o projeto aparece", err);
+        t.checked = !valor;
         marcarLinhaStatus(tr, (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou", detErro(err));
       }
     }));
@@ -355,6 +389,9 @@
       representantes: representantesTexto,
       ordem: (projetosAtual || []).length + 1
     };
+    // v0.35.0 — onde o projeto novo aparece (caixas do formulário, só quando as colunas existem)
+    const temVis = DB_PROJETOS.temVisibilidade(projetosAtual);
+    if (temVis) DB_PROJETOS.VISIBILIDADE.forEach(v => { const c = campo("nvp-" + v.k); nova[v.k] = c ? c.checked : true; });
     const btn = document.getElementById("ed-confirmar-novo-proj");
     btn.disabled = true;
     try {
@@ -379,10 +416,12 @@
       // "não avaliada", fora da régua, não "reprovada em tudo"), exatamente como o botão
       // "+ Nova iniciativa" do conjunto Corsário. Falha aqui NÃO desfaz o projeto (ele já está
       // no golden) — só avisa, pra reconciliar depois pelo conjunto "O Caminho para o Corsário".
-      try {
+      // Com as colunas de visibilidade (v0.35.0) o Corsário lê a lista do cadastro e não
+      // precisa disto — o projeto aparece lá se "Corsário" estiver marcado.
+      if (!temVis) try {
         const corsario = await DB_CORSARIO.carregar();
         if (corsario.usandoFallback || !(corsario.criterios || []).length) {
-          window.alert('Projeto criado. Mas não consegui carregar o Caminho do Corsário agora para incluí-lo lá — abra o conjunto "O Caminho para o Corsário" mais tarde e crie a iniciativa "' + criado.iniciativa + '" por lá.');
+          window.alert('Projeto criado. Mas não consegui carregar o Caminho do Corsário agora para incluí-lo lá. Depois de rodar tools/sql/2026-11_projetos_visibilidade.sql, marque "Corsário" na linha de "' + criado.iniciativa + '".');
         } else {
           const jaNoCorsario = (corsario.statusRows || []).some(r => String(r.iniciativa).toLowerCase() === criado.iniciativa.toLowerCase());
           if (!jaNoCorsario) {
@@ -395,7 +434,7 @@
         }
       } catch (errCorsario) {
         console.error("editor: projeto criado no golden, mas falhou ao semear o Corsário", errCorsario);
-        window.alert('Projeto criado. Mas não consegui incluí-lo automaticamente no Caminho do Corsário — crie a iniciativa "' + criado.iniciativa + '" no conjunto "O Caminho para o Corsário".');
+        window.alert('Projeto criado. Mas não consegui incluí-lo automaticamente no Caminho do Corsário. Depois de rodar tools/sql/2026-11_projetos_visibilidade.sql, marque "Corsário" na linha de "' + criado.iniciativa + '".');
       }
       formNovoProjetoAberto = false;
       formNovoProjRepresentantesSelecionados = [];

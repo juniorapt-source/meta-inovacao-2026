@@ -17,7 +17,8 @@
   const F = window.DB_FLUXO;
   const CAMADAS = ["cliente", "atendimento", "processo", "painel"];
   let D = null;            // dados carregados
-  let iniciativas = [];    // linhas da matriz
+  let iniciativas = [];    // linhas da matriz: projetos com "Fluxo" marcado no cadastro
+  let escondidas = new Set(); // nomes (minúsculos) de projetos com "Fluxo" desmarcado
   let selecionada = "";    // "" = todas
   let usandoFallback = false;
   let formAberto = null;   // { secao: "rotas"|"paineis"|"encaminhamentos", id: null (novo)|uuid (editar) }
@@ -60,7 +61,8 @@
     D.rotas_lacunas.forEach((r) => nomes.add(r.iniciativa));
     D.matriz.forEach((m) => nomes.add(m.iniciativa));
     D.paineis_prontidao.forEach((p) => p.iniciativa && nomes.add(p.iniciativa));
-    return Array.from(nomes).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    // projeto desmarcado no cadastro sai da matriz mesmo que tenha rota (os cartões ficam)
+    return Array.from(nomes).filter((n) => !escondidas.has(String(n).trim().toLowerCase())).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }
 
   function renderMatriz() {
@@ -231,7 +233,9 @@
     montarShell("fluxo-dados.html");
     try {
       const rp = await window.DB_PROJETOS.carregar();
-      iniciativas = rp.lista.map((p) => p.iniciativa);
+      const P = window.DB_PROJETOS;
+      iniciativas = rp.lista.filter((p) => P.exibir(p, "exibir_fluxo_dados")).map((p) => p.iniciativa);
+      escondidas = new Set(rp.lista.filter((p) => !P.exibir(p, "exibir_fluxo_dados")).map((p) => String(p.iniciativa).trim().toLowerCase()));
     } catch (e) { iniciativas = ((window.DB && window.DB.projetos) || []).map((p) => p.iniciativa); }
     const r = await F.carregar();
     D = r.dados; usandoFallback = r.usandoFallback;

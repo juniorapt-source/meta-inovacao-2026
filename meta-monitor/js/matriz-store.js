@@ -308,6 +308,9 @@
       iniciativa: p.iniciativa || "",
       nucleo: p.nucleo || "",
       orfa: false,
+      // "Matriz" desmarcado no cadastro (v0.35.0): a linha existe aqui só para as células dela
+      // não virarem linha órfã, e sai da grade no fim
+      oculta: p.exibir_matriz === false,
       celulas: {},
     }));
 
@@ -354,6 +357,7 @@
 
     (celulas || []).forEach((cel) => {
       let lin = acharLinha(cel, false);
+      if (lin && lin.oculta) return; // projeto fora da Matriz: não conta nem cria coluna
       let col = acharColuna(cel, false);
       if (!lin || !col) {
         if (!cel.estado) return;
@@ -366,7 +370,7 @@
       if (cel.estado) col.temDado = true;
     });
 
-    return { colunas: cols.filter((c) => c.ativo || c.temDado), linhas: lins };
+    return { colunas: cols.filter((c) => c.ativo || c.temDado), linhas: lins.filter((l) => !l.oculta) };
   }
 
   /* paraSnapshot(linhas, colunas) -> { iniciativa: { slug_do_canal: estado } }

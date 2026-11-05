@@ -36,7 +36,7 @@
     try {
       const r = await F.carregar({ recarregar: !!recarregar });
       dados = r.dados; fallback = r.usandoFallback;
-      try { iniciativasBase = (await window.DB_PROJETOS.carregar()).lista.map((p) => p.iniciativa); }
+      try { iniciativasBase = (await window.DB_PROJETOS.carregar()).lista.filter((p) => window.DB_PROJETOS.exibir(p, "exibir_fluxo_dados")).map((p) => p.iniciativa); }
       catch (e) { iniciativasBase = ((window.DB && window.DB.projetos) || []).map((p) => p.iniciativa); }
     } finally { carregando = false; }
     render();
