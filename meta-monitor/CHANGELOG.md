@@ -15,6 +15,14 @@
   o 2º painel e os detalhes falham com um aviso na página apontando o script.
 - Teste novo: `tools/testar_paineis_headless.js` (banco falso em memória, sem rede).
 
+## v0.33.3 — 2026-11-05
+**Fluxo de dados: opção "Sistema próprio" em "Destino hoje".**
+
+- Novo sistema "Sistema próprio" (`tools/sql/2026-11_fluxo_dados_patch5.sql`), oferecido só em
+  "Destino hoje (um ou mais)" no formulário de rota; em "Destino alvo" ele fica escondido (a não
+  ser que já esteja marcado). Patch5 aplicado no Supabase em 05/11/2026; os dados locais
+  (`data/fluxo_dados.js`) têm o mesmo registro.
+
 ## v0.33.2 — 2026-11-05
 **Fluxo de dados: editar direto na página.**
 
