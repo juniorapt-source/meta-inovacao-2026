@@ -13,7 +13,7 @@
 .il-col-iniciativa{width:220px;min-width:180px;font-family:var(--font-sans);color:var(--tinta)}
 .il-col-check{width:150px;text-align:center}
 .il-col-resp{width:260px}
-.il-col-status{width:80px;font:400 11px 'DM Sans',sans-serif;color:var(--grafite);white-space:nowrap}
+.il-col-status{width:96px;font:400 11px 'DM Sans',sans-serif;color:var(--grafite);white-space:nowrap}
 .il-link-cel{display:flex;gap:6px;align-items:center}
 .il-link-cel input{flex:1;min-width:180px;font:400 12.5px 'DM Sans',sans-serif;padding:5px 7px;border:1px solid var(--border-soft);background:var(--branco)}
 .il-link-cel input:focus{outline:2px solid var(--accent);outline-offset:-1px}
@@ -32,3 +32,15 @@
 .il-grupo-seta{color:var(--cor-grupo,var(--grafite));font-size:9px;width:9px;flex-shrink:0}
 .il-grupo-count{font-weight:500;color:var(--grafite);text-transform:none;letter-spacing:0}
 .il-vazia{text-align:center;color:var(--grafite);padding:16px}
+/* Painéis (v0.34.0): vários por iniciativa, coluna de detalhes */
+.il-col-link{min-width:240px}
+.il-col-desc{width:300px}
+.il-col-desc input{width:100%;box-sizing:border-box;font:400 12.5px 'DM Sans',sans-serif;padding:5px 7px;border:1px solid var(--border-soft);background:var(--branco)}
+.il-col-desc input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.il-ini-nome{margin-bottom:2px}
+td.il-col-iniciativa{vertical-align:top;padding-top:10px}
+.il-add{font:600 11px 'DM Sans',sans-serif;color:var(--accent);background:transparent;border:0;padding:2px 0;cursor:pointer}
+.il-add:hover{text-decoration:underline}
+.il-status-cel{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.il-remover{font:600 14px 'DM Sans',sans-serif;line-height:1;color:var(--grafite);background:transparent;border:1px solid transparent;border-radius:3px;padding:1px 6px;cursor:pointer}
+.il-remover:hover{color:var(--warn);border-color:var(--border-soft)}

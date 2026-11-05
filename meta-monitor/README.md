@@ -21,7 +21,7 @@ Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanh
 | `plano-acao.html` | Atividades por iniciativa (CRUD via Supabase) |
 | `corsario.html` | Adequação de cada iniciativa ao ecossistema oficial (Supabase, somente leitura) — régua de 19 critérios, patente por faixa de % |
 | `fluxo-dados.html` | Fluxo de dados (Projeto Corso): matriz iniciativa × cliente/atendimento/processo/painel, rotas com lacunas, painéis prontos para reapontar e encaminhamentos (Supabase `fluxo_dados_*`, somente leitura; com "Ativar edição" cria rota e encaminhamento; edição completa na aba "Fluxo de dados" do `editor.html`) |
-| `paineis.html` | Painéis (menu Execução): por iniciativa do Corsário, link do painel e responsável pela manutenção (pessoa de `meta_inovacao_pessoas`). Grava em `meta_inovacao_iniciativa_links` (tipo `painel`) ao editar |
+| `paineis.html` | Painéis (menu Execução): por iniciativa do Corsário, um ou mais painéis, cada um com link, detalhes (texto livre) e responsável pela manutenção (pessoa de `meta_inovacao_pessoas`). Grava em `meta_inovacao_iniciativa_links` (tipo `painel`) ao editar |
 | `sites.html` | Sites (menu Execução): por iniciativa do Corsário, link da página e se tem formulário de captura de lead. Grava em `meta_inovacao_iniciativa_links` (tipo `site`) ao editar |
 | `editor.html` | Modo edição: Plano de ação e Agenda editam ao vivo no Supabase (linha a linha, salva sozinho); matriz, pessoas, projetos e URC continuam no modelo "edita a cópia local, baixa `data/*.js`, publica no Git"; aba **Histórico** com as últimas 100 alterações (log de auditoria) |
 
@@ -227,6 +227,8 @@ node tools/testar_projetos_headless.js # F16: projetos.html com ?semrede=1 — a
                                         # dados locais, contagem, filtro por núcleo e busca
 node tools/testar_participantes_headless.js # F15: participantes.html com ?semrede=1 —
                                         # cards por grupo, pendência de indicação, fallback
+node tools/testar_paineis_headless.js  # paineis.html: vários painéis por iniciativa,
+                                        # detalhes, busca e remover (banco falso, sem rede)
 node tools/testar_canva_oficina.js     # canva.html: ciclo e encontro_id da oficina (canal
                                         # do QR + data de hoje) chegam na demanda gravada
                                         # em vez de nascerem nulos

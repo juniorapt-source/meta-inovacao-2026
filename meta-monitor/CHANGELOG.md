@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.34.0 — 2026-11-05
+**Painéis: mais de um painel por iniciativa e coluna de detalhes.**
+
+- **Vários painéis por iniciativa:** cada iniciativa ganhou um "+ painel" abaixo do nome, que
+  abre mais uma linha (link, detalhes, responsável). O "×" no fim da linha remove o painel
+  (soft delete, `deleted_at`). A contagem do topo passa a mostrar também o total de painéis.
+- **Coluna "Detalhes do painel":** texto livre e opcional, pra dizer o que é o painel. Grava
+  ao sair do campo ou com Enter. A busca também procura nesse texto.
+- Sites não muda (continua uma linha por iniciativa).
+- **Banco (precisa rodar à mão):** `tools/sql/2026-11_iniciativa_links_paineis_multiplos.sql`
+  cria a coluna `descricao` e troca a restrição única `(tipo, iniciativa)` por um índice único
+  só para `tipo = 'site'`. Antes de rodar, o 1º painel de cada iniciativa continua gravando;
+  o 2º painel e os detalhes falham com um aviso na página apontando o script.
+- Teste novo: `tools/testar_paineis_headless.js` (banco falso em memória, sem rede).
+
 ## v0.33.0 — 2026-11-05
 **Execução: páginas "Painéis" e "Sites".**
 

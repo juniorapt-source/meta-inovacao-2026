@@ -1,8 +1,10 @@
-/* sites.html e paineis.html (menu Execução, v0.33.0) — uma tabela por iniciativa,
+/* sites.html e paineis.html (menu Execução, v0.33.0; vários painéis em v0.34.0) — uma tabela por iniciativa,
  * agrupada por núcleo, com a mesma lista e a mesma ordem do "O Caminho para o Corsário".
  *
  *   <body data-tipo="site">   → Link da página + "Tem formulário de captura de lead?"
- *   <body data-tipo="painel"> → Link do painel + Responsável pela manutenção (pessoas)
+ *   <body data-tipo="painel"> → Link do painel + Detalhes (texto livre) + Responsável pela
+ *                               manutenção (pessoas). Vários painéis por iniciativa (v0.34.0):
+ *                               "+ painel" abre uma linha nova, "×" remove (soft delete).
  *
  * Fontes:
  *   - iniciativas: corsario_status (DB_CORSARIO), núcleo + iniciativa distintos. Sem rede,
@@ -37,7 +39,9 @@
   const elEstado = $("il-estado");
 
   let INICIATIVAS = [];          // {iniciativa, nucleo, projeto_id, nucleo_id}
-  let LINKS = new Map();         // iniciativa -> linha de meta_inovacao_iniciativa_links (deste TIPO)
+  let LINKS = new Map();         // iniciativa -> [linhas de meta_inovacao_iniciativa_links deste TIPO], por id
+  let RASCUNHOS = new Map();     // iniciativa -> nº de linhas em branco na tela (só painel)
+  const pendentes = new Set();   // gravações em andamento (render espera por elas)
   let PESSOAS = [];              // {db_id, nome}
   let podeEditar = false;
   let colapsados = new Set();
@@ -94,7 +98,12 @@
     if (usouSeed) INICIATIVAS = iniciativasDoSeed();
 
     LINKS = new Map();
-    (links.lista || []).filter((l) => l.tipo === TIPO).forEach((l) => LINKS.set(l.iniciativa, l));
+    (links.lista || []).filter((l) => l.tipo === TIPO).forEach((l) => {
+      if (!LINKS.has(l.iniciativa)) LINKS.set(l.iniciativa, []);
+      LINKS.get(l.iniciativa).push(l);
+    });
+    LINKS.forEach((arr) => arr.sort((a, b) => (a.db_id || 0) - (b.db_id || 0)));
+    RASCUNHOS = new Map();
     PESSOAS = pessoasUnicas(pessoas.lista);
     podeEditar = !links.usandoFallback;
 
@@ -125,15 +134,15 @@
     return chaves.map((c) => grupos.get(c));
   }
 
-  function nColunas() { return 4; }
+  function nColunas() { return TIPO === "painel" ? 5 : 4; }
 
   function thead() {
     const terceira = TIPO === "painel"
-      ? '<th class="il-col-resp">Responsável pela manutenção</th>'
+      ? '<th class="il-col-desc">Detalhes do painel</th><th class="il-col-resp">Responsável pela manutenção</th>'
       : '<th class="il-col-check">Formulário de captura de lead</th>';
     return "<thead><tr>" +
       '<th class="il-col-iniciativa">Iniciativa</th>' +
-      "<th>" + (TIPO === "painel" ? "Link do painel" : "Link da página") + "</th>" +
+      '<th class="il-col-link">' + (TIPO === "painel" ? "Link do painel" : "Link da página") + "</th>" +
       terceira +
       '<th class="il-col-status"></th>' +
     "</tr></thead>";
@@ -160,16 +169,40 @@
       opts += '<option value="' + esc(atual) + '" selected>' + esc((l && l.responsavel) || "pessoa #" + atual) + "</option>";
     }
     opts += PESSOAS.map((p) => '<option value="' + esc(String(p.db_id)) + '"' + (String(p.db_id) === atual ? " selected" : "") + ">" + esc(p.nome) + "</option>").join("");
-    return '<td class="il-col-resp"><select data-campo="responsavel_pessoa_id" aria-label="Responsável pela manutenção"' + dis + ">" + opts + "</select></td>";
+    const desc = '<td class="il-col-desc"><input type="text" data-campo="descricao" value="' + esc((l && l.descricao) || "") +
+      '" placeholder="O que é este painel (opcional)" maxlength="500"' + dis + ' aria-label="Detalhes do painel"></td>';
+    return desc + '<td class="il-col-resp"><select data-campo="responsavel_pessoa_id" aria-label="Responsável pela manutenção"' + dis + ">" + opts + "</select></td>";
+  }
+
+  function salvos(nome) { return LINKS.get(nome) || []; }
+
+  // linhas em branco na tela: as pedidas pelo "+ painel", ou 1 se a iniciativa não tem nada
+  function nBrancos(nome) {
+    if (TIPO !== "painel") return salvos(nome).length ? 0 : 1;
+    return Math.max(RASCUNHOS.get(nome) || 0, salvos(nome).length ? 0 : 1);
+  }
+
+  function linhaUnica(x, l, primeira, total) {
+    const nomeCel = primeira
+      ? '<td class="il-col-iniciativa"' + (total > 1 ? ' rowspan="' + total + '"' : "") + '>' +
+          '<div class="il-ini-nome">' + esc(x.iniciativa) + "</div>" +
+          (TIPO === "painel" && podeEditar
+            ? '<button type="button" class="il-add" data-acao="adicionar" title="Adicionar outro painel a esta iniciativa">+ painel</button>' : "") +
+        "</td>"
+      : "";
+    const remover = TIPO === "painel" && podeEditar && (l || total > 1)
+      ? '<button type="button" class="il-remover" data-acao="remover" title="Remover este painel" aria-label="Remover este painel">×</button>' : "";
+    return '<tr data-iniciativa="' + esc(x.iniciativa) + '"' + (l ? ' data-id="' + esc(String(l.db_id)) + '"' : "") +
+      (primeira ? "" : ' class="il-sub-linha"') + ">" +
+      nomeCel + linkCelula(l) + terceiraCelula(l) +
+      '<td class="il-col-status"><div class="il-status-cel"><span data-status></span>' + remover + "</div></td>" +
+    "</tr>";
   }
 
   function linha(x) {
-    const l = LINKS.get(x.iniciativa);
-    return '<tr data-iniciativa="' + esc(x.iniciativa) + '">' +
-      '<td class="il-col-iniciativa">' + esc(x.iniciativa) + "</td>" +
-      linkCelula(l) + terceiraCelula(l) +
-      '<td class="il-col-status" data-status></td>' +
-    "</tr>";
+    const ls = salvos(x.iniciativa);
+    const itens = ls.concat(new Array(nBrancos(x.iniciativa)).fill(null));
+    return itens.map((l, i) => linhaUnica(x, l, i === 0, itens.length)).join("");
   }
 
   function linhaGrupo(g) {
@@ -183,19 +216,35 @@
   }
 
   function preenchido(x) {
-    const l = LINKS.get(x.iniciativa);
-    return !!(l && l.link);
+    return salvos(x.iniciativa).some((l) => l.link);
   }
 
   let ultimaContagem = 0;
   function atualizarContagem() {
     const comLink = INICIATIVAS.filter(preenchido).length;
-    elContagem.textContent = "Mostrando " + ultimaContagem + " de " + INICIATIVAS.length + " iniciativas · " + comLink + " com link.";
+    let txt = "Mostrando " + ultimaContagem + " de " + INICIATIVAS.length + " iniciativas · " + comLink + " com link";
+    if (TIPO === "painel") {
+      const nPaineis = INICIATIVAS.reduce((n, x) => n + salvos(x.iniciativa).filter((l) => l.link).length, 0);
+      txt += " · " + nPaineis + (nPaineis === 1 ? " painel" : " painéis");
+    }
+    elContagem.textContent = txt + ".";
+  }
+
+  function casaBusca(x, q) {
+    if (!q) return true;
+    if (semAcento(x.iniciativa).includes(q) || semAcento(x.nucleo).includes(q)) return true;
+    return salvos(x.iniciativa).some((l) => semAcento(l.descricao).includes(q));
+  }
+
+  // re-render só depois das gravações em curso (senão a linha recém-gravada some da tela)
+  async function renderAposSalvar() {
+    if (pendentes.size) await Promise.allSettled(Array.from(pendentes));
+    render();
   }
 
   function render() {
     const q = semAcento(elBusca.value);
-    const lista = INICIATIVAS.filter((x) => !q || semAcento(x.iniciativa).includes(q) || semAcento(x.nucleo).includes(q));
+    const lista = INICIATIVAS.filter((x) => casaBusca(x, q));
     ultimaContagem = lista.length;
     atualizarContagem();
     let corpo;
@@ -214,27 +263,93 @@
     const el = tr.querySelector("[data-status]");
     if (!el) return;
     const txt = { salvando: "salvando…", salvo: "salvo ✓", falhou: "falhou ⓘ" }[estado] || estado;
-    el.className = "il-col-status il-st-" + estado;
+    el.className = "il-st-" + estado;
     el.textContent = txt;
     el.title = detalhe || "";
     if (estado === "salvo") setTimeout(() => { if (el.textContent === "salvo ✓") el.textContent = ""; }, 1800);
   }
 
-  async function gravar(tr, campos) {
+  function registroDaLinha(tr) {
+    const id = tr.dataset.id;
+    return id ? salvos(tr.dataset.iniciativa).find((l) => String(l.db_id) === id) || null : null;
+  }
+
+  function mensagemErro(err) {
+    let msg = (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou";
+    if (TIPO === "painel" && DB_INICIATIVA_LINKS.faltaScriptPaineis(err)) {
+      msg = "O banco ainda não aceita vários painéis por iniciativa nem a coluna de detalhes — rode " + DB_INICIATIVA_LINKS.SCRIPT_PAINEIS + " no Supabase.";
+    }
+    return msg + ((err && err.message) ? " — " + err.message : "");
+  }
+
+  // uma gravação por linha por vez: a 2ª espera a 1ª (que pode estar criando a linha)
+  const filaPorLinha = new WeakMap();
+  function gravar(tr, campos) {
+    const anterior = filaPorLinha.get(tr) || Promise.resolve();
+    const p = anterior.then(() => gravarAgora(tr, campos));
+    filaPorLinha.set(tr, p.catch(() => {}));
+    pendentes.add(p);
+    p.finally(() => pendentes.delete(p));
+    return p;
+  }
+
+  async function gravarAgora(tr, campos) {
     const nome = tr.dataset.iniciativa;
     const ini = INICIATIVAS.find((x) => x.iniciativa === nome);
-    if (!ini) return;
+    if (!ini) return false;
+    const existente = registroDaLinha(tr);
     marcar(tr, "salvando");
     try {
-      const salvo = await DB_INICIATIVA_LINKS.gravar(TIPO, ini, LINKS.get(nome) || null, campos, usuario());
-      LINKS.set(nome, salvo);
+      const salvo = await DB_INICIATIVA_LINKS.gravar(TIPO, ini, existente, campos, usuario());
+      const arr = salvos(nome).slice();
+      if (existente) {
+        arr[arr.indexOf(existente)] = salvo;
+      } else {
+        const brancos = nBrancos(nome);
+        arr.push(salvo);
+        RASCUNHOS.set(nome, Math.max(0, brancos - 1));
+        tr.dataset.id = String(salvo.db_id);
+      }
+      LINKS.set(nome, arr);
       marcar(tr, "salvo");
       return true;
     } catch (err) {
       console.error("iniciativa-links: falha ao gravar", err);
-      const msg = (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou";
-      marcar(tr, "falhou", msg + ((err && err.message) ? " — " + err.message : ""));
+      const msg = mensagemErro(err);
+      marcar(tr, "falhou", msg);
+      if (TIPO === "painel" && DB_INICIATIVA_LINKS.faltaScriptPaineis(err)) mostrarAvisoScript();
       return false;
+    }
+  }
+
+  function mostrarAvisoScript() {
+    if (elEstado.querySelector("[data-aviso-script]")) return;
+    const p = document.createElement("p");
+    p.className = "aviso";
+    p.dataset.avisoScript = "1";
+    p.innerHTML = "<b>Falta um passo no banco</b> — pra ter mais de um painel por iniciativa e a coluna de detalhes, rode <code>" +
+      esc(DB_INICIATIVA_LINKS.SCRIPT_PAINEIS) + "</code> no Supabase.";
+    elEstado.appendChild(p);
+  }
+
+  async function removerLinha(tr) {
+    const nome = tr.dataset.iniciativa;
+    const existente = registroDaLinha(tr);
+    if (!existente) {
+      // linha em branco: só some da tela
+      RASCUNHOS.set(nome, Math.max(0, nBrancos(nome) - 1));
+      return renderAposSalvar();
+    }
+    const rotulo = existente.descricao || existente.link || "este painel";
+    if (!window.confirm("Remover o painel \"" + rotulo + "\" de " + nome + "?")) return;
+    marcar(tr, "salvando");
+    try {
+      await DB_INICIATIVA_LINKS.remover(existente, usuario());
+      LINKS.set(nome, salvos(nome).filter((l) => l !== existente));
+      await renderAposSalvar();
+    } catch (err) {
+      console.error("iniciativa-links: falha ao remover", err);
+      marcar(tr, "falhou", mensagemErro(err));
     }
   }
 
@@ -258,7 +373,7 @@
     const tr = alvo.closest("tr[data-iniciativa]");
     if (!tr || !podeEditar) return;
     const campo = alvo.dataset.campo;
-    const atual = LINKS.get(tr.dataset.iniciativa);
+    const atual = registroDaLinha(tr);
     if (campo === "link") {
       const v = alvo.value.trim();
       alvo.value = v;
@@ -272,6 +387,12 @@
       alvo.title = "";
       if (v === ((atual && atual.link) || "")) return;
       if (await gravar(tr, { link: v })) { atualizarAbrir(tr, v); atualizarContagem(); }
+    } else if (campo === "descricao") {
+      const v = alvo.value.trim();
+      alvo.value = v;
+      if (v === ((atual && atual.descricao) || "")) return;
+      const ok = await gravar(tr, { descricao: v });
+      if (!ok) alvo.value = (atual && atual.descricao) || "";
     } else if (campo === "captura_lead") {
       const ok = await gravar(tr, { captura_lead: alvo.checked });
       if (!ok) alvo.checked = !alvo.checked;
@@ -279,25 +400,45 @@
       const id = alvo.value;
       const p = PESSOAS.find((x) => String(x.db_id) === id);
       const ok = await gravar(tr, { responsavel_pessoa_id: id ? Number(id) : null, responsavel: p ? p.nome : null });
-      if (!ok) alvo.value = atual && atual.responsavel_pessoa_id ? String(atual.responsavel_pessoa_id) : "";
+      if (!ok) { const a = registroDaLinha(tr); alvo.value = a && a.responsavel_pessoa_id ? String(a.responsavel_pessoa_id) : ""; }
     }
   });
 
-  // Enter no campo de link grava (dispara o change ao tirar o foco)
+  // Enter no campo de link/detalhes grava (dispara o change ao tirar o foco)
   elTabela.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && e.target.dataset && e.target.dataset.campo === "link") e.target.blur();
+    const c = e.target.dataset && e.target.dataset.campo;
+    if (e.key === "Enter" && (c === "link" || c === "descricao")) e.target.blur();
   });
 
-  elTabela.addEventListener("click", (e) => {
+  elTabela.addEventListener("click", async (e) => {
+    const acao = e.target.closest("[data-acao]");
+    if (acao && podeEditar) {
+      const tr = acao.closest("tr[data-iniciativa]");
+      if (!tr) return;
+      const nome = tr.dataset.iniciativa;
+      if (acao.dataset.acao === "adicionar") {
+        await Promise.allSettled(Array.from(pendentes));
+        RASCUNHOS.set(nome, nBrancos(nome) + 1);
+        render();
+        // foco no link da linha nova (a última desta iniciativa)
+        const linhas = Array.from(elTabela.querySelectorAll("tr[data-iniciativa]")).filter((r) => r.dataset.iniciativa === nome);
+        const ultima = linhas[linhas.length - 1];
+        const inp = ultima && ultima.querySelector('[data-campo="link"]');
+        if (inp) inp.focus();
+      } else if (acao.dataset.acao === "remover") {
+        await removerLinha(tr);
+      }
+      return;
+    }
     const btn = e.target.closest("[data-grupo]");
     if (!btn) return;
     const c = btn.dataset.grupo;
     if (colapsados.has(c)) colapsados.delete(c); else colapsados.add(c);
     salvarColapsados();
-    render();
+    renderAposSalvar();
   });
 
-  elBusca.addEventListener("input", render);
+  elBusca.addEventListener("input", renderAposSalvar);
 
   if (window.EDITOR_ATUAL) EDITOR_ATUAL.montar($("cc-editor-rodape-wrap"));
   carregar();
