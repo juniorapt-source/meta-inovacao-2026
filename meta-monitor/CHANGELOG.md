@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.33.1 — 2026-11-05
+**Sites e Painéis: projeto novo aparece mesmo fora do Corsário.**
+
+- As duas páginas liam a lista só de `corsario_status`. Projeto criado no editor só entrava ali se a
+  inclusão automática no Corsário desse certo; quando falhava, ficava de fora (caso "Startup Day -
+  Mentores"). Agora a lista soma o cadastro de projetos (`meta_inovacao_projetos`) às iniciativas do
+  Corsário, sem repetir (casa por `projeto_id` e, sem FK, pelo nome). Iniciativas livres do Corsário
+  continuam aparecendo.
+
 ## v0.33.0 — 2026-11-05
 **Execução: páginas "Painéis" e "Sites".**
 

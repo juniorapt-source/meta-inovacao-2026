@@ -5,7 +5,10 @@
  *   <body data-tipo="painel"> → Link do painel + Responsável pela manutenção (pessoas)
  *
  * Fontes:
- *   - iniciativas: corsario_status (DB_CORSARIO), núcleo + iniciativa distintos. Sem rede,
+ *   - iniciativas: cadastro de projetos (meta_inovacao_projetos, DB_PROJETOS) somado às
+ *     iniciativas de corsario_status (DB_CORSARIO) — as do Corsário que não são projeto
+ *     (criadas pelo "+ Nova iniciativa" de lá) continuam aparecendo. Projeto novo entra
+ *     aqui mesmo que a inclusão automática dele no Corsário tenha falhado. Sem rede,
  *     cai pra data/projetos.js (window.DB.projetos), que tem os mesmos pares.
  *   - valores: meta_inovacao_iniciativa_links (DB_INICIATIVA_LINKS).
  *   - pessoas (só painel): meta_inovacao_pessoas (DB_PESSOAS), a lista do menu Pessoas.
@@ -65,6 +68,22 @@
     return Array.from(m.values());
   }
 
+  // junta o cadastro de projetos (fonte oficial) com as do Corsário, sem repetir:
+  // casa por projeto_id e, pras linhas sem FK, pelo nome (sem caixa/acento).
+  function juntarComProjetos(doCorsario, projetos) {
+    const out = doCorsario.slice();
+    const porId = new Set(out.filter((x) => x.projeto_id != null).map((x) => String(x.projeto_id)));
+    const porNome = new Set(out.map((x) => semAcento(x.iniciativa)));
+    (projetos || []).forEach((p) => {
+      if (!p || !p.iniciativa) return;
+      if (p.db_id != null && porId.has(String(p.db_id))) return;
+      if (porNome.has(semAcento(p.iniciativa))) return;
+      porNome.add(semAcento(p.iniciativa));
+      out.push({ iniciativa: p.iniciativa, nucleo: p.nucleo || null, projeto_id: p.db_id != null ? p.db_id : null, nucleo_id: p.nucleo_id || null });
+    });
+    return out;
+  }
+
   function iniciativasDoSeed() {
     return ((window.DB && window.DB.projetos) || []).map((p) => ({ iniciativa: p.iniciativa, nucleo: p.nucleo || null, projeto_id: null, nucleo_id: null }));
   }
@@ -84,12 +103,15 @@
 
   async function carregar() {
     elTabela.innerHTML = '<tbody><tr><td class="il-vazia">Carregando…</td></tr></tbody>';
-    const [crs, links, pessoas] = await Promise.all([
+    const [crs, projs, links, pessoas] = await Promise.all([
       window.DB_CORSARIO ? DB_CORSARIO.carregar() : Promise.resolve({ statusRows: [], usandoFallback: true }),
+      window.DB_PROJETOS ? DB_PROJETOS.carregar().catch(() => ({ lista: [], usandoFallback: true })) : Promise.resolve({ lista: [], usandoFallback: true }),
       DB_INICIATIVA_LINKS.carregar(),
       TIPO === "painel" && window.DB_PESSOAS ? DB_PESSOAS.carregar() : Promise.resolve({ lista: [] }),
     ]);
     INICIATIVAS = iniciativasDoCorsario(crs.statusRows || []);
+    // só soma o cadastro quando ele veio do banco — o seed local pode estar atrás
+    if (!projs.usandoFallback) INICIATIVAS = juntarComProjetos(INICIATIVAS, projs.lista);
     const usouSeed = !INICIATIVAS.length;
     if (usouSeed) INICIATIVAS = iniciativasDoSeed();
 
