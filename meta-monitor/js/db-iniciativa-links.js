@@ -79,6 +79,10 @@
     if (existente && existente.db_id) {
       const patch = {};
       Object.keys(campos).forEach((k) => { const v = campos[k]; patch[k] = (v === "" || v === undefined) ? null : v; });
+      // v0.36.0 — linha antiga (sem projeto_id, ou com o nome de antes de um rename) sai
+      // gravada com o projeto e o nome atuais da iniciativa
+      if (iniciativa && iniciativa.projeto_id != null && String(existente.projeto_id) !== String(iniciativa.projeto_id)) patch.projeto_id = iniciativa.projeto_id;
+      if (iniciativa && iniciativa.iniciativa && existente.iniciativa !== iniciativa.iniciativa) patch.iniciativa = iniciativa.iniciativa;
       return api.salvar(existente.db_id, patch, usuario);
     }
     return api.criar(Object.assign({ tipo: tipo }, iniciativa, campos), usuario);

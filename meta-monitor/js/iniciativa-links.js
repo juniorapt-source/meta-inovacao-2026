@@ -45,9 +45,12 @@
   const elContagem = $("il-contagem");
   const elEstado = $("il-estado");
 
-  let INICIATIVAS = [];          // {iniciativa, nucleo, projeto_id, nucleo_id}
-  let LINKS = new Map();         // iniciativa -> [linhas de meta_inovacao_iniciativa_links deste TIPO], por id
-  let RASCUNHOS = new Map();     // iniciativa -> nº de linhas em branco na tela (só painel)
+  // v0.36.0 — cada iniciativa tem uma `chave` (o projeto_id quando há, senão o nome) e as
+  // linhas de links casam por projeto_id e, sem ele, pelo nome. Assim renomear o projeto no
+  // editor não separa a iniciativa dos links já gravados (tools/sql/2026-11_projeto_id_ligacao.sql).
+  let INICIATIVAS = [];          // {iniciativa, nucleo, projeto_id, nucleo_id, chave}
+  let LINKS = new Map();         // chave -> [linhas de meta_inovacao_iniciativa_links deste TIPO], por id
+  let RASCUNHOS = new Map();     // chave -> nº de linhas em branco na tela (só painel)
   const pendentes = new Set();   // gravações em andamento (render espera por elas)
   let PESSOAS = [];              // {db_id, nome}
   let podeEditar = false;
@@ -58,6 +61,7 @@
   function corNucleo(n) { return NUCLEO_CORES[normalizar(n)] || "var(--grafite)"; }
   function nomePessoa(p) { return (p && (p.nome_completo || p.nome_exibicao || p.nome)) || ""; }
   function usuario() { return window.EDITOR_ATUAL ? EDITOR_ATUAL.nomeAtual() : null; }
+  function chaveDe(x) { return x.projeto_id != null ? "p:" + x.projeto_id : "n:" + semAcento(x.iniciativa); }
 
   try { colapsados = new Set(JSON.parse(localStorage.getItem(LS_GRUPOS) || "[]")); } catch (e) { /* segue expandido */ }
   function salvarColapsados() { try { localStorage.setItem(LS_GRUPOS, JSON.stringify(Array.from(colapsados))); } catch (e) { /* idem */ } }
@@ -130,11 +134,20 @@
     }
     const usouSeed = !doCadastro && !INICIATIVAS.length;
     if (usouSeed) INICIATIVAS = iniciativasDoSeed();
+    INICIATIVAS.forEach((x) => { x.chave = chaveDe(x); });
 
+    // link -> iniciativa: pelo projeto_id; sem ele (ou id fora da lista), pelo nome
+    const iniPorId = new Map(), iniPorNome = new Map();
+    INICIATIVAS.forEach((x) => {
+      if (x.projeto_id != null) iniPorId.set(String(x.projeto_id), x);
+      if (!iniPorNome.has(semAcento(x.iniciativa))) iniPorNome.set(semAcento(x.iniciativa), x);
+    });
     LINKS = new Map();
     (links.lista || []).filter((l) => l.tipo === TIPO).forEach((l) => {
-      if (!LINKS.has(l.iniciativa)) LINKS.set(l.iniciativa, []);
-      LINKS.get(l.iniciativa).push(l);
+      const ini = (l.projeto_id != null && iniPorId.get(String(l.projeto_id))) || iniPorNome.get(semAcento(l.iniciativa));
+      const chave = ini ? ini.chave : chaveDe(l);
+      if (!LINKS.has(chave)) LINKS.set(chave, []);
+      LINKS.get(chave).push(l);
     });
     LINKS.forEach((arr) => arr.sort((a, b) => (a.db_id || 0) - (b.db_id || 0)));
     RASCUNHOS = new Map();
@@ -208,12 +221,12 @@
     return desc + '<td class="il-col-resp"><select data-campo="responsavel_pessoa_id" aria-label="Responsável pela manutenção"' + dis + ">" + opts + "</select></td>";
   }
 
-  function salvos(nome) { return LINKS.get(nome) || []; }
+  function salvos(chave) { return LINKS.get(chave) || []; }
 
   // linhas em branco na tela: as pedidas pelo "+ painel", ou 1 se a iniciativa não tem nada
-  function nBrancos(nome) {
-    if (TIPO !== "painel") return salvos(nome).length ? 0 : 1;
-    return Math.max(RASCUNHOS.get(nome) || 0, salvos(nome).length ? 0 : 1);
+  function nBrancos(chave) {
+    if (TIPO !== "painel") return salvos(chave).length ? 0 : 1;
+    return Math.max(RASCUNHOS.get(chave) || 0, salvos(chave).length ? 0 : 1);
   }
 
   function linhaUnica(x, l, primeira, total) {
@@ -226,7 +239,7 @@
       : "";
     const remover = TIPO === "painel" && podeEditar && (l || total > 1)
       ? '<button type="button" class="il-remover" data-acao="remover" title="Remover este painel" aria-label="Remover este painel">×</button>' : "";
-    return '<tr data-iniciativa="' + esc(x.iniciativa) + '"' + (l ? ' data-id="' + esc(String(l.db_id)) + '"' : "") +
+    return '<tr data-iniciativa="' + esc(x.iniciativa) + '" data-chave="' + esc(x.chave) + '"' + (l ? ' data-id="' + esc(String(l.db_id)) + '"' : "") +
       (primeira ? "" : ' class="il-sub-linha"') + ">" +
       nomeCel + linkCelula(l) + terceiraCelula(l) +
       '<td class="il-col-status"><div class="il-status-cel"><span data-status></span>' + remover + "</div></td>" +
@@ -234,8 +247,8 @@
   }
 
   function linha(x) {
-    const ls = salvos(x.iniciativa);
-    const itens = ls.concat(new Array(nBrancos(x.iniciativa)).fill(null));
+    const ls = salvos(x.chave);
+    const itens = ls.concat(new Array(nBrancos(x.chave)).fill(null));
     return itens.map((l, i) => linhaUnica(x, l, i === 0, itens.length)).join("");
   }
 
@@ -250,7 +263,7 @@
   }
 
   function preenchido(x) {
-    return salvos(x.iniciativa).some((l) => l.link);
+    return salvos(x.chave).some((l) => l.link);
   }
 
   let ultimaContagem = 0;
@@ -258,7 +271,7 @@
     const comLink = INICIATIVAS.filter(preenchido).length;
     let txt = "Mostrando " + ultimaContagem + " de " + INICIATIVAS.length + " iniciativas · " + comLink + " com link";
     if (TIPO === "painel") {
-      const nPaineis = INICIATIVAS.reduce((n, x) => n + salvos(x.iniciativa).filter((l) => l.link).length, 0);
+      const nPaineis = INICIATIVAS.reduce((n, x) => n + salvos(x.chave).filter((l) => l.link).length, 0);
       txt += " · " + nPaineis + (nPaineis === 1 ? " painel" : " painéis");
     }
     elContagem.textContent = txt + ".";
@@ -267,7 +280,7 @@
   function casaBusca(x, q) {
     if (!q) return true;
     if (semAcento(x.iniciativa).includes(q) || semAcento(x.nucleo).includes(q)) return true;
-    return salvos(x.iniciativa).some((l) => semAcento(l.descricao).includes(q));
+    return salvos(x.chave).some((l) => semAcento(l.descricao).includes(q));
   }
 
   // re-render só depois das gravações em curso (senão a linha recém-gravada some da tela)
@@ -305,7 +318,7 @@
 
   function registroDaLinha(tr) {
     const id = tr.dataset.id;
-    return id ? salvos(tr.dataset.iniciativa).find((l) => String(l.db_id) === id) || null : null;
+    return id ? salvos(tr.dataset.chave).find((l) => String(l.db_id) === id) || null : null;
   }
 
   function mensagemErro(err) {
@@ -328,23 +341,23 @@
   }
 
   async function gravarAgora(tr, campos) {
-    const nome = tr.dataset.iniciativa;
-    const ini = INICIATIVAS.find((x) => x.iniciativa === nome);
+    const chave = tr.dataset.chave;
+    const ini = INICIATIVAS.find((x) => x.chave === chave);
     if (!ini) return false;
     const existente = registroDaLinha(tr);
     marcar(tr, "salvando");
     try {
       const salvo = await DB_INICIATIVA_LINKS.gravar(TIPO, ini, existente, campos, usuario());
-      const arr = salvos(nome).slice();
+      const arr = salvos(chave).slice();
       if (existente) {
         arr[arr.indexOf(existente)] = salvo;
       } else {
-        const brancos = nBrancos(nome);
+        const brancos = nBrancos(chave);
         arr.push(salvo);
-        RASCUNHOS.set(nome, Math.max(0, brancos - 1));
+        RASCUNHOS.set(chave, Math.max(0, brancos - 1));
         tr.dataset.id = String(salvo.db_id);
       }
-      LINKS.set(nome, arr);
+      LINKS.set(chave, arr);
       marcar(tr, "salvo");
       return true;
     } catch (err) {
@@ -367,11 +380,11 @@
   }
 
   async function removerLinha(tr) {
-    const nome = tr.dataset.iniciativa;
+    const nome = tr.dataset.iniciativa, chave = tr.dataset.chave;
     const existente = registroDaLinha(tr);
     if (!existente) {
       // linha em branco: só some da tela
-      RASCUNHOS.set(nome, Math.max(0, nBrancos(nome) - 1));
+      RASCUNHOS.set(chave, Math.max(0, nBrancos(chave) - 1));
       return renderAposSalvar();
     }
     const rotulo = existente.descricao || existente.link || "este painel";
@@ -379,7 +392,7 @@
     marcar(tr, "salvando");
     try {
       await DB_INICIATIVA_LINKS.remover(existente, usuario());
-      LINKS.set(nome, salvos(nome).filter((l) => l !== existente));
+      LINKS.set(chave, salvos(chave).filter((l) => l !== existente));
       await renderAposSalvar();
     } catch (err) {
       console.error("iniciativa-links: falha ao remover", err);
@@ -449,13 +462,13 @@
     if (acao && podeEditar) {
       const tr = acao.closest("tr[data-iniciativa]");
       if (!tr) return;
-      const nome = tr.dataset.iniciativa;
+      const chave = tr.dataset.chave;
       if (acao.dataset.acao === "adicionar") {
         await Promise.allSettled(Array.from(pendentes));
-        RASCUNHOS.set(nome, nBrancos(nome) + 1);
+        RASCUNHOS.set(chave, nBrancos(chave) + 1);
         render();
         // foco no link da linha nova (a última desta iniciativa)
-        const linhas = Array.from(elTabela.querySelectorAll("tr[data-iniciativa]")).filter((r) => r.dataset.iniciativa === nome);
+        const linhas = Array.from(elTabela.querySelectorAll("tr[data-chave]")).filter((r) => r.dataset.chave === chave);
         const ultima = linhas[linhas.length - 1];
         const inp = ultima && ultima.querySelector('[data-campo="link"]');
         if (inp) inp.focus();

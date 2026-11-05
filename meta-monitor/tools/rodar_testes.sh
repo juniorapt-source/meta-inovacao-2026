@@ -93,6 +93,7 @@ COM_CHROME=(
   "testar_pessoas_editor_nova_headless.js|node tools/testar_pessoas_editor_nova_headless.js"
   "testar_fluxo_dados_editar_headless.js|node tools/testar_fluxo_dados_editar_headless.js"
   "testar_projetos_visibilidade_headless.js|node tools/testar_projetos_visibilidade_headless.js"
+  "testar_projeto_id_ligacao_headless.js|node tools/testar_projeto_id_ligacao_headless.js"
   "testar_urc_editor_headless.js|node tools/testar_urc_editor_headless.js"
   "testar_plano_acao_responsavel_headless.js|node tools/testar_plano_acao_responsavel_headless.js"
   # item D3.2 — órfãos reconciliados, headless via CDP

@@ -171,6 +171,11 @@ node tools/testar_projetos_visibilidade_headless.js # "Aparece em" do cadastro d
                                         # Atividades, Canva e Fluxo listam só os projetos
                                         # marcados; caixas do editor gravam; sem o script
                                         # SQL tudo segue como antes
+node tools/testar_projeto_id_ligacao_headless.js # ligação por projeto_id
+                                        # (v0.36.0): projeto renomeado continua achando
+                                        # atividades, drawer, Painéis e Canva; rename no
+                                        # editor leva o nome às tabelas por nome; sem o
+                                        # script SQL, tudo segue pelo nome
 node tools/testar_projetos_editor_representantes_headless.js # aba "Projetos &
                                         # Representantes" do editor.html (item 4.1):
                                         # vínculo existente vira chip removível, texto

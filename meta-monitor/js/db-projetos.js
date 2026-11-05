@@ -56,6 +56,82 @@
     return grupos;
   }
 
+  // v0.36.0 — ligação por projeto_id (tools/sql/2026-11_projeto_id_ligacao.sql) nas tabelas
+  // que guardavam só o nome: plano_acao_atividades, meta_inovacao_iniciativa_links,
+  // fluxo_dados_rotas, fluxo_dados_paineis (e meta_inovacao_canva_demandas, que já tinha).
+  //
+  // resolvedor(projetos) devolve uma função linha -> projeto do cadastro (ou null): casa por
+  // projeto_id e, para linha sem projeto_id, pelo nome (sem caixa/espaços nas pontas).
+  // `campoNome` é a coluna de texto da linha ("iniciativa"; no Canva, "projeto").
+  function resolvedor(projetos, campoNome) {
+    const campo = campoNome || "iniciativa";
+    const nome = (x) => String(x == null ? "" : x).trim().toLowerCase();
+    const porId = new Map(), porNome = new Map();
+    (projetos || []).forEach((p) => {
+      if (!p) return;
+      if (p.db_id != null) porId.set(String(p.db_id), p);
+      if (p.iniciativa && !porNome.has(nome(p.iniciativa))) porNome.set(nome(p.iniciativa), p);
+    });
+    return function (linha) {
+      if (!linha) return null;
+      if (linha.projeto_id != null) {
+        const p = porId.get(String(linha.projeto_id));
+        if (p) return p;
+      }
+      return porNome.get(nome(linha[campo])) || null;
+    };
+  }
+
+  // Filtro PostgREST "do projeto": linhas com o projeto_id OU, sem projeto_id, com o nome.
+  // Serve tanto pro .or() do supabase-js quanto pra query string crua (or=(...)).
+  function aspas(v) { return '"' + String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"'; }
+  function filtroDoProjeto(projetoId, nome, campoNome) {
+    const campo = campoNome || "iniciativa";
+    const porNome = campo + ".eq." + aspas(nome == null ? "" : nome);
+    if (projetoId == null || projetoId === "") return porNome;
+    return "projeto_id.eq." + Number(projetoId) + ",and(projeto_id.is.null," + porNome + ")";
+  }
+
+  // erro de "coluna não existe" — o script de projeto_id ainda não rodou (42703 no Postgres,
+  // PGRST204 no cache do PostgREST). Quem consulta por projeto_id cai pro nome nesse caso.
+  function faltaColunaProjetoId(err) {
+    if (!err) return false;
+    const c = String(err.code || "");
+    const msg = String(err.message || err.details || err).toLowerCase();
+    return c === "42703" || c === "PGRST204" || (msg.indexOf("projeto_id") !== -1 && (msg.indexOf("does not exist") !== -1 || msg.indexOf("could not find") !== -1));
+  }
+
+  // Renomear no editor: leva o nome novo pras tabelas que ainda são lidas pelo nome. Depois
+  // do script SQL, o gatilho cc_propagar_nome_projeto já fez isto no banco e aqui não sobra
+  // linha com o nome velho (0 linhas, sem efeito). Antes do script, é o que evita que
+  // atividades, Sites/Painéis e Fluxo de dados fiquem órfãos. O Canva não entra: o site
+  // não tem UPDATE direto nele (só o gatilho do banco alcança).
+  // Devolve a lista de tabelas que falharam (vazia = tudo certo).
+  const TABELAS_COM_NOME = [
+    { tabela: "plano_acao_atividades", autoria: true },
+    { tabela: "meta_inovacao_iniciativa_links", autoria: true },
+    { tabela: "fluxo_dados_rotas", autoria: false },
+    { tabela: "fluxo_dados_paineis", autoria: false },
+  ];
+  async function propagarNome(nomeAntes, nomeDepois, usuario) {
+    if (!nomeAntes || !nomeDepois || nomeAntes === nomeDepois) return [];
+    if (BASE.forcarFallback && BASE.forcarFallback(root)) return [];
+    const supa = await root.CC_SUPABASE.obterClienteEsm();
+    const falhas = [];
+    for (const t of TABELAS_COM_NOME) {
+      const patch = { iniciativa: nomeDepois };
+      if (t.autoria) patch.updated_by = usuario || null;
+      try {
+        const r = await supa.from(t.tabela).update(patch).eq("iniciativa", nomeAntes);
+        if (r.error) throw r.error;
+      } catch (err) {
+        console.error("db-projetos: falha ao levar o nome novo para " + t.tabela, err);
+        falhas.push(t.tabela);
+      }
+    }
+    return falhas;
+  }
+
   function linhaParaProjeto(r) {
     const p = {
       nucleo: r.nucleo,
@@ -111,5 +187,10 @@
     exibir: exibir,
     temVisibilidade: temVisibilidade,
     agruparPorProjeto: agruparPorProjeto,
+    resolvedor: resolvedor,
+    filtroDoProjeto: filtroDoProjeto,
+    faltaColunaProjetoId: faltaColunaProjetoId,
+    propagarNome: propagarNome,
+    TABELAS_COM_NOME: TABELAS_COM_NOME.map((t) => t.tabela),
   };
 })(this);

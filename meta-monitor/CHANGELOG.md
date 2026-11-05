@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.36.0 — 2026-11-05
+**Projeto ligado por `projeto_id`: renomear no editor não deixa mais nada órfão.**
+
+Até aqui, renomear um projeto em Editor › Projetos & Representantes só levava o nome novo para o
+Corsário. Atividades, links de Sites/Painéis, rotas e painéis do Fluxo de dados e demandas do Canva
+guardavam o projeto pelo nome e sumiam da tela do projeto.
+
+- **Atividades por iniciativa** e o **painel lateral (drawer)** da iniciativa buscam as atividades
+  por `projeto_id` e, nas linhas antigas sem id, pelo nome. Atividade nova já grava `projeto_id`.
+  O drawer também lê a régua do Corsário pelo id.
+- **Sites e Painéis** casam o link com o projeto pelo `projeto_id` (nome como reserva). Editar uma
+  linha antiga grava o nome e o id atuais.
+- **Canva consolidado** agrupa as demandas pelo nome atual do projeto ligado: um projeto renomeado
+  não se parte em dois grupos nem aparece em "quem falta".
+- **Minhas ações** mostra o nome atual do projeto de cada atividade.
+- **Editor › renomear projeto** leva o nome novo para atividades, Sites/Painéis e Fluxo de dados já
+  agora, mesmo antes do script SQL (o Canva só depois dele).
+- **Banco (a rodar):** `tools/sql/2026-11_projeto_id_ligacao.sql` cria `projeto_id` (FK) em
+  `plano_acao_atividades`, `fluxo_dados_rotas` e `fluxo_dados_paineis` (e a FK que faltava em
+  `meta_inovacao_iniciativa_links`), preenche pelo nome e cria dois gatilhos: um que resolve o
+  `projeto_id` pelo nome em toda gravação, outro que leva o nome novo às 5 tabelas quando o projeto é
+  renomeado (inclusive o Canva). O texto do nome continua gravado (as views do Fluxo de dados
+  agrupam por ele). Ensaiado em PostgreSQL 16 local. **Sem o script, tudo segue pelo nome.**
+- Teste novo: `tools/testar_projeto_id_ligacao_headless.js`.
+
 ## v0.35.0 — 2026-11-05
 **Cadastro de projetos como fonte única: "Aparece em".**
 

@@ -222,6 +222,19 @@
           console.error("editor: projeto salvo, mas falhou ao atualizar o Corsário", errCorsario);
           avisoCorsario = "salvo, mas o Corsário não atualizou"; detCorsario = detErro(errCorsario);
         }
+        // v0.36.0 — renomear também leva o nome novo pra atividades, Sites/Painéis e Fluxo
+        // de dados (que ainda casam pelo nome nas linhas sem projeto_id). Depois de
+        // tools/sql/2026-11_projeto_id_ligacao.sql o gatilho do banco já faz isto (e o Canva
+        // também); aqui sobra 0 linha. Falha não desfaz o projeto, só avisa.
+        if (campo === "iniciativa" && iniciativaAntes && iniciativaAntes !== valor) {
+          try {
+            const falhas = await DB_PROJETOS.propagarNome(iniciativaAntes, valor, EDITOR_ATUAL.nomeAtual());
+            if (falhas.length && !avisoCorsario) { avisoCorsario = "salvo, mas o nome não chegou em " + falhas.join(", "); }
+          } catch (errNome) {
+            console.error("editor: projeto salvo, mas falhou ao levar o nome novo para as outras telas", errNome);
+            if (!avisoCorsario) { avisoCorsario = "salvo, mas o nome não chegou nas outras telas"; detCorsario = detErro(errNome); }
+          }
+        }
         marcarLinhaStatus(tr, avisoCorsario || "salvo", detCorsario);
       } catch (err) {
         console.error("editor: falha ao salvar projeto", err);
