@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.37.0 — 2026-11-05
+**Modo edição vira um grupo do menu lateral.**
+
+O seletor "Conjunto:" de editor.html tinha crescido para nove opções e escondia o que dava para
+editar. Agora cada conjunto é um item próprio no menu, no grupo **Modo edição** (no lugar de
+"Admin"), do mesmo jeito que Jornada tem O Caminho para o Corsário e Fluxo de dados.
+
+- Itens: Plano de ação, Agenda, Pessoas, Projetos & Representantes, URC — Liderança, URC —
+  Responsáveis por canal, O Caminho para o Corsário, Fluxo de dados, Matriz (cópia de segurança)
+  e Histórico de alterações.
+- Continua sendo uma página só: cada item é `editor.html#<conjunto>` e trocar de item não
+  recarrega. O título mostra o conjunto aberto ("Modo edição · Agenda").
+- Os botões "Editar dados"/"Histórico" saíram — o Histórico é um item do menu.
+- Links antigos continuam valendo: `editor.html` abre o Plano de ação e `editor.html#fluxo`
+  (de fluxo-dados.html) abre o Fluxo de dados.
+
 ## v0.36.0 — 2026-11-05
 **Projeto ligado por `projeto_id`: renomear no editor não deixa mais nada órfão.**
 
