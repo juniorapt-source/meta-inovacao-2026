@@ -16,7 +16,7 @@
   Corsário). **Atividades**, **Canva** e a **Matriz de demandas** filtram pela caixa delas; na Matriz,
   as células de projeto escondido não viram linha órfã. **Fluxo de dados** tira da matriz o projeto
   desmarcado (os cartões de rota continuam).
-- **Banco (a rodar):** `tools/sql/2026-11_projetos_visibilidade.sql` cria as 7 colunas `exibir_*`
+- **Banco (rodado em 05/11/2026, `corsario_sem_projeto` = 0):** `tools/sql/2026-11_projetos_visibilidade.sql` cria as 7 colunas `exibir_*`
   em `meta_inovacao_projetos` (default true). Na primeira vez, desmarca "Corsário" de quem não
   estava no Corsário; transforma em projeto as iniciativas que existiam só no Corsário (com
   Corsário, Sites e Painéis marcados); e liga ao projeto as linhas de `corsario_status` que casavam
