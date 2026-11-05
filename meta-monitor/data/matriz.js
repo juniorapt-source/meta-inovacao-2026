@@ -276,7 +276,7 @@ window.DB.matriz = {
   "dxp": "",
   "contab": ""
  },
- "Startup Day": {
+ "Startup Day - Participantes": {
   "foco": "",
   "cnr": "",
   "empresa": "",

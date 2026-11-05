@@ -20,7 +20,7 @@ window.DB.projetos = [
   { "nucleo": "Startups", "iniciativa": "Missões", "representantes": ["Cris"] },
   { "nucleo": "Startups", "iniciativa": "Prêmio Sebrae Startups", "representantes": ["Pova"] },
   { "nucleo": "Startups", "iniciativa": "Sebrae Startups", "representantes": ["Núcleo de Startups"] },
-  { "nucleo": "Startups", "iniciativa": "Startup Day", "representantes": ["Cris", "Pova"] },
+  { "nucleo": "Startups", "iniciativa": "Startup Day - Participantes", "representantes": ["Cris", "Pova"] },
   { "nucleo": "Startups", "iniciativa": "Startup NE", "representantes": ["Wébia", "Jéssica", "Fernanda"] },
   { "nucleo": "Startups", "iniciativa": "Websummit Rio e Lisboa", "representantes": ["Cris", "Pova"] },
 
