@@ -17,6 +17,8 @@
       ["demandas.html", "Matriz de demandas"],
       ["canva-consolidado.html", "Consolidação do canvas"],
       ["plano-acao.html", "Atividades por iniciativa"],
+      ["paineis.html", "Painéis"],
+      ["sites.html", "Sites"],
     ] },
     // Grupo criado em 22/08/2026, a pedido do José. As três páginas existiam e eram
     // alcançáveis só por URL direta — o QR levava à primeira, e as outras duas ninguém
@@ -40,9 +42,24 @@
     ] },
     { titulo: "Jornada", paginas: [
       ["corsario.html", "O Caminho para o Corsário"],
+      ["fluxo-dados.html", "Fluxo de dados"],
     ] },
-    { titulo: "Admin", paginas: [
-      ["editor.html", "Modo edição"],
+    // Grupo "Modo edição" (05/11/2026, a pedido do José): antes era um item só ("Admin ›
+    // Modo edição") com um <select> de conjuntos dentro da página — a lista cresceu e
+    // virou um menu escondido. Agora cada conjunto é um item aqui, como Jornada tem os
+    // seus. Todos abrem a MESMA página (editor.html) e o #hash escolhe o conjunto — as
+    // chaves batem com CONJUNTOS em editor.html (+ "historico", a visão do log).
+    { titulo: "Modo edição", paginas: [
+      ["editor.html#plano", "Plano de ação"],
+      ["editor.html#agenda", "Agenda"],
+      ["editor.html#pessoas", "Pessoas"],
+      ["editor.html#projetos", "Projetos & Representantes"],
+      ["editor.html#urc_lideranca", "URC — Liderança"],
+      ["editor.html#urc_canais", "URC — Responsáveis por canal"],
+      ["editor.html#corsario", "O Caminho para o Corsário"],
+      ["editor.html#fluxo", "Fluxo de dados"],
+      ["editor.html#matriz", "Matriz (cópia de segurança)"],
+      ["editor.html#historico", "Histórico de alterações"],
     ] },
   ];
 
@@ -106,6 +123,16 @@
     if (a.cc.tipo === "cadeia") return ' <span class="chip cc">cadeia ' + a.cc.no + "</span>";
     if (a.cc.tipo === "sla") return ' <span class="chip sla">◆ SLA</span>';
     return "";
+  };
+
+  // troca o item marcado no menu sem remontar o <nav> — usado por editor.html, onde
+  // trocar de conjunto só muda o #hash (não recarrega a página).
+  window.marcarNavAtivo = function (href) {
+    document.querySelectorAll(".nav a").forEach((a) => {
+      const ativo = a.getAttribute("href") === href;
+      a.classList.toggle("ativo", ativo);
+      if (ativo) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
   };
 
   window.montarShell = function (paginaAtual) {

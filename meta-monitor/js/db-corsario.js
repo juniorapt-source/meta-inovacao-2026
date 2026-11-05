@@ -88,9 +88,9 @@
   }
 
   // item 5.7 — projeto_id/nucleo_id são OPCIONAIS aqui de propósito: nem toda linha
-  // nova de corsario_status corresponde a um projeto do golden record (o botão
-  // "+ Nova iniciativa" deste próprio conjunto cria iniciativa livre, sem exigir que
-  // ela exista em meta_inovacao_projetos — é o chamador (editor.html) quem resolve as
+  // nova de corsario_status correspondia a um projeto do golden record (o antigo botão
+  // "+ Nova iniciativa", removido na v0.35.0, criava iniciativa livre, sem exigir que
+  // ela existisse em meta_inovacao_projetos — é o chamador (editor.html) quem resolve as
   // FKs quando tem de onde tirar, e passa `undefined`/omite quando não tem; a coluna
   // continua nullable, então a linha nasce sem FK em vez de nascer com FK errada.
   async function criar(linhaParcial, usuario) {

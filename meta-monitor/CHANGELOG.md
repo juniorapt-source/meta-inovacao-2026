@@ -1,5 +1,212 @@
 # Changelog
 
+## v0.38.0 — 2026-11-05
+**Plano de ação: editar a ação direto no detalhe da linha.**
+
+Na visão Lista de `plano.html`, o detalhe de cada ação (aberto ao clicar na linha) ganhou o botão
+**Editar**. Ele troca o detalhe por um formulário com status, prazo (data e texto exibido),
+atividade, como executar, como monitorar e ferramenta. **Salvar** grava no Supabase só os campos
+alterados, pelo mesmo caminho do Kanban e do editor (`DB_PLANO.salvar`, com "Editando como…" no
+`updated_by`).
+
+- Mudar a data do prazo atualiza o texto "como aparece" (ex.: `20/11`) quando ele ainda era o
+  da data antiga.
+- Com dados locais (sem conexão com o banco), o botão fica desabilitado com o motivo.
+- Responsável fica de fora: ele tem vínculos próprios no golden record
+  (`meta_inovacao_plano_responsaveis`) que um campo de texto deixaria dessincronizados.
+- Teste novo: `tools/testar_plano_editar_headless.js`.
+## v0.37.0 — 2026-11-05
+**Modo edição vira um grupo do menu lateral.**
+
+O seletor "Conjunto:" de editor.html tinha crescido para nove opções e escondia o que dava para
+editar. Agora cada conjunto é um item próprio no menu, no grupo **Modo edição** (no lugar de
+"Admin"), do mesmo jeito que Jornada tem O Caminho para o Corsário e Fluxo de dados.
+
+- Itens: Plano de ação, Agenda, Pessoas, Projetos & Representantes, URC — Liderança, URC —
+  Responsáveis por canal, O Caminho para o Corsário, Fluxo de dados, Matriz (cópia de segurança)
+  e Histórico de alterações.
+- Continua sendo uma página só: cada item é `editor.html#<conjunto>` e trocar de item não
+  recarrega. O título mostra o conjunto aberto ("Modo edição · Agenda").
+- Os botões "Editar dados"/"Histórico" saíram — o Histórico é um item do menu.
+- Links antigos continuam valendo: `editor.html` abre o Plano de ação e `editor.html#fluxo`
+  (de fluxo-dados.html) abre o Fluxo de dados.
+
+## v0.36.0 — 2026-11-05
+**Projeto ligado por `projeto_id`: renomear no editor não deixa mais nada órfão.**
+
+Até aqui, renomear um projeto em Editor › Projetos & Representantes só levava o nome novo para o
+Corsário. Atividades, links de Sites/Painéis, rotas e painéis do Fluxo de dados e demandas do Canva
+guardavam o projeto pelo nome e sumiam da tela do projeto.
+
+- **Atividades por iniciativa** e o **painel lateral (drawer)** da iniciativa buscam as atividades
+  por `projeto_id` e, nas linhas antigas sem id, pelo nome. Atividade nova já grava `projeto_id`.
+  O drawer também lê a régua do Corsário pelo id.
+- **Sites e Painéis** casam o link com o projeto pelo `projeto_id` (nome como reserva). Editar uma
+  linha antiga grava o nome e o id atuais.
+- **Canva consolidado** agrupa as demandas pelo nome atual do projeto ligado: um projeto renomeado
+  não se parte em dois grupos nem aparece em "quem falta".
+- **Minhas ações** mostra o nome atual do projeto de cada atividade.
+- **Editor › renomear projeto** leva o nome novo para atividades, Sites/Painéis e Fluxo de dados já
+  agora, mesmo antes do script SQL (o Canva só depois dele).
+- **Banco (a rodar):** `tools/sql/2026-11_projeto_id_ligacao.sql` cria `projeto_id` (FK) em
+  `plano_acao_atividades`, `fluxo_dados_rotas` e `fluxo_dados_paineis` (e a FK que faltava em
+  `meta_inovacao_iniciativa_links`), preenche pelo nome e cria dois gatilhos: um que resolve o
+  `projeto_id` pelo nome em toda gravação, outro que leva o nome novo às 5 tabelas quando o projeto é
+  renomeado (inclusive o Canva). O texto do nome continua gravado (as views do Fluxo de dados
+  agrupam por ele). Ensaiado em PostgreSQL 16 local. **Sem o script, tudo segue pelo nome.**
+- Teste novo: `tools/testar_projeto_id_ligacao_headless.js`.
+
+## v0.35.0 — 2026-11-05
+**Cadastro de projetos como fonte única: "Aparece em".**
+
+- **Editor › Projetos & Representantes** ganhou a coluna **Aparece em**, com uma caixa por tela:
+  Corsário, Sites, Painéis, Fluxo (de dados), Atividades (por iniciativa), Matriz (de demandas) e
+  Canva (oficina e consolidado). Marcar/desmarcar grava na hora. O formulário "+ Novo projeto" tem
+  as mesmas caixas, todas marcadas por padrão. Portfólio, busca e página inicial mostram sempre
+  todos os projetos.
+- **Corsário** (página e aba do editor) passa a listar os projetos com "Corsário" marcado; nome e
+  núcleo vêm do cadastro, e `corsario_status` guarda só os status. Projeto sem status aparece fora
+  da régua até ser avaliado. Saiu o botão "+ Nova iniciativa" do Corsário: projeto novo entra só
+  pelo cadastro, e criar projeto não precisa mais semear o Corsário.
+- **Sites e Painéis** listam os projetos com a sua caixa marcada (sem somar as iniciativas do
+  Corsário). **Atividades**, **Canva** e a **Matriz de demandas** filtram pela caixa delas; na Matriz,
+  as células de projeto escondido não viram linha órfã. **Fluxo de dados** tira da matriz o projeto
+  desmarcado (os cartões de rota continuam).
+- **Banco (rodado em 05/11/2026, `corsario_sem_projeto` = 0):** `tools/sql/2026-11_projetos_visibilidade.sql` cria as 7 colunas `exibir_*`
+  em `meta_inovacao_projetos` (default true). Na primeira vez, desmarca "Corsário" de quem não
+  estava no Corsário; transforma em projeto as iniciativas que existiam só no Corsário (com
+  Corsário, Sites e Painéis marcados); e liga ao projeto as linhas de `corsario_status` que casavam
+  só pelo nome. Ensaiado em PostgreSQL 16 local. **Sem o script, todas as telas seguem como antes.**
+- Testes novos: `tools/testar_projetos_visibilidade.js` (puro) e
+  `tools/testar_projetos_visibilidade_headless.js`.
+
+## v0.34.0 — 2026-11-05
+**Painéis: mais de um painel por iniciativa e coluna de detalhes.**
+
+- **Vários painéis por iniciativa:** cada iniciativa ganhou um "+ painel" abaixo do nome, que
+  abre mais uma linha (link, detalhes, responsável). O "×" no fim da linha remove o painel
+  (soft delete, `deleted_at`). A contagem do topo passa a mostrar também o total de painéis.
+- **Coluna "Detalhes do painel":** texto livre e opcional, pra dizer o que é o painel. Grava
+  ao sair do campo ou com Enter. A busca também procura nesse texto.
+- Sites não muda (continua uma linha por iniciativa).
+- **Banco (rodado à mão em 05/11/2026):** `tools/sql/2026-11_iniciativa_links_paineis_multiplos.sql`
+  cria a coluna `descricao` e troca a restrição única `(tipo, iniciativa)` por um índice único
+  só para `tipo = 'site'`. Antes de rodar, o 1º painel de cada iniciativa continua gravando;
+  o 2º painel e os detalhes falham com um aviso na página apontando o script.
+- Teste novo: `tools/testar_paineis_headless.js` (banco falso em memória, sem rede).
+
+## v0.33.3 — 2026-11-05
+**Fluxo de dados: opção "Sistema próprio" em "Destino hoje".**
+
+- Novo sistema "Sistema próprio" (`tools/sql/2026-11_fluxo_dados_patch5.sql`), oferecido só em
+  "Destino hoje (um ou mais)" no formulário de rota; em "Destino alvo" ele fica escondido (a não
+  ser que já esteja marcado). Patch5 aplicado no Supabase em 05/11/2026; os dados locais
+  (`data/fluxo_dados.js`) têm o mesmo registro.
+
+## v0.33.2 — 2026-11-05
+**Fluxo de dados: editar direto na página.**
+
+- Com "Ativar edição" ligado, cada cartão de rota, painel e encaminhamento em `fluxo-dados.html`
+  ganha um botão **Editar**, que abre o mesmo formulário do editor já preenchido ("Editar rota",
+  "Editar painel", "Editar encaminhamento"). Antes a página só criava; editar exigia ir à aba
+  "Fluxo de dados" do `editor.html`, que continua sendo o lugar de desativar/reativar e de
+  cadastrar sistemas. Sem banco (dados locais), o botão aparece desabilitado.
+- Teste novo: `tools/testar_fluxo_dados_editar_headless.js`.
+
+## v0.33.1 — 2026-11-05
+**Sites e Painéis: projeto novo aparece mesmo fora do Corsário.**
+
+- As duas páginas liam a lista só de `corsario_status`. Projeto criado no editor só entrava ali se a
+  inclusão automática no Corsário desse certo; quando falhava, ficava de fora (caso "Startup Day -
+  Mentores"). Agora a lista soma o cadastro de projetos (`meta_inovacao_projetos`) às iniciativas do
+  Corsário, sem repetir (casa por `projeto_id` e, sem FK, pelo nome). Iniciativas livres do Corsário
+  continuam aparecendo.
+
+## v0.33.0 — 2026-11-05
+**Execução: páginas "Painéis" e "Sites".**
+
+- **Menu Execução** ganhou "Painéis" (`paineis.html`) e "Sites" (`sites.html`). As duas listam
+  as iniciativas agrupadas por núcleo, na mesma lista e ordem do "O Caminho para o Corsário"
+  (lida de `corsario_status`; sem rede, cai para `data/projetos.js`).
+- **Sites:** link da página da iniciativa + caixa "Formulário de captura de lead".
+- **Painéis:** link do painel + "Responsável pela manutenção", escolhido da lista de pessoas
+  (`meta_inovacao_pessoas`, a mesma do menu Participantes). Grava o id da pessoa e o nome em texto.
+- Grava sozinho ao editar (link ao sair do campo ou Enter; só aceita `http://`/`https://`).
+  Linha nova só nasce no primeiro preenchimento. Código em `js/iniciativa-links.js` e
+  `js/db-iniciativa-links.js`.
+- **Banco (rodado à mão em 05/11/2026):** `tools/sql/2026-11_iniciativa_links.sql` cria
+  `meta_inovacao_iniciativa_links` (3 policies conferidas). Sem a tabela, as páginas abrem com a edição
+  desligada e um aviso.
+- **Correção de CSS:** o rodapé "Editando como … trocar" mostrava o formulário de troca sempre
+  aberto (`display:flex` anulava o `hidden`).
+
+## v0.32.0 — 2026-10-16
+**Fluxo de dados: 5 ajustes.**
+
+- **Outras fontes em lista.** "Existe outra fonte?" (sim/não/não sei) virou uma lista de textos,
+  um por fonte (`fluxo_dados_rotas.outras_fontes`). Ignora itens em branco e repetidos exatos ao
+  salvar; lista vazia = "nenhuma outra fonte informada". Linha antiga com `existe_outra_fonte =
+  'sim'` e lista vazia mostra "Há outra fonte, ainda não informada" (sem inventar conteúdo).
+- **Destinos múltiplos.** "Destino hoje" e "Destino alvo" aceitam vários sistemas (caixas de
+  marcar), gravados em `fluxo_dados_rota_destinos`. Ao salvar, só a diferença vai ao banco
+  (INSERT dos novos, DELETE dos removidos; a tabela não tem UPDATE). A rota nova é gravada
+  primeiro e os destinos depois; se os destinos falharem, o formulário fica aberto na rota já
+  criada para repetir, sem duplicá-la. As colunas antigas (`existe_outra_fonte`,
+  `sistema_destino_*_id`) ficam no banco, deprecadas e sem uso na tela.
+- **Criar pela página.** `fluxo-dados.html` ganhou "Nova rota" e "Novo encaminhamento", só no
+  modo de edição ("Ativar edição", flag `cc_fluxo_edicao` em `sessionStorage`; o `editor.html` não
+  tem flag que se reaproveite). Formulários e gravação foram extraídos para `js/fluxo-form.js`,
+  compartilhado com a aba do editor. Depois de salvar, a matriz e as listas se atualizam sem recarregar.
+- **Novo painel pela página** (ajuste posterior): `fluxo-dados.html` ganhou o botão "Novo painel" no
+  modo de edição, com o mesmo formulário da aba do editor (sem indicador/ferramenta, com link).
+- **Painel sem "indicador" e "ferramenta".** Saíram do formulário, das telas e do snapshot; as
+  colunas ficam no banco (anuláveis) e a edição de painel antigo não as apaga.
+- **"Link do painel".** Campo opcional em `fluxo_dados_paineis.link_painel` (só `http://` ou
+  `https://`; sem esquema é recusado com mensagem). Aparece como "Abrir painel"
+  (`target="_blank" rel="noopener noreferrer"`, href validado e montado por DOM). A view
+  `fluxo_dados_paineis_prontidao` não foi alterada: o link vem da tabela.
+- **Correção de CSS:** nas caixas de marcar do formulário (ex.: "Rotas que alimentam este painel") o
+  quadradinho ocupava a linha toda acima do texto; agora fica na mesma linha.
+- **Banco (rodado à mão em 16/10/2026):** `patch3` (outras_fontes, rota_destinos, view de lacunas
+  por conjuntos) e `patch4` (link_painel). Registrados em `tools/sql/APLICADOS.md`.
+  `2026-10_fluxo_dados_limpeza_zz_teste.sql` remove o resíduo do teste de escrita.
+- **Testes:** `tools/testar_fluxo_dados.js` ampliado (fontes, diff de destinos, lacuna por
+  conjunto, formulário de painel e link, validações de rota/encaminhamento, escrita contra
+  cliente simulado).
+
+## v0.31.0 — 2026-10-16
+**Nova frente: "Fluxo de dados" (Projeto Corso).** Mapa de como o dado de cada iniciativa
+nasce, quem manda, quem deveria mandar e para onde vai, e de onde cada painel lê — base para
+reapontar os painéis que hoje leem planilhas para o banco do Foco.
+
+- **Página `fluxo-dados.html`** (menu: grupo *Jornada*, ao lado do Corsário), somente
+  leitura, 4 blocos: Matriz (iniciativa × cliente/atendimento/processo/painel, pior status por
+  célula, mesmas cores do Corsário), Rotas (com selos de lacuna e "alvo indefinido"), Painéis
+  (com "pronto para reapontar") e Encaminhamentos (com dependência: bloqueado até a anterior
+  ficar `feito`). Lê as views `fluxo_dados_matriz`, `fluxo_dados_rotas_lacunas` e
+  `fluxo_dados_paineis_prontidao`.
+- **Edição na aba "Fluxo de dados" do `editor.html`** (`js/editor-fluxo.js`): rotas (todos os
+  campos, "quem envia hoje"/"quem deveria enviar" em destaque), painéis (com as rotas que os
+  alimentam), encaminhamentos (com dependência) e sistemas (cadastro de sistema novo).
+  Diferente das outras abas, salva por botão "Salvar" (formulário de ~22 campos), não campo a
+  campo. Nunca DELETE: "Desativar" grava `ativo = false`; a única exceção é desvincular
+  painel × rota. Erro 401/403/42501 vira mensagem que lembra que pode ser GRANT faltando.
+- **Dados:** `js/db-fluxo.js` (`window.DB_FLUXO`) lê do Supabase e cai no snapshot
+  `data/fluxo_dados.js` (7 sistemas, 2 rotas, 1 painel, 5 encaminhamentos e as 3 views, de
+  16/10/2026). Não usa a fábrica `DB_BASE.criarWrapper` porque estas tabelas não têm
+  `deleted_at`/`updated_by`.
+- **Teste:** `tools/testar_fluxo_dados.js` (integridade do snapshot, regra "rota `ok` precisa de
+  `alvo_definido`" como aviso, fallback offline, mensagem de erro de permissão).
+- **Banco:** o DDL foi executado à mão no SQL Editor em 16/10/2026 (a anon key não roda DDL) e
+  está versionado em `tools/sql/`: `2026-10_fluxo_dados.sql` (5 tabelas + 3 views), `patch1`
+  (view de lacunas: "indefinido" conta como lacuna) e `patch2` (policies no padrão do repo:
+  leitura pública, escrita com `x-cc-token`). Registro e o desvio do padrão de tabela
+  (`ativo boolean` e prefixo `fluxo_dados_`, não `deleted_at`/`meta_inovacao_`) em
+  `tools/sql/APLICADOS.md`.
+- **Correção pós-teste de gravação:** o formulário de rota agora respeita os campos `NOT NULL` do
+  banco (`chega_completo` e `existe_outra_fonte` com padrão `nao_sabe`; `descricao` da rota e
+  `tipo` do sistema obrigatórios).
+
 ## Auditoria do plano de débitos técnicos — 2026-08-30
 Varredura completa do `docs/PLANO_EXECUCAO_DEBITOS_TECNICOS.md` contra o código: todos os
 itens marcados ✅ estão de fato na `main` e conferem com o que o plano descreve. Três

@@ -270,15 +270,31 @@
         verMais("agenda.html", "Ver agenda completa"));
 
     preencherBlocoAsync(idRepr, representantesHtml(proj), (h) => h);
-    preencherBlocoAsync(idRegua, buscarRegua(nome), (r) => reguaHtml(nome, r));
-    preencherBlocoAsync(idAtividades, supaBuscar("plano_acao_atividades", "iniciativa=eq." + encodeURIComponent(nome) + "&deleted_at=is.null"), (linhas) => atividadesIniciativaHtml(linhas));
+    preencherBlocoAsync(idRegua, buscarRegua(nome, proj.db_id), (r) => reguaHtml(nome, r));
+    preencherBlocoAsync(idAtividades, buscarDoProjeto("plano_acao_atividades", proj.db_id, nome, "deleted_at=is.null"), (linhas) => atividadesIniciativaHtml(linhas));
     preencherBlocoAsync(idMatriz, supaBuscar("meta_inovacao_matriz_celulas", QUERY_MATRIZ_CELULAS), (linhas) => matrizHtml(linhas, nome));
   }
 
-  async function buscarRegua(nomeIniciativa) {
+  // v0.36.0 — linhas de uma tabela que guarda o projeto por projeto_id + nome: casa pelo id
+  // e, nas linhas sem id, pelo nome (DB_PROJETOS.filtroDoProjeto). Sem id do projeto (seed
+  // local), sem js/db-projetos.js na página, ou sem a coluna no banco (script
+  // tools/sql/2026-11_projeto_id_ligacao.sql não rodado), cai pro nome como antes.
+  async function buscarDoProjeto(tabela, projetoId, nome, resto) {
+    const P = root.DB_PROJETOS;
+    const porNome = () => supaBuscar(tabela, "iniciativa=eq." + encodeURIComponent(nome) + (resto ? "&" + resto : ""));
+    if (projetoId == null || !P || !P.filtroDoProjeto) return porNome();
+    try {
+      return await supaBuscar(tabela, "or=(" + encodeURIComponent(P.filtroDoProjeto(projetoId, nome)) + ")" + (resto ? "&" + resto : ""));
+    } catch (err) {
+      if (P.faltaColunaProjetoId && P.faltaColunaProjetoId(err)) return porNome();
+      throw err;
+    }
+  }
+
+  async function buscarRegua(nomeIniciativa, projetoId) {
     const [criterios, statusRows] = await Promise.all([
       supaBuscar("corsario_criterios", "select=chave,rotulo,grupo,ordem&order=ordem"),
-      supaBuscar("corsario_status", "select=criterio,status,observacao&iniciativa=eq." + encodeURIComponent(nomeIniciativa)),
+      buscarDoProjeto("corsario_status", projetoId, nomeIniciativa, "select=criterio,status,observacao"),
     ]);
     const porChave = Object.fromEntries(criterios.map((c) => [c.chave, c]));
     const itens = statusRows.map((r) => ({ criterio: porChave[r.criterio] || { rotulo: r.criterio, grupo: "" }, status: String(r.status || "").toLowerCase().trim() }));

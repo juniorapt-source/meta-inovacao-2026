@@ -272,9 +272,19 @@
     }).join("");
   }
 
+  // v0.36.0 — nome atual do projeto pelo projeto_id (renomear no editor não deixa o nome
+  // velho aqui); sem id ou sem o cadastro carregado, o texto gravado na atividade.
+  function nomeIniciativaAtividade(at) {
+    if (at.projeto_id != null && window.DB_PROJETOS && DB_PROJETOS.resolvedor) {
+      const p = DB_PROJETOS.resolvedor((window.DB && window.DB.projetos) || [])(at);
+      if (p && p.iniciativa) return p.iniciativa;
+    }
+    return at.iniciativa || "";
+  }
+
   function linhaAtividade(at) {
     return '<div class="ma-linha" data-atividade-id="' + esc(at.id) + '">' +
-      '<span class="ma-titulo">' + esc(at.descricao || "(sem descrição)") + '<div class="ma-no-resumo">' + esc(at.iniciativa || "") + "</div></span>" +
+      '<span class="ma-titulo">' + esc(at.descricao || "(sem descrição)") + '<div class="ma-no-resumo">' + esc(nomeIniciativaAtividade(at)) + "</div></span>" +
       '<span class="ma-controles">' +
         '<select data-campo="status" aria-label="Status">' + opcoesStatusAtividade(at.status || "nao_iniciado") + "</select>" +
         '<span class="ma-salvo" aria-live="polite"></span>' +
@@ -333,6 +343,8 @@
     secaoAtividades.innerHTML = '<div class="ma-vazio">Carregando…</div>';
     try {
       const atividades = await atividadesDaPessoa(id);
+      // nome do projeto vem do cadastro hidratado (nomeIniciativaAtividade)
+      if (window.PORTFOLIO) { try { await window.PORTFOLIO.pronto; } catch (e) { /* segue com o texto gravado */ } }
       // corrida: se o usuário trocou de pessoa no meio da chamada, descarta o resultado
       // (a próxima render pra outra pessoa já reescreveu contextoAtual.id).
       if (contextoAtual.id !== id) return;

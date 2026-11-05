@@ -19,8 +19,11 @@ Ambiente estático (HTML + CSS + JS puro, sem build e sem backend) para acompanh
 | `participantes.html` | Pessoas por grupo, com pendências de indicação (CAN-05) e fallback do Nó 2 |
 | `projetos.html` | Portfólio de projetos por núcleo, com representantes |
 | `plano-acao.html` | Atividades por iniciativa (CRUD via Supabase) |
-| `corsario.html` | Adequação de cada iniciativa ao ecossistema oficial (Supabase, somente leitura) — régua de 19 critérios, patente por faixa de % |
-| `editor.html` | Modo edição: Plano de ação e Agenda editam ao vivo no Supabase (linha a linha, salva sozinho); matriz, pessoas, projetos e URC continuam no modelo "edita a cópia local, baixa `data/*.js`, publica no Git"; aba **Histórico** com as últimas 100 alterações (log de auditoria) |
+| `corsario.html` | Adequação de cada iniciativa ao ecossistema oficial (Supabase, somente leitura) — régua de 19 critérios, patente por faixa de %. Lista os projetos do cadastro com "Corsário" marcado (v0.35.0) |
+| `fluxo-dados.html` | Fluxo de dados (Projeto Corso): matriz iniciativa × cliente/atendimento/processo/painel, rotas com lacunas, painéis prontos para reapontar e encaminhamentos (Supabase `fluxo_dados_*`, somente leitura; com "Ativar edição" cria rota, painel e encaminhamento e edita os existentes pelo botão "Editar" de cada cartão; desativar e cadastrar sistemas na aba "Fluxo de dados" do `editor.html`) |
+| `paineis.html` | Painéis (menu Execução): por projeto do cadastro com "Painéis" marcado, um ou mais painéis, cada um com link, detalhes (texto livre) e responsável pela manutenção (pessoa de `meta_inovacao_pessoas`). Grava em `meta_inovacao_iniciativa_links` (tipo `painel`) ao editar |
+| `sites.html` | Sites (menu Execução): por projeto do cadastro com "Sites" marcado, link da página e se tem formulário de captura de lead. Grava em `meta_inovacao_iniciativa_links` (tipo `site`) ao editar |
+| `editor.html` | Modo edição: Plano de ação e Agenda editam ao vivo no Supabase (linha a linha, salva sozinho); matriz, pessoas, projetos e URC continuam no modelo "edita a cópia local, baixa `data/*.js`, publica no Git"; aba **Histórico** com as últimas 100 alterações (log de auditoria). Na aba Projetos, a coluna **Aparece em** escolhe em quais telas cada projeto aparece (v0.35.0) |
 
 ## Como os dados funcionam
 
@@ -156,6 +159,23 @@ node tools/testar_urc_guardrail_offline.js # guardrail da URC (liderança não e
                                         # canal) conferido SEM rede: a violação é barrada
                                         # antes de ir ao Supabase, e em modo de teste o
                                         # bloqueio de escrita vem antes do guardrail
+node tools/testar_pessoas_editor_nova_headless.js # aba "Pessoas" do editor.html:
+                                        # "+ Nova pessoa" valida nome/grupo, recusa
+                                        # nome+grupo repetido e grava a linha nova
+node tools/testar_fluxo_dados_editar_headless.js # fluxo-dados.html: botão "Editar"
+                                        # nos cartões de rota/painel/encaminhamento (só com
+                                        # "Ativar edição"; desabilitado offline) abre o
+                                        # formulário preenchido e Salvar faz UPDATE
+node tools/testar_projetos_visibilidade_headless.js # "Aparece em" do cadastro de
+                                        # projetos (v0.35.0): Corsário, Sites, Painéis,
+                                        # Atividades, Canva e Fluxo listam só os projetos
+                                        # marcados; caixas do editor gravam; sem o script
+                                        # SQL tudo segue como antes
+node tools/testar_projeto_id_ligacao_headless.js # ligação por projeto_id
+                                        # (v0.36.0): projeto renomeado continua achando
+                                        # atividades, drawer, Painéis e Canva; rename no
+                                        # editor leva o nome às tabelas por nome; sem o
+                                        # script SQL, tudo segue pelo nome
 node tools/testar_projetos_editor_representantes_headless.js # aba "Projetos &
                                         # Representantes" do editor.html (item 4.1):
                                         # vínculo existente vira chip removível, texto
@@ -188,6 +208,11 @@ node tools/testar_plano_acao_responsavel_headless.js # plano-acao.html (item 4.3
                                         # "legado", pessoa golden fora da lista estática de
                                         # 32 ids aparece (grupo URC), trocar grava o id
                                         # golden novo — dublê de Supabase, sem rede real
+node tools/testar_projetos_visibilidade.js # v0.35.0, puro: DB_PROJETOS.exibir/
+                                        # agruparPorProjeto e linha escondida da Matriz
+node tools/testar_fluxo_dados.js        # frente Fluxo de dados (v0.31.0): snapshot data/fluxo_dados.js
+                                        # íntegro (FKs, enums), rota ok exige alvo_definido (AVISO,
+                                        # exit 0), fallback offline, erro de permissão cita GRANT
 node tools/auditoria_fk_final.js --check # item 5.1: por FK das Camadas 2/4, se toda porta
                                         # de entrada de linha nova grava a FK (e quem lê a
                                         # FK hoje). Offline — mede o código, não o banco.
@@ -214,10 +239,15 @@ node tools/testar_guardrail_urc_supabase.js # F14: o mesmo guardrail de validar_
 node tools/testar_kanban_headless.js   # F11: visão Kanban de plano.html — contagem de
                                         # cards por coluna bate com a mesma fonte de
                                         # verdade dos KPIs (F2), sem perder/duplicar ação
+node tools/testar_plano_editar_headless.js # plano.html, visão Lista: "Editar" no
+                                        # detalhe da ação grava só o que mudou (dublê,
+                                        # sem escrita real); bloqueado com dados locais
 node tools/testar_projetos_headless.js # F16: projetos.html com ?semrede=1 — aviso de
                                         # dados locais, contagem, filtro por núcleo e busca
 node tools/testar_participantes_headless.js # F15: participantes.html com ?semrede=1 —
                                         # cards por grupo, pendência de indicação, fallback
+node tools/testar_paineis_headless.js  # paineis.html: vários painéis por iniciativa,
+                                        # detalhes, busca e remover (banco falso, sem rede)
 node tools/testar_canva_oficina.js     # canva.html: ciclo e encontro_id da oficina (canal
                                         # do QR + data de hoje) chegam na demanda gravada
                                         # em vez de nascerem nulos

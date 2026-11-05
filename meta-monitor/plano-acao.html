@@ -135,11 +135,21 @@
 
   let supa = null;
   let iniciativaAtual = null;
+  // v0.36.0 — projeto selecionado pelo id do cadastro (db_id). Atividades casam por
+  // projeto_id e, nas linhas antigas sem id, pelo nome (tools/sql/2026-11_projeto_id_ligacao.sql).
+  // temProjetoId vira false se o banco ainda não tem a coluna: aí tudo volta a ser pelo nome.
+  let projetoIdAtual = null;
+  let temProjetoId = true;
   let listaAtual = [];
   const timers = new Map(); // debounce por "id:campo"
 
+  // projetos com "Atividades" marcado no cadastro (v0.35.0; sem a coluna, todos)
+  function projetosVisiveis() {
+    return ((window.DB && window.DB.projetos) || []).filter((p) => !window.DB_PROJETOS || DB_PROJETOS.exibir(p, "exibir_atividades"));
+  }
+
   function renderNav() {
-    const projetos = (window.DB && window.DB.projetos) || [];
+    const projetos = projetosVisiveis();
     const nucleos = [...new Set(projetos.map((p) => p.nucleo))];
     let html = "";
     nucleos.forEach((n) => {
@@ -147,7 +157,8 @@
       projetos
         .filter((p) => p.nucleo === n)
         .forEach((p) => {
-          html += '<button type="button" data-iniciativa="' + esc(p.iniciativa) + '">' + esc(p.iniciativa) + "</button>";
+          html += '<button type="button" data-iniciativa="' + esc(p.iniciativa) + '"' +
+            (p.db_id != null ? ' data-projeto-id="' + esc(String(p.db_id)) + '"' : "") + ">" + esc(p.iniciativa) + "</button>";
         });
     });
     navEl.innerHTML = html || '<div class="pa-carregando">Nenhuma iniciativa cadastrada.</div>';
@@ -201,18 +212,26 @@
     }
   }
 
-  async function selecionar(nome) {
+  function consultaAtividades(nome, projetoId, porId) {
+    let q = supa.from(TABELA).select("*");
+    q = porId && projetoId != null ? q.or(DB_PROJETOS.filtroDoProjeto(projetoId, nome)) : q.eq("iniciativa", nome);
+    return q.is("deleted_at", null)
+      .order("ordem", { ascending: true })
+      .order("created_at", { ascending: true });
+  }
+
+  async function selecionar(nome, projetoId) {
     iniciativaAtual = nome;
+    projetoIdAtual = projetoId != null && projetoId !== "" ? Number(projetoId) : null;
     destacarBotaoAtivo(nome);
     painel.innerHTML = tituloPainel(nome) + '<div class="pa-carregando">Carregando…</div>';
     try {
-      const { data, error } = await supa
-        .from(TABELA)
-        .select("*")
-        .eq("iniciativa", nome)
-        .is("deleted_at", null)
-        .order("ordem", { ascending: true })
-        .order("created_at", { ascending: true });
+      let { data, error } = await consultaAtividades(nome, projetoIdAtual, temProjetoId && window.DB_PROJETOS);
+      if (error && projetoIdAtual != null && temProjetoId && DB_PROJETOS.faltaColunaProjetoId(error)) {
+        // script SQL ainda não rodou: segue pelo nome, como antes
+        temProjetoId = false;
+        ({ data, error } = await consultaAtividades(nome, projetoIdAtual, false));
+      }
       if (error) throw error;
       listaAtual = data || [];
       renderPainel();
@@ -254,9 +273,12 @@
     if (!iniciativaAtual || !supa) return;
     const novaOrdem = listaAtual.length ? Math.max(...listaAtual.map((a) => a.ordem || 0)) + 1 : 1;
     try {
+      const nova = { iniciativa: iniciativaAtual, descricao: "", responsavel: "", status: "nao_iniciado", ordem: novaOrdem, updated_by: EDITOR_ATUAL.nomeAtual() };
+      // projeto_id só vai quando o banco tem a coluna (sem ela, o insert falharia)
+      if (temProjetoId && projetoIdAtual != null) nova.projeto_id = projetoIdAtual;
       const { data, error } = await supa
         .from(TABELA)
-        .insert({ iniciativa: iniciativaAtual, descricao: "", responsavel: "", status: "nao_iniciado", ordem: novaOrdem, updated_by: EDITOR_ATUAL.nomeAtual() })
+        .insert(nova)
         .select()
         .single();
       if (error) throw error;
@@ -305,7 +327,7 @@
   });
   painel.addEventListener("click", (e) => {
     if (e.target.closest("#pa-nova")) { criarAtividade(); return; }
-    if (e.target.closest("#pa-retry")) { selecionar(iniciativaAtual); return; }
+    if (e.target.closest("#pa-retry")) { selecionar(iniciativaAtual, projetoIdAtual); return; }
     const del = e.target.closest(".pa-del");
     if (del) {
       const row = del.closest(".pa-row");
@@ -314,7 +336,7 @@
   });
   navEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-iniciativa]");
-    if (btn) selecionar(btn.dataset.iniciativa);
+    if (btn) selecionar(btn.dataset.iniciativa, btn.dataset.projetoId);
   });
 
   // GOVERNANÇA (camada 2): hidrata DB.projetos do golden record antes de montar o nav de
@@ -337,8 +359,8 @@
     painel.innerHTML = '<div class="pa-erro">Não foi possível carregar os dados agora.</div>';
     return;
   }
-  const projetos = (window.DB && window.DB.projetos) || [];
-  if (projetos.length) selecionar(projetos[0].iniciativa);
+  const projetos = projetosVisiveis();
+  if (projetos.length) selecionar(projetos[0].iniciativa, projetos[0].db_id);
   EDITOR_ATUAL.montar(document.getElementById("cc-editor-rodape-wrap"));
 })();
 </script>

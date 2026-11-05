@@ -325,7 +325,10 @@
     document.getElementById("crs-retry").addEventListener("click", carregar);
   }
 
-  function processar(criterios, statusRows) {
+  // projetos: lista do cadastro (DB_PROJETOS) quando ele veio do banco com as colunas de
+  // visibilidade (tools/sql/2026-11_projetos_visibilidade.sql); null = modo antigo, a lista
+  // sai das próprias linhas de corsario_status.
+  function processar(criterios, statusRows, projetos) {
     CRITERIOS = criterios; // já vem ordenado por `ordem` (fetch com &order=ordem) — fonte única pra cards e matriz
     GRUPOS = [];
     const idxGrupo = new Map();
@@ -338,15 +341,28 @@
     });
 
     const porIniciativa = new Map();
-    statusRows.forEach((r) => {
-      const nome = r.iniciativa;
-      if (!porIniciativa.has(nome)) porIniciativa.set(nome, { nome: nome, nucleo: r.nucleo, itens: [], ultimaAtualizacao: null });
-      const ent = porIniciativa.get(nome);
-      if (!ent.nucleo && r.nucleo) ent.nucleo = r.nucleo;
+    function incluir(ent, r) {
       const status = normalizar(r.status);
       ent.itens.push({ criterio: r.criterio, status: status, observacao: r.observacao, atualizado_em: r.atualizado_em });
       if (r.atualizado_em && (!ent.ultimaAtualizacao || r.atualizado_em > ent.ultimaAtualizacao)) ent.ultimaAtualizacao = r.atualizado_em;
-    });
+    }
+    if (projetos) {
+      // fonte única: um card por projeto marcado "Corsário" no cadastro; nome e núcleo vêm
+      // do cadastro. Projeto sem status ainda aparece (fora da régua até ser avaliado).
+      DB_PROJETOS.agruparPorProjeto(statusRows, projetos, "exibir_corsario").forEach((g) => {
+        const ent = { nome: g.projeto.iniciativa, nucleo: g.projeto.nucleo, itens: [], ultimaAtualizacao: null };
+        g.linhas.forEach((r) => incluir(ent, r));
+        porIniciativa.set("p" + g.projeto.db_id, ent);
+      });
+    } else {
+      statusRows.forEach((r) => {
+        const nome = r.iniciativa;
+        if (!porIniciativa.has(nome)) porIniciativa.set(nome, { nome: nome, nucleo: r.nucleo, itens: [], ultimaAtualizacao: null });
+        const ent = porIniciativa.get(nome);
+        if (!ent.nucleo && r.nucleo) ent.nucleo = r.nucleo;
+        incluir(ent, r);
+      });
+    }
 
     TODAS = Array.from(porIniciativa.values()).map((ent) => {
       ent.calc = calcular(ent.itens.map((i) => i.status));
@@ -645,7 +661,12 @@
     try {
       const criterios = await buscar("corsario_criterios", "&order=ordem&limit=1000");
       const statusRows = await buscar("corsario_status", "&limit=1000");
-      processar(criterios, statusRows);
+      let projetos = null;
+      if (window.DB_PROJETOS) {
+        const rp = await DB_PROJETOS.carregar();
+        if (!rp.usandoFallback && DB_PROJETOS.temVisibilidade(rp.lista)) projetos = rp.lista;
+      }
+      processar(criterios, statusRows, projetos);
       elEstado.innerHTML = "";
       elFrota.innerHTML = frotaHtml();
       montarDropdownNucleos();

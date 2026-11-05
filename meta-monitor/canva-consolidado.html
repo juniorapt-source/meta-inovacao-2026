@@ -327,8 +327,17 @@
         DB_CANAIS.carregar().catch((err) => { console.error("canva-consolidado: falha ao carregar canais golden, caindo pro catálogo estático", err); return null; }),
         DB_PESSOAS.carregar().catch((err) => { console.error("canva-consolidado: falha ao carregar pessoas golden, caindo pro texto legado", err); return null; }),
       ]);
-      demandas = linhas;
-      projetosGolden = proj.lista || [];
+      // v0.36.0 — d.projeto passa a ser o nome ATUAL do projeto ligado (projeto_id), não o
+      // gravado na hora do preenchimento: renomear no editor não parte o grupo em dois nem
+      // deixa o projeto em "não preencheram". O texto gravado fica em d.projeto_gravado.
+      // Fila de projeto novo (sem id) e cadastro local (sem rede) não mudam nada.
+      const projetoDe = proj.usandoFallback ? null : DB_PROJETOS.resolvedor(proj.lista || [], "projeto");
+      demandas = (linhas || []).map((d) => {
+        const p = projetoDe && d.projeto_id != null && !d.projeto_novo ? projetoDe(d) : null;
+        return p && p.iniciativa !== d.projeto ? Object.assign({}, d, { projeto: p.iniciativa, projeto_gravado: d.projeto }) : d;
+      });
+      // só projetos com "Canva" marcado no cadastro (v0.35.0; sem a coluna, todos)
+      projetosGolden = (proj.lista || []).filter((p) => DB_PROJETOS.exibir(p, "exibir_canva"));
       usandoFallbackProj = !!proj.usandoFallback;
       nucleosPorDbId = new Map((nucleosRes ? nucleosRes.lista : []).map((n) => [n.db_id, n]));
       canaisPorDbId = new Map((canaisRes ? canaisRes.lista : []).map((c) => [c.db_id, c]));

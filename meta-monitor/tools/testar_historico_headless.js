@@ -155,13 +155,14 @@ async function principal() {
 
     const erros = [];
 
-    await evaluate("document.getElementById('btn-aba-historico').click()");
+    // desde 05/11/2026 o Histórico é um item do menu lateral (editor.html#historico)
+    await evaluate("document.querySelector('.nav a[href=\"editor.html#historico\"]').click()");
     await esperar(300);
 
     const estado = JSON.parse(await evaluate(`JSON.stringify({
       historicoVisivel: document.getElementById('aba-historico').style.display !== 'none',
       dadosEscondido: document.getElementById('aba-dados').style.display === 'none',
-      btnAtivo: document.getElementById('btn-aba-historico').classList.contains('ativo'),
+      btnAtivo: document.querySelector('.nav a[href="editor.html#historico"]').classList.contains('ativo'),
       linhas: [...document.querySelectorAll('#hist-lista .hist-linha')].map(l => l.textContent.replace(/\\s+/g,' ').trim()),
       totalLinhas: document.querySelectorAll('#hist-lista .hist-linha').length,
       opcoesAutor: [...document.querySelectorAll('#hist-autor option')].map(o => o.value).filter(Boolean),
@@ -169,7 +170,7 @@ async function principal() {
 
     if (!estado.historicoVisivel) erros.push("clicar em HISTÓRICO não exibiu #aba-historico");
     if (!estado.dadosEscondido) erros.push('aba "Editar dados" devia ter escondido ao trocar pra Histórico');
-    if (!estado.btnAtivo) erros.push('botão "Histórico" não ficou marcado como ativo');
+    if (!estado.btnAtivo) erros.push('item "Histórico de alterações" do menu não ficou marcado como ativo');
     if (estado.totalLinhas !== 3) erros.push(`esperava 3 linhas do mock, veio ${estado.totalLinhas}`);
 
     // UPDATE: diff de "status" com rótulo TRADUZIDO (item 3.2) — nunca a chave crua
@@ -225,10 +226,10 @@ async function principal() {
     if (totalComFiltroAutor !== 2) erros.push(`filtro por autor (JR.): ${totalComFiltroAutor} linhas, esperava 2`);
 
     // volta pra aba de dados: continua acessível e funcional (o Modo edição de sempre)
-    await evaluate("document.getElementById('btn-aba-dados').click()");
+    await evaluate("document.querySelector('.nav a[href=\"editor.html#plano\"]').click()");
     await esperar(150);
-    const voltouDados = await evaluate("document.getElementById('aba-dados').style.display !== 'none' && document.getElementById('btn-aba-dados').classList.contains('ativo')");
-    if (!voltouDados) erros.push('voltar pro botão "Editar dados" não reativou a aba');
+    const voltouDados = await evaluate("document.getElementById('aba-dados').style.display !== 'none' && document.querySelector('.nav a[href=\"editor.html#plano\"]').classList.contains('ativo') && !document.querySelector('.nav a[href=\"editor.html#historico\"]').classList.contains('ativo')");
+    if (!voltouDados) erros.push('voltar pro item "Plano de ação" do menu não reativou a aba de dados');
 
     if (erros.length) {
       console.error("FALHOU historico_auditoria:");
