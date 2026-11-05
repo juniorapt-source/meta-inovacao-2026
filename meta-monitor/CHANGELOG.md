@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.33.2 — 2026-11-05
+**Fluxo de dados: editar direto na página.**
+
+- Com "Ativar edição" ligado, cada cartão de rota, painel e encaminhamento em `fluxo-dados.html`
+  ganha um botão **Editar**, que abre o mesmo formulário do editor já preenchido ("Editar rota",
+  "Editar painel", "Editar encaminhamento"). Antes a página só criava; editar exigia ir à aba
+  "Fluxo de dados" do `editor.html`, que continua sendo o lugar de desativar/reativar e de
+  cadastrar sistemas. Sem banco (dados locais), o botão aparece desabilitado.
+- Teste novo: `tools/testar_fluxo_dados_editar_headless.js`.
+
 ## v0.33.1 — 2026-11-05
 **Sites e Painéis: projeto novo aparece mesmo fora do Corsário.**
 

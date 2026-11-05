@@ -1,6 +1,7 @@
 /* fluxo-dados.html — tela "Fluxo de dados" (Projeto Corso). Somente leitura, salvo no modo de
  * edição (botão "Ativar edição", flag em sessionStorage): aí aparecem "Nova rota", "Novo painel" e
- * "Novo encaminhamento", com o formulário compartilhado de js/fluxo-form.js (o mesmo da aba do editor).
+ * "Novo encaminhamento", e um botão "Editar" em cada cartão de rota, painel e encaminhamento, todos com
+ * o formulário compartilhado de js/fluxo-form.js (o mesmo da aba do editor).
  *
  * 4 blocos: Matriz (iniciativa × cliente/atendimento/processo/painel, vinda da view
  * fluxo_dados_matriz), Rotas (view fluxo_dados_rotas_lacunas), Painéis (view
@@ -19,11 +20,12 @@
   let iniciativas = [];    // linhas da matriz
   let selecionada = "";    // "" = todas
   let usandoFallback = false;
-  let formAberto = null;   // { secao: "rotas"|"encaminhamentos", id: null|uuid }
+  let formAberto = null;   // { secao: "rotas"|"paineis"|"encaminhamentos", id: null (novo)|uuid (editar) }
   let mensagem = null;     // { ok, texto }
   const FF = window.FLUXO_FORM;
   const CHAVE_EDICAO = "cc_fluxo_edicao";
   const TITULO_FORM = { rotas: "Nova rota", paineis: "Novo painel", encaminhamentos: "Novo encaminhamento" };
+  const TITULO_EDITAR = { rotas: "Editar rota", paineis: "Editar painel", encaminhamentos: "Editar encaminhamento" };
 
   const $ = (id) => document.getElementById(id);
   const rotulo = (map, k) => (k && map[k] !== undefined ? map[k] : (k || "—"));
@@ -37,6 +39,14 @@
   function textoErro(err) {
     const S = window.CC_SUPABASE;
     return (S && S.ehErroDePermissao && S.ehErroDePermissao(err) && S.mensagemEscritaAmigavel(err)) || F.mensagemErro(err);
+  }
+
+  // botão "Editar" de um cartão: só no modo de edição e só se o registro existe na tabela
+  // (as views de lacunas/prontidão podem trazer linha que a tabela não tem)
+  function botaoEditar(secao, id) {
+    if (!edicaoLigada() || !(D[secao] || []).some((x) => x.id === id)) return "";
+    return '<div class="fd-acoes"><button type="button" class="ed-btn sec fd-editar" data-fd-secao="' + secao + '" data-fd-id="' + esc(id) + '"'
+      + (usandoFallback ? ' disabled title="Sem conexão com o banco: edição indisponível"' : "") + ">Editar</button></div>";
   }
 
   function chipStatus(s) {
@@ -109,7 +119,7 @@
         + '<div class="fd-linha"><b>Mecanismo</b> ' + esc(rotulo(F.ROTULO_MECANISMO, r.mecanismo_hoje)) + '<span class="fd-seta">→</span>' + esc(rotulo(F.ROTULO_MECANISMO, r.mecanismo_alvo))
         + " · <b>chega completo</b> " + esc(rotulo(F.ROTULO_CHEGA, r.chega_completo)) + "</div>"
         + '<div class="fd-linha"><b>Outras fontes</b> ' + (fontes.itens.length ? chips(fontes.itens) : '<span class="fd-vazia">' + esc(fontes.aviso) + "</span>") + "</div>"
-        + "<div>" + seloLacuna(r) + "</div></article>";
+        + "<div>" + seloLacuna(r) + "</div>" + botaoEditar("rotas", r.id) + "</article>";
     }).join("");
   }
 
@@ -124,7 +134,7 @@
         + '<div class="fd-linha">' + (p.iniciativa ? esc(p.iniciativa) : "transversal") + ' <span data-link-painel="' + esc(p.id) + '"></span></div>'
         + '<div class="fd-linha"><b>Fonte hoje</b> ' + esc(p.fonte_hoje || "—") + '<span class="fd-seta">→</span><b>fonte alvo</b> ' + esc(p.fonte_alvo || "—") + "</div>"
         + '<div class="fd-linha"><b>Rotas:</b> ' + p.rotas_ok + " ok · " + p.rotas_pendentes + " pendentes (de " + p.rotas_ligadas + ")</div>"
-        + "<div>" + pronto + "</div></article>";
+        + "<div>" + pronto + "</div>" + botaoEditar("paineis", p.id) + "</article>";
     }).join("");
     // link do painel: a view de prontidão não tem link_painel; vem da tabela fluxo_dados_paineis
     FF.anexarLinksPainel($("fd-paineis"), D.paineis);
@@ -153,11 +163,12 @@
       const cls = e.status === "feito" ? "ok" : e.status === "andamento" ? "andamento" : e.status === "cancelado" ? "nao_se_aplica" : e.status === "bloqueado" ? "a_iniciar" : "entendimento";
       return '<article class="fd-card"><h3>' + esc(e.acao) + ' <span class="fd-st fd-st-' + cls + '">' + esc(rotulo(F.ROTULO_ENC, e.status)) + "</span></h3>"
         + '<div class="fd-linha"><b>Para:</b> ' + esc(alvo || "—") + "</div>"
-        + '<div class="fd-linha"><b>Responsável:</b> ' + esc(e.responsavel || "não definido") + " · <b>prazo:</b> " + esc(e.prazo || "sem prazo") + "</div>" + dep + "</article>";
+        + '<div class="fd-linha"><b>Responsável:</b> ' + esc(e.responsavel || "não definido") + " · <b>prazo:</b> " + esc(e.prazo || "sem prazo") + "</div>" + dep
+        + botaoEditar("encaminhamentos", e.id) + "</article>";
     }).join("");
   }
 
-  // ---- modo de edição: Nova rota / Novo encaminhamento ----
+  // ---- modo de edição: Nova rota / Novo painel / Novo encaminhamento / Editar ----
   function renderEdicao() {
     const on = edicaoLigada();
     let h = "";
@@ -170,13 +181,13 @@
     $("fd-msg").innerHTML = mensagem ? '<p class="fx-msg ' + (mensagem.ok ? "ok" : "erro") + '">' + esc(mensagem.texto) + "</p>" : "";
     if (on && formAberto) {
       const reg = formAberto.id ? (D[formAberto.secao] || []).find((x) => x.id === formAberto.id) : null;
-      $("fd-form").innerHTML = '<h2>' + TITULO_FORM[formAberto.secao] + "</h2>" + FF.formHtml(formAberto.secao, reg, ctx());
+      $("fd-form").innerHTML = '<h2>' + (reg ? TITULO_EDITAR : TITULO_FORM)[formAberto.secao] + "</h2>" + FF.formHtml(formAberto.secao, reg, ctx());
       FF.ligarForm($("fd-form"));
       $("fx-form").addEventListener("submit", (e) => { e.preventDefault(); salvarForm(); });
       $("fx-cancelar").addEventListener("click", () => { formAberto = null; renderEdicao(); });
     } else $("fd-form").innerHTML = "";
-    const on1 = $("fd-ed-ligar"); if (on1) on1.addEventListener("click", () => { definirEdicao(true); mensagem = null; renderEdicao(); });
-    const off = $("fd-ed-desligar"); if (off) off.addEventListener("click", () => { definirEdicao(false); formAberto = null; mensagem = null; renderEdicao(); });
+    const on1 = $("fd-ed-ligar"); if (on1) on1.addEventListener("click", () => { definirEdicao(true); mensagem = null; renderTudo(); });
+    const off = $("fd-ed-desligar"); if (off) off.addEventListener("click", () => { definirEdicao(false); formAberto = null; mensagem = null; renderTudo(); });
     const nr = $("fd-ed-rota"); if (nr) nr.addEventListener("click", () => { formAberto = { secao: "rotas", id: null }; mensagem = null; renderEdicao(); $("fd-form").scrollIntoView({ block: "nearest" }); });
     const np = $("fd-ed-painel"); if (np) np.addEventListener("click", () => { formAberto = { secao: "paineis", id: null }; mensagem = null; renderEdicao(); $("fd-form").scrollIntoView({ block: "nearest" }); });
     const ne = $("fd-ed-enc"); if (ne) ne.addEventListener("click", () => { formAberto = { secao: "encaminhamentos", id: null }; mensagem = null; renderEdicao(); $("fd-form").scrollIntoView({ block: "nearest" }); });
@@ -208,6 +219,11 @@
     }
   }
 
+  function abrirEdicao(secao, id) {
+    formAberto = { secao: secao, id: id }; mensagem = null; renderEdicao();
+    $("fd-form").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function renderTudo() { FF.injetarEstilos(); renderEdicao(); renderMatriz(); renderFiltro(); renderRotas(); renderPaineis(); renderEncaminhamentos(); }
   function selecionar(ini) { selecionada = ini; renderTudo(); if (ini) $("fd-filtro").scrollIntoView({ behavior: "smooth", block: "start" }); }
 
@@ -226,6 +242,10 @@
     $("fd-matriz").addEventListener("click", (ev) => {
       const b = ev.target.closest(".fd-cel");
       if (b) selecionar(b.getAttribute("data-ini"));
+    });
+    document.querySelector("main").addEventListener("click", (ev) => {
+      const b = ev.target.closest(".fd-editar");
+      if (b && !b.disabled) abrirEdicao(b.getAttribute("data-fd-secao"), b.getAttribute("data-fd-id"));
     });
     renderTudo();
   }
