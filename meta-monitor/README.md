@@ -159,6 +159,9 @@ node tools/testar_urc_guardrail_offline.js # guardrail da URC (liderança não e
                                         # canal) conferido SEM rede: a violação é barrada
                                         # antes de ir ao Supabase, e em modo de teste o
                                         # bloqueio de escrita vem antes do guardrail
+node tools/testar_pessoas_editor_nova_headless.js # aba "Pessoas" do editor.html:
+                                        # "+ Nova pessoa" valida nome/grupo, recusa
+                                        # nome+grupo repetido e grava a linha nova
 node tools/testar_projetos_editor_representantes_headless.js # aba "Projetos &
                                         # Representantes" do editor.html (item 4.1):
                                         # vínculo existente vira chip removível, texto
