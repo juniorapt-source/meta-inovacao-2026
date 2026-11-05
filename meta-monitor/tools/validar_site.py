@@ -19,6 +19,8 @@ OBRIG = {
     # dropdowns Núcleos/Patentes + ordenação); os demais ids não mudaram.
     "corsario.html": ["crs-frota-wrap", "crs-toolbar", "crs-segmento", "crs-grid", "crs-matriz-wrap", "crs-matriz"],
     "fluxo-dados.html": ["fd-matriz", "fd-filtro", "fd-rotas", "fd-paineis", "fd-enc"],
+    "sites.html": ["il-tabela", "il-busca", "il-contagem", "il-estado"],
+    "paineis.html": ["il-tabela", "il-busca", "il-contagem", "il-estado"],
     "editor.html": ["ed-conjunto", "ed-area", "ed-baixar"],
     # canva.html não tem menu lateral (é destino de QR), mas entra aqui como qualquer outra:
     # são ~450 linhas de JS embutido, e é o `node --check` de _checar_inline abaixo que

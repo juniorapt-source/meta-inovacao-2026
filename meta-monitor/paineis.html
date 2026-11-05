@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Painéis · Carta de Corso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/iniciativa-links.css">
+</head>
+<body data-tipo="painel">
+<div class="shell">
+  <nav class="nav" aria-label="Navegação do painel"></nav>
+  <main class="conteudo">
+    <h1 class="pagina-titulo">Painéis</h1>
+    <p class="il-sub">Painel de cada iniciativa e quem cuida da manutenção dele (lista do menu <a href="participantes.html">Participantes</a>). A lista de iniciativas é a mesma do <a href="corsario.html">O Caminho para o Corsário</a>. As alterações são salvas sozinhas.</p>
+    <div id="il-estado"></div>
+    <div class="il-toolbar">
+      <input type="search" id="il-busca" placeholder="Buscar iniciativa ou núcleo…" aria-label="Buscar iniciativa ou núcleo">
+      <p class="il-contagem" id="il-contagem"></p>
+    </div>
+    <div class="il-wrap">
+      <table class="il-tabela" id="il-tabela"></table>
+    </div>
+    <div id="cc-editor-rodape-wrap"></div>
+  </main>
+</div>
+
+<script src="data/config.js"></script>
+<script src="js/gate.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/db-base.js"></script>
+<script src="data/plano.js"></script>
+<script src="data/nos.js"></script>
+<script src="data/canais.js"></script>
+<script src="data/agenda.js"></script>
+<script src="data/projetos.js"></script>
+<script src="data/pessoas.js"></script>
+<script src="js/db-corsario.js"></script>
+<script src="js/db-pessoas.js"></script>
+<script src="js/db-iniciativa-links.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/core.js"></script>
+<script src="js/editor_atual.js"></script>
+<script src="js/iniciativa-links.js"></script>
+</body>
+</html>

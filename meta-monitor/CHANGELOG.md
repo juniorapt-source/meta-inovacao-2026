@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.33.0 — 2026-11-05
+**Execução: páginas "Painéis" e "Sites".**
+
+- **Menu Execução** ganhou "Painéis" (`paineis.html`) e "Sites" (`sites.html`). As duas listam
+  as iniciativas agrupadas por núcleo, na mesma lista e ordem do "O Caminho para o Corsário"
+  (lida de `corsario_status`; sem rede, cai para `data/projetos.js`).
+- **Sites:** link da página da iniciativa + caixa "Formulário de captura de lead".
+- **Painéis:** link do painel + "Responsável pela manutenção", escolhido da lista de pessoas
+  (`meta_inovacao_pessoas`, a mesma do menu Participantes). Grava o id da pessoa e o nome em texto.
+- Grava sozinho ao editar (link ao sair do campo ou Enter; só aceita `http://`/`https://`).
+  Linha nova só nasce no primeiro preenchimento. Código em `js/iniciativa-links.js` e
+  `js/db-iniciativa-links.js`.
+- **Banco (pendente, rodar à mão):** `tools/sql/2026-11_iniciativa_links.sql` cria
+  `meta_inovacao_iniciativa_links`. Até rodar, as páginas abrem com a edição desligada e um aviso.
+- **Correção de CSS:** o rodapé "Editando como … trocar" mostrava o formulário de troca sempre
+  aberto (`display:flex` anulava o `hidden`).
+
 ## v0.32.0 — 2026-10-16
 **Fluxo de dados: 5 ajustes.**
 

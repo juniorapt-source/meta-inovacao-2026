@@ -17,6 +17,8 @@
       ["demandas.html", "Matriz de demandas"],
       ["canva-consolidado.html", "Consolidação do canvas"],
       ["plano-acao.html", "Atividades por iniciativa"],
+      ["paineis.html", "Painéis"],
+      ["sites.html", "Sites"],
     ] },
     // Grupo criado em 22/08/2026, a pedido do José. As três páginas existiam e eram
     // alcançáveis só por URL direta — o QR levava à primeira, e as outras duas ninguém
