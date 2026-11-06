@@ -1,9 +1,10 @@
 /* Camada de dados das páginas "Painéis" e "Sites" (menu Execução, v0.33.0) —
  * window.DB_INICIATIVA_LINKS.
  *
- * Tabela meta_inovacao_iniciativa_links (tools/sql/2026-11_iniciativa_links.sql): tipo
- * 'site' tem uma linha por iniciativa; tipo 'painel' pode ter várias (v0.34.0,
- * tools/sql/2026-11_iniciativa_links_paineis_multiplos.sql, que também cria `descricao`).
+ * Tabela meta_inovacao_iniciativa_links (tools/sql/2026-11_iniciativa_links.sql): os dois
+ * tipos podem ter várias linhas por iniciativa — painel desde v0.34.0
+ * (tools/sql/2026-11_iniciativa_links_paineis_multiplos.sql, que também cria `descricao`),
+ * site desde v0.39.0 (tools/sql/2026-11_iniciativa_links_sites_multiplos.sql).
  * A linha só nasce quando alguém preenche algo pela primeira vez — gravar() decide entre
  * INSERT e UPDATE. remover() é soft delete (deleted_at).
  *
@@ -93,11 +94,28 @@
     return api.removerSoft(existente.db_id, usuario);
   }
 
+  const SCRIPT_PAINEIS = "tools/sql/2026-11_iniciativa_links_paineis_multiplos.sql";
+  const SCRIPT_SITES = "tools/sql/2026-11_iniciativa_links_sites_multiplos.sql";
+
   // erro de banco que indica que o script dos painéis múltiplos ainda não rodou
   function faltaScriptPaineis(err) {
     const msg = String((err && (err.message || err.details)) || "");
     return (err && err.code === "23505") || /descricao/i.test(msg) || /tipo_iniciativa_uq/i.test(msg);
   }
+
+  // erro de banco que indica que ainda falta rodar o script de múltiplos links/painéis
+  // deste `tipo` (sites: 2026-11_iniciativa_links_sites_multiplos.sql).
+  function faltaScriptMultiplos(tipo, err) {
+    if (!err) return false;
+    if (tipo === "painel") return faltaScriptPaineis(err);
+    if (tipo === "site") {
+      const msg = String((err && (err.message || err.details)) || "");
+      return err.code === "23505" || /site_uq/i.test(msg);
+    }
+    return false;
+  }
+
+  function scriptMultiplos(tipo) { return tipo === "painel" ? SCRIPT_PAINEIS : SCRIPT_SITES; }
 
   root.DB_INICIATIVA_LINKS = {
     TABELA: TABELA,
@@ -106,7 +124,10 @@
     gravar: gravar,
     remover: remover,
     faltaScriptPaineis: faltaScriptPaineis,
-    SCRIPT_PAINEIS: "tools/sql/2026-11_iniciativa_links_paineis_multiplos.sql",
+    faltaScriptMultiplos: faltaScriptMultiplos,
+    scriptMultiplos: scriptMultiplos,
+    SCRIPT_PAINEIS: SCRIPT_PAINEIS,
+    SCRIPT_SITES: SCRIPT_SITES,
     linkValido: linkValido,
   };
 })(this);

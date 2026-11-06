@@ -1,10 +1,13 @@
-/* sites.html e paineis.html (menu Execução, v0.33.0; vários painéis em v0.34.0) — uma tabela por iniciativa,
- * agrupada por núcleo, com a mesma lista e a mesma ordem do "O Caminho para o Corsário".
+/* sites.html e paineis.html (menu Execução, v0.33.0; vários links/painéis em v0.34.0 e
+ * v0.39.0) — uma tabela por iniciativa, agrupada por núcleo, com a mesma lista e a mesma
+ * ordem do "O Caminho para o Corsário".
  *
  *   <body data-tipo="site">   → Link da página + "Tem formulário de captura de lead?"
  *   <body data-tipo="painel"> → Link do painel + Detalhes (texto livre) + Responsável pela
- *                               manutenção (pessoas). Vários painéis por iniciativa (v0.34.0):
- *                               "+ painel" abre uma linha nova, "×" remove (soft delete).
+ *                               manutenção (pessoas).
+ *
+ * Os dois tipos aceitam vários por iniciativa: "+ painel"/"+ link" abre uma linha nova,
+ * "×" remove (soft delete).
  *
  * Fontes:
  *   - iniciativas (v0.35.0): os projetos do cadastro (meta_inovacao_projetos) com "Sites" /
@@ -59,6 +62,7 @@
   function normalizar(s) { return String(s == null ? "" : s).trim().toLowerCase(); }
   function semAcento(s) { return normalizar(s).normalize("NFD").replace(/[̀-ͯ]/g, ""); }
   function corNucleo(n) { return NUCLEO_CORES[normalizar(n)] || "var(--grafite)"; }
+  function substantivo() { return TIPO === "painel" ? "painel" : "link"; }
   function nomePessoa(p) { return (p && (p.nome_completo || p.nome_exibicao || p.nome)) || ""; }
   function usuario() { return window.EDITOR_ATUAL ? EDITOR_ATUAL.nomeAtual() : null; }
   function chaveDe(x) { return x.projeto_id != null ? "p:" + x.projeto_id : "n:" + semAcento(x.iniciativa); }
@@ -223,9 +227,8 @@
 
   function salvos(chave) { return LINKS.get(chave) || []; }
 
-  // linhas em branco na tela: as pedidas pelo "+ painel", ou 1 se a iniciativa não tem nada
+  // linhas em branco na tela: as pedidas pelo "+ painel"/"+ link", ou 1 se a iniciativa não tem nada
   function nBrancos(chave) {
-    if (TIPO !== "painel") return salvos(chave).length ? 0 : 1;
     return Math.max(RASCUNHOS.get(chave) || 0, salvos(chave).length ? 0 : 1);
   }
 
@@ -233,12 +236,12 @@
     const nomeCel = primeira
       ? '<td class="il-col-iniciativa"' + (total > 1 ? ' rowspan="' + total + '"' : "") + '>' +
           '<div class="il-ini-nome">' + esc(x.iniciativa) + "</div>" +
-          (TIPO === "painel" && podeEditar
-            ? '<button type="button" class="il-add" data-acao="adicionar" title="Adicionar outro painel a esta iniciativa">+ painel</button>' : "") +
+          (podeEditar
+            ? '<button type="button" class="il-add" data-acao="adicionar" title="Adicionar outro ' + substantivo() + ' a esta iniciativa">+ ' + substantivo() + '</button>' : "") +
         "</td>"
       : "";
-    const remover = TIPO === "painel" && podeEditar && (l || total > 1)
-      ? '<button type="button" class="il-remover" data-acao="remover" title="Remover este painel" aria-label="Remover este painel">×</button>' : "";
+    const remover = podeEditar && (l || total > 1)
+      ? '<button type="button" class="il-remover" data-acao="remover" title="Remover este ' + substantivo() + '" aria-label="Remover este ' + substantivo() + '">×</button>' : "";
     return '<tr data-iniciativa="' + esc(x.iniciativa) + '" data-chave="' + esc(x.chave) + '"' + (l ? ' data-id="' + esc(String(l.db_id)) + '"' : "") +
       (primeira ? "" : ' class="il-sub-linha"') + ">" +
       nomeCel + linkCelula(l) + terceiraCelula(l) +
@@ -323,8 +326,10 @@
 
   function mensagemErro(err) {
     let msg = (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou";
-    if (TIPO === "painel" && DB_INICIATIVA_LINKS.faltaScriptPaineis(err)) {
-      msg = "O banco ainda não aceita vários painéis por iniciativa nem a coluna de detalhes — rode " + DB_INICIATIVA_LINKS.SCRIPT_PAINEIS + " no Supabase.";
+    if (DB_INICIATIVA_LINKS.faltaScriptMultiplos(TIPO, err)) {
+      msg = "O banco ainda não aceita mais de um " + substantivo() + " por iniciativa" +
+        (TIPO === "painel" ? " nem a coluna de detalhes" : "") +
+        " — rode " + DB_INICIATIVA_LINKS.scriptMultiplos(TIPO) + " no Supabase.";
     }
     return msg + ((err && err.message) ? " — " + err.message : "");
   }
@@ -364,7 +369,7 @@
       console.error("iniciativa-links: falha ao gravar", err);
       const msg = mensagemErro(err);
       marcar(tr, "falhou", msg);
-      if (TIPO === "painel" && DB_INICIATIVA_LINKS.faltaScriptPaineis(err)) mostrarAvisoScript();
+      if (DB_INICIATIVA_LINKS.faltaScriptMultiplos(TIPO, err)) mostrarAvisoScript();
       return false;
     }
   }
@@ -374,8 +379,9 @@
     const p = document.createElement("p");
     p.className = "aviso";
     p.dataset.avisoScript = "1";
-    p.innerHTML = "<b>Falta um passo no banco</b> — pra ter mais de um painel por iniciativa e a coluna de detalhes, rode <code>" +
-      esc(DB_INICIATIVA_LINKS.SCRIPT_PAINEIS) + "</code> no Supabase.";
+    p.innerHTML = "<b>Falta um passo no banco</b> — pra ter mais de um " + substantivo() + " por iniciativa" +
+      (TIPO === "painel" ? " e a coluna de detalhes" : "") + ", rode <code>" +
+      esc(DB_INICIATIVA_LINKS.scriptMultiplos(TIPO)) + "</code> no Supabase.";
     elEstado.appendChild(p);
   }
 
@@ -387,8 +393,8 @@
       RASCUNHOS.set(chave, Math.max(0, nBrancos(chave) - 1));
       return renderAposSalvar();
     }
-    const rotulo = existente.descricao || existente.link || "este painel";
-    if (!window.confirm("Remover o painel \"" + rotulo + "\" de " + nome + "?")) return;
+    const rotulo = existente.descricao || existente.link || ("este " + substantivo());
+    if (!window.confirm("Remover o " + substantivo() + " \"" + rotulo + "\" de " + nome + "?")) return;
     marcar(tr, "salvando");
     try {
       await DB_INICIATIVA_LINKS.remover(existente, usuario());

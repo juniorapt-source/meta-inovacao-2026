@@ -248,6 +248,8 @@ node tools/testar_participantes_headless.js # F15: participantes.html com ?semre
                                         # cards por grupo, pendência de indicação, fallback
 node tools/testar_paineis_headless.js  # paineis.html: vários painéis por iniciativa,
                                         # detalhes, busca e remover (banco falso, sem rede)
+node tools/testar_sites_headless.js    # sites.html: vários links por iniciativa, gravação
+                                        # e remover (banco falso, sem rede)
 node tools/testar_canva_oficina.js     # canva.html: ciclo e encontro_id da oficina (canal
                                         # do QR + data de hoje) chegam na demanda gravada
                                         # em vez de nascerem nulos

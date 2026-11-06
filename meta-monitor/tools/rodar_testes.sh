@@ -102,6 +102,7 @@ COM_CHROME=(
   "testar_projetos_headless.js|node tools/testar_projetos_headless.js"
   "testar_participantes_headless.js|node tools/testar_participantes_headless.js"
   "testar_paineis_headless.js|node tools/testar_paineis_headless.js"
+  "testar_sites_headless.js|node tools/testar_sites_headless.js"
   "testar_canva_oficina.js|node tools/testar_canva_oficina.js"
   "testar_canva_multiprojeto_headless.js|node tools/testar_canva_multiprojeto_headless.js"
   "testar_canva_combo_pessoas_headless.js|node tools/testar_canva_combo_pessoas_headless.js"
