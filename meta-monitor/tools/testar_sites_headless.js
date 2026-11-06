@@ -4,9 +4,9 @@
  * Abre com ?semrede=1 (iniciativas vêm do seed local). Como em modo de teste a escrita no
  * Supabase fica bloqueada, o servidor deste teste acrescenta ao fim de
  * js/db-iniciativa-links.js um banco FALSO em memória (carregar/gravar/remover), que nunca
- * toca rede. Confere: 4 colunas, "+ link" abre uma 2ª linha na mesma iniciativa, cada link
- * grava numa linha separada, a contagem conta as iniciativas com link e o "×" remove
- * (soft delete) sem apagar o 1º link.
+ * toca rede. Confere: 5 colunas (as duas de check — captura de lead e Portal Sebrae — incluídas),
+ * "+ link" abre uma 2ª linha na mesma iniciativa, cada link grava numa linha separada, a
+ * contagem conta as iniciativas com link e o "×" remove (soft delete) sem apagar o 1º link.
  *
  * Mesmo padrão de CDP cru (sem Playwright) dos outros testes headless do repo.
  */
@@ -18,7 +18,7 @@ const path = require("node:path");
 const http = require("node:http");
 
 const REPO = path.join(__dirname, "..");
-const STUB = "\n// --- banco falso do teste (tools/testar_sites_headless.js) ---\n;(function () {\n  const api = window.DB_INICIATIVA_LINKS;\n  let seq = 100;\n  window.__FAKE_LINKS = [];\n  api.carregar = async function () { return { lista: window.__FAKE_LINKS.filter(function (l) { return !l.deleted; }).slice(), usandoFallback: false }; };\n  api.gravar = async function (tipo, ini, existente, campos) {\n    await new Promise(function (r) { setTimeout(r, 30); });\n    if (existente) { const l = window.__FAKE_LINKS.find(function (x) { return x.db_id === existente.db_id; }); Object.assign(l, campos); return Object.assign({}, l); }\n    const novo = Object.assign({ db_id: ++seq, tipo: tipo, iniciativa: ini.iniciativa, link: \"\", captura_lead: false }, campos);\n    window.__FAKE_LINKS.push(novo);\n    return Object.assign({}, novo);\n  };\n  api.remover = async function (existente) { window.__FAKE_LINKS.find(function (x) { return x.db_id === existente.db_id; }).deleted = true; };\n})();\n";
+const STUB = "\n// --- banco falso do teste (tools/testar_sites_headless.js) ---\n;(function () {\n  const api = window.DB_INICIATIVA_LINKS;\n  let seq = 100;\n  window.__FAKE_LINKS = [];\n  api.carregar = async function () { return { lista: window.__FAKE_LINKS.filter(function (l) { return !l.deleted; }).slice(), usandoFallback: false }; };\n  api.gravar = async function (tipo, ini, existente, campos) {\n    await new Promise(function (r) { setTimeout(r, 30); });\n    if (existente) { const l = window.__FAKE_LINKS.find(function (x) { return x.db_id === existente.db_id; }); Object.assign(l, campos); return Object.assign({}, l); }\n    const novo = Object.assign({ db_id: ++seq, tipo: tipo, iniciativa: ini.iniciativa, link: \"\", captura_lead: false, portal_sebrae: false }, campos);\n    window.__FAKE_LINKS.push(novo);\n    return Object.assign({}, novo);\n  };\n  api.remover = async function (existente) { window.__FAKE_LINKS.find(function (x) { return x.db_id === existente.db_id; }).deleted = true; };\n})();\n";
 
 const CAMINHOS_CHROME = [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -158,6 +158,7 @@ async function principal() {
       const out = {};
       out.colunas = tab.querySelectorAll('thead th').length;
       out.temCheck = !!tab.querySelector('thead th.il-col-check');
+      out.nChecks = tab.querySelectorAll('thead th.il-col-check').length;
       const tr1 = tab.querySelector('tr[data-iniciativa]');
       const nome = tr1.dataset.iniciativa;
       out.nome = nome;
@@ -190,7 +191,8 @@ async function principal() {
       return JSON.stringify(out);
     })()`));
 
-    if (r.colunas !== 4 || !r.temCheck) erros.push("cabeçalho deveria ter 4 colunas com a de captura de lead (veio " + r.colunas + ")");
+    if (r.colunas !== 5 || !r.temCheck) erros.push("cabeçalho deveria ter 5 colunas com as de captura de lead e Portal Sebrae (veio " + r.colunas + ")");
+    if (r.nChecks !== 2) erros.push("deveria ter 2 colunas de check (captura de lead + Portal Sebrae), veio " + r.nChecks);
     if (r.linhasAntes !== 1) erros.push("iniciativa sem link deveria mostrar 1 linha em branco (veio " + r.linhasAntes + ")");
     if (!r.temBotaoAdd) erros.push("deveria ter o botão '+ link' igual ao '+ painel' de paineis.html");
     if (r.linhasDepoisAdd !== 2 || r.rowspan !== "2") erros.push("'+ link' deveria abrir a 2ª linha com rowspan=2 (veio " + r.linhasDepoisAdd + ", rowspan " + r.rowspan + ")");

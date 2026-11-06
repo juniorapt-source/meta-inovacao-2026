@@ -2,7 +2,8 @@
  * v0.39.0) — uma tabela por iniciativa, agrupada por núcleo, com a mesma lista e a mesma
  * ordem do "O Caminho para o Corsário".
  *
- *   <body data-tipo="site">   → Link da página + "Tem formulário de captura de lead?"
+ *   <body data-tipo="site">   → Link da página + "Tem formulário de captura de lead?" +
+ *                               "Está no Portal Sebrae?" (v0.40.0)
  *   <body data-tipo="painel"> → Link do painel + Detalhes (texto livre) + Responsável pela
  *                               manutenção (pessoas).
  *
@@ -185,12 +186,12 @@
     return chaves.map((c) => grupos.get(c));
   }
 
-  function nColunas() { return TIPO === "painel" ? 5 : 4; }
+  function nColunas() { return 5; }
 
   function thead() {
     const terceira = TIPO === "painel"
       ? '<th class="il-col-desc">Detalhes do painel</th><th class="il-col-resp">Responsável pela manutenção</th>'
-      : '<th class="il-col-check">Formulário de captura de lead</th>';
+      : '<th class="il-col-check">Formulário de captura de lead</th><th class="il-col-check">Está no Portal Sebrae</th>';
     return "<thead><tr>" +
       '<th class="il-col-iniciativa">Iniciativa</th>' +
       '<th class="il-col-link">' + (TIPO === "painel" ? "Link do painel" : "Link da página") + "</th>" +
@@ -212,7 +213,9 @@
     const dis = podeEditar ? "" : " disabled";
     if (TIPO === "site") {
       return '<td class="il-col-check"><input type="checkbox" data-campo="captura_lead" aria-label="Tem formulário de captura de lead"' +
-        (l && l.captura_lead ? " checked" : "") + dis + "></td>";
+        (l && l.captura_lead ? " checked" : "") + dis + "></td>" +
+        '<td class="il-col-check"><input type="checkbox" data-campo="portal_sebrae" aria-label="Está no Portal Sebrae"' +
+        (l && l.portal_sebrae ? " checked" : "") + dis + "></td>";
     }
     const atual = l && l.responsavel_pessoa_id ? String(l.responsavel_pessoa_id) : "";
     let opts = '<option value="">— escolher —</option>';
@@ -326,7 +329,9 @@
 
   function mensagemErro(err) {
     let msg = (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou";
-    if (DB_INICIATIVA_LINKS.faltaScriptMultiplos(TIPO, err)) {
+    if (TIPO === "site" && DB_INICIATIVA_LINKS.faltaScriptPortalSebrae(err)) {
+      msg = "O banco ainda não tem a coluna \"Está no Portal Sebrae\" — rode " + DB_INICIATIVA_LINKS.SCRIPT_PORTAL_SEBRAE + " no Supabase.";
+    } else if (DB_INICIATIVA_LINKS.faltaScriptMultiplos(TIPO, err)) {
       msg = "O banco ainda não aceita mais de um " + substantivo() + " por iniciativa" +
         (TIPO === "painel" ? " nem a coluna de detalhes" : "") +
         " — rode " + DB_INICIATIVA_LINKS.scriptMultiplos(TIPO) + " no Supabase.";
@@ -446,8 +451,8 @@
       if (v === ((atual && atual.descricao) || "")) return;
       const ok = await gravar(tr, { descricao: v });
       if (!ok) alvo.value = (atual && atual.descricao) || "";
-    } else if (campo === "captura_lead") {
-      const ok = await gravar(tr, { captura_lead: alvo.checked });
+    } else if (campo === "captura_lead" || campo === "portal_sebrae") {
+      const ok = await gravar(tr, { [campo]: alvo.checked });
       if (!ok) alvo.checked = !alvo.checked;
     } else if (campo === "responsavel_pessoa_id") {
       const id = alvo.value;

@@ -32,6 +32,7 @@ create table if not exists public.meta_inovacao_iniciativa_links (
   nucleo_id             bigint,
   link                  text check (link is null or link ~* '^https?://'),
   captura_lead          boolean not null default false,   -- só usado em tipo = 'site'
+  portal_sebrae         boolean not null default false,   -- só usado em tipo = 'site' (v0.40.0)
   responsavel_pessoa_id bigint references public.meta_inovacao_pessoas(id),  -- só em tipo = 'painel'
   responsavel           text,                              -- cópia em texto do nome
   deleted_at            timestamptz,                       -- soft delete — nunca DELETE físico

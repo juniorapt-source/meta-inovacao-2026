@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.40.0 — 2026-11-06
+**Sites: nova coluna de check "Está no Portal Sebrae".**
+
+Igual à coluna "Formulário de captura de lead" já existente, `sites.html` ganhou outra
+caixa de marcar, pra indicar se a página da iniciativa está publicada no Portal Sebrae.
+
+- Coluna nova `portal_sebrae` (boolean, default `false`) em `meta_inovacao_iniciativa_links`
+  — só usada em `tipo = 'site'`, mesmo padrão de `captura_lead`.
+  `tools/sql/2026-11_iniciativa_links_portal_sebrae.sql` (roda depois de
+  `2026-11_iniciativa_links.sql`; o script base também já cria a coluna direto, pra quem
+  está montando o banco do zero).
+- Grava sozinho ao marcar/desmarcar, mesmo fluxo da coluna de captura de lead. Se a coluna
+  ainda não existe no banco (script não rodado), a linha mostra "falhou" com o nome do
+  script a rodar.
+- `tools/testar_sites_headless.js` atualizado para as 5 colunas (2 de check).
+
 ## v0.38.0 — 2026-11-05
 **Plano de ação: editar a ação direto no detalhe da linha.**
 

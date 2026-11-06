@@ -5,6 +5,7 @@
  * tipos podem ter várias linhas por iniciativa — painel desde v0.34.0
  * (tools/sql/2026-11_iniciativa_links_paineis_multiplos.sql, que também cria `descricao`),
  * site desde v0.39.0 (tools/sql/2026-11_iniciativa_links_sites_multiplos.sql).
+ * `portal_sebrae` (site, v0.40.0): tools/sql/2026-11_iniciativa_links_portal_sebrae.sql.
  * A linha só nasce quando alguém preenche algo pela primeira vez — gravar() decide entre
  * INSERT e UPDATE. remover() é soft delete (deleted_at).
  *
@@ -33,6 +34,7 @@
       link: r.link || "",
       descricao: r.descricao || "",
       captura_lead: !!r.captura_lead,
+      portal_sebrae: !!r.portal_sebrae,
       responsavel_pessoa_id: r.responsavel_pessoa_id || null,
       responsavel: r.responsavel || null,
       updated_at: r.updated_at || null,
@@ -49,6 +51,7 @@
       nucleo_id: o.nucleo_id || null,
       link: o.link || null,
       captura_lead: !!o.captura_lead,
+      portal_sebrae: !!o.portal_sebrae,
       responsavel_pessoa_id: o.responsavel_pessoa_id || null,
       responsavel: o.responsavel || null,
     };
@@ -96,6 +99,13 @@
 
   const SCRIPT_PAINEIS = "tools/sql/2026-11_iniciativa_links_paineis_multiplos.sql";
   const SCRIPT_SITES = "tools/sql/2026-11_iniciativa_links_sites_multiplos.sql";
+  const SCRIPT_PORTAL_SEBRAE = "tools/sql/2026-11_iniciativa_links_portal_sebrae.sql";
+
+  // erro de banco que indica que a coluna `portal_sebrae` (v0.40.0) ainda não existe
+  function faltaScriptPortalSebrae(err) {
+    const msg = String((err && (err.message || err.details)) || "");
+    return /portal_sebrae/i.test(msg);
+  }
 
   // erro de banco que indica que o script dos painéis múltiplos ainda não rodou
   function faltaScriptPaineis(err) {
@@ -126,8 +136,10 @@
     faltaScriptPaineis: faltaScriptPaineis,
     faltaScriptMultiplos: faltaScriptMultiplos,
     scriptMultiplos: scriptMultiplos,
+    faltaScriptPortalSebrae: faltaScriptPortalSebrae,
     SCRIPT_PAINEIS: SCRIPT_PAINEIS,
     SCRIPT_SITES: SCRIPT_SITES,
+    SCRIPT_PORTAL_SEBRAE: SCRIPT_PORTAL_SEBRAE,
     linkValido: linkValido,
   };
 })(this);
