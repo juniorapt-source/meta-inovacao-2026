@@ -2,7 +2,7 @@ window.DB = window.DB || {};
 window.DB.config = {
  "projeto": "Carta de Corso",
  "subtitulo": "Meta Inovação 2026 · Unidade de Inovação · Sebrae Nacional",
- "versao": "0.43.0",
+ "versao": "0.44.0",
  "atualizado_em": "2026-11-12",
  "hoje_referencia": null,
  "exigirSenha": false,

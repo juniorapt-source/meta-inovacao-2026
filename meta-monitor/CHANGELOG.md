@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.44.0 — 2026-11-12
+**Painéis: reordena a coluna "Prioridade de migração".**
+
+Só reordenação de colunas em `paineis.html`, sem mudança de banco: "Prioridade de
+migração" passa a vir antes de "Origem no Foco" (era depois de "ID"). Ordem nova:
+Detalhes → Responsável pela manutenção → Prioridade de migração → Origem no Foco → ID →
+Responsável pela migração → Link do novo painel (Power BI).
+
 ## v0.43.0 — 2026-11-12
 **Painéis: nova coluna "ID", entre Origem no Foco e Prioridade de migração.**
 

@@ -5,10 +5,11 @@
  *   <body data-tipo="site">   → Link da página + "Tem formulário de captura de lead?" +
  *                               "Está no Portal Sebrae?" (v0.40.0)
  *   <body data-tipo="painel"> → Link do painel + Detalhes (texto livre) + Responsável pela
- *                               manutenção (pessoas) + Origem no Foco (texto livre, v0.41.0)
- *                               + ID (texto livre, v0.43.0) + Prioridade de migração
- *                               (inteiro, único entre os painéis ativos) + Responsável
- *                               pela migração (pessoas) + Link do novo painel no Power BI
+ *                               manutenção (pessoas) + Prioridade de migração (inteiro,
+ *                               único entre os painéis ativos, v0.42.0; antes de Origem
+ *                               no Foco desde v0.44.0) + Origem no Foco (texto livre,
+ *                               v0.41.0) + ID (texto livre, v0.43.0) + Responsável pela
+ *                               migração (pessoas) + Link do novo painel no Power BI
  *                               (v0.42.0).
  *
  * Os dois tipos aceitam vários por iniciativa: "+ painel"/"+ link" abre uma linha nova,
@@ -194,9 +195,10 @@
 
   function thead() {
     const terceira = TIPO === "painel"
-      ? '<th class="il-col-desc">Detalhes do painel</th><th class="il-col-resp">Responsável pela manutenção</th><th class="il-col-origem">Origem no Foco</th>' +
-        '<th class="il-col-id">ID</th>' +
-        '<th class="il-col-prioridade">Prioridade de migração</th><th class="il-col-resp">Responsável pela migração</th><th class="il-col-link">Link do novo painel (Power BI)</th>'
+      ? '<th class="il-col-desc">Detalhes do painel</th><th class="il-col-resp">Responsável pela manutenção</th>' +
+        '<th class="il-col-prioridade">Prioridade de migração</th>' +
+        '<th class="il-col-origem">Origem no Foco</th><th class="il-col-id">ID</th>' +
+        '<th class="il-col-resp">Responsável pela migração</th><th class="il-col-link">Link do novo painel (Power BI)</th>'
       : '<th class="il-col-check">Formulário de captura de lead</th><th class="il-col-check">Está no Portal Sebrae</th>';
     return "<thead><tr>" +
       '<th class="il-col-iniciativa">Iniciativa</th>' +
@@ -236,20 +238,20 @@
     const desc = '<td class="il-col-desc"><input type="text" data-campo="descricao" value="' + esc((l && l.descricao) || "") +
       '" placeholder="O que é este painel (opcional)" maxlength="500"' + dis + ' aria-label="Detalhes do painel"></td>';
     const resp = '<td class="il-col-resp">' + selectPessoa("responsavel_pessoa_id", l, "responsavel_pessoa_id", "responsavel", "Responsável pela manutenção", dis) + "</td>";
+    const prioridade = l && l.prioridade_migracao != null ? String(l.prioridade_migracao) : "";
+    const prioridadeCel = '<td class="il-col-prioridade"><input type="number" min="1" step="1" inputmode="numeric" data-campo="prioridade_migracao" value="' +
+      esc(prioridade) + '" placeholder="nº"' + dis + ' aria-label="Prioridade de migração"></td>';
     const origem = '<td class="il-col-origem"><input type="text" data-campo="origem_foco" value="' + esc((l && l.origem_foco) || "") +
       '" placeholder="Origem no Foco (opcional)" maxlength="500"' + dis + ' aria-label="Origem no Foco"></td>';
     const idCel = '<td class="il-col-id"><input type="text" data-campo="identificador" value="' + esc((l && l.identificador) || "") +
       '" placeholder="ID (opcional)" maxlength="500"' + dis + ' aria-label="ID"></td>';
-    return desc + resp + origem + idCel;
+    return desc + resp + prioridadeCel + origem + idCel;
   }
 
-  // Prioridade/responsável/link da migração pro novo painel (v0.42.0) — só em tipo = "painel"
+  // Responsável/link da migração pro novo painel (v0.42.0) — só em tipo = "painel"
   function quartaCelula(l) {
     if (TIPO !== "painel") return "";
     const dis = podeEditar ? "" : " disabled";
-    const prioridade = l && l.prioridade_migracao != null ? String(l.prioridade_migracao) : "";
-    const prioridadeCel = '<td class="il-col-prioridade"><input type="number" min="1" step="1" inputmode="numeric" data-campo="prioridade_migracao" value="' +
-      esc(prioridade) + '" placeholder="nº"' + dis + ' aria-label="Prioridade de migração"></td>';
     const respMig = '<td class="il-col-resp">' + selectPessoa("responsavel_migracao_pessoa_id", l, "responsavel_migracao_pessoa_id", "responsavel_migracao", "Responsável pela migração", dis) + "</td>";
     const linkNovo = (l && l.link_novo_powerbi) || "";
     const abrirNovo = linkNovo && DB_INICIATIVA_LINKS.linkValido(linkNovo)
@@ -257,7 +259,7 @@
     const linkNovoCel = '<td><div class="il-link-cel">' +
       '<input type="url" data-campo="link_novo_powerbi" value="' + esc(linkNovo) + '" placeholder="https://…"' + dis + ' aria-label="Link do novo painel (Power BI)">' +
       abrirNovo + "</div></td>";
-    return prioridadeCel + respMig + linkNovoCel;
+    return respMig + linkNovoCel;
   }
 
   function salvos(chave) { return LINKS.get(chave) || []; }
