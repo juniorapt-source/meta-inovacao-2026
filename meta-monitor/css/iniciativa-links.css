@@ -7,12 +7,12 @@
 .il-toolbar input[type=search]{font:400 13px 'DM Sans',sans-serif;padding:7px 10px;border:1px solid var(--linha);background:var(--branco);min-width:220px}
 .il-contagem{font:400 12.5px 'DM Sans',sans-serif;color:var(--grafite);margin:0}
 .il-wrap{overflow:auto;max-height:75vh;border:1px solid var(--linha);background:var(--branco)}
-.il-tabela{border-collapse:separate;border-spacing:0;font-size:12.5px;width:100%;min-width:640px}
+.il-tabela{border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:640px}
 .il-tabela th,.il-tabela td{padding:5px 8px;border-bottom:1px solid var(--border-soft);border-right:1px solid var(--border-soft);vertical-align:middle}
 .il-tabela thead th{position:sticky;top:0;z-index:3;background:var(--ceu);font:700 10.5px 'DM Sans',sans-serif;color:var(--grafite);text-align:left;text-transform:none;letter-spacing:normal}
 .il-col-iniciativa{width:220px;min-width:180px;font-family:var(--font-sans);color:var(--tinta)}
 .il-col-check{width:150px;text-align:center}
-.il-col-resp{width:260px}
+.il-col-resp{width:260px;min-width:260px}
 .il-col-status{width:96px;font:400 11px 'DM Sans',sans-serif;color:var(--grafite);white-space:nowrap}
 .il-link-cel{display:flex;gap:6px;align-items:center}
 .il-link-cel input{flex:1;min-width:180px;font:400 12.5px 'DM Sans',sans-serif;padding:5px 7px;border:1px solid var(--border-soft);background:var(--branco)}
@@ -34,14 +34,14 @@
 .il-vazia{text-align:center;color:var(--grafite);padding:16px}
 /* Painéis (v0.34.0): vários por iniciativa, coluna de detalhes */
 .il-col-link{min-width:240px}
-.il-col-desc{width:300px}
-.il-col-desc input,.il-col-origem input,.il-col-id input,.il-col-prioridade input{width:100%;box-sizing:border-box;font:400 12.5px 'DM Sans',sans-serif;padding:5px 7px;border:1px solid var(--border-soft);background:var(--branco)}
+.il-col-desc{width:300px;min-width:300px}
+.il-col-desc input,.il-col-origem input,.il-col-id input,.il-col-prioridade input{width:100%;min-width:100%;box-sizing:border-box;font:400 12.5px 'DM Sans',sans-serif;padding:5px 7px;border:1px solid var(--border-soft);background:var(--branco)}
 .il-col-desc input:focus,.il-col-origem input:focus,.il-col-id input:focus,.il-col-prioridade input:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .il-col-desc input.invalido,.il-col-origem input.invalido,.il-col-id input.invalido,.il-col-prioridade input.invalido{border-color:var(--warn);background:var(--warn-w)}
-.il-col-origem{width:220px}
-.il-col-id{width:140px}
+.il-col-origem{width:220px;min-width:220px}
+.il-col-id{width:140px;min-width:140px}
 /* Migração pro novo painel (v0.42.0) */
-.il-col-prioridade{width:120px}
+.il-col-prioridade{width:120px;min-width:120px}
 .il-col-prioridade input{text-align:center}
 .il-ini-nome{margin-bottom:2px}
 td.il-col-iniciativa{vertical-align:top;padding-top:10px}

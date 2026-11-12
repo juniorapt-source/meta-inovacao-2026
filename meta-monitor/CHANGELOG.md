@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.45.0 — 2026-11-12
+**Painéis e Sites: corrige colunas de texto espremidas (dados não apareciam).**
+
+Bug pré-existente (não causado pela reordenação do v0.44.0): com `table-layout:auto`
+e a tabela limitada à largura da tela, o navegador espremia as colunas de pouco
+conteúdo textual (Detalhes, Origem no Foco, ID, Prioridade de migração, Responsável)
+até ~16-33px de largura, escondendo o texto digitado — mesmo com o dado salvo
+corretamente no banco. Adicionado `min-width` nessas colunas (igual ao `width`
+já definido) pra forçar a tabela a rolar horizontalmente em vez de espremer o
+conteúdo. Nenhum dado foi perdido; é só exibição.
+
 ## v0.44.0 — 2026-11-12
 **Painéis: reordena a coluna "Prioridade de migração".**
 
