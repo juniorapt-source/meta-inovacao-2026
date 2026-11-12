@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.42.0 — 2026-11-12
+**Painéis: 3 colunas novas sobre a migração pro Power BI.**
+
+`paineis.html` ganha mais 3 colunas, depois de "Origem no Foco": "Prioridade de
+migração" (número, único entre os painéis — duas linhas não podem dividir a mesma
+ordem), "Responsável pela migração" (outra pessoa, convive com o responsável pela
+manutenção) e "Link do novo painel (Power BI)".
+
+- Colunas novas `prioridade_migracao` (integer), `responsavel_migracao_pessoa_id` +
+  `responsavel_migracao` (padrão "convivendo, nunca substituindo") e
+  `link_novo_powerbi` (mesmo CHECK de `link`) em `meta_inovacao_iniciativa_links` — só
+  usadas em `tipo = 'painel'`. Índice único parcial garante que dois painéis ativos não
+  dividam a mesma prioridade. `tools/sql/2026-11_iniciativa_links_migracao_powerbi.sql`
+  (roda depois de `2026-11_iniciativa_links.sql`; o script base também já cria as
+  colunas e o índice direto, pra quem está montando o banco do zero).
+- A prioridade repetida é barrada no cliente antes de gravar (olha todos os painéis
+  carregados, de qualquer iniciativa) — o índice do banco é só o reforço. Se a coluna
+  ainda não existe no banco (script não rodado), a linha mostra "falhou" com o nome do
+  script a rodar.
+- `tools/testar_paineis_headless.js` atualizado para as 9 colunas, incluindo o teste da
+  prioridade duplicada.
+
 ## v0.41.0 — 2026-11-12
 **Painéis: nova coluna de texto livre "Origem no Foco".**
 

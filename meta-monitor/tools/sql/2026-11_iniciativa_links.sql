@@ -5,6 +5,7 @@
 -- Uma tabela só, uma linha por iniciativa e por tipo:
 --   tipo = 'site'   → link da página da iniciativa + "tem formulário de captura de lead?"
 --   tipo = 'painel' → link do painel + responsável pela manutenção (pessoa do golden record)
+--                     + prioridade/responsável/link da migração pro novo painel (v0.42.0)
 --
 -- A lista de iniciativas NÃO mora aqui: as páginas leem núcleo + iniciativa de
 -- corsario_status (a mesma lista do "O Caminho para o Corsário"). A linha desta tabela
@@ -36,11 +37,20 @@ create table if not exists public.meta_inovacao_iniciativa_links (
   responsavel_pessoa_id bigint references public.meta_inovacao_pessoas(id),  -- só em tipo = 'painel'
   responsavel           text,                              -- cópia em texto do nome
   origem_foco           text,                              -- só usado em tipo = 'painel' (v0.41.0)
+  prioridade_migracao   integer,                           -- só em tipo = 'painel' (v0.42.0) — ordem de migração pro novo painel, única (índice abaixo)
+  responsavel_migracao_pessoa_id bigint references public.meta_inovacao_pessoas(id),  -- só em tipo = 'painel' (v0.42.0)
+  responsavel_migracao  text,                              -- cópia em texto do nome
+  link_novo_powerbi     text check (link_novo_powerbi is null or link_novo_powerbi ~* '^https?://'),  -- só em tipo = 'painel' (v0.42.0)
   deleted_at            timestamptz,                       -- soft delete — nunca DELETE físico
   updated_at            timestamptz not null default now(),
   updated_by            text,
   constraint meta_inovacao_iniciativa_links_tipo_iniciativa_uq unique (tipo, iniciativa)
 );
+
+-- 1b) Dois painéis não podem dividir a mesma prioridade de migração (v0.42.0)
+create unique index if not exists meta_inovacao_iniciativa_links_prioridade_migracao_uq
+  on public.meta_inovacao_iniciativa_links (prioridade_migracao)
+  where tipo = 'painel' and deleted_at is null and prioridade_migracao is not null;
 
 -- 2) Trigger de updated_at
 create or replace function public.cc_touch_updated_at()

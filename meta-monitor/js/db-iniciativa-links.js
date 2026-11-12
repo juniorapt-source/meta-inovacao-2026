@@ -8,6 +8,11 @@
  * `portal_sebrae` (site, v0.40.0): tools/sql/2026-11_iniciativa_links_portal_sebrae.sql.
  * `origem_foco` (painel, v0.41.0): texto livre, "Origem no Foco", ao lado do responsável —
  * tools/sql/2026-11_iniciativa_links_origem_foco.sql.
+ * Migração pro novo painel (painel, v0.42.0): `prioridade_migracao` (inteiro, único entre
+ * os painéis ativos — índice parcial garante que dois painéis não dividam a mesma ordem),
+ * `responsavel_migracao_pessoa_id`/`responsavel_migracao` (outra pessoa, convive com o
+ * responsável pela manutenção) e `link_novo_powerbi` (link do painel já migrado) —
+ * tools/sql/2026-11_iniciativa_links_migracao_powerbi.sql.
  * A linha só nasce quando alguém preenche algo pela primeira vez — gravar() decide entre
  * INSERT e UPDATE. remover() é soft delete (deleted_at).
  *
@@ -40,6 +45,10 @@
       responsavel_pessoa_id: r.responsavel_pessoa_id || null,
       responsavel: r.responsavel || null,
       origem_foco: r.origem_foco || "",
+      prioridade_migracao: r.prioridade_migracao != null ? Number(r.prioridade_migracao) : null,
+      responsavel_migracao_pessoa_id: r.responsavel_migracao_pessoa_id || null,
+      responsavel_migracao: r.responsavel_migracao || null,
+      link_novo_powerbi: r.link_novo_powerbi || "",
       updated_at: r.updated_at || null,
       updated_by: r.updated_by || null,
     };
@@ -59,9 +68,13 @@
       responsavel: o.responsavel || null,
     };
     // só manda a coluna quando há valor: assim o 1º painel continua gravando mesmo
-    // antes de rodar o script que cria `descricao`/`origem_foco`
+    // antes de rodar o script que cria `descricao`/`origem_foco`/as colunas de migração
     if (o.descricao) linha.descricao = o.descricao;
     if (o.origem_foco) linha.origem_foco = o.origem_foco;
+    if (Object.prototype.hasOwnProperty.call(o, "prioridade_migracao")) linha.prioridade_migracao = o.prioridade_migracao;
+    if (o.responsavel_migracao_pessoa_id) linha.responsavel_migracao_pessoa_id = o.responsavel_migracao_pessoa_id;
+    if (Object.prototype.hasOwnProperty.call(o, "responsavel_migracao")) linha.responsavel_migracao = o.responsavel_migracao;
+    if (o.link_novo_powerbi) linha.link_novo_powerbi = o.link_novo_powerbi;
     return linha;
   }
 
@@ -105,6 +118,8 @@
   const SCRIPT_SITES = "tools/sql/2026-11_iniciativa_links_sites_multiplos.sql";
   const SCRIPT_PORTAL_SEBRAE = "tools/sql/2026-11_iniciativa_links_portal_sebrae.sql";
   const SCRIPT_ORIGEM_FOCO = "tools/sql/2026-11_iniciativa_links_origem_foco.sql";
+  const SCRIPT_MIGRACAO_POWERBI = "tools/sql/2026-11_iniciativa_links_migracao_powerbi.sql";
+  const INDICE_PRIORIDADE_MIGRACAO = "meta_inovacao_iniciativa_links_prioridade_migracao_uq";
 
   // erro de banco que indica que a coluna `portal_sebrae` (v0.40.0) ainda não existe
   function faltaScriptPortalSebrae(err) {
@@ -116,6 +131,21 @@
   function faltaScriptOrigemFoco(err) {
     const msg = String((err && (err.message || err.details)) || "");
     return /origem_foco/i.test(msg);
+  }
+
+  // erro de banco que indica que as colunas de migração pro novo painel (v0.42.0) —
+  // prioridade_migracao / responsavel_migracao* / link_novo_powerbi — ainda não existem
+  function faltaScriptMigracaoPowerbi(err) {
+    const msg = String((err && (err.message || err.details)) || "");
+    return /prioridade_migracao|responsavel_migracao|link_novo_powerbi/i.test(msg);
+  }
+
+  // erro de banco de violação do índice único de `prioridade_migracao` (dois painéis com a
+  // mesma ordem de migração) — distingue da checagem genérica de 23505 em faltaScriptPaineis
+  function prioridadeMigracaoDuplicadaNoBanco(err) {
+    if (!err || err.code !== "23505") return false;
+    const msg = String((err && (err.message || err.details)) || "");
+    return msg.indexOf(INDICE_PRIORIDADE_MIGRACAO) !== -1 || /prioridade_migracao/i.test(msg);
   }
 
   // erro de banco que indica que o script dos painéis múltiplos ainda não rodou
@@ -149,10 +179,13 @@
     scriptMultiplos: scriptMultiplos,
     faltaScriptPortalSebrae: faltaScriptPortalSebrae,
     faltaScriptOrigemFoco: faltaScriptOrigemFoco,
+    faltaScriptMigracaoPowerbi: faltaScriptMigracaoPowerbi,
+    prioridadeMigracaoDuplicadaNoBanco: prioridadeMigracaoDuplicadaNoBanco,
     SCRIPT_PAINEIS: SCRIPT_PAINEIS,
     SCRIPT_SITES: SCRIPT_SITES,
     SCRIPT_PORTAL_SEBRAE: SCRIPT_PORTAL_SEBRAE,
     SCRIPT_ORIGEM_FOCO: SCRIPT_ORIGEM_FOCO,
+    SCRIPT_MIGRACAO_POWERBI: SCRIPT_MIGRACAO_POWERBI,
     linkValido: linkValido,
   };
 })(this);

@@ -5,7 +5,10 @@
  *   <body data-tipo="site">   → Link da página + "Tem formulário de captura de lead?" +
  *                               "Está no Portal Sebrae?" (v0.40.0)
  *   <body data-tipo="painel"> → Link do painel + Detalhes (texto livre) + Responsável pela
- *                               manutenção (pessoas) + Origem no Foco (texto livre, v0.41.0).
+ *                               manutenção (pessoas) + Origem no Foco (texto livre, v0.41.0)
+ *                               + Prioridade de migração (inteiro, único entre os painéis
+ *                               ativos) + Responsável pela migração (pessoas) + Link do
+ *                               novo painel no Power BI (v0.42.0).
  *
  * Os dois tipos aceitam vários por iniciativa: "+ painel"/"+ link" abre uma linha nova,
  * "×" remove (soft delete).
@@ -186,11 +189,12 @@
     return chaves.map((c) => grupos.get(c));
   }
 
-  function nColunas() { return TIPO === "painel" ? 6 : 5; }
+  function nColunas() { return TIPO === "painel" ? 9 : 5; }
 
   function thead() {
     const terceira = TIPO === "painel"
-      ? '<th class="il-col-desc">Detalhes do painel</th><th class="il-col-resp">Responsável pela manutenção</th><th class="il-col-origem">Origem no Foco</th>'
+      ? '<th class="il-col-desc">Detalhes do painel</th><th class="il-col-resp">Responsável pela manutenção</th><th class="il-col-origem">Origem no Foco</th>' +
+        '<th class="il-col-prioridade">Prioridade de migração</th><th class="il-col-resp">Responsável pela migração</th><th class="il-col-link">Link do novo painel (Power BI)</th>'
       : '<th class="il-col-check">Formulário de captura de lead</th><th class="il-col-check">Está no Portal Sebrae</th>';
     return "<thead><tr>" +
       '<th class="il-col-iniciativa">Iniciativa</th>' +
@@ -209,6 +213,16 @@
       abrir + "</div></td>";
   }
 
+  function selectPessoa(campo, l, campoId, campoNome, label, dis) {
+    const atual = l && l[campoId] ? String(l[campoId]) : "";
+    let opts = '<option value="">— escolher —</option>';
+    if (atual && !PESSOAS.some((p) => String(p.db_id) === atual)) {
+      opts += '<option value="' + esc(atual) + '" selected>' + esc((l && l[campoNome]) || "pessoa #" + atual) + "</option>";
+    }
+    opts += PESSOAS.map((p) => '<option value="' + esc(String(p.db_id)) + '"' + (String(p.db_id) === atual ? " selected" : "") + ">" + esc(p.nome) + "</option>").join("");
+    return '<select data-campo="' + campo + '" aria-label="' + esc(label) + '"' + dis + ">" + opts + "</select>";
+  }
+
   function terceiraCelula(l) {
     const dis = podeEditar ? "" : " disabled";
     if (TIPO === "site") {
@@ -217,18 +231,29 @@
         '<td class="il-col-check"><input type="checkbox" data-campo="portal_sebrae" aria-label="Está no Portal Sebrae"' +
         (l && l.portal_sebrae ? " checked" : "") + dis + "></td>";
     }
-    const atual = l && l.responsavel_pessoa_id ? String(l.responsavel_pessoa_id) : "";
-    let opts = '<option value="">— escolher —</option>';
-    if (atual && !PESSOAS.some((p) => String(p.db_id) === atual)) {
-      opts += '<option value="' + esc(atual) + '" selected>' + esc((l && l.responsavel) || "pessoa #" + atual) + "</option>";
-    }
-    opts += PESSOAS.map((p) => '<option value="' + esc(String(p.db_id)) + '"' + (String(p.db_id) === atual ? " selected" : "") + ">" + esc(p.nome) + "</option>").join("");
     const desc = '<td class="il-col-desc"><input type="text" data-campo="descricao" value="' + esc((l && l.descricao) || "") +
       '" placeholder="O que é este painel (opcional)" maxlength="500"' + dis + ' aria-label="Detalhes do painel"></td>';
-    const resp = '<td class="il-col-resp"><select data-campo="responsavel_pessoa_id" aria-label="Responsável pela manutenção"' + dis + ">" + opts + "</select></td>";
+    const resp = '<td class="il-col-resp">' + selectPessoa("responsavel_pessoa_id", l, "responsavel_pessoa_id", "responsavel", "Responsável pela manutenção", dis) + "</td>";
     const origem = '<td class="il-col-origem"><input type="text" data-campo="origem_foco" value="' + esc((l && l.origem_foco) || "") +
       '" placeholder="Origem no Foco (opcional)" maxlength="500"' + dis + ' aria-label="Origem no Foco"></td>';
     return desc + resp + origem;
+  }
+
+  // Prioridade/responsável/link da migração pro novo painel (v0.42.0) — só em tipo = "painel"
+  function quartaCelula(l) {
+    if (TIPO !== "painel") return "";
+    const dis = podeEditar ? "" : " disabled";
+    const prioridade = l && l.prioridade_migracao != null ? String(l.prioridade_migracao) : "";
+    const prioridadeCel = '<td class="il-col-prioridade"><input type="number" min="1" step="1" inputmode="numeric" data-campo="prioridade_migracao" value="' +
+      esc(prioridade) + '" placeholder="nº"' + dis + ' aria-label="Prioridade de migração"></td>';
+    const respMig = '<td class="il-col-resp">' + selectPessoa("responsavel_migracao_pessoa_id", l, "responsavel_migracao_pessoa_id", "responsavel_migracao", "Responsável pela migração", dis) + "</td>";
+    const linkNovo = (l && l.link_novo_powerbi) || "";
+    const abrirNovo = linkNovo && DB_INICIATIVA_LINKS.linkValido(linkNovo)
+      ? '<a class="il-abrir" href="' + esc(linkNovo) + '" target="_blank" rel="noopener noreferrer">abrir ↗</a>' : "";
+    const linkNovoCel = '<td><div class="il-link-cel">' +
+      '<input type="url" data-campo="link_novo_powerbi" value="' + esc(linkNovo) + '" placeholder="https://…"' + dis + ' aria-label="Link do novo painel (Power BI)">' +
+      abrirNovo + "</div></td>";
+    return prioridadeCel + respMig + linkNovoCel;
   }
 
   function salvos(chave) { return LINKS.get(chave) || []; }
@@ -250,7 +275,7 @@
       ? '<button type="button" class="il-remover" data-acao="remover" title="Remover este ' + substantivo() + '" aria-label="Remover este ' + substantivo() + '">×</button>' : "";
     return '<tr data-iniciativa="' + esc(x.iniciativa) + '" data-chave="' + esc(x.chave) + '"' + (l ? ' data-id="' + esc(String(l.db_id)) + '"' : "") +
       (primeira ? "" : ' class="il-sub-linha"') + ">" +
-      nomeCel + linkCelula(l) + terceiraCelula(l) +
+      nomeCel + linkCelula(l) + terceiraCelula(l) + quartaCelula(l) +
       '<td class="il-col-status"><div class="il-status-cel"><span data-status></span>' + remover + "</div></td>" +
     "</tr>";
   }
@@ -336,6 +361,10 @@
       msg = "O banco ainda não tem a coluna \"Está no Portal Sebrae\" — rode " + DB_INICIATIVA_LINKS.SCRIPT_PORTAL_SEBRAE + " no Supabase.";
     } else if (TIPO === "painel" && DB_INICIATIVA_LINKS.faltaScriptOrigemFoco(err)) {
       msg = "O banco ainda não tem a coluna \"Origem no Foco\" — rode " + DB_INICIATIVA_LINKS.SCRIPT_ORIGEM_FOCO + " no Supabase.";
+    } else if (TIPO === "painel" && DB_INICIATIVA_LINKS.prioridadeMigracaoDuplicadaNoBanco(err)) {
+      msg = "Essa prioridade de migração já está em uso por outro painel.";
+    } else if (TIPO === "painel" && DB_INICIATIVA_LINKS.faltaScriptMigracaoPowerbi(err)) {
+      msg = "O banco ainda não tem as colunas de migração pro novo painel — rode " + DB_INICIATIVA_LINKS.SCRIPT_MIGRACAO_POWERBI + " no Supabase.";
     } else if (DB_INICIATIVA_LINKS.faltaScriptMultiplos(TIPO, err)) {
       msg = "O banco ainda não aceita mais de um " + substantivo() + " por iniciativa" +
         (TIPO === "painel" ? " nem a coluna de detalhes" : "") +
@@ -416,8 +445,9 @@
     }
   }
 
-  function atualizarAbrir(tr, valor) {
-    const cel = tr.querySelector(".il-link-cel");
+  function atualizarAbrir(alvo, valor) {
+    const cel = alvo.closest(".il-link-cel");
+    if (!cel) return;
     const velho = cel.querySelector(".il-abrir");
     if (velho) velho.remove();
     if (valor && DB_INICIATIVA_LINKS.linkValido(valor)) {
@@ -431,13 +461,26 @@
     }
   }
 
+  // dois painéis não podem dividir a mesma prioridade de migração (checagem no cliente,
+  // global — olha todas as iniciativas, não só a desta linha; o banco tem o mesmo índice
+  // único como reforço, ver DB_INICIATIVA_LINKS.prioridadeMigracaoDuplicadaNoBanco)
+  function prioridadeMigracaoDuplicada(valor, idAtual) {
+    for (const arr of LINKS.values()) {
+      for (const l of arr) {
+        if (idAtual && String(l.db_id) === String(idAtual)) continue;
+        if (l.prioridade_migracao != null && l.prioridade_migracao === valor) return true;
+      }
+    }
+    return false;
+  }
+
   elTabela.addEventListener("change", async (e) => {
     const alvo = e.target;
     const tr = alvo.closest("tr[data-iniciativa]");
     if (!tr || !podeEditar) return;
     const campo = alvo.dataset.campo;
     const atual = registroDaLinha(tr);
-    if (campo === "link") {
+    if (campo === "link" || campo === "link_novo_powerbi") {
       const v = alvo.value.trim();
       alvo.value = v;
       if (!DB_INICIATIVA_LINKS.linkValido(v)) {
@@ -448,8 +491,11 @@
       }
       alvo.classList.remove("invalido");
       alvo.title = "";
-      if (v === ((atual && atual.link) || "")) return;
-      if (await gravar(tr, { link: v })) { atualizarAbrir(tr, v); atualizarContagem(); }
+      if (v === ((atual && atual[campo]) || "")) return;
+      if (await gravar(tr, { [campo]: v })) {
+        atualizarAbrir(alvo, v);
+        if (campo === "link") atualizarContagem();
+      }
     } else if (campo === "descricao") {
       const v = alvo.value.trim();
       alvo.value = v;
@@ -462,6 +508,34 @@
       if (v === ((atual && atual.origem_foco) || "")) return;
       const ok = await gravar(tr, { origem_foco: v });
       if (!ok) alvo.value = (atual && atual.origem_foco) || "";
+    } else if (campo === "prioridade_migracao") {
+      const bruto = alvo.value.trim();
+      if (bruto === "") {
+        alvo.classList.remove("invalido");
+        alvo.title = "";
+        if ((atual && atual.prioridade_migracao) == null) return;
+        const ok = await gravar(tr, { prioridade_migracao: null });
+        if (!ok) alvo.value = (atual && atual.prioridade_migracao != null) ? String(atual.prioridade_migracao) : "";
+        return;
+      }
+      const num = Number(bruto);
+      if (!Number.isInteger(num) || num < 1) {
+        alvo.classList.add("invalido");
+        alvo.title = "Use um número inteiro positivo.";
+        marcar(tr, "falhou", alvo.title);
+        return;
+      }
+      if (prioridadeMigracaoDuplicada(num, tr.dataset.id)) {
+        alvo.classList.add("invalido");
+        alvo.title = "Essa prioridade de migração já está em uso por outro painel.";
+        marcar(tr, "falhou", alvo.title);
+        return;
+      }
+      alvo.classList.remove("invalido");
+      alvo.title = "";
+      if (atual && atual.prioridade_migracao === num) return;
+      const ok = await gravar(tr, { prioridade_migracao: num });
+      if (!ok) alvo.value = (atual && atual.prioridade_migracao != null) ? String(atual.prioridade_migracao) : "";
     } else if (campo === "captura_lead" || campo === "portal_sebrae") {
       const ok = await gravar(tr, { [campo]: alvo.checked });
       if (!ok) alvo.checked = !alvo.checked;
@@ -470,13 +544,18 @@
       const p = PESSOAS.find((x) => String(x.db_id) === id);
       const ok = await gravar(tr, { responsavel_pessoa_id: id ? Number(id) : null, responsavel: p ? p.nome : null });
       if (!ok) { const a = registroDaLinha(tr); alvo.value = a && a.responsavel_pessoa_id ? String(a.responsavel_pessoa_id) : ""; }
+    } else if (campo === "responsavel_migracao_pessoa_id") {
+      const id = alvo.value;
+      const p = PESSOAS.find((x) => String(x.db_id) === id);
+      const ok = await gravar(tr, { responsavel_migracao_pessoa_id: id ? Number(id) : null, responsavel_migracao: p ? p.nome : null });
+      if (!ok) { const a = registroDaLinha(tr); alvo.value = a && a.responsavel_migracao_pessoa_id ? String(a.responsavel_migracao_pessoa_id) : ""; }
     }
   });
 
   // Enter no campo de link/detalhes grava (dispara o change ao tirar o foco)
   elTabela.addEventListener("keydown", (e) => {
     const c = e.target.dataset && e.target.dataset.campo;
-    if (e.key === "Enter" && (c === "link" || c === "descricao" || c === "origem_foco")) e.target.blur();
+    if (e.key === "Enter" && (c === "link" || c === "descricao" || c === "origem_foco" || c === "prioridade_migracao" || c === "link_novo_powerbi")) e.target.blur();
   });
 
   elTabela.addEventListener("click", async (e) => {
