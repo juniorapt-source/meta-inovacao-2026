@@ -6,9 +6,10 @@
  *                               "Está no Portal Sebrae?" (v0.40.0)
  *   <body data-tipo="painel"> → Link do painel + Detalhes (texto livre) + Responsável pela
  *                               manutenção (pessoas) + Origem no Foco (texto livre, v0.41.0)
- *                               + Prioridade de migração (inteiro, único entre os painéis
- *                               ativos) + Responsável pela migração (pessoas) + Link do
- *                               novo painel no Power BI (v0.42.0).
+ *                               + ID (texto livre, v0.43.0) + Prioridade de migração
+ *                               (inteiro, único entre os painéis ativos) + Responsável
+ *                               pela migração (pessoas) + Link do novo painel no Power BI
+ *                               (v0.42.0).
  *
  * Os dois tipos aceitam vários por iniciativa: "+ painel"/"+ link" abre uma linha nova,
  * "×" remove (soft delete).
@@ -189,11 +190,12 @@
     return chaves.map((c) => grupos.get(c));
   }
 
-  function nColunas() { return TIPO === "painel" ? 9 : 5; }
+  function nColunas() { return TIPO === "painel" ? 10 : 5; }
 
   function thead() {
     const terceira = TIPO === "painel"
       ? '<th class="il-col-desc">Detalhes do painel</th><th class="il-col-resp">Responsável pela manutenção</th><th class="il-col-origem">Origem no Foco</th>' +
+        '<th class="il-col-id">ID</th>' +
         '<th class="il-col-prioridade">Prioridade de migração</th><th class="il-col-resp">Responsável pela migração</th><th class="il-col-link">Link do novo painel (Power BI)</th>'
       : '<th class="il-col-check">Formulário de captura de lead</th><th class="il-col-check">Está no Portal Sebrae</th>';
     return "<thead><tr>" +
@@ -236,7 +238,9 @@
     const resp = '<td class="il-col-resp">' + selectPessoa("responsavel_pessoa_id", l, "responsavel_pessoa_id", "responsavel", "Responsável pela manutenção", dis) + "</td>";
     const origem = '<td class="il-col-origem"><input type="text" data-campo="origem_foco" value="' + esc((l && l.origem_foco) || "") +
       '" placeholder="Origem no Foco (opcional)" maxlength="500"' + dis + ' aria-label="Origem no Foco"></td>';
-    return desc + resp + origem;
+    const idCel = '<td class="il-col-id"><input type="text" data-campo="identificador" value="' + esc((l && l.identificador) || "") +
+      '" placeholder="ID (opcional)" maxlength="500"' + dis + ' aria-label="ID"></td>';
+    return desc + resp + origem + idCel;
   }
 
   // Prioridade/responsável/link da migração pro novo painel (v0.42.0) — só em tipo = "painel"
@@ -361,6 +365,8 @@
       msg = "O banco ainda não tem a coluna \"Está no Portal Sebrae\" — rode " + DB_INICIATIVA_LINKS.SCRIPT_PORTAL_SEBRAE + " no Supabase.";
     } else if (TIPO === "painel" && DB_INICIATIVA_LINKS.faltaScriptOrigemFoco(err)) {
       msg = "O banco ainda não tem a coluna \"Origem no Foco\" — rode " + DB_INICIATIVA_LINKS.SCRIPT_ORIGEM_FOCO + " no Supabase.";
+    } else if (TIPO === "painel" && DB_INICIATIVA_LINKS.faltaScriptId(err)) {
+      msg = "O banco ainda não tem a coluna \"ID\" — rode " + DB_INICIATIVA_LINKS.SCRIPT_ID + " no Supabase.";
     } else if (TIPO === "painel" && DB_INICIATIVA_LINKS.prioridadeMigracaoDuplicadaNoBanco(err)) {
       msg = "Essa prioridade de migração já está em uso por outro painel.";
     } else if (TIPO === "painel" && DB_INICIATIVA_LINKS.faltaScriptMigracaoPowerbi(err)) {
@@ -508,6 +514,12 @@
       if (v === ((atual && atual.origem_foco) || "")) return;
       const ok = await gravar(tr, { origem_foco: v });
       if (!ok) alvo.value = (atual && atual.origem_foco) || "";
+    } else if (campo === "identificador") {
+      const v = alvo.value.trim();
+      alvo.value = v;
+      if (v === ((atual && atual.identificador) || "")) return;
+      const ok = await gravar(tr, { identificador: v });
+      if (!ok) alvo.value = (atual && atual.identificador) || "";
     } else if (campo === "prioridade_migracao") {
       const bruto = alvo.value.trim();
       if (bruto === "") {
@@ -555,7 +567,7 @@
   // Enter no campo de link/detalhes grava (dispara o change ao tirar o foco)
   elTabela.addEventListener("keydown", (e) => {
     const c = e.target.dataset && e.target.dataset.campo;
-    if (e.key === "Enter" && (c === "link" || c === "descricao" || c === "origem_foco" || c === "prioridade_migracao" || c === "link_novo_powerbi")) e.target.blur();
+    if (e.key === "Enter" && (c === "link" || c === "descricao" || c === "origem_foco" || c === "identificador" || c === "prioridade_migracao" || c === "link_novo_powerbi")) e.target.blur();
   });
 
   elTabela.addEventListener("click", async (e) => {

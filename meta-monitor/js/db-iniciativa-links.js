@@ -13,6 +13,9 @@
  * `responsavel_migracao_pessoa_id`/`responsavel_migracao` (outra pessoa, convive com o
  * responsável pela manutenção) e `link_novo_powerbi` (link do painel já migrado) —
  * tools/sql/2026-11_iniciativa_links_migracao_powerbi.sql.
+ * `identificador` (painel, v0.43.0): texto livre, coluna "ID", entre Origem no Foco e
+ * Prioridade de migração — tools/sql/2026-11_iniciativa_links_id.sql. Chama-se
+ * `identificador` (e não `id`) pra não colidir com a chave primária da tabela.
  * A linha só nasce quando alguém preenche algo pela primeira vez — gravar() decide entre
  * INSERT e UPDATE. remover() é soft delete (deleted_at).
  *
@@ -45,6 +48,7 @@
       responsavel_pessoa_id: r.responsavel_pessoa_id || null,
       responsavel: r.responsavel || null,
       origem_foco: r.origem_foco || "",
+      identificador: r.identificador || "",
       prioridade_migracao: r.prioridade_migracao != null ? Number(r.prioridade_migracao) : null,
       responsavel_migracao_pessoa_id: r.responsavel_migracao_pessoa_id || null,
       responsavel_migracao: r.responsavel_migracao || null,
@@ -71,6 +75,7 @@
     // antes de rodar o script que cria `descricao`/`origem_foco`/as colunas de migração
     if (o.descricao) linha.descricao = o.descricao;
     if (o.origem_foco) linha.origem_foco = o.origem_foco;
+    if (o.identificador) linha.identificador = o.identificador;
     if (Object.prototype.hasOwnProperty.call(o, "prioridade_migracao")) linha.prioridade_migracao = o.prioridade_migracao;
     if (o.responsavel_migracao_pessoa_id) linha.responsavel_migracao_pessoa_id = o.responsavel_migracao_pessoa_id;
     if (Object.prototype.hasOwnProperty.call(o, "responsavel_migracao")) linha.responsavel_migracao = o.responsavel_migracao;
@@ -119,6 +124,7 @@
   const SCRIPT_PORTAL_SEBRAE = "tools/sql/2026-11_iniciativa_links_portal_sebrae.sql";
   const SCRIPT_ORIGEM_FOCO = "tools/sql/2026-11_iniciativa_links_origem_foco.sql";
   const SCRIPT_MIGRACAO_POWERBI = "tools/sql/2026-11_iniciativa_links_migracao_powerbi.sql";
+  const SCRIPT_ID = "tools/sql/2026-11_iniciativa_links_id.sql";
   const INDICE_PRIORIDADE_MIGRACAO = "meta_inovacao_iniciativa_links_prioridade_migracao_uq";
 
   // erro de banco que indica que a coluna `portal_sebrae` (v0.40.0) ainda não existe
@@ -131,6 +137,12 @@
   function faltaScriptOrigemFoco(err) {
     const msg = String((err && (err.message || err.details)) || "");
     return /origem_foco/i.test(msg);
+  }
+
+  // erro de banco que indica que a coluna `identificador` (v0.43.0) ainda não existe
+  function faltaScriptId(err) {
+    const msg = String((err && (err.message || err.details)) || "");
+    return /identificador/i.test(msg);
   }
 
   // erro de banco que indica que as colunas de migração pro novo painel (v0.42.0) —
@@ -179,12 +191,14 @@
     scriptMultiplos: scriptMultiplos,
     faltaScriptPortalSebrae: faltaScriptPortalSebrae,
     faltaScriptOrigemFoco: faltaScriptOrigemFoco,
+    faltaScriptId: faltaScriptId,
     faltaScriptMigracaoPowerbi: faltaScriptMigracaoPowerbi,
     prioridadeMigracaoDuplicadaNoBanco: prioridadeMigracaoDuplicadaNoBanco,
     SCRIPT_PAINEIS: SCRIPT_PAINEIS,
     SCRIPT_SITES: SCRIPT_SITES,
     SCRIPT_PORTAL_SEBRAE: SCRIPT_PORTAL_SEBRAE,
     SCRIPT_ORIGEM_FOCO: SCRIPT_ORIGEM_FOCO,
+    SCRIPT_ID: SCRIPT_ID,
     SCRIPT_MIGRACAO_POWERBI: SCRIPT_MIGRACAO_POWERBI,
     linkValido: linkValido,
   };

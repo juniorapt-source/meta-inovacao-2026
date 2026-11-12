@@ -35,10 +35,11 @@
 /* Painéis (v0.34.0): vários por iniciativa, coluna de detalhes */
 .il-col-link{min-width:240px}
 .il-col-desc{width:300px}
-.il-col-desc input,.il-col-origem input,.il-col-prioridade input{width:100%;box-sizing:border-box;font:400 12.5px 'DM Sans',sans-serif;padding:5px 7px;border:1px solid var(--border-soft);background:var(--branco)}
-.il-col-desc input:focus,.il-col-origem input:focus,.il-col-prioridade input:focus{outline:2px solid var(--accent);outline-offset:-1px}
-.il-col-desc input.invalido,.il-col-origem input.invalido,.il-col-prioridade input.invalido{border-color:var(--warn);background:var(--warn-w)}
+.il-col-desc input,.il-col-origem input,.il-col-id input,.il-col-prioridade input{width:100%;box-sizing:border-box;font:400 12.5px 'DM Sans',sans-serif;padding:5px 7px;border:1px solid var(--border-soft);background:var(--branco)}
+.il-col-desc input:focus,.il-col-origem input:focus,.il-col-id input:focus,.il-col-prioridade input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.il-col-desc input.invalido,.il-col-origem input.invalido,.il-col-id input.invalido,.il-col-prioridade input.invalido{border-color:var(--warn);background:var(--warn-w)}
 .il-col-origem{width:220px}
+.il-col-id{width:140px}
 /* Migração pro novo painel (v0.42.0) */
 .il-col-prioridade{width:120px}
 .il-col-prioridade input{text-align:center}

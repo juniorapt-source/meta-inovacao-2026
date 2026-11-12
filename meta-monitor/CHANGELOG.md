@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.43.0 — 2026-11-12
+**Painéis: nova coluna "ID", entre Origem no Foco e Prioridade de migração.**
+
+`paineis.html` ganha mais uma coluna de texto livre, "ID", entre "Origem no Foco" e
+"Prioridade de migração".
+
+- Coluna nova `identificador` (text, opcional) em `meta_inovacao_iniciativa_links` — só
+  usada em `tipo = 'painel'`, mesmo padrão de `descricao`/`origem_foco`. Chama-se
+  `identificador` (e não `id`) pra não colidir com a chave primária da tabela.
+  `tools/sql/2026-11_iniciativa_links_id.sql` (roda depois de
+  `2026-11_iniciativa_links.sql`; o script base também já cria a coluna direto, pra quem
+  está montando o banco do zero).
+- Grava sozinho ao sair do campo ou Enter, mesmo fluxo da coluna de detalhes. Se a coluna
+  ainda não existe no banco (script não rodado), a linha mostra "falhou" com o nome do
+  script a rodar.
+- `tools/testar_paineis_headless.js` atualizado para as 10 colunas.
+
 ## v0.42.0 — 2026-11-12
 **Painéis: 3 colunas novas sobre a migração pro Power BI.**
 
