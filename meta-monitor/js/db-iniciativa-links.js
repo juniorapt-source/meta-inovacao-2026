@@ -6,6 +6,8 @@
  * (tools/sql/2026-11_iniciativa_links_paineis_multiplos.sql, que também cria `descricao`),
  * site desde v0.39.0 (tools/sql/2026-11_iniciativa_links_sites_multiplos.sql).
  * `portal_sebrae` (site, v0.40.0): tools/sql/2026-11_iniciativa_links_portal_sebrae.sql.
+ * `origem_foco` (painel, v0.41.0): texto livre, "Origem no Foco", ao lado do responsável —
+ * tools/sql/2026-11_iniciativa_links_origem_foco.sql.
  * A linha só nasce quando alguém preenche algo pela primeira vez — gravar() decide entre
  * INSERT e UPDATE. remover() é soft delete (deleted_at).
  *
@@ -37,6 +39,7 @@
       portal_sebrae: !!r.portal_sebrae,
       responsavel_pessoa_id: r.responsavel_pessoa_id || null,
       responsavel: r.responsavel || null,
+      origem_foco: r.origem_foco || "",
       updated_at: r.updated_at || null,
       updated_by: r.updated_by || null,
     };
@@ -56,8 +59,9 @@
       responsavel: o.responsavel || null,
     };
     // só manda a coluna quando há valor: assim o 1º painel continua gravando mesmo
-    // antes de rodar o script que cria `descricao`
+    // antes de rodar o script que cria `descricao`/`origem_foco`
     if (o.descricao) linha.descricao = o.descricao;
+    if (o.origem_foco) linha.origem_foco = o.origem_foco;
     return linha;
   }
 
@@ -100,11 +104,18 @@
   const SCRIPT_PAINEIS = "tools/sql/2026-11_iniciativa_links_paineis_multiplos.sql";
   const SCRIPT_SITES = "tools/sql/2026-11_iniciativa_links_sites_multiplos.sql";
   const SCRIPT_PORTAL_SEBRAE = "tools/sql/2026-11_iniciativa_links_portal_sebrae.sql";
+  const SCRIPT_ORIGEM_FOCO = "tools/sql/2026-11_iniciativa_links_origem_foco.sql";
 
   // erro de banco que indica que a coluna `portal_sebrae` (v0.40.0) ainda não existe
   function faltaScriptPortalSebrae(err) {
     const msg = String((err && (err.message || err.details)) || "");
     return /portal_sebrae/i.test(msg);
+  }
+
+  // erro de banco que indica que a coluna `origem_foco` (v0.41.0) ainda não existe
+  function faltaScriptOrigemFoco(err) {
+    const msg = String((err && (err.message || err.details)) || "");
+    return /origem_foco/i.test(msg);
   }
 
   // erro de banco que indica que o script dos painéis múltiplos ainda não rodou
@@ -137,9 +148,11 @@
     faltaScriptMultiplos: faltaScriptMultiplos,
     scriptMultiplos: scriptMultiplos,
     faltaScriptPortalSebrae: faltaScriptPortalSebrae,
+    faltaScriptOrigemFoco: faltaScriptOrigemFoco,
     SCRIPT_PAINEIS: SCRIPT_PAINEIS,
     SCRIPT_SITES: SCRIPT_SITES,
     SCRIPT_PORTAL_SEBRAE: SCRIPT_PORTAL_SEBRAE,
+    SCRIPT_ORIGEM_FOCO: SCRIPT_ORIGEM_FOCO,
     linkValido: linkValido,
   };
 })(this);

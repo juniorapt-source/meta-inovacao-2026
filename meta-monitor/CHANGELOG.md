@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.41.0 — 2026-11-12
+**Painéis: nova coluna de texto livre "Origem no Foco".**
+
+`paineis.html` ganha mais uma coluna, ao lado de "Responsável pela manutenção": texto
+livre pra registrar de onde vem o dado que alimenta o painel dentro do FOCO (Salesforce).
+
+- Coluna nova `origem_foco` (text, opcional) em `meta_inovacao_iniciativa_links` — só
+  usada em `tipo = 'painel'`, mesmo padrão de `descricao`.
+  `tools/sql/2026-11_iniciativa_links_origem_foco.sql` (roda depois de
+  `2026-11_iniciativa_links.sql`; o script base também já cria a coluna direto, pra quem
+  está montando o banco do zero).
+- Grava sozinho ao sair do campo ou Enter, mesmo fluxo da coluna de detalhes. Se a coluna
+  ainda não existe no banco (script não rodado), a linha mostra "falhou" com o nome do
+  script a rodar.
+- `tools/testar_paineis_headless.js` atualizado para as 6 colunas.
+
 ## v0.40.0 — 2026-11-06
 **Sites: nova coluna de check "Está no Portal Sebrae".**
 

@@ -35,6 +35,7 @@ create table if not exists public.meta_inovacao_iniciativa_links (
   portal_sebrae         boolean not null default false,   -- só usado em tipo = 'site' (v0.40.0)
   responsavel_pessoa_id bigint references public.meta_inovacao_pessoas(id),  -- só em tipo = 'painel'
   responsavel           text,                              -- cópia em texto do nome
+  origem_foco           text,                              -- só usado em tipo = 'painel' (v0.41.0)
   deleted_at            timestamptz,                       -- soft delete — nunca DELETE físico
   updated_at            timestamptz not null default now(),
   updated_by            text,

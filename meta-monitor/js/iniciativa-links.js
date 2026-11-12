@@ -5,7 +5,7 @@
  *   <body data-tipo="site">   → Link da página + "Tem formulário de captura de lead?" +
  *                               "Está no Portal Sebrae?" (v0.40.0)
  *   <body data-tipo="painel"> → Link do painel + Detalhes (texto livre) + Responsável pela
- *                               manutenção (pessoas).
+ *                               manutenção (pessoas) + Origem no Foco (texto livre, v0.41.0).
  *
  * Os dois tipos aceitam vários por iniciativa: "+ painel"/"+ link" abre uma linha nova,
  * "×" remove (soft delete).
@@ -186,11 +186,11 @@
     return chaves.map((c) => grupos.get(c));
   }
 
-  function nColunas() { return 5; }
+  function nColunas() { return TIPO === "painel" ? 6 : 5; }
 
   function thead() {
     const terceira = TIPO === "painel"
-      ? '<th class="il-col-desc">Detalhes do painel</th><th class="il-col-resp">Responsável pela manutenção</th>'
+      ? '<th class="il-col-desc">Detalhes do painel</th><th class="il-col-resp">Responsável pela manutenção</th><th class="il-col-origem">Origem no Foco</th>'
       : '<th class="il-col-check">Formulário de captura de lead</th><th class="il-col-check">Está no Portal Sebrae</th>';
     return "<thead><tr>" +
       '<th class="il-col-iniciativa">Iniciativa</th>' +
@@ -225,7 +225,10 @@
     opts += PESSOAS.map((p) => '<option value="' + esc(String(p.db_id)) + '"' + (String(p.db_id) === atual ? " selected" : "") + ">" + esc(p.nome) + "</option>").join("");
     const desc = '<td class="il-col-desc"><input type="text" data-campo="descricao" value="' + esc((l && l.descricao) || "") +
       '" placeholder="O que é este painel (opcional)" maxlength="500"' + dis + ' aria-label="Detalhes do painel"></td>';
-    return desc + '<td class="il-col-resp"><select data-campo="responsavel_pessoa_id" aria-label="Responsável pela manutenção"' + dis + ">" + opts + "</select></td>";
+    const resp = '<td class="il-col-resp"><select data-campo="responsavel_pessoa_id" aria-label="Responsável pela manutenção"' + dis + ">" + opts + "</select></td>";
+    const origem = '<td class="il-col-origem"><input type="text" data-campo="origem_foco" value="' + esc((l && l.origem_foco) || "") +
+      '" placeholder="Origem no Foco (opcional)" maxlength="500"' + dis + ' aria-label="Origem no Foco"></td>';
+    return desc + resp + origem;
   }
 
   function salvos(chave) { return LINKS.get(chave) || []; }
@@ -331,6 +334,8 @@
     let msg = (window.CC_SUPABASE && CC_SUPABASE.mensagemEscritaAmigavel && CC_SUPABASE.mensagemEscritaAmigavel(err)) || "falhou";
     if (TIPO === "site" && DB_INICIATIVA_LINKS.faltaScriptPortalSebrae(err)) {
       msg = "O banco ainda não tem a coluna \"Está no Portal Sebrae\" — rode " + DB_INICIATIVA_LINKS.SCRIPT_PORTAL_SEBRAE + " no Supabase.";
+    } else if (TIPO === "painel" && DB_INICIATIVA_LINKS.faltaScriptOrigemFoco(err)) {
+      msg = "O banco ainda não tem a coluna \"Origem no Foco\" — rode " + DB_INICIATIVA_LINKS.SCRIPT_ORIGEM_FOCO + " no Supabase.";
     } else if (DB_INICIATIVA_LINKS.faltaScriptMultiplos(TIPO, err)) {
       msg = "O banco ainda não aceita mais de um " + substantivo() + " por iniciativa" +
         (TIPO === "painel" ? " nem a coluna de detalhes" : "") +
@@ -451,6 +456,12 @@
       if (v === ((atual && atual.descricao) || "")) return;
       const ok = await gravar(tr, { descricao: v });
       if (!ok) alvo.value = (atual && atual.descricao) || "";
+    } else if (campo === "origem_foco") {
+      const v = alvo.value.trim();
+      alvo.value = v;
+      if (v === ((atual && atual.origem_foco) || "")) return;
+      const ok = await gravar(tr, { origem_foco: v });
+      if (!ok) alvo.value = (atual && atual.origem_foco) || "";
     } else if (campo === "captura_lead" || campo === "portal_sebrae") {
       const ok = await gravar(tr, { [campo]: alvo.checked });
       if (!ok) alvo.checked = !alvo.checked;
@@ -465,7 +476,7 @@
   // Enter no campo de link/detalhes grava (dispara o change ao tirar o foco)
   elTabela.addEventListener("keydown", (e) => {
     const c = e.target.dataset && e.target.dataset.campo;
-    if (e.key === "Enter" && (c === "link" || c === "descricao")) e.target.blur();
+    if (e.key === "Enter" && (c === "link" || c === "descricao" || c === "origem_foco")) e.target.blur();
   });
 
   elTabela.addEventListener("click", async (e) => {

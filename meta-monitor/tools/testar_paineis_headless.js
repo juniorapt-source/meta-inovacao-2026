@@ -4,9 +4,10 @@
  * Abre com ?semrede=1 (iniciativas e pessoas vêm dos seeds locais). Como em modo de teste
  * a escrita no Supabase fica bloqueada, o servidor deste teste acrescenta ao fim de
  * js/db-iniciativa-links.js um banco FALSO em memória (carregar/gravar/remover), que nunca
- * toca rede. Confere: 5 colunas, "+ painel" abre uma 2ª linha na mesma iniciativa,
- * link + detalhes gravam em linhas separadas, a contagem conta os painéis, a busca acha
- * pelo texto de detalhes e o "×" remove (soft delete).
+ * toca rede. Confere: 6 colunas (inclui "Origem no Foco", v0.41.0), "+ painel" abre uma 2ª
+ * linha na mesma iniciativa, link + detalhes + origem gravam em linhas separadas, a
+ * contagem conta os painéis, a busca acha pelo texto de detalhes e o "×" remove (soft
+ * delete).
  *
  * Mesmo padrão de CDP cru (sem Playwright) dos outros testes headless do repo.
  */
@@ -158,6 +159,7 @@ async function principal() {
       const out = {};
       out.colunas = tab.querySelectorAll('thead th').length;
       out.temDetalhes = !!tab.querySelector('thead th.il-col-desc');
+      out.temOrigem = !!tab.querySelector('thead th.il-col-origem');
       const tr1 = tab.querySelector('tr[data-iniciativa]');
       const nome = tr1.dataset.iniciativa;
       out.nome = nome;
@@ -171,6 +173,7 @@ async function principal() {
       // 1º painel
       preencher(linhasDe(nome)[0], 'link', 'https://exemplo.com/a');
       preencher(linhasDe(nome)[0], 'descricao', 'Painel de vendas');
+      preencher(linhasDe(nome)[0], 'origem_foco', 'Objeto Oportunidade');
       await dormir(200);
       // + painel
       linhasDe(nome)[0].querySelector('[data-acao="adicionar"]').click();
@@ -179,7 +182,7 @@ async function principal() {
       out.rowspan = linhasDe(nome)[0].querySelector('td.il-col-iniciativa').getAttribute('rowspan');
       preencher(linhasDe(nome)[1], 'link', 'https://exemplo.com/b');
       await dormir(200);
-      out.fake = window.__FAKE_LINKS.filter((l) => !l.deleted).map((l) => ({ link: l.link, descricao: l.descricao || '' }));
+      out.fake = window.__FAKE_LINKS.filter((l) => !l.deleted).map((l) => ({ link: l.link, descricao: l.descricao || '', origem_foco: l.origem_foco || '' }));
       out.contagem = document.getElementById('il-contagem').textContent;
       // busca pelo texto de detalhes
       const busca = document.getElementById('il-busca');
@@ -194,18 +197,20 @@ async function principal() {
       out.linhasDepoisRemover = linhasDe(nome).length;
       out.ativosDepoisRemover = window.__FAKE_LINKS.filter((l) => !l.deleted).length;
       out.detalheNaTela = linhasDe(nome)[0].querySelector('[data-campo="descricao"]').value;
+      out.origemNaTela = linhasDe(nome)[0].querySelector('[data-campo="origem_foco"]').value;
       return JSON.stringify(out);
     })()`));
 
-    if (r.colunas !== 5 || !r.temDetalhes) erros.push("cabeçalho deveria ter 5 colunas com 'Detalhes do painel' (veio " + r.colunas + ")");
+    if (r.colunas !== 6 || !r.temDetalhes || !r.temOrigem) erros.push("cabeçalho deveria ter 6 colunas com 'Detalhes do painel' e 'Origem no Foco' (veio " + r.colunas + ")");
     if (r.linhasAntes !== 1) erros.push("iniciativa sem painel deveria mostrar 1 linha em branco (veio " + r.linhasAntes + ")");
     if (r.linhasDepoisAdd !== 2 || r.rowspan !== "2") erros.push("'+ painel' deveria abrir a 2ª linha com rowspan=2 (veio " + r.linhasDepoisAdd + ", rowspan " + r.rowspan + ")");
-    const esperado = JSON.stringify([{ link: "https://exemplo.com/a", descricao: "Painel de vendas" }, { link: "https://exemplo.com/b", descricao: "" }]);
+    const esperado = JSON.stringify([{ link: "https://exemplo.com/a", descricao: "Painel de vendas", origem_foco: "Objeto Oportunidade" }, { link: "https://exemplo.com/b", descricao: "", origem_foco: "" }]);
     if (JSON.stringify(r.fake) !== esperado) erros.push("gravação: esperava " + esperado + ", veio " + JSON.stringify(r.fake));
     if (!/2 painéis/.test(r.contagem)) erros.push("contagem deveria citar 2 painéis: " + r.contagem);
     if (r.buscaIniciativas !== 1) erros.push("busca por texto de detalhes deveria achar 1 iniciativa (veio " + r.buscaIniciativas + ")");
     if (r.linhasDepoisRemover !== 1 || r.ativosDepoisRemover !== 1) erros.push("'×' deveria remover o 2º painel (linhas " + r.linhasDepoisRemover + ", ativos " + r.ativosDepoisRemover + ")");
     if (r.detalheNaTela !== "Painel de vendas") erros.push("detalhes do 1º painel sumiram da tela após remover o 2º");
+    if (r.origemNaTela !== "Objeto Oportunidade") erros.push("origem no Foco do 1º painel sumiu da tela após remover o 2º");
 
     if (erros.length) {
       console.error("FALHOU paineis_multiplos:");
