@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.46.0 — 2026-11-12
+**Painéis: reduz a largura de Link do painel/Power BI, Responsável e Prioridade de migração.**
+
+Pra distribuir melhor o espaço da tabela, diminui a largura das colunas "Link do
+painel"/"Link do novo painel (Power BI)" (240→170px), "Responsável pela
+manutenção"/"Responsável pela migração" (260→190px) e "Prioridade de migração"
+(120→90px). Só CSS, sem mudança de dados.
+
 ## v0.45.0 — 2026-11-12
 **Painéis e Sites: corrige colunas de texto espremidas (dados não apareciam).**
 
